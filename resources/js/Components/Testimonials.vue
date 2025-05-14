@@ -1,6 +1,6 @@
 <template>
     <section
-        class="relative w-full py-16 px-4 flex flex-col items-center justify-center text-center"
+        class="relative w-full py-16 px-4 flex flex-col items-center justify-center text-center backdrop-blur z-10"
     >
         <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-10">
             What Our Clients Say

@@ -1,8 +1,8 @@
 <template>
     <section
-        class="relative w-full flex flex-col items-center justify-center text-center mx-auto max-w-none backdrop-blur px-4 bg-gray-200 py-10"
+        class="relative w-full flex flex-col items-center justify-center text-center mx-auto max-w-none backdrop-blur px-4 bg-secondary py-10"
     >
-        <h2 class="text-4xl md:text-5xl font-bold text-primary mb-10">
+        <h2 class="text-4xl md:text-5xl font-bold text-fourth mb-10">
             Focused on What You Need
         </h2>
         <div
@@ -39,15 +39,15 @@
                     </span>
                     <!-- Icon and content -->
                     <span
-                        class="flex items-center justify-center w-10 h-10 rounded-full bg-amber-100 text-2xl mr-4 shadow-sm"
+                        class="flex items-center justify-center w-10 h-10 rounded-full text-2xl mr-4 shadow-sm"
                     >
                         <span aria-hidden="true">{{ reason.icon }}</span>
                     </span>
-                    <div class="flex-1">
-                        <div class="font-bold text-lg text-gray-900 mb-1">
+                    <div class="flex-1 tracking-wider">
+                        <div class="font-bold text-lg text-dark-800 mb-1">
                             {{ reason.title }}
                         </div>
-                        <div class="text-gray-600 text-base">
+                        <div class="text-primary text-base">
                             {{ reason.desc }}
                         </div>
                     </div>

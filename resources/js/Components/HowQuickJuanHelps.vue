@@ -3,7 +3,7 @@
         class="relative w-full flex flex-col items-center justify-center text-center mx-auto max-w-none bg-white/90 backdrop-blur px-4 py-16 overflow-hidden"
         aria-labelledby="how-quickjuan-helps-title"
     >
-        <!-- Decorative SVG background -->
+        <!-- Decorative SVG background top -->
         <svg
             class="absolute -top-16 left-1/2 -translate-x-1/2 w-[120vw] h-40 opacity-20 pointer-events-none z-0"
             viewBox="0 0 1440 320"
@@ -17,6 +17,28 @@
                 d="M0,160L60,170.7C120,181,240,203,360,197.3C480,192,600,160,720,133.3C840,107,960,85,1080,101.3C1200,117,1320,171,1380,197.3L1440,224L1440,0L1380,0C1320,0,1200,0,1080,0C960,0,840,0,720,0C600,0,480,0,360,0C240,0,120,0,60,0L0,0Z"
             />
         </svg>
+        <!-- Decorative SVG background bottom -->
+        <svg
+            class="absolute -bottom-16 left-1/2 -translate-x-1/2 w-[120vw] h-40 opacity-20 pointer-events-none z-0 rotate-180"
+            viewBox="0 0 1440 320"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+        >
+            <path
+                fill="#27548A"
+                fill-opacity="0.18"
+                d="M0,160L60,170.7C120,181,240,203,360,197.3C480,192,600,160,720,133.3C840,107,960,85,1080,101.3C1200,117,1320,171,1380,197.3L1440,224L1440,0L1380,0C1320,0,1200,0,1080,0C960,0,840,0,720,0C600,0,480,0,360,0C240,0,120,0,60,0L0,0Z"
+            />
+        </svg>
+        <!-- Decorative blurred circle left -->
+        <div
+            class="hidden md:block absolute -left-32 top-1/3 w-64 h-64 bg-primary-light rounded-full blur-3xl opacity-20 z-0"
+        ></div>
+        <!-- Decorative blurred circle right -->
+        <div
+            class="hidden md:block absolute -right-32 bottom-1/4 w-72 h-72 bg-third-light rounded-full blur-3xl opacity-20 z-0"
+        ></div>
         <h2
             id="how-quickjuan-helps-title"
             class="text-4xl md:text-5xl font-bold text-secondary mb-10 relative z-10"
