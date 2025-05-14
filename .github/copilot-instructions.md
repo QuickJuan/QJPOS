@@ -1,0 +1,27 @@
+Co-pilot Instructions
+
+-   This Project is for Retail, Restaurant, and and Fast Food
+-   The project is a web application
+-   The project is a web application that allows users to manage their inventory, sales, and customer data
+-   The is build from scratch using Laravel 11, Vue 3 with composition API with typescript and setup on script tag
+-   The project used tailwindcss for styling
+-   The Project should allow user to login and start cashiering
+-   The project should have a dashboard that shows sales and inventory data
+-   The project should have a product management page that allows user to add, edit, and delete products
+-   The project should have a sales management page that allows user to view and manage sales
+-   The project should have a customer management page that allows user to view and manage customers
+-   The project should have a report page that shows sales and inventory reports
+-   The project should have a settings page that allows user to manage their account and application settings
+-   The project should have a responsive design that works on mobile and desktop devices
+-   The project should have a login page that allows user to login using their email and password
+-   The project should have a registration page that allows user to register using their email and password
+-   The project should have a forgot password page that allows user to reset their password
+-   The project should have a profile page that allows user to view and edit their profile
+-   The project should have a logout functionality that allows user to logout from the application
+-   The project should have a notification system that shows success and error messages
+-   The project should have a search functionality that allows user to search for products, sales, and customers
+-   The project should have a filter functionality that allows user to filter products, sales, and customers
+-   The project should have a sort functionality that allows user to sort products, sales, and customers
+-   The project should have a pagination functionality that allows user to paginate products, sales, and customers
+-   The project should have a dark mode functionality that allows user to switch between light and dark mode
+-   Please always make it responsive and accessible to all users specially with blind and color blind
