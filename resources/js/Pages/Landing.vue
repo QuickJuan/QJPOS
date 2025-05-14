@@ -176,7 +176,7 @@
                             />
                         </div>
                     </transition>
-                    <div class="absolute inset-0 bg-fourth bg-opacity-60"></div>
+                    <div class="absolute inset-0 bg-black bg-opacity-60"></div>
                     <!-- Swap Button (mobile only) -->
                     <button
                         v-if="isMobile"
@@ -214,14 +214,14 @@
                         class="text-4xl sm:text-5xl md:text-6xl font-extrabold text-primary drop-shadow-lg mb-2 font-sans tracking-tight"
                     >
                         Welcome to
-                        <span class="text-primary">QuickJuan POS</span>
+                        <span class="text-fourth">QuickJuan POS</span>
                     </h1>
                     <p
-                        class="text-lg sm:text-xl md:text-2xl text-secondary mb-4 max-w-2xl font-light drop-shadow"
+                        class="text-lg sm:text-xl md:text-2xl text-primary mb-4 max-w-2xl font-light drop-shadow"
                     >
                         The modern, multi-tenant Point of Sale platform for
                         retail, restaurants, and fast food.
-                        <span class="font-semibold text-third"
+                        <span class="font-semibold text-fourth"
                             >Manage your business, inventory, and sales with
                             ease.</span
                         >
