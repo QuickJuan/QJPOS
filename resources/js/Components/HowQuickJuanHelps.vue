@@ -19,7 +19,7 @@
         </svg>
         <h2
             id="how-quickjuan-helps-title"
-            class="text-4xl md:text-5xl font-bold text-amber-500 mb-10 relative z-10"
+            class="text-4xl md:text-5xl font-bold text-secondary mb-10 relative z-10"
         >
             Powerful Capabilities of QuickJuan POS
         </h2>

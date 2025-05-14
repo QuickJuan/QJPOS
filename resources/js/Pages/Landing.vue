@@ -176,16 +176,8 @@
                             />
                         </div>
                     </transition>
-                    <div class="absolute inset-0 bg-black bg-opacity-60"></div>
-                    <!-- Swap Button (mobile only) -->
-                    <button
-                        v-if="isMobile"
-                        @click="toggleMedia"
-                        class="absolute top-4 right-4 z-20 px-4 py-2 rounded-lg bg-primary text-white font-bold shadow hover:bg-third hover:text-secondary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                        aria-label="Toggle between video and POS images"
-                    >
-                        {{ showVideo ? "Show POS Images" : "Show Video" }}
-                    </button>
+                    <div class="absolute inset-0 bg-white bg-opacity-60"></div>
+
                     <!-- Image navigation (mobile only) -->
                     <div
                         v-if="!showVideo && isMobile"
@@ -214,14 +206,14 @@
                         class="text-4xl sm:text-5xl md:text-6xl font-extrabold text-primary drop-shadow-lg mb-2 font-sans tracking-tight"
                     >
                         Welcome to
-                        <span class="text-fourth">QuickJuan POS</span>
+                        <span class="text-secondary">QuickJuan POS</span>
                     </h1>
                     <p
                         class="text-lg sm:text-xl md:text-2xl text-primary mb-4 max-w-2xl font-light drop-shadow"
                     >
                         The modern, multi-tenant Point of Sale platform for
                         retail, restaurants, and fast food.
-                        <span class="font-semibold text-fourth"
+                        <span class="font-semibold text-primary"
                             >Manage your business, inventory, and sales with
                             ease.</span
                         >
