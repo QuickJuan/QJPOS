@@ -1,7 +1,5 @@
 <template>
-    <div
-        class="relative min-h-screen flex flex-col items-stretch justify-center overflow-hidden"
-    >
+    <div class="min-h-screen flex flex-col">
         <!-- Navigation Bar -->
         <header
             :class="[
@@ -141,7 +139,7 @@
 
         <!-- Background Media: Video or Image (full background) -->
         <div
-            class="fixed inset-0 z-0 w-full h-full overflow-hidden pointer-events-none"
+            class="fixed inset-0 z-0 w-full h-full pointer-events-none"
             aria-label="Restaurant video background"
         >
             <transition name="fade" mode="out-in">
@@ -198,381 +196,121 @@
             </div>
         </div>
 
-        <!-- Content -->
-        <div
-            class="relative z-10 flex flex-col items-center justify-end md:justify-center text-center px-6 py-8 md:py-0 w-full min-h-screen bg-gradient-to-t md:bg-gradient-to-r from-black/80 via-black/60 to-transparent"
-            style="padding-top: 6rem"
-            aria-labelledby="landing-title"
-        >
-            <h1
-                id="landing-title"
-                class="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white drop-shadow-lg mb-4 font-sans tracking-tight"
-            >
-                Welcome to <span class="text-amber-400">QuickJuan POS</span>
-            </h1>
-            <p
-                class="text-lg sm:text-xl md:text-2xl text-white mb-8 max-w-2xl font-light drop-shadow"
-            >
-                The modern, multi-tenant Point of Sale platform for retail,
-                restaurants, and fast food.
-                <span class="font-semibold text-amber-300"
-                    >Manage your business, inventory, and sales with ease.</span
-                >
-            </p>
-            <button
-                @click="scrollToGetStarted"
-                class="px-8 py-4 rounded-lg bg-amber-400 text-gray-900 font-bold text-xl shadow-lg hover:bg-amber-300 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 mb-8"
-                aria-label="Get Started Free"
-            >
-                Get Started Free
-            </button>
-        </div>
-        <!-- Products Section -->
-        <section
-            id="products"
-            class="relative z-20 w-full bg-white py-16 px-0 flex flex-col items-center justify-center text-center overflow-hidden"
-        >
-            <h2
-                class="text-3xl md:text-4xl font-bold text-gray-900 mb-10 z-10 relative"
-            >
-                Our Products
-            </h2>
+        <main class="flex-grow flex flex-col">
+            <!-- Content -->
             <div
-                class="relative w-full max-w-6xl mx-auto flex flex-col md:flex-row gap-6 md:gap-8 h-auto md:h-[420px] lg:h-[320px] min-h-[320px]"
+                class="relative z-10 flex flex-col items-center justify-end md:justify-center text-center px-6 py-8 md:py-0 w-full min-h-screen bg-gradient-to-t md:bg-gradient-to-r from-black/80 via-black/60 to-transparent"
+                style="padding-top: 6rem"
+                aria-labelledby="landing-title"
             >
-                <!-- Slanted background divisions -->
-                <div
-                    class="absolute inset-0 hidden md:flex w-full h-full pointer-events-none select-none"
-                    aria-hidden="true"
+                <h1
+                    id="landing-title"
+                    class="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white drop-shadow-lg mb-2 font-sans tracking-tight"
                 >
-                    <div
-                        class="w-1/3 h-full transform -skew-x-12 origin-left shadow-lg"
-                    ></div>
-                    <div
-                        class="w-1/3 h-full transform -skew-x-12 origin-center shadow-lg"
-                    ></div>
-                    <div
-                        class="w-1/3 h-full transform -skew-x-12 origin-right shadow-lg"
-                    ></div>
-                </div>
-                <!-- Product 1: F&B -->
-                <div
-                    class="relative flex-1 flex flex-col items-center justify-center z-10 px-2 md:px-6 gap-2"
+                    Welcome to
+                    <span class="text-amber-400">QuickJuan POS</span>
+                </h1>
+                <p
+                    class="text-lg sm:text-xl md:text-2xl text-white mb-4 max-w-2xl font-light drop-shadow"
                 >
-                    <div class="w-full flex flex-col items-center">
-                        <div
-                            class="w-full flex items-center justify-center overflow-hidden"
-                        >
-                            <span class="text-6xl md:text-7xl text-gray-300"
-                                >🍽️</span
-                            >
-                        </div>
-                        <span
-                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-400 text-white font-extrabold text-xl shadow-lg border-4 border-white absolute top-4 right-6 md:right-10"
-                        >
-                            {{ fnbClients }}+
-                        </span>
-                        <h4
-                            class="font-extrabold text-gray-900 mb-2 text-2xl md:text-3xl mt-2"
-                        >
-                            POS for F&amp;B
-                        </h4>
-                        <p class="text-gray-700 text-base font-medium mb-2">
-                            For restaurants, cafes, and bars. Fast orders, easy
-                            tables, real-time sales.
-                        </p>
-                    </div>
-                </div>
-                <!-- Product 2: Drugstore -->
-                <div
-                    class="relative flex-1 flex flex-col items-center justify-center z-10 px-2 md:px-6 gap-2"
+                    The modern, multi-tenant Point of Sale platform for retail,
+                    restaurants, and fast food.
+                    <span class="font-semibold text-amber-300"
+                        >Manage your business, inventory, and sales with
+                        ease.</span
+                    >
+                </p>
+                <button
+                    @click="scrollToGetStarted"
+                    class="px-8 py-4 rounded-lg bg-amber-400 text-gray-900 font-bold text-xl shadow-lg hover:bg-amber-300 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 mb-4"
+                    aria-label="Get Started Free"
                 >
-                    <div class="w-full flex flex-col items-center">
-                        <div
-                            class="w-full flex items-center justify-center overflow-hidden"
-                        >
-                            <span class="text-6xl md:text-7xl text-gray-300"
-                                >💊</span
-                            >
-                        </div>
-                        <span
-                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-400 text-white font-extrabold text-xl shadow-lg border-4 border-white absolute top-4 right-6 md:right-10"
-                        >
-                            {{ drugstoreClients }}+
-                        </span>
-                        <h4
-                            class="font-extrabold text-gray-900 mb-2 text-2xl md:text-3xl mt-2"
-                        >
-                            POS for Drugstore
-                        </h4>
-                        <p class="text-gray-700 text-base font-medium mb-2">
-                            For pharmacies and health stores. Track stocks, fast
-                            checkout, compliance ready.
-                        </p>
-                    </div>
-                </div>
-                <!-- Product 3: Kiosk/Fast Food -->
-                <div
-                    class="relative flex-1 flex flex-col items-center justify-center z-10 px-2 md:px-6 gap-2"
-                >
-                    <div class="w-full flex flex-col items-center">
-                        <div
-                            class="w-full flex items-center justify-center overflow-hidden"
-                        >
-                            <span class="text-6xl md:text-7xl text-gray-300"
-                                >🍔</span
-                            >
-                        </div>
-                        <span
-                            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-400 text-white font-extrabold text-xl shadow-lg border-4 border-white absolute top-4 right-6 md:right-10"
-                        >
-                            {{ kioskClients }}+
-                        </span>
-                        <h4
-                            class="font-extrabold text-gray-900 mb-2 text-2xl md:text-3xl mt-2"
-                        >
-                            POS for Kiosk &amp; Fast Food
-                        </h4>
-                        <p class="text-gray-700 text-base font-medium mb-2">
-                            For kiosks and fast food. Quick orders, combos,
-                            kitchen display ready.
-                        </p>
-                    </div>
-                </div>
+                    Get Started Free
+                </button>
+                <!-- Products Section (inline, inside hero/landing area) -->
+                <ProductsSection />
             </div>
-        </section>
-        <!-- How QuickJuan POS Helps Your Business Grow Section (now below products) -->
-        <section
-            class="relative w-full flex flex-col items-center justify-center text-center border border-gray-200 mb-12 mx-auto min-h-screen max-w-none bg-white/90 backdrop-blur shadow-xl px-4"
-            style="
-                margin-top: 2rem;
-                padding-top: 3.5rem;
-                padding-bottom: 3.5rem;
-            "
-        >
-            <h2 class="text-4xl md:text-5xl font-bold text-gray-900 mb-10">
-                How QuickJuan POS Helps Your Business Grow
-            </h2>
-            <div
-                class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-10 w-full max-w-6xl mx-auto"
+            <!-- How QuickJuan POS Helps Your Business Grow Section (now as component) -->
+            <HowQuickJuanHelps />
+            <!-- Why Choose QuickJuan Section -->
+            <WhyChooseQuickJuan />
+            <!-- Testimonials Section -->
+            <section
+                class="relative w-full bg-white py-16 px-4 border-t border-gray-100 z-20"
             >
-                <!-- 9 cards go here, unchanged -->
-                <div class="flex flex-col items-center">
-                    <svg
-                        class="w-12 h-12 mb-3 text-amber-400"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M3 17v-2a4 4 0 014-4h10a4 4 0 014 4v2"
-                        />
-                        <circle cx="12" cy="7" r="4" />
-                    </svg>
-                    <h4 class="text-xl font-semibold text-gray-800 mb-2">
-                        Empower Your Team
-                    </h4>
-                    <p class="text-gray-600 text-base">
-                        Serve customers faster and boost loyalty with the right
-                        tools.
-                    </p>
+                <Testimonials />
+            </section>
+            <!-- Contact Us Section -->
+            <section
+                id="contact"
+                class="relative w-full bg-white py-16 px-4 border-t border-gray-100 z-20"
+            >
+                <ContactUs />
+            </section>
+
+            <!-- Footer Section -->
+            <footer
+                class="w-full bg-gray-900 text-gray-100 pt-10 pb-6 border-t border-gray-200 mt-0"
+            >
+                <div class="max-w-6xl mx-auto px-4 flex flex-col items-center">
+                    <!-- Office Hours -->
+                    <div class="text-center mb-6">
+                        <div class="text-lg font-semibold text-amber-400">
+                            Office Hours
+                        </div>
+                        <div class="text-base text-gray-200">
+                            Monday to Saturday, 8:00 AM – 7:00 PM
+                        </div>
+                    </div>
+                    <!-- Footer Menu -->
+                    <nav aria-label="Footer menu" class="mb-4">
+                        <ul
+                            class="flex flex-wrap justify-center gap-6 text-base font-medium"
+                        >
+                            <li>
+                                <a
+                                    href="/terms-and-conditions"
+                                    class="hover:text-amber-400 transition-colors"
+                                    >Terms and Conditions</a
+                                >
+                            </li>
+                            <li>
+                                <a
+                                    href="/privacy-policy"
+                                    class="hover:text-amber-400 transition-colors"
+                                    >Privacy Policy</a
+                                >
+                            </li>
+                            <li>
+                                <a
+                                    href="/customer-support"
+                                    class="hover:text-amber-400 transition-colors"
+                                    >Customer Support</a
+                                >
+                            </li>
+                            <li>
+                                <a
+                                    href="/faq"
+                                    class="hover:text-amber-400 transition-colors"
+                                    >FAQ</a
+                                >
+                            </li>
+                            <li>
+                                <a
+                                    href="/reviews"
+                                    class="hover:text-amber-400 transition-colors"
+                                    >Reviews</a
+                                >
+                            </li>
+                        </ul>
+                    </nav>
+                    <div class="text-sm text-gray-400 text-center">
+                        &copy; {{ new Date().getFullYear() }} QuickJuan POS. All
+                        rights reserved.
+                    </div>
                 </div>
-                <div class="flex flex-col items-center">
-                    <svg
-                        class="w-12 h-12 mb-3 text-amber-400"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                    >
-                        <rect x="3" y="11" width="18" height="7" rx="2" />
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M16 11V7a4 4 0 00-8 0v4"
-                        />
-                    </svg>
-                    <h4 class="text-xl font-semibold text-gray-800 mb-2">
-                        Real-Time Insights
-                    </h4>
-                    <p class="text-gray-600 text-base">
-                        Smarter decisions with up-to-the-minute sales and
-                        inventory.
-                    </p>
-                </div>
-                <div class="flex flex-col items-center">
-                    <svg
-                        class="w-12 h-12 mb-3 text-amber-400"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M12 8v4l3 3"
-                        />
-                        <circle cx="12" cy="12" r="10" />
-                    </svg>
-                    <h4 class="text-xl font-semibold text-gray-800 mb-2">
-                        Grow Your Revenue
-                    </h4>
-                    <p class="text-gray-600 text-base">
-                        Unlock new sales and streamline operations for growth.
-                    </p>
-                </div>
-                <div class="flex flex-col items-center">
-                    <svg
-                        class="w-12 h-12 mb-3 text-amber-400"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M9 17v-2a4 4 0 014-4h2a4 4 0 014 4v2"
-                        />
-                        <circle cx="15" cy="7" r="4" />
-                    </svg>
-                    <h4 class="text-xl font-semibold text-gray-800 mb-2">
-                        Multi-Branch Ready
-                    </h4>
-                    <p class="text-gray-600 text-base">
-                        Manage multiple locations from a single dashboard.
-                    </p>
-                </div>
-                <div class="flex flex-col items-center">
-                    <svg
-                        class="w-12 h-12 mb-3 text-amber-400"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M12 20v-6m0 0V4m0 10h4m-4 0H8"
-                        />
-                    </svg>
-                    <h4 class="text-xl font-semibold text-gray-800 mb-2">
-                        Easy Integrations
-                    </h4>
-                    <p class="text-gray-600 text-base">
-                        Connect with accounting, delivery, and more.
-                    </p>
-                </div>
-                <div class="flex flex-col items-center">
-                    <svg
-                        class="w-12 h-12 mb-3 text-amber-400"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                    >
-                        <circle cx="12" cy="12" r="10" />
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M8 12h8"
-                        />
-                    </svg>
-                    <h4 class="text-xl font-semibold text-gray-800 mb-2">
-                        Inventory Control
-                    </h4>
-                    <p class="text-gray-600 text-base">
-                        Track stock in real time and avoid shortages.
-                    </p>
-                </div>
-                <div class="flex flex-col items-center">
-                    <svg
-                        class="w-12 h-12 mb-3 text-amber-400"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                    >
-                        <rect x="4" y="4" width="16" height="16" rx="2" />
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M8 12h8"
-                        />
-                    </svg>
-                    <h4 class="text-xl font-semibold text-gray-800 mb-2">
-                        Customizable Receipts
-                    </h4>
-                    <p class="text-gray-600 text-base">
-                        Brand your receipts and add promos easily.
-                    </p>
-                </div>
-                <div class="flex flex-col items-center">
-                    <svg
-                        class="w-12 h-12 mb-3 text-amber-400"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M5 13l4 4L19 7"
-                        />
-                    </svg>
-                    <h4 class="text-xl font-semibold text-gray-800 mb-2">
-                        Secure & Reliable
-                    </h4>
-                    <p class="text-gray-600 text-base">
-                        Enterprise-grade security and 99.9% uptime.
-                    </p>
-                </div>
-                <div class="flex flex-col items-center">
-                    <svg
-                        class="w-12 h-12 mb-3 text-amber-400"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M12 8c-1.657 0-3 1.343-3 3s1.343 3 3 3 3-1.343 3-3-1.343-3-3-3zm0 0V4m0 10v4m8-8h-4m-8 0H4"
-                        />
-                    </svg>
-                    <h4 class="text-xl font-semibold text-gray-800 mb-2">
-                        Easy to Use
-                    </h4>
-                    <p class="text-gray-600 text-base">
-                        Intuitive interface for quick staff training.
-                    </p>
-                </div>
-            </div>
-        </section>
-        <!-- Testimonials Section -->
-        <section class="relative w-full bg-white py-16 px-4 z-20">
-            <Testimonials />
-        </section>
-        <!-- Contact Us Section -->
-        <section id="contact" class="relative w-full bg-white py-16 px-4 z-20">
-            <ContactUs />
-        </section>
+            </footer>
+        </main>
     </div>
 </template>
 
@@ -581,6 +319,9 @@ import { ref, computed, onMounted, onUnmounted } from "vue";
 import QuickJuanIcon from "@/Components/QuickJuanIcon.vue";
 import Testimonials from "@/Components/Testimonials.vue";
 import ContactUs from "@/Components/ContactUs.vue";
+import WhyChooseQuickJuan from "@/Components/WhyChooseQuickJuan.vue";
+import HowQuickJuanHelps from "@/Components/HowQuickJuanHelps.vue";
+import ProductsSection from "./Home/ProductsSection.vue";
 
 // Animated client numbers for products
 const fnbClients = ref(0);
@@ -589,9 +330,9 @@ const kioskClients = ref(0);
 
 function animateClients(target: number, refVar: any, duration = 1200) {
     const start = 0;
-    const increment = Math.ceil(target / (duration / 16));
     let current = start;
-    const step = () => {
+    const increment = Math.ceil(target / (duration / 16));
+    function step() {
         current += increment;
         if (current >= target) {
             refVar.value = target;
@@ -599,7 +340,7 @@ function animateClients(target: number, refVar: any, duration = 1200) {
             refVar.value = current;
             requestAnimationFrame(step);
         }
-    };
+    }
     step();
 }
 
