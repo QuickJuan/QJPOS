@@ -25,25 +25,6 @@ class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
-
-        // // Get the domain from the request
-        // $host = request()->getHost();
-
-        // // Check if the domain contains a subdomain (tenant)
-        // $isSubdomain = strtolower($host) !== config('app.main_domain');
-
-        // // Initialize tenancy only for subdomains (tenant routes)
-        // if ($isSubdomain) {
-        //     app(InitializeTenancyByDomain::class)->handle(request(), function () {
-        //         // No-op — just forces tenancy initialization for tenant routes
-        //     });
-
-        //     // Optionally prevent access from central domains for tenant routes
-        //     app(PreventAccessFromCentralDomains::class)->handle(request(), function () {
-        //         // No-op — just prevents access from central domain for tenant routes
-        //     });
-        // }
-
         
         return $panel
             ->default()

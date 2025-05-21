@@ -1,8 +1,11 @@
 <?php
 
 use Illuminate\Foundation\Application;
+use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
+use Stancl\Tenancy\Middleware\InitializeTenancyByDomainOrSubdomain;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -11,8 +14,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        \Stancl\Tenancy\Middleware\InitializeTenancyByDomain::class;
-        \Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains::class;
+        $middleware->web(append: [
+            \App\Http\Middleware\HandleInertiaRequests::class,
+            \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
+            InitializeTenancyByDomainOrSubdomain::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
