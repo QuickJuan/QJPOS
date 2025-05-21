@@ -24,7 +24,7 @@ use Stancl\Tenancy\Middleware\InitializeTenancyByDomainOrSubdomain;
 
 Route::middleware([
     'web',
-    InitializeTenancyByDomain::class,
+    InitializeTenancyBySubdomain::class,
     PreventAccessFromCentralDomains::class,
 ])->group(function () {
 
@@ -43,7 +43,7 @@ Route::middleware([
             //         'tenants' => auth()->user()->tenants,
             //     ]);
             // })->name('profile.show');
-            
+
 
         });
 
@@ -63,10 +63,10 @@ Route::middleware([
                 'tenant' => tenant(),
             ]);
         })->name('landing');
-   
 
-    
-        
+
+
+
 
 
     // Route::get('/admin', function () {

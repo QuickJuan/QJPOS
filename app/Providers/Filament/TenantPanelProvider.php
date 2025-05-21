@@ -29,7 +29,7 @@ class TenantPanelProvider extends PanelProvider
         return $panel
             ->id('tenant')
             ->path('admin')
-            
+
             ->colors([
                 'primary' => Color::Amber,
             ])
@@ -68,7 +68,7 @@ class TenantPanelProvider extends PanelProvider
         if (!isCentralDomain()) {
             return array_merge($defaultMiddlewares, [
                 PreventAccessFromCentralDomains::class,
-                InitializeTenancyByDomain::class,
+                InitializeTenancyBySubdomain::class,
             ]);
         }
 

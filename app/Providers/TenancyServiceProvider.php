@@ -4,10 +4,15 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Tenancy\CreateDomainBasedOnCompanyName;
+use App\Tenancy\CreateFrameworkDirectoriesForTenant;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use Livewire\Features\SupportFileUploads\FilePreviewController;
+use Livewire\Livewire;
 use Stancl\JobPipeline\JobPipeline;
+use Stancl\Tenancy\Controllers\TenantAssetsController;
 use Stancl\Tenancy\Events;
 use Stancl\Tenancy\Jobs;
 use Stancl\Tenancy\Listeners;
@@ -27,6 +32,8 @@ class TenancyServiceProvider extends ServiceProvider
                 JobPipeline::make([
                     Jobs\CreateDatabase::class,
                     Jobs\MigrateDatabase::class,
+                    CreateFrameworkDirectoriesForTenant::class,
+                    CreateDomainBasedOnCompanyName::class,
                     // Jobs\SeedDatabase::class,
 
                     // Your own jobs to prepare the tenant.
@@ -101,7 +108,8 @@ class TenancyServiceProvider extends ServiceProvider
     {
         $this->bootEvents();
         $this->mapRoutes();
-
+        $this->callableMethodsIfInTenantDomain();
+        TenantAssetsController::$tenancyMiddleware = Middleware\InitializeTenancyBySubdomain::class;
         $this->makeTenancyMiddlewareHighestPriority();
     }
 
@@ -121,7 +129,10 @@ class TenancyServiceProvider extends ServiceProvider
     protected function mapRoutes()
     {
         $this->app->booted(function () {
-            if (file_exists(base_path('routes/tenant.php'))) {
+            if (isCentralDomain()) {
+                Route::namespace(static::$controllerNamespace)
+                    ->group(base_path('routes/web.php'));
+            } else {
                 Route::namespace(static::$controllerNamespace)
                     ->group(base_path('routes/tenant.php'));
             }
@@ -144,5 +155,26 @@ class TenancyServiceProvider extends ServiceProvider
         foreach (array_reverse($tenancyMiddleware) as $middleware) {
             $this->app[\Illuminate\Contracts\Http\Kernel::class]->prependToMiddlewarePriority($middleware);
         }
+    }
+
+    private function callableMethodsIfInTenantDomain(): void
+    {
+        if (! isCentralDomain()) {
+            $this->setMiddlewareForLiveWire();
+        }
+    }
+
+    private function setMiddlewareForLiveWire(): void
+    {
+        Livewire::setUpdateRoute(function ($handle) {
+            return Route::post('/livewire/update', $handle)
+                ->middleware(
+                    'web',
+                    Middleware\InitializeTenancyBySubdomain::class,
+                );
+        });
+
+        // specify the right identification middleware
+        FilePreviewController::$middleware = ['web', Middleware\InitializeTenancyBySubdomain::class];
     }
 }
