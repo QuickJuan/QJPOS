@@ -33,7 +33,7 @@ return [
     |
     */
 
-    'middleware' => ['web', InitializeTenancyByDomain::class,  PreventAccessFromCentralDomains::class,],
+    'middleware' => ['web', InitializeTenancyBySubdomain::class,  PreventAccessFromCentralDomains::class,],
 
     'auth_session' => AuthenticateSession::class,
 
