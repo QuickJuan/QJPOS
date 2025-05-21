@@ -3,6 +3,7 @@
 use Laravel\Jetstream\Features;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Laravel\Jetstream\Http\Middleware\AuthenticateSession;
+use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromTenantDomains;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 

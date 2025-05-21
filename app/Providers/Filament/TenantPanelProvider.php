@@ -68,7 +68,7 @@ class TenantPanelProvider extends PanelProvider
         if (!isCentralDomain()) {
             return array_merge($defaultMiddlewares, [
                 PreventAccessFromCentralDomains::class,
-                InitializeTenancyBySubdomain::class,
+                InitializeTenancyByDomain::class,
             ]);
         }
 

@@ -24,9 +24,8 @@ use Stancl\Tenancy\Middleware\InitializeTenancyByDomainOrSubdomain;
 
 Route::middleware([
     'web',
+    InitializeTenancyByDomain::class,
     PreventAccessFromCentralDomains::class,
-    InitializeTenancyBySubdomain::class,
-
 ])->group(function () {
 
     Route::middleware(['auth:sanctum'])
