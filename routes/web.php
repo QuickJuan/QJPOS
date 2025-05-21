@@ -17,14 +17,14 @@ foreach (config('tenancy.central_domains') as $domain) {
         //         return redirect("/central");
         //     })->name('login');
 
-        Route::get('/dashboard', function () {
-            return "central dashboard";
-        })->name('central.dashboard');
+        // Route::get('/dashboard', function () {
+        //     return "central dashboard";
+        // })->name('central.dashboard');
 
         // Optional: redirect /admin to login if not using Filament
-        Route::get('/admin', function () {
-            return redirect("/central");
-        })->name('admin.login');
+        // Route::get('/admin', function () {
+        //     return redirect("/central");
+        // })->name('admin.login');
 
 
     });

@@ -6,7 +6,9 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
+use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
+use Stancl\Tenancy\Middleware\InitializeTenancyByDomainOrSubdomain;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,7 +24,7 @@ use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 
 Route::middleware([
     'web',
-    InitializeTenancyByDomain::class,
+    InitializeTenancyBySubdomain::class,
     PreventAccessFromCentralDomains::class,
 ])->group(function () {
 
@@ -41,7 +43,7 @@ Route::middleware([
             //         'tenants' => auth()->user()->tenants,
             //     ]);
             // })->name('profile.show');
-            
+
 
         });
 
@@ -61,10 +63,10 @@ Route::middleware([
                 'tenant' => tenant(),
             ]);
         })->name('landing');
-   
 
-    
-        
+
+
+
 
 
     // Route::get('/admin', function () {
