@@ -4,19 +4,14 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
-use Livewire\Livewire;
-use Stancl\Tenancy\Jobs;
-use Stancl\Tenancy\Events;
-use Stancl\Tenancy\Listeners;
-use Stancl\Tenancy\Middleware;
-use Stancl\JobPipeline\JobPipeline;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
-use Middleware\InitializeTenancyByDomain;
-use Middleware\InitializeTenancyByDomainOrSubdomain;
-use Stancl\Tenancy\Controllers\TenantAssetsController;
-use Livewire\Features\SupportFileUploads\FilePreviewController;
+use Stancl\JobPipeline\JobPipeline;
+use Stancl\Tenancy\Events;
+use Stancl\Tenancy\Jobs;
+use Stancl\Tenancy\Listeners;
+use Stancl\Tenancy\Middleware;
 
 class TenancyServiceProvider extends ServiceProvider
 {
@@ -106,8 +101,7 @@ class TenancyServiceProvider extends ServiceProvider
     {
         $this->bootEvents();
         $this->mapRoutes();
-        // Ensure Filament asset requests are tenant-aware
-        \Stancl\Tenancy\Controllers\TenantAssetsController::$tenancyMiddleware = InitializeTenancyByDomain::class;
+
         $this->makeTenancyMiddlewareHighestPriority();
     }
 
@@ -150,26 +144,5 @@ class TenancyServiceProvider extends ServiceProvider
         foreach (array_reverse($tenancyMiddleware) as $middleware) {
             $this->app[\Illuminate\Contracts\Http\Kernel::class]->prependToMiddlewarePriority($middleware);
         }
-    }
-
-    private function callableMethodsIfInTenantDomain(): void
-    {
-        if (! isCentralDomain()) {
-            $this->setMiddlewareForLiveWire();
-        }
-    }
-
-    private function setMiddlewareForLiveWire(): void
-    {
-        Livewire::setUpdateRoute(function ($handle) {
-            return Route::post('/livewire/update', $handle)
-                ->middleware(
-                    'web',
-                    Middleware\InitializeTenancyBySubdomain::class,
-                );
-        });
-
-        // specify the right identification middleware
-        FilePreviewController::$middleware = ['web', InitializeTenancyByDomainOrSubdomain::class];
     }
 }
