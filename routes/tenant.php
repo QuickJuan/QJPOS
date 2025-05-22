@@ -5,6 +5,8 @@ declare(strict_types=1);
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use Laravel\Fortify\Http\Controllers\NewPasswordController;
+use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
@@ -57,19 +59,17 @@ Route::middleware([
             ->middleware('auth')
             ->name('logout');
 
+        Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])->name('password.request');
+
+        Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])->name('password.email');
+
+        Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])->name('password.reset');
+        Route::post('reset-password', [NewPasswordController::class, 'store'])->name('password.update');
+
         //public landing page
         Route::get('/', function () {
             return Inertia::render('Landing', [
                 'tenant' => tenant(),
             ]);
         })->name('landing');
-
-
-
-
-
-
-    // Route::get('/admin', function () {
-    //     return 'ADMIN The id of the current tenant is ' . tenant('id');
-    // })->name('admin.dashboard');
 });

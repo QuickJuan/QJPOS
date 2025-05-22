@@ -9,6 +9,7 @@ use App\Tenancy\CreateFrameworkDirectoriesForTenant;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 use Livewire\Features\SupportFileUploads\FilePreviewController;
 use Livewire\Livewire;
 use Stancl\JobPipeline\JobPipeline;

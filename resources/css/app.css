@@ -5,3 +5,47 @@
 [x-cloak] {
     display: none;
 }
+
+.container {
+    @apply mx-auto max-w-[1440px];;
+}
+
+.default-padding {
+    @apply px-6 md:px-12
+}
+
+.extra-small-text {
+    @apply text-[10px] lg:text-xs;
+}
+
+.small-text {
+    @apply text-xs lg:text-sm;
+}
+
+.normal-text {
+    @apply text-sm lg:text-base;
+}
+
+.large-text {
+    @apply text-base lg:text-lg;
+}
+
+.extra-large-text {
+    @apply text-lg lg:text-xl;
+}
+
+.extra-large-2-text {
+    @apply text-xl lg:text-2xl;
+}
+
+.extra-large-3-text {
+    @apply text-2xl lg:text-3xl;
+}
+
+.extra-large-4-text {
+    @apply text-3xl lg:text-4xl;
+}
+
+.extra-large-5-text {
+    @apply text-4xl lg:text-5xl;
+}
