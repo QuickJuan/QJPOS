@@ -1,5 +1,6 @@
 <?php
 
+use Inertia\Inertia;
 use Illuminate\Support\Facades\Route;
 use Filament\Http\Middleware\Authenticate;
 use App\Http\Middleware\BlockTenantAccessToCentral;
@@ -10,7 +11,9 @@ foreach (config('tenancy.central_domains') as $domain) {
 
         // Central home route
         Route::get('/', function () {
-            return "central domain";
+            return Inertia::render('Welcome', [
+                'table' => 'Welcome to the Central Domain',
+            ]);
         })->name('central.home');
 
         // Route::get('/login', function () {
@@ -25,6 +28,7 @@ foreach (config('tenancy.central_domains') as $domain) {
         // Route::get('/admin', function () {
         //     return redirect("/central");
         // })->name('admin.login');
+        
 
 
     });
