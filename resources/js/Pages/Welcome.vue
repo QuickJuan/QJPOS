@@ -11,10 +11,27 @@
             >
                 {{ designMode ? "Exit Design Mode" : "Enter Design Mode" }}
             </button>
+            <button class="btn bg-green-500 hover:bg-green-600" @click="zoomIn">
+                Zoom In
+            </button>
+            <button
+                class="btn bg-yellow-500 hover:bg-yellow-600"
+                @click="zoomOut"
+            >
+                Zoom Out
+            </button>
         </div>
 
         <!-- Floor canvas -->
-        <div class="relative" :style="{ width: '200%', height: '200%' }">
+        <div
+            class="relative transform origin-top-left transition-transform duration-200"
+            :class="{ floor: designMode }"
+            :style="{
+                width: '2000px',
+                height: '1000px',
+                transform: `scale(${zoomLevel})`,
+            }"
+        >
             <div
                 v-for="(table, index) in tables"
                 :key="table.id"
@@ -45,6 +62,20 @@ import { ref, onMounted } from "vue";
 
 const tables = ref([]);
 const designMode = ref(true);
+
+const GRID_SIZE = 20;
+
+const snapToGrid = (value) => Math.round(value / GRID_SIZE) * GRID_SIZE;
+
+const zoomLevel = ref(1);
+
+const zoomIn = () => {
+    zoomLevel.value = Math.min(zoomLevel.value + 0.1, 2); // max 2x
+};
+
+const zoomOut = () => {
+    zoomLevel.value = Math.max(zoomLevel.value - 0.1, 0.5); // min 0.5x
+};
 
 // Add a new table
 const addTable = (chairs) => {
@@ -110,25 +141,22 @@ const onDrag = (event) => {
     if (!dragInfo.dragging) return;
 
     const table = tables.value.find((t) => t.id === dragInfo.tableId);
-    const newX = event.clientX - dragInfo.offsetX;
-    const newY = event.clientY - dragInfo.offsetY;
 
-    const tempTable = {
-        ...table,
-        x: newX,
-        y: newY,
-    };
+    let newX = event.clientX - dragInfo.offsetX;
+    let newY = event.clientY - dragInfo.offsetY;
 
-    // Check collision
+    // Adjust for zoom level
+    newX = newX / zoomLevel.value;
+    newY = newY / zoomLevel.value;
+
+    // Snap to grid
+    newX = snapToGrid(newX);
+    newY = snapToGrid(newY);
+
+    const tempTable = { ...table, x: newX, y: newY, width: 100, height: 80 };
+
     const collides = tables.value.some((other) => {
         if (other.id === table.id) return false;
-
-        // Set width/height (or estimate if missing)
-        tempTable.width = 100;
-        tempTable.height = 80;
-        other.width = 100;
-        other.height = 80;
-
         return isOverlapping(tempTable, other);
     });
 
@@ -161,5 +189,11 @@ const isOverlapping = (tableA, tableB) => {
 <style scoped>
 .btn {
     @apply px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700;
+}
+
+.floor {
+    background-image: linear-gradient(#e5e7eb 1px, transparent 1px),
+        linear-gradient(to right, #e5e7eb 1px, transparent 1px);
+    background-size: 20px 20px;
 }
 </style>
