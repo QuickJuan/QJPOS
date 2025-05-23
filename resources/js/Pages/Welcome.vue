@@ -1,10 +1,16 @@
 <template>
     <div class="relative w-full h-screen bg-gray-100">
         <!-- Add buttons to create tables -->
-        <div class="absolute top-4 left-4 z-50 space-x-2">
+        <div class="z-50 space-x-2">
             <button @click="addTable(2)" class="btn">Add 2 Chairs</button>
             <button @click="addTable(4)" class="btn">Add 4 Chairs</button>
             <button @click="addTable(6)" class="btn">Add 6 Chairs</button>
+            <button
+                class="px-4 py-2 mb-4 rounded bg-indigo-500 text-white hover:bg-indigo-600"
+                @click="designMode = !designMode"
+            >
+                {{ designMode ? "Exit Design Mode" : "Enter Design Mode" }}
+            </button>
         </div>
 
         <!-- Render draggable tables -->
@@ -12,7 +18,13 @@
         <div
             v-for="table in tables"
             :key="table.id"
-            class="absolute bg-teal-300 rounded shadow text-center cursor-move select-none"
+            class="absolute bg-teal-300 rounded shadow text-center select-none"
+            :class="[
+                'absolute rounded shadow text-center select-none',
+                designMode
+                    ? 'cursor-move bg-teal-300'
+                    : 'cursor-pointer bg-gray-200',
+            ]"
             :style="{
                 left: `${table.x}px`,
                 top: `${table.y}px`,
@@ -32,6 +44,7 @@
 import { ref, onMounted } from "vue";
 
 const tables = ref([]);
+const designMode = ref(true);
 
 // Add a new table
 const addTable = (chairs) => {
@@ -73,6 +86,8 @@ let dragInfo = {
 };
 
 const startDrag = (event, id) => {
+    if (!designMode.value) return; //
+
     const table = tables.value.find((t) => t.id === id);
     dragInfo.dragging = true;
     dragInfo.tableId = id;
