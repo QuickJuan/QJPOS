@@ -12,6 +12,16 @@ class Product extends Model  implements HasMedia
     //
     use InteractsWithMedia;
 
+    protected $fillable = [
+        'uuid',
+        'name',
+        'receipt_alias',
+        'description',
+        'category_id',
+        'brand_id',
+    ];
+
+
 
     public function registerMediaCollections(): void
     {
@@ -39,7 +49,7 @@ class Product extends Model  implements HasMedia
         return $this->getFirstMediaUrl('featured_image');
     }
 
-    
+
     public function getProductImagesUrlsAttribute()
     {
         return $this->getMedia('product_images')->map(function ($media) {

@@ -24,6 +24,11 @@ class ProductResource extends Resource
     {
         return $form
             ->schema([
+                Forms\Components\TextInput::make('uuid')
+                    ->required()
+                    ->maxLength(150)
+                    ->label('UUID'),
+
                 Forms\Components\TextInput::make('name')
                     ->required()
                     ->maxLength(150)
@@ -66,11 +71,6 @@ class ProductResource extends Resource
                             ->maxLength(255)
                             ->label('Brand Name'),
                     ]),
-
-                Forms\Components\TextInput::make('price')
-                    ->numeric()
-                    ->required()
-                    ->label('Price'),
 
                 SpatieMediaLibraryFileUpload::make('featured_image')
                     ->collection('featured_image')

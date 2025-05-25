@@ -49,28 +49,28 @@ class CreateDefaultTenantUser
         $tenant->run(function ($tenant) {
             $storage_path = storage_path();
 
-            mkdir("$storage_path/app",0775, true);
+            mkdir("$storage_path/app",0777, true);
 //            file_put_contents("$storage_path/app/.gitignore", "*\n!.gitignore");
 
-            mkdir("$storage_path/app/public",0775, true);
+            mkdir("$storage_path/app/public",0777, true);
 //            file_put_contents("$storage_path/app/public/.gitignore", "*\n!.gitignore");
 
-            mkdir("$storage_path/framework",0775, true);
+            mkdir("$storage_path/framework",0777, true);
 //            file_put_contents("$storage_path/framework/.gitignore", "*\n!.gitignore");
 
-            mkdir("$storage_path/framework/sessions", 0775, true);
+            mkdir("$storage_path/framework/sessions", 0777, true);
 //            file_put_contents("$storage_path/framework/sessions/.gitignore", "*\n!.gitignore");
 
-            mkdir("$storage_path/framework/testing", 0775, true);
+            mkdir("$storage_path/framework/testing", 0777, true);
 //            file_put_contents("$storage_path/framework/testing/.gitignore", "*\n!.gitignore");
 
-            mkdir("$storage_path/framework/views", 0775, true);
+            mkdir("$storage_path/framework/views", 0777, true);
 //            file_put_contents("$storage_path/framework/views/.gitignore", "*\n!.gitignore");
 
-            mkdir("$storage_path/framework/cache", 0775, true);
+            mkdir("$storage_path/framework/cache", 0777, true);
 //            file_put_contents("$storage_path/framework/cache/.gitignore", "*\n!.gitignore");
 
-            mkdir("$storage_path/logs", 0775, true);
+            mkdir("$storage_path/logs", 0777, true);
 //            file_put_contents("$storage_path/logs/.gitignore", "*\n!.gitignore");
         });
 
