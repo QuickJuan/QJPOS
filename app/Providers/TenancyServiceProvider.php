@@ -33,8 +33,8 @@ class TenancyServiceProvider extends ServiceProvider
                 JobPipeline::make([
                     Jobs\CreateDatabase::class,
                     Jobs\MigrateDatabase::class,
-                    CreateFrameworkDirectoriesForTenant::class,
-                    CreateDomainBasedOnCompanyName::class,
+                    // CreateFrameworkDirectoriesForTenant::class,
+                    // CreateDomainBasedOnCompanyName::class,
                     // Jobs\SeedDatabase::class,
 
                     // Your own jobs to prepare the tenant.
