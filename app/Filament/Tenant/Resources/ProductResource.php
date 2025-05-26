@@ -8,6 +8,7 @@ use Filament\Forms\Form;
 use Filament\Tables\Table;
 use Filament\Resources\Resource;
 use Filament\Forms\Components\Select;
+use Filament\Tables\Columns\TextColumn;
 use App\Filament\Tenant\Resources\ProductResource\Pages;
 use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 use App\Filament\Tenant\Resources\ProductResource\RelationManagers;
@@ -95,7 +96,26 @@ class ProductResource extends Resource
     {
         return $table
             ->columns([
-                //
+                TextColumn::make('id')
+                    ->label('ID')
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('name')
+                    ->label('Product Name')
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('receipt_alias')
+                    ->label('Receipt Name')
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('category.name')
+                    ->label('Category')
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('brand.name')
+                    ->label('Brand')
+                    ->searchable()
+                    ->sortable(),
             ])
             ->filters([
                 //

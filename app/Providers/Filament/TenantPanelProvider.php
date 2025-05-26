@@ -54,22 +54,24 @@ class TenantPanelProvider extends PanelProvider
     private function registerMiddlewares(): array
     {
         $defaultMiddlewares = [
+            PreventAccessFromCentralDomains::class,
+            InitializeTenancyBySubdomain::class,
             EncryptCookies::class,
             AddQueuedCookiesToResponse::class,
             StartSession::class,
             AuthenticateSession::class,
             ShareErrorsFromSession::class,
-            VerifyCsrfToken::class,
             SubstituteBindings::class,
             DisableBladeIconComponents::class,
             DispatchServingFilamentEvent::class,
+            VerifyCsrfToken::class,
         ];
 
         if (!isCentralDomain()) {
-            return array_merge($defaultMiddlewares, [
-                PreventAccessFromCentralDomains::class,
-                InitializeTenancyBySubdomain::class,
-            ]);
+            // return array_merge($defaultMiddlewares, [
+            //     PreventAccessFromCentralDomains::class,
+            //     InitializeTenancyBySubdomain::class,
+            // ]);
         }
 
         return $defaultMiddlewares;
