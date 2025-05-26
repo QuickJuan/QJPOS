@@ -1,23 +1,20 @@
 <?php
-
 namespace App\Filament\Tenant\Resources;
 
-use App\Filament\Tenant\Resources\BrandResource\Pages;
-use App\Filament\Tenant\Resources\BrandResource\RelationManagers;
-use App\Models\Brand;
-use Filament\Forms;
+use App\Filament\Tenant\Resources\ModifierResource\Pages;
+use App\Models\Modifier;
+use Filament\Forms\Components\KeyValue;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
-class BrandResource extends Resource
+class ModifierResource extends Resource
 {
-    protected static ?string $model = Brand::class;
+    protected static ?string $model = Modifier::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
@@ -25,7 +22,15 @@ class BrandResource extends Resource
     {
         return $form
             ->schema([
-                TextInput::make('name'),
+                Select::make('product_id')
+                    ->relationship('product', 'name')
+                    ->required(),
+
+                TextInput::make('name')
+                    ->required()
+                    ->rules('required'),
+
+                KeyValue::make('list'),
             ]);
     }
 
@@ -33,7 +38,13 @@ class BrandResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('name'),
+                TextColumn::make('product.name')
+                    ->searchable()
+                    ->sortable(),
+
+                TextColumn::make('name')
+                    ->searchable()
+                    ->sortable(),
             ])
             ->filters([
                 //
@@ -58,9 +69,9 @@ class BrandResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListBrands::route('/'),
-            'create' => Pages\CreateBrand::route('/create'),
-            'edit' => Pages\EditBrand::route('/{record}/edit'),
+            'index'  => Pages\ListModifiers::route('/'),
+            'create' => Pages\CreateModifier::route('/create'),
+            'edit'   => Pages\EditModifier::route('/{record}/edit'),
         ];
     }
 }

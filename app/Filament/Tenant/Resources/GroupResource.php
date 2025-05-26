@@ -1,23 +1,19 @@
 <?php
-
 namespace App\Filament\Tenant\Resources;
 
-use App\Filament\Tenant\Resources\BrandResource\Pages;
-use App\Filament\Tenant\Resources\BrandResource\RelationManagers;
-use App\Models\Brand;
-use Filament\Forms;
+use App\Filament\Tenant\Resources\GroupResource\Pages;
+use App\Models\Group;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
-class BrandResource extends Resource
+class GroupResource extends Resource
 {
-    protected static ?string $model = Brand::class;
+    protected static ?string $model = Group::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
@@ -25,7 +21,16 @@ class BrandResource extends Resource
     {
         return $form
             ->schema([
-                TextInput::make('name'),
+                TextInput::make('name')
+                    ->required()
+                    ->rules('required'),
+
+                // SpatieMediaLibraryFileUpload::make('featured_image')
+                //     ->collection('featured_image')
+
+                Select::make('products')
+                    ->relationship('products', 'name')
+                    ->multiple(),
             ]);
     }
 
@@ -33,7 +38,9 @@ class BrandResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('name'),
+                TextColumn::make('name')
+                    ->sortable()
+                    ->searchable(),
             ])
             ->filters([
                 //
@@ -58,9 +65,9 @@ class BrandResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListBrands::route('/'),
-            'create' => Pages\CreateBrand::route('/create'),
-            'edit' => Pages\EditBrand::route('/{record}/edit'),
+            'index'  => Pages\ListGroups::route('/'),
+            'create' => Pages\CreateGroup::route('/create'),
+            'edit'   => Pages\EditGroup::route('/{record}/edit'),
         ];
     }
 }
