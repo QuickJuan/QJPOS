@@ -2,14 +2,15 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Spatie\MediaLibrary\HasMedia;
-use Spatie\MediaLibrary\InteractsWithMedia;
 use App\Helper\MediaPathGenerator;
+use Illuminate\Database\Eloquent\Model;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Product extends Model  implements HasMedia
 {
-    //
     use InteractsWithMedia;
 
     protected $fillable = [
@@ -20,8 +21,6 @@ class Product extends Model  implements HasMedia
         'category_id',
         'brand_id',
     ];
-
-
 
     public function registerMediaCollections(): void
     {
@@ -43,17 +42,25 @@ class Product extends Model  implements HasMedia
         return $this->belongsTo(Brand::class);
     }
 
-
     public function getFeaturedImageUrlAttribute()
     {
         return $this->getFirstMediaUrl('featured_image');
     }
-
 
     public function getProductImagesUrlsAttribute()
     {
         return $this->getMedia('product_images')->map(function ($media) {
             return $media->getUrl();
         })->toArray();
+    }
+
+    public function groups(): BelongsToMany
+    {
+        return $this->belongsToMany(Group::class);
+    }
+
+    public function products(): HasMany
+    {
+        return $this->hasMany(Product::class);
     }
 }

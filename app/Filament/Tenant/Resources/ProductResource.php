@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Filament\Tenant\Resources;
 
 use Filament\Forms;
@@ -8,8 +7,7 @@ use App\Models\Product;
 use Filament\Forms\Form;
 use Filament\Tables\Table;
 use Filament\Resources\Resource;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Filament\Forms\Components\Select;
 use App\Filament\Tenant\Resources\ProductResource\Pages;
 use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 use App\Filament\Tenant\Resources\ProductResource\RelationManagers;
@@ -33,12 +31,12 @@ class ProductResource extends Resource
                     ->required()
                     ->maxLength(150)
                     ->label('Product Name'),
-                
+
                 Forms\Components\TextInput::make('receipt_alias')
                     ->required()
                     ->maxLength(150)
                     ->label('Receipt Name'),
-                
+
                 Forms\Components\RichEditor::make('description')
                     ->maxLength(500)
                     ->ColumnSpan(2)
@@ -71,6 +69,10 @@ class ProductResource extends Resource
                             ->maxLength(255)
                             ->label('Brand Name'),
                     ]),
+
+                Select::make('groups')
+                    ->relationship('groups', 'name')
+                    ->multiple(),
 
                 SpatieMediaLibraryFileUpload::make('featured_image')
                     ->collection('featured_image')
@@ -120,9 +122,9 @@ class ProductResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListProducts::route('/'),
+            'index'  => Pages\ListProducts::route('/'),
             'create' => Pages\CreateProduct::route('/create'),
-            'edit' => Pages\EditProduct::route('/{record}/edit'),
+            'edit'   => Pages\EditProduct::route('/{record}/edit'),
         ];
     }
 }
