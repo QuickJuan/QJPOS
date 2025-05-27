@@ -23,7 +23,7 @@ return new class extends Migration
                 ->comment('Date and time of the reservation');
             $table->datetime('reservation_to')
                 ->comment('End date and time of the reservation');
-            $table->string('status', 15)->default('active')
+            $table->string('status', 15)->default('Active')
                 ->comment('Status of the reservation, e.g., active, arrived, cancelled');
             $table->text('notes')->nullable()
                 ->comment('Additional notes or comments regarding the reservation');

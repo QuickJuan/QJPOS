@@ -2,6 +2,7 @@
 
 namespace App\Filament\Tenant\Resources;
 
+use App\Enums\TableReservationStatusType;
 use App\Filament\Tenant\Resources\TableReservationResource\Pages;
 use App\Filament\Tenant\Resources\TableReservationResource\RelationManagers;
 use App\Models\TableReservation;
@@ -23,7 +24,56 @@ class TableReservationResource extends Resource
     {
         return $form
             ->schema([
-                //
+                Forms\Components\Select::make('table_room_id')
+                    ->label('Table Room')
+                    ->relationship('tableRoom', 'name')
+                    ->required()
+                    ->searchable()
+                    ->preload(),
+
+                Forms\Components\Select::make('user_id')
+                    ->label('User')
+                    ->relationship('user', 'name')
+                    ->required()
+                    ->searchable()
+                    ->preload(),
+
+                Forms\Components\Section::make('Reservation Details')
+                    ->columnSpan(1)
+                    ->schema([
+                        Forms\Components\DateTimePicker::make('reservation_from')
+                            ->label('Reservation From')
+                            ->required(),
+
+                        Forms\Components\DateTimePicker::make('reservation_to')
+                            ->label('Reservation To')
+                            ->required(),
+
+                        Forms\Components\Select::make('status')
+                            ->label('Status')
+                            ->options(TableReservationStatusType::filamentOptions())
+                            ->default(TableReservationStatusType::ACTIVE->value),
+                    ]),
+
+                Forms\Components\Section::make('Contact Information')
+                    ->columnSpan(1)
+                    ->schema([
+                        Forms\Components\TextInput::make('pax')
+                            ->label('Number of Pax')
+                            ->numeric()
+                            ->minValue(1)
+                            ->maxValue(100)
+                            ->default(1),
+
+                        Forms\Components\TextInput::make('contact_phone')
+                            ->label('Contact Phone'),
+
+                        Forms\Components\TextInput::make('contact_email')
+                            ->label('Contact Email'),
+
+                        Forms\Components\Textarea::make('notes')
+                            ->label('Notes'),
+                    ]),
             ]);
     }
 
@@ -31,7 +81,42 @@ class TableReservationResource extends Resource
     {
         return $table
             ->columns([
-                //
+                Tables\Columns\TextColumn::make('tableRoom.name')
+                    ->label('Table Room')
+                    ->searchable()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('user.name')
+                    ->label('User')
+                    ->searchable()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('reservation_from')
+                    ->label('Reservation From')
+                    ->dateTime()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('reservation_to')
+                    ->label('Reservation To')
+                    ->dateTime()
+                    ->sortable(),
+
+                Tables\Columns\SelectColumn::make('status')
+                    ->options(TableReservationStatusType::filamentOptions())
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('pax')
+                    ->label('Number of Pax'),
+
+                Tables\Columns\TextColumn::make('contact_phone')
+                    ->label('Contact Phone'),
+
+                Tables\Columns\TextColumn::make('contact_email')
+                    ->label('Contact Email'),
+
+                Tables\Columns\TextColumn::make('notes')
+                    ->limit(50)
+                    ->wrap(),
             ])
             ->filters([
                 //

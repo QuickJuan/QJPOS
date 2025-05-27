@@ -2,6 +2,8 @@
 
 namespace App\Traits;
 
+use Illuminate\Support\Str;
+
 trait EnumsWithOptions
 {
     public static function toOptions(): array
@@ -48,5 +50,16 @@ trait EnumsWithOptions
             array_column(self::cases(), 'name'),
             array_column(self::cases(), 'value')
         );
+    }
+
+    public static function filamentOptions(): array
+    {
+        $options = [];
+
+        foreach (self::cases() as $case) {
+            $options[$case->value] = Str::title($case->value);
+        }
+
+        return $options;
     }
 }
