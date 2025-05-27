@@ -35,11 +35,11 @@
             <div
                 v-for="(table, index) in tables"
                 :key="table.id"
-                class="absolute bg-teal-300 rounded shadow text-center select-none"
+                class="absolute text-center select-none"
                 :class="[
                     designMode
-                        ? 'cursor-move bg-teal-300'
-                        : 'cursor-pointer bg-gray-200',
+                        ? 'cursor-move border-2 bg-gray-200'
+                        : 'cursor-pointer ',
                 ]"
                 :style="{
                     left: `${table.x}px`,
@@ -50,8 +50,14 @@
                 }"
                 @mousedown="startDrag($event, table.id)"
             >
-                <p class="text-sm font-bold">Table #{{ index + 1 }}</p>
-                <p class="text-xs text-gray-500">Chairs: {{ table.chairs }}</p>
+                <!-- <p class="text-sm font-bold">Table #{{ index + 1 }}</p>
+                <p class="text-xs text-gray-500">Chairs: {{ table.chairs }}</p> -->
+                <img
+                    src="/images/round-6.png"
+                    alt="Table Image"
+                    class="w-auto h-full transparent-blend mx-auto"
+                    @mousedown="startDrag($event, table.id)"
+                />
             </div>
         </div>
     </div>
@@ -63,7 +69,7 @@ import { ref, onMounted } from "vue";
 const tables = ref([]);
 const designMode = ref(true);
 
-const GRID_SIZE = 20;
+const GRID_SIZE = 5;
 
 const snapToGrid = (value) => Math.round(value / GRID_SIZE) * GRID_SIZE;
 
@@ -195,5 +201,9 @@ const isOverlapping = (tableA, tableB) => {
     background-image: linear-gradient(#e5e7eb 1px, transparent 1px),
         linear-gradient(to right, #e5e7eb 1px, transparent 1px);
     background-size: 20px 20px;
+}
+
+.transparent-blend {
+    mix-blend-mode: multiply;
 }
 </style>
