@@ -25,11 +25,11 @@ class Product extends Model  implements HasMedia
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('featured_image')
-            ->singleFile()
-            ->usePathGenerator(new MediaPathGenerator());
+            ->singleFile();
+            // ->usePathGenerator(new MediaPathGenerator());
 
-        $this->addMediaCollection('product_images')
-            ->usePathGenerator(new MediaPathGenerator());
+        $this->addMediaCollection('product_images');
+            // ->usePathGenerator(new MediaPathGenerator());
     }
 
     public function category()

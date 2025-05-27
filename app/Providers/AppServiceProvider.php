@@ -6,6 +6,7 @@ use App\Models\User;
 use Laravel\Fortify\Fortify;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Config;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,6 +23,16 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        
+        // Dynamically add current host to sanctum.stateful for dynamic tenants
+        if (app()->environment('local', 'development', 'production')) {
+            $host = request()->getHost();
+            $stateful = Config::get('sanctum.stateful', []);
+            if (is_string($stateful)) {
+                $stateful = explode(',', $stateful);
+            }
+            $stateful[] = $host;
+            $stateful[] = ltrim($host, '.');
+            Config::set('sanctum.stateful', array_unique($stateful));
+        }
     }
 }
