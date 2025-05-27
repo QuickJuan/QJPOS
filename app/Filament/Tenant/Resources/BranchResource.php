@@ -137,4 +137,14 @@ class BranchResource extends Resource
             'edit' => Pages\EditBranch::route('/{record}/edit'),
         ];
     }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return 'Store';
+    }
+
+    public static function getNavigationSort(): ?int
+    {
+        return 1; // Second in group
+    }
 }

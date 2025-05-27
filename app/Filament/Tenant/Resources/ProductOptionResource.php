@@ -98,4 +98,14 @@ class ProductOptionResource extends Resource
             'edit'   => Pages\EditProductOption::route('/{record}/edit'),
         ];
     }
+    
+    public static function getNavigationGroup(): ?string
+    {
+        return 'Products';
+    }
+
+    public static function getNavigationSort(): ?int
+    {
+        return 6; // Second in group
+    }
 }

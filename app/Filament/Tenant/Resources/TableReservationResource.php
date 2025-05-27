@@ -155,4 +155,14 @@ class TableReservationResource extends Resource
             'edit' => Pages\EditTableReservation::route('/{record}/edit'),
         ];
     }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return 'Table / Rooms';
+    }
+
+    public static function getNavigationSort(): ?int
+    {
+        return 2; // Second in group
+    }
 }

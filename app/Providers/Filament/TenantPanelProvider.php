@@ -47,6 +47,12 @@ class TenantPanelProvider extends PanelProvider
             ->login()
             ->authMiddleware([
                 Authenticate::class,
+            ])
+            ->navigationGroups([
+                'Store',
+                'Products',
+                'Table / Rooms'
+                // Add more group names as needed
             ]);
     }
 

@@ -115,4 +115,14 @@ class OptionItemResource extends Resource
             'edit'   => Pages\EditOptionItem::route('/{record}/edit'),
         ];
     }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return 'Products';
+    }
+
+    public static function getNavigationSort(): ?int
+    {
+        return 7; // Second in group
+    }
 }
