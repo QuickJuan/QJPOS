@@ -100,4 +100,14 @@ class ProductPackagingResource extends Resource
             'edit'   => Pages\EditProductPackaging::route('/{record}/edit'),
         ];
     }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return 'Products';
+    }
+
+    public static function getNavigationSort(): ?int
+    {
+        return 5; // Third in group
+    }
 }

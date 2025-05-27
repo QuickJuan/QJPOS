@@ -84,4 +84,14 @@ class ModifierResource extends Resource
             'edit'   => Pages\EditModifier::route('/{record}/edit'),
         ];
     }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return 'Products';
+    }
+
+    public static function getNavigationSort(): ?int
+    {
+        return 8; // Second in group
+    }
 }

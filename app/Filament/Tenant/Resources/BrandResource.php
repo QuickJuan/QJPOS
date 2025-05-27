@@ -63,4 +63,14 @@ class BrandResource extends Resource
             'edit' => Pages\EditBrand::route('/{record}/edit'),
         ];
     }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return 'Products';
+    }
+
+    public static function getNavigationSort(): ?int
+    {
+        return 2; // Second in group
+    }
 }

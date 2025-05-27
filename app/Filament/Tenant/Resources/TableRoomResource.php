@@ -180,4 +180,14 @@ class TableRoomResource extends Resource
             'edit' => Pages\EditTableRoom::route('/{record}/edit'),
         ];
     }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return 'Table / Rooms';
+    }
+
+    public static function getNavigationSort(): ?int
+    {
+        return 1; // Second in group
+    }
 }
