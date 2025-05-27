@@ -2,12 +2,17 @@
 
 namespace App\Models;
 
+use Spatie\MediaLibrary\HasMedia;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Spatie\MediaLibrary\InteractsWithMedia;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class TableRoom extends Model
+class TableRoom extends Model  implements HasMedia
 {
+
+    use InteractsWithMedia;
+    
     protected $fillable = [
         'branch_id',
         'name',
@@ -38,4 +43,18 @@ class TableRoom extends Model
     {
         return $this->belongsTo(TableRoom::class, 'merge_to');
     }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('featured_image')
+            ->singleFile();
+            // ->usePathGenerator(new MediaPathGenerator());
+    }
+
+    public function getFeaturedImageUrl()
+    {
+        return $this->getFirstMediaUrl('featured_image');
+    }
+
+
 }

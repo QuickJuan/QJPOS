@@ -22,4 +22,5 @@ class OptionItem extends Model
     {
         return $this->belongsTo(ProductPackaging::class);
     }
+
 }

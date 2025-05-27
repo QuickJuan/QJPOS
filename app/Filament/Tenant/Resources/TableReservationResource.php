@@ -58,6 +58,11 @@ class TableReservationResource extends Resource
                 Forms\Components\Section::make('Contact Information')
                     ->columnSpan(1)
                     ->schema([
+                        Forms\Components\TextInput::make('name')
+                            ->label('Customer Name')
+                            ->required()
+                            ->maxLength(150),
+
                         Forms\Components\TextInput::make('pax')
                             ->label('Number of Pax')
                             ->numeric()
@@ -66,9 +71,13 @@ class TableReservationResource extends Resource
                             ->default(1),
 
                         Forms\Components\TextInput::make('contact_phone')
+                            ->tel()
+                            ->maxLength(20)
                             ->label('Contact Phone'),
 
                         Forms\Components\TextInput::make('contact_email')
+                            ->email()
+                            ->maxLength(150)
                             ->label('Contact Email'),
 
                         Forms\Components\Textarea::make('notes')
