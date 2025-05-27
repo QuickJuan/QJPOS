@@ -12,6 +12,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
 use App\Filament\Tenant\Resources\ProductOptionResource\Pages;
+use App\Filament\Tenant\Resources\ProductOptionResource\RelationManagers\OptionItemsRelationManager;
 
 class ProductOptionResource extends Resource
 {
@@ -25,19 +26,22 @@ class ProductOptionResource extends Resource
             ->schema([
                 Select::make('product_packaging_id')
                     ->label('Product Packaging')
-                    ->relationship('productPackaging', 'unit_measure'),
+                    ->relationship('productPackaging', 'unit_measure')
+                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->product->name . ' - ' . $record->unit_measure),
 
                 TextInput::make('name')
-                    ->label('Name')
+                    ->label('Option Name')
+                    ->helperText('This is the name of the product option. sample Drinks, Side dish')
                     ->required(),
 
                 TextInput::make('qty')
-                    ->label('Quantity')
+                    ->label('Limit quantity')
                     ->numeric()
                     ->required(),
 
                 Checkbox::make('is_default')
                     ->label('Is Default')
+                    ->helperText('Toggle this option if the option is default for the product packaging')
                     ->default(false),
             ]);
     }
@@ -46,18 +50,20 @@ class ProductOptionResource extends Resource
     {
         return $table
             ->columns([
-               TextColumn::make('productPackaging.unit_measure')
-                    ->label('Product Packaging')
+
+                TextColumn::make('productPackaging')
+                    ->label('Product & Packaging')
+                    ->formatStateUsing(fn ($record) => $record->productPackaging?->product?->name . ' - ' . $record->productPackaging?->unit_measure)
                     ->sortable()
                     ->searchable(),
 
                TextColumn::make('name')
-                    ->label('Name')
+                    ->label('Option Name')
                     ->sortable()
                     ->searchable(),
 
                TextColumn::make('qty')
-                    ->label('Quantity')
+                    ->label('Limit quantity')
                     ->sortable(),
 
                IconColumn::make('is_default')
@@ -80,7 +86,7 @@ class ProductOptionResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            OptionItemsRelationManager::class,
         ];
     }
 

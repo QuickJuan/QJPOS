@@ -1,15 +1,16 @@
 <?php
 namespace App\Filament\Tenant\Resources;
 
-use App\Filament\Tenant\Resources\ProductPackagingResource\Pages;
-use App\Models\ProductPackaging;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
-use Filament\Resources\Resource;
 use Filament\Tables;
-use Filament\Tables\Columns\TextColumn;
+use Filament\Forms\Form;
 use Filament\Tables\Table;
+use App\Models\ProductPackaging;
+use Filament\Resources\Resource;
+use Filament\Forms\Components\Select;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Forms\Components\TextInput;
+use App\Filament\Tenant\Resources\ProductPackagingResource\Pages;
+use App\Filament\Tenant\Resources\ProductPackagingResource\RelationManagers\ProductOptionsRelationManager;
 
 class ProductPackagingResource extends Resource
 {
@@ -53,16 +54,16 @@ class ProductPackagingResource extends Resource
                     ->sortable()
                     ->searchable(),
 
+                TextColumn::make('unit_measure')
+                    ->label('Unit Measure')
+                    ->sortable()
+                    ->searchable(),
+
                 TextColumn::make('cost')
                     ->sortable()
                     ->searchable(),
 
                 TextColumn::make('price')
-                    ->sortable()
-                    ->searchable(),
-
-                TextColumn::make('unit_measure')
-                    ->label('Unit Measure')
                     ->sortable()
                     ->searchable(),
 
@@ -87,7 +88,7 @@ class ProductPackagingResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            ProductOptionsRelationManager::class,
         ];
     }
 

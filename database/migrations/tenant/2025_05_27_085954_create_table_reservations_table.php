@@ -17,6 +17,8 @@ return new class extends Migration
                 ->constrained('table_rooms')
                 ->onDelete('cascade')
                 ->comment('Foreign key referencing the table_rooms table');
+            $table->string('name', 150)
+                ->comment('Name of the person making the reservation');
             $table->unsignedBigInteger('user_id')->nullable()
                 ->comment('ID of the user making the reservation');
             $table->dateTime('reservation_from')

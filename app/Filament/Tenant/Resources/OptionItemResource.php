@@ -25,14 +25,33 @@ class OptionItemResource extends Resource
                     ->relationship('productOption', 'name')
                     ->required()
                     ->searchable()
-                    ->preload(),
+                    ->preload()
+                    ->reactive()
+                    ->getOptionLabelFromRecordUsing(function ($record) {
+                        $optionName = $record->name ?? '';
+                        $productName = $record->productPackaging?->product?->name ?? '';
+                        $unitMeasure = $record->productPackaging?->unit_measure ?? '';
+                        return trim(  $productName . ' ' . $unitMeasure . ' - ' .$optionName);
+                    }),
 
                 Select::make('product_packaging_id')
-                    ->label('Product Packaging')
+                    ->label('Product Option Item')
                     ->relationship('productPackaging', 'unit_measure')
-                    ->required()
-                    ->searchable()
-                    ->preload(),
+                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->unit_measure . ' - ' . $record->product->name)
+                    ->options(function ($get) {
+                        $productOptionId = $get('product_option_id');
+                        if (!$productOptionId) {
+                            return [];
+                        }
+                        $productOption = \App\Models\ProductOption::find($productOptionId);
+                        $productId = $productOption?->productPackaging?->product_id;
+                        return \App\Models\ProductPackaging::where('product_id', '!=', $productId)
+                            ->with('product')
+                            ->get()
+                            ->mapWithKeys(function ($packaging) {
+                                return [$packaging->id => $packaging->product->name . ' - ' . $packaging->unit_measure];
+                            });
+                    }),
 
                 TextInput::make('additional_price')
                     ->label('Additional Price')
@@ -47,7 +66,26 @@ class OptionItemResource extends Resource
     {
         return $table
             ->columns([
-                //
+
+                Tables\Columns\TextColumn::make('productOption.productPackaging.product.name')
+                    ->label('Main Product')
+                    ->sortable()
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('productOption.name')
+                    ->label('Product Option')
+                    ->sortable()
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('productPackaging.product.name')
+                    ->label('Item Option')
+                    ->sortable()
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('productPackaging.unit_measure')
+                    ->label('Product Packaging')
+                    ->sortable()
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('additional_price')
+                    ->sortable()
+                    ->searchable(),
             ])
             ->filters([
                 //

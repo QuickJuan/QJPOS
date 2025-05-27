@@ -135,6 +135,7 @@ class ProductResource extends Resource
         return [
             RelationManagers\CategoryRelationManager::class,
             RelationManagers\BrandRelationManager::class,
+            RelationManagers\ProductPackagingsRelationManager::class,
             // Add other relation managers here if needed
         ];
     }

@@ -1,10 +1,11 @@
 <?php
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Spatie\MediaLibrary\HasMedia;
+use Illuminate\Database\Eloquent\Model;
 use Spatie\MediaLibrary\InteractsWithMedia;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ProductPackaging extends Model implements HasMedia
 {
@@ -19,8 +20,26 @@ class ProductPackaging extends Model implements HasMedia
         'featured_image',
     ];
 
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('featured_image')
+            ->singleFile();
+            // ->usePathGenerator(new MediaPathGenerator());
+    }
+
+    public function getFeaturedImageUrlAttribute()
+    {
+        return $this->getFirstMediaUrl('featured_image');
+    }
+
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
+
+    public function productOptions(): HasMany
+    {
+        return $this->hasMany(ProductOption::class);
+    }
+
 }
