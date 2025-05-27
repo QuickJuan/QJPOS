@@ -5,6 +5,7 @@
             <button @click="addTable(2)" class="btn">Add 2 Chairs</button>
             <button @click="addTable(4)" class="btn">Add 4 Chairs</button>
             <button @click="addTable(6)" class="btn">Add 6 Chairs</button>
+            <button @click="addTable(8)" class="btn">Add 8 Chairs</button>
             <button
                 class="px-4 py-2 rounded bg-indigo-500 text-white hover:bg-indigo-600"
                 @click="designMode = !designMode"
@@ -35,11 +36,11 @@
             <div
                 v-for="(table, index) in tables"
                 :key="table.id"
-                class="absolute bg-teal-300 rounded shadow text-center select-none"
+                class="absolute text-center select-none bg-green-200"
                 :class="[
                     designMode
-                        ? 'cursor-move bg-teal-300'
-                        : 'cursor-pointer bg-gray-200',
+                        ? 'cursor-move border-2 bg-gray-200'
+                        : 'cursor-pointer ',
                 ]"
                 :style="{
                     left: `${table.x}px`,
@@ -50,14 +51,33 @@
                 }"
                 @mousedown="startDrag($event, table.id)"
             >
-                <p class="text-sm font-bold">Table #{{ index + 1 }}</p>
-                <p class="text-xs text-gray-500">Chairs: {{ table.chairs }}</p>
+                <!-- <p class="text-sm font-bold">Table #{{ index + 1 }}</p>
+                <p class="text-xs text-gray-500">Chairs: {{ table.chairs }}</p> -->
+                <div
+                    class="relative w-full h-full flex justify-center items-center p-2"
+                >
+                    <img
+                        :src="table.img"
+                        :alt="`Table with ${table.chairs} chairs`"
+                        class="w-auto h-full transparent-blend mx-auto"
+                    />
+                    <div
+                        class="absolute inset-0 flex items-center justify-center z-10 pointer-events-none"
+                    >
+                        <div
+                            class="bg-white bg-opacity-75 p-2 rounded-full shadow text-center"
+                        >
+                            <p class="text-sm font-bold">T{{ index + 1 }}</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </template>
 
 <script setup>
+// import table from "vendor/filament/tables/resources/js/components/table";
 import { ref, onMounted } from "vue";
 
 const tables = ref([]);
@@ -79,13 +99,18 @@ const zoomOut = () => {
 
 // Add a new table
 const addTable = (chairs) => {
+    let tableSize = {
+        2: { width: 150, height: 100, img: "/images/round-4.png" },
+        4: { width: 150, height: 100, img: "/images/square-4.png" },
+        6: { width: 150, height: 100, img: "/images/rec-6.png" },
+        8: { width: 150, height: 100, img: "/images/rec-8.png" },
+    };
     tables.value.push({
         id: Date.now() + Math.random(),
         chairs,
         x: 100,
         y: 100,
-        width: 100,
-        height: 80,
+        ...tableSize[chairs],
     });
 
     saveTables();
@@ -153,7 +178,7 @@ const onDrag = (event) => {
     newX = snapToGrid(newX);
     newY = snapToGrid(newY);
 
-    const tempTable = { ...table, x: newX, y: newY, width: 100, height: 80 };
+    const tempTable = { ...table, x: newX, y: newY, width: 150, height: 100 };
 
     const collides = tables.value.some((other) => {
         if (other.id === table.id) return false;
@@ -195,5 +220,9 @@ const isOverlapping = (tableA, tableB) => {
     background-image: linear-gradient(#e5e7eb 1px, transparent 1px),
         linear-gradient(to right, #e5e7eb 1px, transparent 1px);
     background-size: 20px 20px;
+}
+
+.transparent-blend {
+    mix-blend-mode: multiply;
 }
 </style>
