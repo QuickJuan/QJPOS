@@ -60,6 +60,7 @@
                         :src="table.img"
                         :alt="`Table with ${table.chairs} chairs`"
                         class="w-auto h-full transparent-blend mx-auto"
+                        style="pointer-events: none;"
                     />
                     <div
                         class="absolute inset-0 flex items-center justify-center z-10 pointer-events-none"
@@ -105,12 +106,34 @@ const addTable = (chairs) => {
         6: { width: 150, height: 100, img: "/images/rec-6.png" },
         8: { width: 150, height: 100, img: "/images/rec-8.png" },
     };
+    const { width, height, img } = tableSize[chairs];
+    // Try to find a free spot
+    let found = false;
+    let x = 100,
+        y = 100;
+    const maxX = 2000 - width;
+    const maxY = 1000 - height;
+    for (let tryY = 0; tryY <= maxY && !found; tryY += GRID_SIZE) {
+        for (let tryX = 0; tryX <= maxX && !found; tryX += GRID_SIZE) {
+            const tempTable = { x: tryX, y: tryY, width, height };
+            const collides = tables.value.some((other) =>
+                isOverlapping(tempTable, other)
+            );
+            if (!collides) {
+                x = tryX;
+                y = tryY;
+                found = true;
+            }
+        }
+    }
     tables.value.push({
         id: Date.now() + Math.random(),
         chairs,
-        x: 100,
-        y: 100,
-        ...tableSize[chairs],
+        x,
+        y,
+        width,
+        height,
+        img,
     });
 
     saveTables();
@@ -129,8 +152,48 @@ const loadTables = () => {
     }
 };
 
+const repositionTablesIfNeeded = () => {
+    const maxX = 2000;
+    const maxY = 1000;
+    tables.value.forEach((table, idx) => {
+        // If x or y is missing, null, or not a number, reposition
+        if (
+            typeof table.x !== "number" ||
+            isNaN(table.x) ||
+            typeof table.y !== "number" ||
+            isNaN(table.y)
+        ) {
+            // Find a free spot
+            let found = false;
+            for (
+                let tryY = 0;
+                tryY <= maxY - table.height && !found;
+                tryY += GRID_SIZE
+            ) {
+                for (
+                    let tryX = 0;
+                    tryX <= maxX - table.width && !found;
+                    tryX += GRID_SIZE
+                ) {
+                    const tempTable = { ...table, x: tryX, y: tryY };
+                    const collides = tables.value.some(
+                        (other, otherIdx) =>
+                            otherIdx !== idx && isOverlapping(tempTable, other)
+                    );
+                    if (!collides) {
+                        table.x = tryX;
+                        table.y = tryY;
+                        found = true;
+                    }
+                }
+            }
+        }
+    });
+};
+
 onMounted(() => {
     loadTables();
+    repositionTablesIfNeeded();
 });
 
 // Dragging logic
@@ -178,7 +241,8 @@ const onDrag = (event) => {
     newX = snapToGrid(newX);
     newY = snapToGrid(newY);
 
-    const tempTable = { ...table, x: newX, y: newY, width: 150, height: 100 };
+    // Use actual table size for collision detection
+    const tempTable = { ...table, x: newX, y: newY };
 
     const collides = tables.value.some((other) => {
         if (other.id === table.id) return false;

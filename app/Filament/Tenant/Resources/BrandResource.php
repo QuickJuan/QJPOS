@@ -2,18 +2,19 @@
 
 namespace App\Filament\Tenant\Resources;
 
-use App\Filament\Tenant\Resources\BrandResource\Pages;
-use App\Filament\Tenant\Resources\BrandResource\RelationManagers;
-use App\Models\Brand;
 use Filament\Forms;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
-use Filament\Resources\Resource;
 use Filament\Tables;
-use Filament\Tables\Columns\TextColumn;
+use App\Models\Brand;
+use Filament\Forms\Form;
 use Filament\Tables\Table;
+use Filament\Resources\Resource;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Forms\Components\TextInput;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use App\Filament\Tenant\Resources\BrandResource\Pages;
+use App\Filament\Tenant\Resources\BrandResource\RelationManagers;
+use App\Filament\Tenant\Resources\BrandResource\RelationManagers\ProductsRelationManager;
 
 class BrandResource extends Resource
 {
@@ -51,7 +52,7 @@ class BrandResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            ProductsRelationManager::class,
         ];
     }
 
