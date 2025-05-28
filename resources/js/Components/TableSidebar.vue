@@ -3,7 +3,6 @@
         <div
             v-if="show"
             class="absolute left-0 top-0 z-40 h-full w-80 max-w-full bg-white shadow-xl border-r flex flex-col"
-            style="min-height: 1000px"
         >
             <div class="flex items-center justify-between p-4 border-b">
                 <h2 class="text-lg font-bold">
@@ -29,7 +28,7 @@
                     </svg>
                 </button>
             </div>
-            <form @submit.prevent="onSave" class="flex-1 flex flex-col p-4">
+            <form @submit.prevent="onSave" class="flex flex-col p-4">
                 <div class="mb-3">
                     <label class="block text-sm font-medium mb-1"
                         >Customer Name</label
@@ -104,8 +103,35 @@
                     <button
                         v-if="localTable.status === 'occupied'"
                         type="button"
-                        @click="onAction('checkout')"
-                        class="px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700"
+                        @click.stop="$emit('take-order')"
+                        class="px-3 py-1 rounded bg-indigo-600 text-white hover:bg-indigo-700"
+                    >
+                        Take Order
+                    </button>
+                </div>
+                <div class="mt-6 flex flex-col flex-grow min-h-0">
+                    <h3 class="font-bold mb-2">Table Orders</h3>
+                    <ul class="mb-2 h-40 overflow-y-auto flex flex-col-reverse">
+                        <li
+                            v-for="(item, idx) in (orders as ProductOrder[]).slice().reverse()"
+                            :key="item.id + '-' + idx"
+                            class="flex justify-between items-center border-b py-1"
+                        >
+                            <span>{{ item.name }}</span>
+                            <span>₱{{ item.price.toFixed(2) }}</span>
+                        </li>
+                    </ul>
+                    <div class="font-bold text-right mb-2">
+                        Total: ₱{{
+                            (orders as ProductOrder[])
+                                .reduce((sum, item) => sum + item.price, 0)
+                                .toFixed(2)
+                        }}
+                    </div>
+                    <button
+                        v-if="(orders as ProductOrder[]).length"
+                        class="w-full px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                        @click="onCheckout"
                     >
                         Checkout
                     </button>
@@ -126,15 +152,23 @@
 
 <script setup lang="ts">
 import { ref, watch, defineProps, defineEmits } from "vue";
-
+interface ProductOrder {
+    id: number;
+    name: string;
+    price: number;
+}
 const props = defineProps({
     show: Boolean,
     tableData: {
         type: Object,
         required: true,
     },
+    orders: {
+        type: Array as () => ProductOrder[],
+        default: () => [],
+    },
 });
-const emit = defineEmits(["close", "save", "action"]);
+const emit = defineEmits(["close", "save", "action", "take-order", "checkout"]);
 
 const localTable = ref({
     status: "vacant",
@@ -145,7 +179,9 @@ const localTable = ref({
 watch(
     () => props.tableData,
     (val) => {
-        localTable.value = { ...val };
+        localTable.value.status = val.status || "vacant";
+        localTable.value.customer = val.customer || "";
+        localTable.value.name = val.name || "";
     },
     { immediate: true, deep: true }
 );
@@ -156,6 +192,14 @@ const onSave = () => {
 
 const onAction = (action: string) => {
     emit("action", action, { ...localTable.value });
+};
+
+const onCheckout = () => {
+    const total = (props.orders as ProductOrder[]).reduce(
+        (sum, item) => sum + item.price,
+        0
+    );
+    emit("checkout", total);
 };
 </script>
 

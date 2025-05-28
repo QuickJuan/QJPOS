@@ -1,17 +1,6 @@
 <template>
     <div class="relative w-full h-screen bg-gray-100 overflow-auto">
-        <!-- TableSidebar always at left-0 -->
-        <TableSidebar
-            :show="showTableSidebar"
-            :tableData="tableSidebarTable"
-            @close="closeTableSideBar"
-            @save="handleTableSidebarSave"
-            @action="handleTableSidebarAction"
-            class="fixed top-0 left-0 z-50 h-full"
-            style="width: 320px; min-height: 1000px;"
-        />
-
-        <!-- Add buttons to create tables -->
+        <!-- Restore header nav -->
         <div class="z-50 space-x-2 p-4 bg-white shadow-md sticky top-0 w-full">
             <button @click="openAddTableModal" class="btn">Add Table</button>
             <button
@@ -30,93 +19,119 @@
                 Zoom Out
             </button>
         </div>
+        <!-- TableSidebar always at left-0 -->
+        <TableSidebar
+            :show="showTableSidebar"
+            :tableData="tableSidebarTable"
+            :orders="tableSidebarOrders"
+            @close="closeTableSideBar"
+            @save="handleTableSidebarSave"
+            @action="handleTableSidebarAction"
+            @take-order="openOrderPanel"
+        />
 
         <!-- Floor canvas, shifted right if sidebar is open -->
         <div
             class="relative transform origin-top-left transition-transform duration-200"
             :class="{ floor: designMode }"
             :style="{
-                width: '2000px',
-                height: '1000px',
                 marginLeft: showTableSidebar ? '320px' : '0',
                 transform: `scale(${zoomLevel})`,
                 transition: 'margin-left 0.3s, width 0.3s',
             }"
         >
             <div
-                v-for="(table, index) in tables"
-                :key="table.id"
-                class="absolute text-center select-none bg-green-200"
-                :class="[
-                    designMode
-                        ? 'cursor-move border-2 bg-gray-200'
-                        : 'cursor-pointer ',
-                ]"
-                :style="{
-                    left: `${table.x}px`,
-                    top: `${table.y}px`,
-                    width: `${table.width}px`,
-                    height: `${table.height}px`,
-                    lineHeight: `${table.height}px`,
-                    // Color by status if not in design mode
-                    ...(!designMode && table.status === 'occupied'
-                        ? { backgroundColor: '#fee2e2' }
-                        : !designMode && table.status === 'reserved'
-                        ? { backgroundColor: '#fef9c3' }
-                        : !designMode && table.status === 'vacant'
-                        ? { backgroundColor: '#bbf7d0' }
-                        : {}),
-                }"
-                @mousedown="startDrag($event, table.id)"
-                @click.stop="!designMode ? openTableSideBar(index) : null"
+                v-if="showOrderPanel"
+                class="h-screen absolute inset-0 z-[9999] flex items-center justify-center"
+                :style="
+                    showTableSidebar
+                        ? 'left: 320px; width: calc(100% - 320px);'
+                        : ''
+                "
             >
-                <!-- Edit icon in top right corner (only in design mode) -->
-                <button
-                    v-if="designMode"
-                    @click.stop="openEditTableModal(index)"
-                    class="absolute top-1 right-1 z-20 bg-white rounded-full p-1 shadow hover:bg-blue-100 focus:outline-none"
-                    title="Edit Table"
-                    tabindex="0"
-                    aria-label="Edit Table"
-                >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="h-4 w-4 text-blue-600"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-2.828 0L9 13zm-6 6h6"
-                        />
-                    </svg>
-                </button>
-
-                <!-- <p class="text-sm font-bold">Table #{{ index + 1 }}</p>
-                <p class="text-xs text-gray-500">Chairs: {{ table.chairs }}</p> -->
+                <ProductOrderPanel
+                    :orders="tableSidebarOrders"
+                    @update:orders="updateTableOrders"
+                    @close="showOrderPanel = false"
+                />
+            </div>
+            <template v-if="!showOrderPanel">
                 <div
-                    class="relative w-full h-full flex justify-center items-center p-2"
+                    v-for="(table, index) in tables"
+                    :key="table.id"
+                    class="absolute text-center select-none bg-green-200"
+                    :class="[
+                        designMode
+                            ? 'cursor-move border-2 bg-gray-200'
+                            : 'cursor-pointer ',
+                    ]"
+                    :style="{
+                        left: `${table.x}px`,
+                        top: `${table.y}px`,
+                        width: `${table.width}px`,
+                        height: `${table.height}px`,
+                        lineHeight: `${table.height}px`,
+                        ...(!designMode && table.status === 'occupied'
+                            ? { backgroundColor: '#fee2e2' }
+                            : !designMode && table.status === 'reserved'
+                            ? { backgroundColor: '#fef9c3' }
+                            : !designMode && table.status === 'vacant'
+                            ? { backgroundColor: '#bbf7d0' }
+                            : {}),
+                    }"
+                    @mousedown="startDrag($event, table.id)"
+                    @click.stop="!designMode ? openTableSideBar(index) : null"
                 >
-                    <img
-                        :src="table.img"
-                        :alt="`Table with ${table.chairs} chairs`"
-                        class="w-auto h-auto transparent-blend mx-auto"
-                        style="pointer-events: none"
-                    />
-                    <div
-                        class="absolute inset-0 flex items-center justify-center z-10 pointer-events-none"
+                    <!-- Edit icon in top right corner (only in design mode) -->
+                    <button
+                        v-if="designMode"
+                        @click.stop="openEditTableModal(index)"
+                        class="absolute top-1 right-1 z-20 bg-white rounded-full p-1 shadow hover:bg-blue-100 focus:outline-none"
+                        title="Edit Table"
+                        tabindex="0"
+                        aria-label="Edit Table"
                     >
-                        <div
-                            class="bg-white bg-opacity-75 p-2 rounded-full shadow text-center"
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-4 w-4 text-blue-600"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
                         >
-                            <p class="text-sm font-bold">T{{ index + 1 }}</p>
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-2.828 0L9 13zm-6 6h6"
+                            />
+                        </svg>
+                    </button>
+
+                    <!-- <p class="text-sm font-bold">Table #{{ index + 1 }}</p>
+                    <p class="text-xs text-gray-500">Chairs: {{ table.chairs }}</p> -->
+                    <div
+                        class="relative w-full h-full flex justify-center items-center p-2"
+                    >
+                        <img
+                            :src="table.img"
+                            :alt="`Table with ${table.chairs} chairs`"
+                            class="w-auto h-auto transparent-blend mx-auto"
+                            style="pointer-events: none"
+                        />
+                        <div
+                            class="absolute inset-0 flex items-center justify-center z-10 pointer-events-none"
+                        >
+                            <div
+                                class="bg-white bg-opacity-75 p-2 rounded-full shadow text-center"
+                            >
+                                <p class="text-sm font-bold">
+                                    T{{ index + 1 }}
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            </template>
         </div>
 
         <!-- Add Table Modal -->
@@ -327,9 +342,10 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from "vue";
 import TableSidebar from "../Components/TableSidebar.vue";
+import ProductOrderPanel from "../Components/ProductOrderPanel.vue";
 
 const tables = ref([]);
-const designMode = ref(true);
+const designMode = ref(false);
 
 const GRID_SIZE = 20;
 
@@ -700,6 +716,8 @@ const tableSidebarTable = ref({
     customer: "",
     name: "",
 });
+const showOrderPanel = ref(false);
+const tableSidebarOrders = ref([]);
 
 const openTableSideBar = (idx: number) => {
     const t = tables.value[idx];
@@ -709,6 +727,7 @@ const openTableSideBar = (idx: number) => {
         customer: t.customer || "",
         name: t.name || "",
     };
+    tableSidebarOrders.value = t.orders || [];
     showTableSidebar.value = true;
 };
 
@@ -747,6 +766,25 @@ const handleTableSidebarAction = (action: string, data: any) => {
     saveTables();
     showTableSidebar.value = false;
 };
+
+function updateTableOrders(newOrders: any[]) {
+    if (tableSidebarIndex.value !== null) {
+        tables.value[tableSidebarIndex.value].orders = [...newOrders];
+        tableSidebarOrders.value = [...newOrders];
+        saveTables();
+    }
+}
+
+function onOrderCheckout(total: number) {
+    alert(`Your total bill is ₱${total.toFixed(2)}`);
+    updateTableOrders([]);
+    showOrderPanel.value = false;
+}
+
+function openOrderPanel() {
+    // showTableSidebar.value = false; // Remove this line to keep sidebar visible
+    showOrderPanel.value = true;
+}
 </script>
 
 <style scoped>
