@@ -1,5 +1,16 @@
 <template>
     <div class="relative w-full h-screen bg-gray-100 overflow-auto">
+        <!-- TableSidebar always at left-0 -->
+        <TableSidebar
+            :show="showTableSidebar"
+            :tableData="tableSidebarTable"
+            @close="closeTableSideBar"
+            @save="handleTableSidebarSave"
+            @action="handleTableSidebarAction"
+            class="fixed top-0 left-0 z-50 h-full"
+            style="width: 320px; min-height: 1000px;"
+        />
+
         <!-- Add buttons to create tables -->
         <div class="z-50 space-x-2 p-4 bg-white shadow-md sticky top-0 w-full">
             <button @click="openAddTableModal" class="btn">Add Table</button>
@@ -20,14 +31,16 @@
             </button>
         </div>
 
-        <!-- Floor canvas -->
+        <!-- Floor canvas, shifted right if sidebar is open -->
         <div
             class="relative transform origin-top-left transition-transform duration-200"
             :class="{ floor: designMode }"
             :style="{
                 width: '2000px',
                 height: '1000px',
+                marginLeft: showTableSidebar ? '320px' : '0',
                 transform: `scale(${zoomLevel})`,
+                transition: 'margin-left 0.3s, width 0.3s',
             }"
         >
             <div
@@ -45,8 +58,17 @@
                     width: `${table.width}px`,
                     height: `${table.height}px`,
                     lineHeight: `${table.height}px`,
+                    // Color by status if not in design mode
+                    ...(!designMode && table.status === 'occupied'
+                        ? { backgroundColor: '#fee2e2' }
+                        : !designMode && table.status === 'reserved'
+                        ? { backgroundColor: '#fef9c3' }
+                        : !designMode && table.status === 'vacant'
+                        ? { backgroundColor: '#bbf7d0' }
+                        : {}),
                 }"
                 @mousedown="startDrag($event, table.id)"
+                @click.stop="!designMode ? openTableSideBar(index) : null"
             >
                 <!-- Edit icon in top right corner (only in design mode) -->
                 <button
@@ -165,7 +187,13 @@
                             <img
                                 :src="newTable.img"
                                 :alt="`Preview for ${newTable.chairs} chairs`"
-                                class="w-full h-16 object-contain bg-gray-100 rounded"
+                                class="w-full h-16 object-contain bg-gray-100 rounded mb-2"
+                            />
+                            <input
+                                type="file"
+                                accept="image/*"
+                                @change="handleNewTableFile"
+                                class="block w-full text-sm text-gray-500 file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                             />
                         </div>
                         <div class="flex justify-end gap-2 mt-4">
@@ -256,7 +284,13 @@
                             <img
                                 :src="editTable.img"
                                 :alt="`Preview for ${editTable.chairs} chairs`"
-                                class="w-full h-16 object-contain bg-gray-100 rounded"
+                                class="w-full h-16 object-contain bg-gray-100 rounded mb-2"
+                            />
+                            <input
+                                type="file"
+                                accept="image/*"
+                                @change="handleEditTableFile"
+                                class="block w-full text-sm text-gray-500 file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                             />
                         </div>
                         <div class="flex justify-between gap-2 mt-4">
@@ -290,9 +324,9 @@
     </div>
 </template>
 
-<script setup>
-// import table from "vendor/filament/tables/resources/js/components/table";
-import { ref, onMounted, watch } from "vue";
+<script setup lang="ts">
+import { ref, watch, onMounted } from "vue";
+import TableSidebar from "../Components/TableSidebar.vue";
 
 const tables = ref([]);
 const designMode = ref(true);
@@ -497,6 +531,37 @@ const newTable = ref({
     img: "/images/round-4.png",
 });
 
+const newTableFile = ref(null);
+
+// Handle file input for add modal
+const handleNewTableFile = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        if (typeof ev.target.result === "string") {
+            newTable.value.img = ev.target.result;
+        }
+    };
+    reader.readAsDataURL(file);
+    newTableFile.value = file;
+};
+
+// For edit modal
+const editTableFile = ref(null);
+const handleEditTableFile = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        if (typeof ev.target.result === "string") {
+            editTable.value.img = ev.target.result;
+        }
+    };
+    reader.readAsDataURL(file);
+    editTableFile.value = file;
+};
+
 const chairOptions = [
     { value: 2, label: "2 Chairs" },
     { value: 4, label: "4 Chairs" },
@@ -626,13 +691,65 @@ watch(
         }
     }
 );
+
+// Sidebar state and logic for table status (refactored)
+const showTableSidebar = ref(false);
+const tableSidebarIndex = ref<number | null>(null);
+const tableSidebarTable = ref({
+    status: "vacant",
+    customer: "",
+    name: "",
+});
+
+const openTableSideBar = (idx: number) => {
+    const t = tables.value[idx];
+    tableSidebarIndex.value = idx;
+    tableSidebarTable.value = {
+        status: t.status || "vacant",
+        customer: t.customer || "",
+        name: t.name || "",
+    };
+    showTableSidebar.value = true;
+};
+
+const closeTableSideBar = () => {
+    showTableSidebar.value = false;
+};
+
+const handleTableSidebarSave = (data: any) => {
+    if (tableSidebarIndex.value === null) return;
+    const t = tables.value[tableSidebarIndex.value];
+    t.status = data.status;
+    t.customer = data.customer;
+    // Optionally update name if editable
+    saveTables();
+    showTableSidebar.value = false;
+};
+
+const handleTableSidebarAction = (action: string, data: any) => {
+    if (tableSidebarIndex.value === null) return;
+    const t = tables.value[tableSidebarIndex.value];
+    if (action === "occupy") {
+        t.status = "occupied";
+    } else if (action === "reserve") {
+        t.status = "reserved";
+    } else if (action === "vacant") {
+        t.status = "vacant";
+        t.customer = "";
+    } else if (action === "checkout") {
+        t.status = "vacant";
+        t.customer = "";
+        showTableSidebar.value = false;
+        setTimeout(() => alert("Thank you!"), 100);
+        saveTables();
+        return;
+    }
+    saveTables();
+    showTableSidebar.value = false;
+};
 </script>
 
 <style scoped>
-.btn {
-    @apply px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700;
-}
-
 .floor {
     background-image: linear-gradient(#e5e7eb 1px, transparent 1px),
         linear-gradient(to right, #e5e7eb 1px, transparent 1px);
@@ -668,5 +785,15 @@ watch(
 
 .modal-body {
     padding: 1.5rem;
+}
+
+/* Slide transition for sidebar */
+.slide-enter-active,
+.slide-leave-active {
+    transition: transform 0.3s ease;
+}
+.slide-enter,
+.slide-leave-to {
+    transform: translateX(-100%);
 }
 </style>
