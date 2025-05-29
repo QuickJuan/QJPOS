@@ -1,5 +1,5 @@
 <template>
-    <div class="relative w-full h-screen bg-gray-100 overflow-auto">
+    <div class="relative w-full h-screen bg-gray-100 overflow-hidden">
         <!-- Restore header nav -->
         <div class="z-50 space-x-2 p-4 bg-white shadow-md sticky top-0 w-full">
             <button @click="openAddTableModal" class="btn">Add Table</button>
@@ -19,43 +19,40 @@
                 Zoom Out
             </button>
         </div>
-        <!-- TableSidebar always at left-0 -->
-        <TableSidebar
-            :show="showTableSidebar"
-            :tableData="tableSidebarTable"
-            :orders="tableSidebarOrders"
-            @close="closeTableSideBar"
-            @save="handleTableSidebarSave"
-            @action="handleTableSidebarAction"
-            @take-order="openOrderPanel"
-        />
 
-        <!-- Floor canvas, shifted right if sidebar is open -->
-        <div
-            class="relative transform origin-top-left transition-transform duration-200"
-            :class="{ floor: designMode }"
-            :style="{
-                marginLeft: showTableSidebar ? '320px' : '0',
-                transform: `scale(${zoomLevel})`,
-                transition: 'margin-left 0.3s, width 0.3s',
-            }"
-        >
-            <div
+        <!-- main content -->
+        <div class="flex h-full overflow-hidden">
+            <!-- TableSidebar always visible at left -->
+            <TableSidebar
+                :show="showTableSidebar"
+                :tableData="tableSidebarTable"
+                :orders="tableSidebarOrders"
+                @close="closeTableSideBar"
+                @save="handleTableSidebarSave"
+                @action="handleTableSidebarAction"
+                @take-order="openOrderPanel"
+                @edit-order="handleEditOrder"
+                @remove-order="handleRemoveOrder"
+            />
+            <!-- Product Panel (center area, only if showOrderPanel) -->
+            <ProductOrderPanel
                 v-if="showOrderPanel"
-                class="h-screen absolute inset-0 z-[9999] flex items-center justify-center"
-                :style="
-                    showTableSidebar
-                        ? 'left: 320px; width: calc(100% - 320px);'
-                        : ''
-                "
+                class="w-[400px] bg-blue-100 sm:bg-red-200 md:bg-green-200 lg:bg-yellow-200 xl:bg-purple-200"
+                :orders="tableSidebarOrders"
+                @update:orders="updateTableOrders"
+                @close="showOrderPanel = false"
+            />
+            <!-- Floor canvas (center area, only if not showOrderPanel) -->
+            <div
+                v-else
+                class="relative transform origin-top-left transition-transform duration-200 flex-grow bg-red-300 overflow-auto"
+                :class="{ floor: designMode }"
+                :style="{
+                    marginLeft: showTableSidebar ? '0' : '0',
+                    transform: `scale(${zoomLevel})`,
+                    transition: 'margin-left 0.3s, width 0.3s',
+                }"
             >
-                <ProductOrderPanel
-                    :orders="tableSidebarOrders"
-                    @update:orders="updateTableOrders"
-                    @close="showOrderPanel = false"
-                />
-            </div>
-            <template v-if="!showOrderPanel">
                 <div
                     v-for="(table, index) in tables"
                     :key="table.id"
@@ -131,8 +128,13 @@
                         </div>
                     </div>
                 </div>
-            </template>
+            </div>
         </div>
+        <!-- TableSidebar always at left-0 -->
+
+        <!-- Product Panel Container (just like floor container, not modal) -->
+
+        <!-- Floor canvas, shifted right if sidebar is open -->
 
         <!-- Add Table Modal -->
         <transition name="modal">
@@ -336,6 +338,38 @@
                 </div>
             </div>
         </transition>
+
+        <!-- Edit Order Modal -->
+        <transition name="modal">
+            <div
+                v-if="showEditOrderModal"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
+            >
+                <div
+                    class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative"
+                >
+                    <h2 class="text-lg font-bold mb-4">Edit Order</h2>
+                    <ProductCardMilktea
+                        v-if="editOrder"
+                        :product="editOrder.product || editOrder"
+                        :initial-qty="editOrder.qty"
+                        :initial-size="editOrder.size"
+                        :initial-options="editOrder.options"
+                        :initial-modifiers="editOrder.modifiers"
+                        :initial-price="editOrder.price"
+                        @add-to-cart="saveEditedOrder"
+                        @cancel="closeEditOrderModal"
+                        edit-mode
+                    />
+                    <button
+                        @click="closeEditOrderModal"
+                        class="absolute top-2 right-2 text-gray-400 hover:text-gray-700"
+                    >
+                        &times;
+                    </button>
+                </div>
+            </div>
+        </transition>
     </div>
 </template>
 
@@ -343,6 +377,7 @@
 import { ref, watch, onMounted } from "vue";
 import TableSidebar from "../Components/TableSidebar.vue";
 import ProductOrderPanel from "../Components/ProductOrderPanel.vue";
+import ProductCardMilktea from "../Components/ProductCardMilktea.vue";
 
 const tables = ref([]);
 const designMode = ref(false);
@@ -784,6 +819,39 @@ function onOrderCheckout(total: number) {
 function openOrderPanel() {
     // showTableSidebar.value = false; // Remove this line to keep sidebar visible
     showOrderPanel.value = true;
+}
+
+function handleRemoveOrder(index) {
+    if (tableSidebarIndex.value !== null) {
+        const orders = [...tableSidebarOrders.value];
+        orders.splice(index, 1);
+        updateTableOrders(orders);
+    }
+}
+
+const showEditOrderModal = ref(false);
+const editOrder = ref(null);
+const editOrderIndex = ref(null);
+
+function handleEditOrder(order, index) {
+    editOrder.value = { ...order };
+    editOrderIndex.value = index;
+    showEditOrderModal.value = true;
+}
+
+function closeEditOrderModal() {
+    showEditOrderModal.value = false;
+    editOrder.value = null;
+    editOrderIndex.value = null;
+}
+
+function saveEditedOrder(edited) {
+    if (editOrderIndex.value !== null && tableSidebarIndex.value !== null) {
+        const orders = [...tableSidebarOrders.value];
+        orders[editOrderIndex.value] = { ...edited };
+        updateTableOrders(orders);
+    }
+    closeEditOrderModal();
 }
 </script>
 
