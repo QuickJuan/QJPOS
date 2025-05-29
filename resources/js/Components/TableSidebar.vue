@@ -2,7 +2,7 @@
     <transition name="slide">
         <div
             v-if="show"
-            class="h-full w-[400px] max-w-full bg-white shadow-xl border-r flex flex-col"
+            class="h-full w-[400px] max-w-full bg-white shadow-xl border-r flex flex-col min-h-0"
             style="pointer-events: auto"
             role="complementary"
             aria-label="Table Sidebar"
@@ -12,6 +12,7 @@
                     Table Status: {{ tableData.name }}
                 </h2>
                 <button
+                    v-if="!showOrderPanel"
                     @click="$emit('close')"
                     class="text-gray-500 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
                     aria-label="Close sidebar"
@@ -36,45 +37,24 @@
             </div>
             <form
                 @submit.prevent="onSave"
-                class="flex flex-col p-4"
+                class="flex flex-col flex-grow min-h-0 p-4 gap-2"
                 aria-labelledby="sidebar-title"
             >
-                <div class="mb-3">
-                    <label
-                        class="block text-sm font-medium mb-1"
-                        for="customer-name-input"
-                        >Customer Name</label
-                    >
-                    <input
-                        id="customer-name-input"
-                        v-model="localTable.customer"
-                        type="text"
-                        class="w-full border rounded px-2 py-1 focus:ring-2 focus:ring-indigo-500"
-                        placeholder="Enter customer name"
-                        aria-label="Customer Name"
+                <!-- Replace status, customer name, pax, and save section with TableCustomer component -->
+                <TableCustomer :value="localTable" @save="onSave" />
+
+                <!-- TableOrder gets flex-grow min-h-0 overflow-auto for scrolling, no extra margin -->
+                <div class="flex-grow min-h-0">
+                    <TableOrder
+                        :orders="orders"
+                        @edit-order="$emit('edit-order', $event)"
+                        @remove-order="$emit('remove-order', $event)"
+                        class="text-base"
                     />
                 </div>
-                <div class="mb-3">
-                    <label class="block text-sm font-medium mb-1">Status</label>
-                    <span
-                        class="inline-block px-2 py-1 rounded text-xs font-semibold"
-                        :class="{
-                            'bg-green-200 text-green-800':
-                                localTable.status === 'vacant',
-                            'bg-yellow-200 text-yellow-800':
-                                localTable.status === 'reserved',
-                            'bg-red-200 text-red-800':
-                                localTable.status === 'occupied',
-                        }"
-                        :aria-label="'Table status: ' + localTable.status"
-                    >
-                        {{
-                            localTable.status.charAt(0).toUpperCase() +
-                            localTable.status.slice(1)
-                        }}
-                    </span>
-                </div>
-                <div class="flex flex-wrap gap-2 mt-4">
+
+                <!-- Remove Take Order from previous location -->
+                <div class="flex flex-wrap gap-2">
                     <button
                         v-if="localTable.status === 'vacant'"
                         type="button"
@@ -111,202 +91,156 @@
                     >
                         Vacant
                     </button>
-                    <button
-                        v-if="localTable.status === 'occupied'"
-                        type="button"
-                        @click="onAction('vacant')"
-                        class="px-3 py-1 rounded bg-green-500 text-white hover:bg-green-600 focus:ring-2 focus:ring-indigo-500"
-                        aria-label="Mark as vacant"
-                    >
-                        Vacant
-                    </button>
-                    <button
-                        v-if="localTable.status === 'occupied'"
-                        type="button"
-                        @click.stop="$emit('take-order')"
-                        class="px-3 py-1 rounded bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500"
-                        aria-label="Take order for this table"
-                    >
-                        Take Order
-                    </button>
                 </div>
-                <div class="mt-6 flex flex-col flex-grow min-h-0">
-                    <h3 class="font-bold mb-2" id="orders-title">
-                        Table Orders
-                    </h3>
-                    <ul
-                        class="mb-2 h-40 overflow-y-auto flex flex-col-reverse"
-                        aria-labelledby="orders-title"
-                        aria-live="polite"
+
+                <!-- TableActionButtons is always visible at the bottom, not sticky, no extra margin -->
+                <div>
+                    <TableActionButtons
+                        :showOrderPanel="showOrderPanel"
+                        :orders="orders"
+                        :status="localTable.status"
+                        @toggle-order-panel="$emit('toggle-order-panel')"
+                        @checkout="$emit('checkout')"
+                        @print-bill="$emit('print-bill')"
+                        @cancel-table="$emit('cancel-table')"
+                        @merge-table="$emit('merge-table')"
+                    />
+                </div>
+            </form>
+            <!-- Printable receipt (hidden, for print only) -->
+            <PrintBillReceipt
+                v-if="showPrintReceipt"
+                ref="receiptRef"
+                :tableName="tableData.name"
+                :customerName="localTable.customer"
+                :orders="orders"
+                :visible="showPrintReceipt"
+            />
+        </div>
+    </transition>
+
+    <!-- Receipt Preview Modal -->
+    <template v-if="showPrintReceipt">
+        <div
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
+        >
+            <div
+                class="bg-white rounded shadow-lg p-4 w-auto max-w-full border border-gray-200 relative"
+            >
+                <button
+                    class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 bg-gray-100 rounded-full p-1 focus:outline-none"
+                    @click="emit('close-receipt')"
+                    aria-label="Close receipt preview"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-5 w-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
                     >
-                        <li
-                            v-for="(item, idx) in (orders as any[]).slice().reverse()"
-                            :key="(item.product?.id || item.id) + '-' + idx"
-                            class="flex flex-col border-b py-1 gap-1"
-                        >
-                            <div class="flex justify-between items-center">
-                                <div>
-                                    <span class="font-semibold">
-                                        {{ item.product?.name || item.name }}
-                                    </span>
-                                    <span
-                                        v-if="item.qty"
-                                        class="ml-2 text-xs text-gray-500"
-                                        >x{{ item.qty }}</span
-                                    >
-                                </div>
-                                <div class="flex items-center gap-1">
-                                    <button
-                                        @click="
-                                            $emit(
-                                                'edit-order',
-                                                item,
-                                                orders.length - 1 - idx
-                                            )
-                                        "
-                                        class="text-blue-500 hover:underline text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
-                                        aria-label="Edit order for {{ item.product?.name || item.name }}"
-                                        title="Edit order"
-                                        tabindex="0"
-                                        @keydown.enter.prevent="
-                                            $emit(
-                                                'edit-order',
-                                                item,
-                                                orders.length - 1 - idx
-                                            )
-                                        "
-                                        @keydown.space.prevent="
-                                            $emit(
-                                                'edit-order',
-                                                item,
-                                                orders.length - 1 - idx
-                                            )
-                                        "
-                                    >
-                                        Edit
-                                    </button>
-                                    <button
-                                        @click="
-                                            $emit(
-                                                'remove-order',
-                                                orders.length - 1 - idx
-                                            )
-                                        "
-                                        class="text-red-500 hover:underline text-xs ml-1 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
-                                        aria-label="Remove order for {{ item.product?.name || item.name }}"
-                                        title="Remove order"
-                                        tabindex="0"
-                                        @keydown.enter.prevent="
-                                            $emit(
-                                                'remove-order',
-                                                orders.length - 1 - idx
-                                            )
-                                        "
-                                        @keydown.space.prevent="
-                                            $emit(
-                                                'remove-order',
-                                                orders.length - 1 - idx
-                                            )
-                                        "
-                                    >
-                                        Remove
-                                    </button>
-                                </div>
-                            </div>
-                            <div
-                                v-if="
-                                    Array.isArray(item.options) &&
-                                    item.options.length
-                                "
-                                class="text-xs text-gray-700 ml-2"
-                            >
-                                <span class="font-semibold">Options:</span>
-                                <span>
-                                    {{
-                                        item.options
-                                            .map(
-                                                (opt) =>
-                                                    opt.name +
-                                                    (opt.price &&
-                                                    opt.price !== "0"
-                                                        ? ` (+₱${opt.price})`
-                                                        : "")
-                                            )
-                                            .join(", ")
-                                    }}
-                                </span>
-                            </div>
-                            <div
-                                v-if="
-                                    item.modifiers &&
-                                    Object.keys(item.modifiers).length
-                                "
-                                class="text-xs text-gray-700 ml-2"
-                            >
-                                <span class="font-semibold">Modifiers:</span>
-                                <span>
-                                    {{
-                                        Object.entries(item.modifiers)
-                                            .map(
-                                                ([mod, val]) => `${mod}: ${val}`
-                                            )
-                                            .join(", ")
-                                    }}
-                                </span>
-                            </div>
-                            <div class="text-right text-sm">
-                                <span>
-                                    ₱{{
-                                        (
-                                            item.total ||
-                                            item.price * (item.qty || 1) ||
-                                            item.price
-                                        ).toFixed(2)
-                                    }}
-                                </span>
-                            </div>
-                        </li>
-                    </ul>
-                    <div class="font-bold text-right mb-2" aria-live="polite">
-                        Total: ₱{{
-                            (orders as any[])
-                                .reduce(
-                                    (sum, item) =>
-                                        sum +
-                                        (item.total ||
-                                            item.price * (item.qty || 1) ||
-                                            item.price),
-                                    0
-                                )
-                                .toFixed(2)
-                        }}
-                    </div>
-                    <button
-                        v-if="(orders as ProductOrder[]).length"
-                        class="w-full px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:ring-2 focus:ring-indigo-500"
-                        @click="onCheckout"
-                        aria-label="Checkout orders for this table"
-                    >
-                        Checkout
-                    </button>
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12"
+                        />
+                    </svg>
+                </button>
+                <div ref="receiptRef">
+                    <PrintBillReceipt
+                        :tableName="tableData.name"
+                        :customerName="localTable.customer"
+                        :orders="orders"
+                        :visible="showPrintReceipt"
+                    />
                 </div>
                 <div class="flex justify-end mt-4">
                     <button
-                        type="button"
-                        @click="$emit('close')"
-                        class="px-3 py-1 rounded bg-gray-300 hover:bg-gray-400 focus:ring-2 focus:ring-indigo-500"
-                        aria-label="Close sidebar"
+                        class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500"
+                        @click="emit('close-receipt')"
                     >
                         Close
                     </button>
                 </div>
-            </form>
+            </div>
         </div>
-    </transition>
+    </template>
+
+    <!-- Inline PrintBillReceipt below TableActionButtons -->
+    <div v-if="showPrintReceipt && false" class="mt-4">
+        <!-- Disabled: Prevent duplicate rendering and errors -->
+        <!--
+        <PrintBillReceipt
+            :tableName="tableData.name"
+            :customerName="localTable.customer"
+            :orders="orders"
+            :visible="showPrintReceipt"
+        />
+        -->
+    </div>
+
+    <template v-if="showCustomerModal">
+        <div
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
+        >
+            <div
+                class="bg-white rounded shadow-lg p-4 w-full max-w-xs border border-gray-200 relative"
+            >
+                <h2 class="text-lg font-bold mb-2">Enter Customer Details</h2>
+                <form @submit.prevent="() => handleCustomerSave(localTable)">
+                    <div class="mb-3">
+                        <label class="block text-sm font-medium mb-1"
+                            >Customer Name</label
+                        >
+                        <input
+                            v-model="localTable.customer"
+                            type="text"
+                            class="w-full border rounded px-2 py-1"
+                            required
+                            autofocus
+                        />
+                    </div>
+                    <div class="mb-3">
+                        <label class="block text-sm font-medium mb-1"
+                            >Pax</label
+                        >
+                        <input
+                            v-model.number="localTable.pax"
+                            type="number"
+                            min="1"
+                            max="99"
+                            class="w-full border rounded px-2 py-1"
+                            required
+                        />
+                    </div>
+                    <div class="flex justify-end gap-2 mt-4">
+                        <button
+                            type="button"
+                            @click="handleCustomerCancel"
+                            class="px-3 py-1 rounded bg-gray-300 hover:bg-gray-400"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            class="px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700"
+                        >
+                            Save
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </template>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, defineProps, defineEmits } from "vue";
+import { ref, watch, defineProps, defineEmits, nextTick } from "vue";
+import PrintBillReceipt from "./PrintBillReceipt.vue";
+import TableOrder from "./TableOrder.vue";
+import TableCustomer from "./TableCustomer.vue";
+import TableActionButtons from "./TableActionButtons.vue";
 interface ProductOrder {
     id: number;
     name: string;
@@ -319,25 +253,41 @@ const props = defineProps({
         required: true,
     },
     orders: {
-        type: Array as () => ProductOrder[],
+        type: Array,
         default: () => [],
+    },
+    showOrderPanel: {
+        type: Boolean,
+        default: false,
+    },
+    showPrintReceipt: {
+        type: Boolean,
+        default: false,
     },
 });
 const emit = defineEmits([
     "close",
     "save",
     "action",
-    "take-order",
+    "toggle-order-panel",
     "checkout",
     "edit-order",
     "remove-order",
+    "print-bill",
+    "cancel-table",
+    "merge-table",
+    "close-receipt",
 ]);
 
 const localTable = ref({
     status: "vacant",
     customer: "",
     name: "",
+    pax: 1,
 });
+const showPaxButtons = ref(false);
+const customerNameError = ref(false);
+const showCustomerModal = ref(false);
 
 watch(
     () => props.tableData,
@@ -349,13 +299,56 @@ watch(
     { immediate: true, deep: true }
 );
 
+function validateCustomerName() {
+    customerNameError.value = !localTable.value.customer.trim();
+}
+function incrementPax() {
+    localTable.value.pax = Math.min((localTable.value.pax || 1) + 1, 99);
+}
+function decrementPax() {
+    localTable.value.pax = Math.max((localTable.value.pax || 1) - 1, 1);
+}
+function setPax(val: number) {
+    localTable.value.pax = val;
+    showPaxButtons.value = false;
+}
+function hidePaxButtons(e: FocusEvent) {
+    setTimeout(() => {
+        showPaxButtons.value = false;
+    }, 150);
+}
+
 const onSave = () => {
+    validateCustomerName();
+    if (customerNameError.value) return;
     emit("save", { ...localTable.value });
 };
 
 const onAction = (action: string) => {
+    if (action === "occupy") {
+        // Show customer modal to input name and pax before occupying
+        showCustomerModal.value = true;
+        return;
+    }
+    validateCustomerName();
+    if (customerNameError.value) return;
     emit("action", action, { ...localTable.value });
 };
+
+function handleCustomerSave(data: any) {
+    // Save customer info and proceed to occupy
+    localTable.value.customer = data.customer;
+    localTable.value.pax = data.pax;
+    showCustomerModal.value = false;
+    validateCustomerName();
+    if (!customerNameError.value) {
+        emit("action", "occupy", { ...localTable.value });
+    }
+}
+
+function handleCustomerCancel() {
+    showCustomerModal.value = false;
+}
 
 const onCheckout = () => {
     const total = (props.orders as ProductOrder[]).reduce(
@@ -364,6 +357,60 @@ const onCheckout = () => {
     );
     emit("checkout", total);
 };
+
+const receiptRef = ref<any>(null);
+
+const printReceipt = () => {
+    const printContents = receiptRef.value?.innerHTML;
+    if (printContents) {
+        const printWindow = window.open("", "", "width=300,height=600");
+        if (printWindow) {
+            printWindow.document.write(
+                `<!DOCTYPE html><html><head><title>Receipt</title><style>
+        body { font-family: monospace; font-size: 12px; margin: 0; padding: 0; background: #fff; color: #000; }
+        .receipt-printable { width: 220px; margin: 0 auto; }
+        hr { border: none; border-top: 1px dashed #000; margin: 4px 0; }
+        @media print { body { margin: 0; } .receipt-printable { width: 220px; } }
+      </style></head><body>` +
+                    printContents +
+                    `</body></html>`
+            );
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+            setTimeout(() => {
+                printWindow.close();
+            }, 500);
+        }
+    }
+};
+
+const printBill = async () => {
+    emit("print-bill");
+};
+
+function getBaseItemTotal(item: any) {
+    const price =
+        typeof item.price === "string" ? parseFloat(item.price) : item.price;
+    const qty = item.qty || 1;
+    return (price * qty).toFixed(2);
+}
+function getItemPrice(item: any) {
+    return (
+        typeof item.price === "string" ? parseFloat(item.price) : item.price
+    ).toFixed(2);
+}
+function getOptionTotal(opt: any, qty: number) {
+    const price =
+        typeof opt.price === "string" ? parseFloat(opt.price) : opt.price;
+    return (price * qty).toFixed(2);
+}
+
+// Add handler for status change
+function onStatusChange() {
+    // If status is changed via dropdown, treat as an action
+    emit("action", localTable.value.status, { ...localTable.value });
+}
 </script>
 
 <style scoped>
@@ -383,5 +430,28 @@ const onCheckout = () => {
 button:focus {
     outline: 2px solid #6366f1; /* indigo-500 */
     outline-offset: 2px;
+}
+
+.receipt-printable {
+    font-family: monospace;
+    font-size: 12px;
+    width: 220px;
+    color: #000;
+    background: #fff;
+    margin: 0 auto;
+}
+@media print {
+    body {
+        margin: 0 !important;
+    }
+    .receipt-printable {
+        width: 220px !important;
+    }
+    .print\:hidden {
+        display: none !important;
+    }
+    .print\:block {
+        display: block !important;
+    }
 }
 </style>

@@ -26,6 +26,12 @@
             >
                 ₱{{ product.price }}
             </div>
+            <div
+                class="text-xs text-gray-500 dark:text-gray-400 mt-1"
+                tabindex="0"
+            >
+                Base price: ₱{{ product.price }}
+            </div>
         </div>
         <!-- Sizes -->
         <div
@@ -221,6 +227,13 @@ function toggleOption(option: any) {
     }
 }
 
+function resetForm() {
+    qty.value = 1;
+    selectedSize.value = props.product?.sizes?.[0]?.value || "";
+    selectedOptions.value = [];
+    selectedModifiers.value = {};
+}
+
 function addToCart() {
     // Calculate total price with options
     let basePrice = parseFloat(props.product.price) || 0;
@@ -228,17 +241,18 @@ function addToCart() {
         (sum: number, opt: any) => sum + (parseFloat(opt.price) || 0),
         0
     );
-    let unitPrice = basePrice + optionsTotal;
-    let totalPrice = unitPrice * qty.value;
+    let unitPrice = basePrice; // Only base price for price property
+    let totalPrice = (basePrice + optionsTotal) * qty.value;
     emit("add-to-cart", {
         product: props.product,
         size: selectedSize.value,
         modifiers: { ...selectedModifiers.value },
         options: [...selectedOptions.value],
         qty: qty.value,
-        price: unitPrice, // always a number
-        total: totalPrice,
+        price: unitPrice, // base price only
+        total: totalPrice, // base + options * qty
     });
+    resetForm();
 }
 </script>
 

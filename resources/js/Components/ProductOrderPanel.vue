@@ -5,26 +5,6 @@
                 class="flex justify-between items-center relative mb-4 p-4 border-b bg-white"
             >
                 <h3 class="text-lg font-bold">Products</h3>
-                <button
-                    class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 bg-gray-100 rounded-full p-2 focus:outline-none"
-                    @click="emit('close')"
-                    aria-label="Close order panel"
-                >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="h-6 w-6"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12"
-                        />
-                    </svg>
-                </button>
             </div>
             <div class="gap-4 p-4 grid grid-cols-1 sm:grid-cols-2 pb-32">
                 <ProductCardMilktea
@@ -60,9 +40,37 @@ watch(
     }
 );
 
+function isSameOrder(a: any, b: any) {
+    // Compare id
+    if (a.id !== b.id) return false;
+    // Compare options (order-insensitive)
+    const optsA = Array.isArray(a.options) ? a.options : [];
+    const optsB = Array.isArray(b.options) ? b.options : [];
+    if (optsA.length !== optsB.length) return false;
+    const sortedA = [...optsA].sort((x, y) => x.name.localeCompare(y.name));
+    const sortedB = [...optsB].sort((x, y) => x.name.localeCompare(y.name));
+    for (let i = 0; i < sortedA.length; i++) {
+        if (
+            sortedA[i].name !== sortedB[i].name ||
+            String(sortedA[i].price) !== String(sortedB[i].price)
+        )
+            return false;
+    }
+    // Compare modifiers (shallow, key-value)
+    const modsA = a.modifiers || {};
+    const modsB = b.modifiers || {};
+    const keysA = Object.keys(modsA);
+    const keysB = Object.keys(modsB);
+    if (keysA.length !== keysB.length) return false;
+    for (const key of keysA) {
+        if (modsA[key] !== modsB[key]) return false;
+    }
+    return true;
+}
+
 function handleAddToCart(payload: any) {
-    const existingOrder = tableOrders.value.find(
-        (order) => order.id === payload.id
+    const existingOrder = tableOrders.value.find((order) =>
+        isSameOrder(order, payload)
     );
     if (existingOrder) {
         existingOrder.qty += payload.qty;

@@ -1,25 +1,5 @@
 <template>
-    <div class="relative w-full h-screen bg-gray-100 overflow-hidden">
-        <!-- Restore header nav -->
-        <div class="z-50 space-x-2 p-4 bg-white shadow-md sticky top-0 w-full">
-            <button @click="openAddTableModal" class="btn">Add Table</button>
-            <button
-                class="px-4 py-2 rounded bg-indigo-500 text-white hover:bg-indigo-600"
-                @click="designMode = !designMode"
-            >
-                {{ designMode ? "Exit Design Mode" : "Enter Design Mode" }}
-            </button>
-            <button class="btn bg-green-500 hover:bg-green-600" @click="zoomIn">
-                Zoom In
-            </button>
-            <button
-                class="btn bg-yellow-500 hover:bg-yellow-600"
-                @click="zoomOut"
-            >
-                Zoom Out
-            </button>
-        </div>
-
+    <div class="relative w-full h-screen bg-gray-100">
         <!-- main content -->
         <div class="flex h-full overflow-hidden">
             <!-- TableSidebar always visible at left -->
@@ -27,12 +7,21 @@
                 :show="showTableSidebar"
                 :tableData="tableSidebarTable"
                 :orders="tableSidebarOrders"
+                :showOrderPanel="showOrderPanel"
+                :showPrintReceipt="showPrintReceipt"
                 @close="closeTableSideBar"
                 @save="handleTableSidebarSave"
                 @action="handleTableSidebarAction"
-                @take-order="openOrderPanel"
+                @toggle-order-panel="showOrderPanel = !showOrderPanel"
                 @edit-order="handleEditOrder"
                 @remove-order="handleRemoveOrder"
+                @checkout="handleCheckout"
+                @print-bill="handlePrintBill"
+                @close-receipt="
+                    () => {
+                        showPrintReceipt = false;
+                    }
+                "
             />
             <!-- Product Panel (center area, only if showOrderPanel) -->
             <ProductOrderPanel
@@ -40,7 +29,6 @@
                 class="w-[400px] bg-blue-100 sm:bg-red-200 md:bg-green-200 lg:bg-yellow-200 xl:bg-purple-200"
                 :orders="tableSidebarOrders"
                 @update:orders="updateTableOrders"
-                @close="showOrderPanel = false"
             />
             <!-- Floor canvas (center area, only if not showOrderPanel) -->
             <div
@@ -53,6 +41,36 @@
                     transition: 'margin-left 0.3s, width 0.3s',
                 }"
             >
+                <!-- Header nav moved here, sticky at top of floor -->
+                <div
+                    class="z-50 space-x-2 p-4 bg-white shadow-md sticky top-0 w-full"
+                >
+                    <button @click="openAddTableModal" class="btn">
+                        Add Table
+                    </button>
+                    <button
+                        class="px-4 py-2 rounded bg-indigo-500 text-white hover:bg-indigo-600"
+                        @click="designMode = !designMode"
+                    >
+                        {{
+                            designMode
+                                ? "Exit Design Mode"
+                                : "Enter Design Mode"
+                        }}
+                    </button>
+                    <button
+                        class="btn bg-green-500 hover:bg-green-600"
+                        @click="zoomIn"
+                    >
+                        Zoom In
+                    </button>
+                    <button
+                        class="btn bg-yellow-500 hover:bg-yellow-600"
+                        @click="zoomOut"
+                    >
+                        Zoom Out
+                    </button>
+                </div>
                 <div
                     v-for="(table, index) in tables"
                     :key="table.id"
@@ -103,9 +121,6 @@
                             />
                         </svg>
                     </button>
-
-                    <!-- <p class="text-sm font-bold">Table #{{ index + 1 }}</p>
-                    <p class="text-xs text-gray-500">Chairs: {{ table.chairs }}</p> -->
                     <div
                         class="relative w-full h-full flex justify-center items-center p-2"
                     >
@@ -122,7 +137,7 @@
                                 class="bg-white bg-opacity-75 p-2 rounded-full shadow text-center"
                             >
                                 <p class="text-sm font-bold">
-                                    T{{ index + 1 }}
+                                    {{ table.name || `Table #${index + 1}` }}
                                 </p>
                             </div>
                         </div>
@@ -754,15 +769,21 @@ const tableSidebarTable = ref({
 const showOrderPanel = ref(false);
 const tableSidebarOrders = ref([]);
 
+// Add this ref to control print bill modal
+const showPrintReceipt = ref(false);
+
 const openTableSideBar = (idx: number) => {
     const t = tables.value[idx];
     tableSidebarIndex.value = idx;
-    tableSidebarTable.value = {
-        status: t.status || "vacant",
-        customer: t.customer || "",
-        name: t.name || "",
-    };
-    tableSidebarOrders.value = t.orders || [];
+    // Use a fresh object reference to ensure reactivity
+    tableSidebarTable.value = JSON.parse(
+        JSON.stringify({
+            status: t.status || "vacant",
+            customer: t.customer || "",
+            name: t.name || "",
+        })
+    );
+    tableSidebarOrders.value = t.orders ? [...t.orders] : [];
     showTableSidebar.value = true;
 };
 
@@ -780,19 +801,38 @@ const handleTableSidebarSave = (data: any) => {
     showTableSidebar.value = false;
 };
 
-const handleTableSidebarAction = (action: string, data: any) => {
+// Update handlePrintBill to show the receipt modal
+function handlePrintBill() {
+    showPrintReceipt.value = true;
+}
+
+// Update handleTableSidebarAction to handle 'occupy' action
+function handleTableSidebarAction(action, data) {
     if (tableSidebarIndex.value === null) return;
     const t = tables.value[tableSidebarIndex.value];
     if (action === "occupy") {
         t.status = "occupied";
+        t.customer = data.customer || t.customer || "";
+        t.name = data.name || t.name || "";
+        // Force reactivity by assigning a new object to both tableSidebarTable and tables
+        tables.value[tableSidebarIndex.value] = { ...t };
+        tableSidebarTable.value = { ...t };
+        saveTables();
+        // Keep sidebar open for cashiering
+        return;
     } else if (action === "reserve") {
         t.status = "reserved";
+        tables.value[tableSidebarIndex.value] = { ...t };
+        tableSidebarTable.value = { ...t };
     } else if (action === "vacant") {
         t.status = "vacant";
         t.customer = "";
+        tables.value[tableSidebarIndex.value] = { ...t };
+        tableSidebarTable.value = { ...t };
     } else if (action === "checkout") {
         t.status = "vacant";
         t.customer = "";
+        tables.value[tableSidebarIndex.value] = { ...t };
         showTableSidebar.value = false;
         setTimeout(() => alert("Thank you!"), 100);
         saveTables();
@@ -800,12 +840,23 @@ const handleTableSidebarAction = (action: string, data: any) => {
     }
     saveTables();
     showTableSidebar.value = false;
-};
+}
 
-function updateTableOrders(newOrders: any[]) {
+function updateTableOrders(newOrders: any[] | any) {
     if (tableSidebarIndex.value !== null) {
-        tables.value[tableSidebarIndex.value].orders = [...newOrders];
-        tableSidebarOrders.value = [...newOrders];
+        if (Array.isArray(newOrders)) {
+            tables.value[tableSidebarIndex.value].orders = [...newOrders];
+            tableSidebarOrders.value = [...newOrders];
+        } else if (newOrders && typeof newOrders === "object") {
+            // Append single order object
+            const currentOrders =
+                tables.value[tableSidebarIndex.value].orders || [];
+            tables.value[tableSidebarIndex.value].orders = [
+                ...currentOrders,
+                newOrders,
+            ];
+            tableSidebarOrders.value = [...currentOrders, newOrders];
+        }
         saveTables();
     }
 }
@@ -833,6 +884,7 @@ const showEditOrderModal = ref(false);
 const editOrder = ref(null);
 const editOrderIndex = ref(null);
 
+// Update to accept both order and index
 function handleEditOrder(order, index) {
     editOrder.value = { ...order };
     editOrderIndex.value = index;
@@ -845,6 +897,7 @@ function closeEditOrderModal() {
     editOrderIndex.value = null;
 }
 
+// Update to use the correct index
 function saveEditedOrder(edited) {
     if (editOrderIndex.value !== null && tableSidebarIndex.value !== null) {
         const orders = [...tableSidebarOrders.value];
@@ -852,6 +905,21 @@ function saveEditedOrder(edited) {
         updateTableOrders(orders);
     }
     closeEditOrderModal();
+}
+
+// Add these methods in <script setup>
+function handleCheckout() {
+    if (tableSidebarIndex.value !== null) {
+        // Clear orders and set table to vacant
+        tables.value[tableSidebarIndex.value].orders = [];
+        tables.value[tableSidebarIndex.value].status = "vacant";
+        tableSidebarOrders.value = [];
+        tableSidebarTable.value.status = "vacant";
+        saveTables();
+        showTableSidebar.value = false;
+        showOrderPanel.value = false;
+        setTimeout(() => alert("Thank you!"), 100);
+    }
 }
 </script>
 
