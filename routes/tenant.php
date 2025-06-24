@@ -1,16 +1,14 @@
 <?php
 
-declare(strict_types=1);
+declare (strict_types = 1);
 
-use Inertia\Inertia;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
 use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
-use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
-use Stancl\Tenancy\Middleware\InitializeTenancyByDomainOrSubdomain;
 
 /*
 |--------------------------------------------------------------------------
@@ -46,30 +44,27 @@ Route::middleware([
             //     ]);
             // })->name('profile.show');
 
-
         });
 
-        Route::get('/login', [AuthController::class, 'index'])
-            ->middleware('guest')
-            ->name('login');
-        Route::post('/login', [AuthController::class, 'login'])
-            ->middleware('guest')
-            ->name('login.post');
-        Route::post('/logout', [AuthController::class, 'logout'])
-            ->middleware('auth')
-            ->name('logout');
+    Route::controller(AuthController::class)
+        ->group(function () {
+            Route::get('/login', 'index')->middleware('guest')->name('login');
+            Route::post('/login', 'login')->middleware('guest')->name('login.post');
+            Route::post('/logout', 'logout')->middleware('auth')->name('logout');
+            Route::get('/branches/validate/{id}', 'checkBranch')->middleware('guest')->name('branches.validate');
+        });
 
-        Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])->name('password.request');
+    Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])->name('password.request');
 
-        Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])->name('password.email');
+    Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])->name('password.email');
 
-        Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])->name('password.reset');
-        Route::post('reset-password', [NewPasswordController::class, 'store'])->name('password.update');
+    Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])->name('password.reset');
+    Route::post('reset-password', [NewPasswordController::class, 'store'])->name('password.update');
 
-        //public landing page
-        Route::get('/', function () {
-            return Inertia::render('Landing', [
-                'tenant' => tenant(),
-            ]);
-        })->name('landing');
+    //public landing page
+    Route::get('/', function () {
+        return Inertia::render('Landing', [
+            'tenant' => tenant(),
+        ]);
+    })->name('landing');
 });

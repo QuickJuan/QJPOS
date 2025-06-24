@@ -70,4 +70,9 @@ class User extends Authenticatable
         return $this->belongsToMany(Branch::class, 'branch_user', 'user_id', 'branch_id')
             ->withTimestamps();
     }
+
+    public function canLoginTo(Branch $branch): bool
+    {
+        return $this->branches()->where('branches.id', $branch->id)->exists();
+    }
 }
