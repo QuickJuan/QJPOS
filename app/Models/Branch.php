@@ -1,8 +1,8 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Branch extends Model
 {
@@ -21,6 +21,12 @@ class Branch extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
-        'long_lat' => 'string',
+        'long_lat'  => 'string',
     ];
+
+    public function users(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'branch_user', 'branch_id', 'user_id')
+            ->withTimestamps();
+    }
 }

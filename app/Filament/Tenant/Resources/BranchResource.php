@@ -1,17 +1,16 @@
 <?php
-
 namespace App\Filament\Tenant\Resources;
 
-use App\Filament\Tenant\Resources\BranchResource\Pages;
-use App\Filament\Tenant\Resources\BranchResource\RelationManagers;
-use App\Models\Branch;
-use Filament\Forms;
-use Filament\Forms\Form;
-use Filament\Resources\Resource;
 use Filament\Tables;
+use App\Models\Branch;
+use Filament\Forms\Form;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Filament\Resources\Resource;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+use App\Filament\Tenant\Resources\BranchResource\Pages;
 
 class BranchResource extends Resource
 {
@@ -23,53 +22,61 @@ class BranchResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('branch_code')
+                TextInput::make('branch_code')
                     ->label('Branch Code')
                     ->required()
                     ->maxLength(255),
 
-                Forms\Components\TextInput::make('name')
+                TextInput::make('name')
                     ->label('Branch Name')
                     ->required()
                     ->maxLength(255),
 
-                Forms\Components\Textarea::make('address')
+                Textarea::make('address')
                     ->label('Address')
                     ->required()
                     ->maxLength(500),
 
-                Forms\Components\TextInput::make('phone')
+                TextInput::make('phone')
                     ->label('Phone')
                     ->required()
                     ->maxLength(20),
 
-                Forms\Components\TextInput::make('email')
+                TextInput::make('email')
                     ->label('Email')
                     ->email()
                     ->required()
                     ->maxLength(255),
 
-                Forms\Components\TextInput::make('contact_person')
+                TextInput::make('contact_person')
                     ->label('Contact Person')
                     ->required()
                     ->maxLength(255),
 
-                Forms\Components\TextInput::make('long_lat')
+                TextInput::make('long_lat')
                     ->label('Longitude/Latitude')
                     ->nullable()
                     ->maxLength(255)
                     ->helperText('Format: "longitude,latitude"'),
 
-                Forms\Components\Toggle::make('is_active')
+                Toggle::make('is_active')
                     ->label('Is Active')
                     ->default(true)
                     ->inline(false),
 
-                Forms\Components\TextInput::make('tin')
+                TextInput::make('tin')
                     ->label('TIN (Tax Identification Number)')
                     ->nullable()
                     ->maxLength(50)
                     ->helperText('VAT number for the branch'),
+
+                Select::make('users')
+                    ->label('User')
+                    ->relationship('users', 'name')
+                    ->multiple()
+                    ->required()
+                    ->searchable()
+                    ->preload()
             ]);
     }
 
@@ -132,9 +139,9 @@ class BranchResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListBranches::route('/'),
+            'index'  => Pages\ListBranches::route('/'),
             'create' => Pages\CreateBranch::route('/create'),
-            'edit' => Pages\EditBranch::route('/{record}/edit'),
+            'edit'   => Pages\EditBranch::route('/{record}/edit'),
         ];
     }
 
