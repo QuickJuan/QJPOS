@@ -229,6 +229,8 @@
                     <ProductsSection />
                 </div>
             </div>
+
+            <ProductPage />
             <!-- How QuickJuan POS Helps Your Business Grow Section (now as component) -->
             <HowQuickJuanHelps />
             <!-- Why Choose QuickJuan Section -->
@@ -316,6 +318,8 @@ import ContactUs from "@/Components/ContactUs.vue";
 import WhyChooseQuickJuan from "@/Components/WhyChooseQuickJuan.vue";
 import HowQuickJuanHelps from "@/Components/HowQuickJuanHelps.vue";
 import ProductsSection from "./Home/ProductsSection.vue";
+
+import ProductPage from "./Products/Index.vue";
 
 // Animated client numbers for products
 const fnbClients = ref(0);
