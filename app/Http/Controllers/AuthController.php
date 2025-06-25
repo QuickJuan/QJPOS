@@ -1,12 +1,13 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Models\User;
+use Inertia\Inertia;
 use App\Models\Branch;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
-use Inertia\Inertia;
 
 class AuthController extends Controller
 {
@@ -40,7 +41,7 @@ class AuthController extends Controller
             'branch'   => 'required|exists:branches,id',
         ]);
 
-        $user = \App\Models\User::where('email', $request->email)->first();
+        $user = User::where('email', $request->email)->first();
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
             return back()->withErrors([
@@ -57,6 +58,9 @@ class AuthController extends Controller
         }
 
         Auth::login($user);
+
+        // Save the selected branch ID in the session
+        session(['active_branch' => $branch]);
 
         return redirect()->route('dashboard');
     }
