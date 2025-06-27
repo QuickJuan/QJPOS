@@ -67,4 +67,8 @@ Route::middleware([
             'tenant' => tenant(),
         ]);
     })->name('landing');
+
+    Route::get('/retail-cashier', function () {
+        return Inertia::render('RetailCashier/Index');
+    })->name('test');
 });
