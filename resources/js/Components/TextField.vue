@@ -1,9 +1,12 @@
 <template>
     <div class="flex flex-col gap-2">
         <div
-            class="flex justify-between items-end text-gray-700 dark:text-gray-300"
+            class="flex justify-between items-end text-gray-900 dark:text-gray-100"
         >
-            <InputLabel :for="id">
+            <InputLabel
+                :for="id"
+                class="!text-gray-900 dark:!text-gray-100 font-semibold"
+            >
                 {{ label }} <span v-if="required" class="text-red-500">*</span>
             </InputLabel>
         </div>

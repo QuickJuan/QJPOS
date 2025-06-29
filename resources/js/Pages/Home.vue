@@ -257,14 +257,10 @@
                             <h3
                                 class="text-xl font-semibold text-gray-900 group-hover:text-orange-600 transition-colors duration-300"
                             >
-                                {{ isClockedIn ? "Clock Out" : "Clock In" }}
+                                Clock In/Out
                             </h3>
                             <p class="text-sm text-gray-600 mt-2">
-                                {{
-                                    isClockedIn
-                                        ? "End your work shift"
-                                        : "Start your work shift"
-                                }}
+                                Manage your work attendance
                             </p>
                             <div v-if="isClockedIn" class="mt-2">
                                 <span
@@ -379,38 +375,7 @@ const tableOrdering = () => {
 };
 
 const toggleAttendance = () => {
-    const action = isClockedIn.value ? "clock-out" : "clock-in";
-
-    // Make API call to clock in/out
-    // router.post(route('attendance.toggle'), { action }, {
-    //     onSuccess: () => {
-    //         isClockedIn.value = !isClockedIn.value;
-    //         toast.add({
-    //             severity: 'success',
-    //             summary: isClockedIn.value ? 'Clocked In' : 'Clocked Out',
-    //             detail: isClockedIn.value ? 'Your shift has started.' : 'Your shift has ended.',
-    //             life: 3000,
-    //         });
-    //     },
-    //     onError: () => {
-    //         toast.add({
-    //             severity: 'error',
-    //             summary: 'Error',
-    //             detail: 'There was an error processing your attendance.',
-    //             life: 4000,
-    //         });
-    //     }
-    // });
-
-    // Temporary simulation
-    isClockedIn.value = !isClockedIn.value;
-    toast.add({
-        severity: "success",
-        summary: isClockedIn.value ? "Clocked In" : "Clocked Out",
-        detail: isClockedIn.value
-            ? "Your shift has started."
-            : "Your shift has ended.",
-        life: 3000,
-    });
+    // Navigate to attendance page
+    router.visit(route("attendance.index"));
 };
 </script>
