@@ -10,7 +10,7 @@ import 'sweetalert2/dist/sweetalert2.min.css';
 import PrimeVue from 'primevue/config';
 import Aura from '@primeuix/themes/aura';
 import ToastService from "primevue/toastservice";
-
+import "primeicons/primeicons.css";
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
