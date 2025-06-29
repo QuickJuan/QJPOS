@@ -3,6 +3,8 @@
 declare (strict_types = 1);
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\AttendanceController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
@@ -30,19 +32,20 @@ Route::middleware([
 
     Route::middleware(['auth:sanctum'])
         ->group(function () {
+            Route::get('/home', [HomeController::class, 'index'])->name('home');
+            
             Route::get('/dashboard', function () {
                 return Inertia::render('Dashboard', [
                     'tenant' => tenant(),
                 ]);
             })->name('dashboard');
 
-            // Route::get('/user/profile', function () {
-            //     return Inertia::render('Profile/Show', [
-            //         'user' => auth()->user(),
-            //         'sessions' => auth()->user()->sessions,
-            //         'tenants' => auth()->user()->tenants,
-            //     ]);
-            // })->name('profile.show');
+            // Attendance routes
+            Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
+            Route::post('/attendance/check-status', [AttendanceController::class, 'checkStatus'])->name('attendance.check-status');
+            Route::post('/attendance/toggle', [AttendanceController::class, 'toggle'])->name('attendance.toggle');
+            Route::get('/attendance/today', [AttendanceController::class, 'today'])->name('attendance.today');
+            Route::get('/attendance/history', [AttendanceController::class, 'history'])->name('attendance.history');
 
         });
 

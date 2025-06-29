@@ -4,6 +4,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -29,6 +30,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'employee_code',
     ];
 
     /**
@@ -69,6 +71,11 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Branch::class, 'branch_user', 'user_id', 'branch_id')
             ->withTimestamps();
+    }
+
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(Attendance::class);
     }
 
     public function canLoginTo(Branch $branch): bool

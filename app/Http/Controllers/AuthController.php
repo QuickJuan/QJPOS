@@ -62,7 +62,7 @@ class AuthController extends Controller
         // Save the selected branch ID in the session
         session(['active_branch' => $branch]);
 
-        return redirect()->route('dashboard');
+        return redirect()->route('home');
     }
 
     public function logout(Request $request)

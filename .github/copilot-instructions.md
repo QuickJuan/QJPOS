@@ -1,27 +1,30 @@
-Co-pilot Instructions
+# Log in process
 
--   This Project is for Retail, Restaurant, and and Fast Food
--   The project is a web application
--   The project is a web application that allows users to manage their inventory, sales, and customer data
--   The is build from scratch using Laravel 11, Vue 3 with composition API with typescript and setup on script tag
--   The project used tailwindcss for styling
--   The Project should allow user to login and start cashiering
--   The project should have a dashboard that shows sales and inventory data
--   The project should have a product management page that allows user to add, edit, and delete products
--   The project should have a sales management page that allows user to view and manage sales
--   The project should have a customer management page that allows user to view and manage customers
--   The project should have a report page that shows sales and inventory reports
--   The project should have a settings page that allows user to manage their account and application settings
--   The project should have a responsive design that works on mobile and desktop devices
--   The project should have a login page that allows user to login using their email and password
--   The project should have a registration page that allows user to register using their email and password
--   The project should have a forgot password page that allows user to reset their password
--   The project should have a profile page that allows user to view and edit their profile
--   The project should have a logout functionality that allows user to logout from the application
--   The project should have a notification system that shows success and error messages
--   The project should have a search functionality that allows user to search for products, sales, and customers
--   The project should have a filter functionality that allows user to filter products, sales, and customers
--   The project should have a sort functionality that allows user to sort products, sales, and customers
--   The project should have a pagination functionality that allows user to paginate products, sales, and customers
--   The project should have a dark mode functionality that allows user to switch between light and dark mode
--   Please always make it responsive and accessible to all users specially with blind and color blind
+-   User should be able to select branch where they want to log in.
+-   User should be able to reveal and hide password.
+-   After login, user should be redirected Home Navigation instead of Dasboard.
+    -   Home page navigation should have 4 buttons
+        -   Dasboard
+        -   Start Cashiering
+        -   Table Ordering
+        -   Clock in/out for attendance.
+-   User should be able to log out.
+
+# clock in / out process
+
+-   User should be able to clock in and clock out.
+-   Create page for clock in and clock out.
+-   On attendance page, user should be able to input their employee code and click clock in or clock out button.
+-   System should be able to detect if user is clocking in or clocking out. from attendance table system will check if the user id exists in the attendance table that does not have actual_timeout.
+    -   If user id exists, system will update the actual_timeout column with current time.
+    -   If user id does not exist, system will create a new record in the attendance table and will put the current time in actual_time_in column.
+-   Enable camera access for attendance.
+    -   when the user click the Clock In/Out button, the system should access the camera and take a photo of the user.
+    -   there will be 1 button for Clock In and Clock Out.
+    -   System will preview the photo before saving it. when the user click the clock in/out button, the system will take a photo of the user and will show the preview of the photo.
+    -   Confirmation dialog will be shown to the user before saving the photo and the attendance record.
+    -   use the spatie media library to store the photo. there will be 2 photo associated with the attendance record.
+        -   photo for clock in
+        -   photo for clock out
+-   system will need to check if the user is associated with the branch where they are clocking in/out.
+    -   if the user is not associated with the branch, system will show an error message and will not allow the user to clock in/out.
