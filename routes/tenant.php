@@ -3,6 +3,7 @@
 declare (strict_types = 1);
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
@@ -30,6 +31,8 @@ Route::middleware([
 
     Route::middleware(['auth:sanctum'])
         ->group(function () {
+            Route::get('/home', [HomeController::class, 'index'])->name('home');
+            
             Route::get('/dashboard', function () {
                 return Inertia::render('Dashboard', [
                     'tenant' => tenant(),
