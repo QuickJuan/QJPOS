@@ -1,6 +1,8 @@
 <template>
-    <div class="flex flex-col">
-        <div class="flex justify-between items-end text-white dark:text-white">
+    <div class="flex flex-col gap-2">
+        <div
+            class="flex justify-between items-end text-gray-700 dark:text-gray-300"
+        >
             <InputLabel :for="id">
                 {{ label }} <span v-if="required" class="text-red-500">*</span>
             </InputLabel>
@@ -13,11 +15,12 @@
             :optionLabel="optionLabel"
             :optionValue="optionValue"
             :defaultValue="defaultValue"
-            :placeholder="placeholder"
+            :placeholder="placeholder || 'Select an option'"
             :filter="searchable"
             @filter="onFilter"
             :showClear="showClear"
-            class="w-full dark:bg-white text-sm"
+            class="w-full text-gray-900 bg-white border border-gray-300 rounded-lg shadow-sm"
+            panelClass="shadow-lg border border-gray-200 rounded-lg"
         />
 
         <InputError :message="error" />
