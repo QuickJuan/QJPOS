@@ -16,9 +16,9 @@ foreach (config('tenancy.central_domains') as $domain) {
             ]);
         })->name('central.home');
 
-        Route::get('/login', function () {
-                return redirect("/central");
-            })->name('login');
+        // Route::get('/login', function () {
+        //         return redirect("/central");
+        //     })->name('login');
 
         // Route::get('/dashboard', function () {
         //     return "central dashboard";
