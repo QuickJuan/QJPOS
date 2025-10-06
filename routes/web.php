@@ -10,11 +10,11 @@ foreach (config('tenancy.central_domains') as $domain) {
     Route::domain($domain)->middleware(['web', BlockTenantAccessToCentral::class])->group(function () {
 
         // Central home route
-        // Route::get('/', function () {
-        //     return Inertia::render('Welcome', [
-        //         'table' => 'Welcome to the Central Domain',
-        //     ]);
-        // })->name('central.home');
+        Route::get('/', function () {
+            return Inertia::render('Welcome', [
+                'table' => 'Welcome to the Central Domain',
+            ]);
+        })->name('central.home');
 
         Route::get('/login', function () {
                 return redirect("/central");
