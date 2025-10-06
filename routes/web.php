@@ -6,9 +6,11 @@ use Filament\Http\Middleware\Authenticate;
 use App\Http\Middleware\BlockTenantAccessToCentral;
 use Stancl\Tenancy\Middleware\PreventAccessFromTenantDomains;
 
-foreach (config('tenancy.central_domains') as $domain) {
-    Route::domain($domain)->middleware(['web', BlockTenantAccessToCentral::class])->group(function () {
-
+// Register routes for all central domains
+Route::domain('{domain}')
+    ->where('domain', implode('|', config('tenancy.central_domains')))
+    ->middleware(['web', BlockTenantAccessToCentral::class])
+    ->group(function () {
         // Central home route
         Route::get('/', function () {
             return Inertia::render('Welcome', [
@@ -18,7 +20,7 @@ foreach (config('tenancy.central_domains') as $domain) {
 
         // Route::get('/login', function () {
         //         return redirect("/central");
-        //     })->name('login');
+        //     })->name('central.login');
 
         // Route::get('/dashboard', function () {
         //     return "central dashboard";
@@ -28,8 +30,4 @@ foreach (config('tenancy.central_domains') as $domain) {
         // Route::get('/admin', function () {
         //     return redirect("/central");
         // })->name('admin.login');
-
-
-
     });
-}
