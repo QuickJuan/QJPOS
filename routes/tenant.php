@@ -33,7 +33,7 @@ Route::middleware([
     Route::middleware(['auth:sanctum'])
         ->group(function () {
             Route::get('/home', [HomeController::class, 'index'])->name('home');
-            
+
             Route::get('/dashboard', function () {
                 return Inertia::render('Dashboard', [
                     'tenant' => tenant(),
@@ -51,8 +51,8 @@ Route::middleware([
 
     Route::controller(AuthController::class)
         ->group(function () {
-            Route::get('/login', 'index')->middleware('guest')->name('login');
-            Route::post('/login', 'login')->middleware('guest')->name('login.post');
+            Route::get('/login', 'index')->middleware('guest')->name('tenant.login');
+            Route::post('/login', 'login')->middleware('guest')->name('tenant.login.post');
             Route::post('/logout', 'logout')->middleware('auth')->name('logout');
             Route::get('/branches/validate/{id}', 'checkBranch')->middleware('guest')->name('branches.validate');
         });
