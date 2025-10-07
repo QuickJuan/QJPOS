@@ -213,10 +213,10 @@
                     >
                         The modern, multi-tenant Point of Sale platform for
                         retail, restaurants, and fast food.
-                        <span class="font-semibold text-primary"
-                            >Manage your business, inventory, and sales with
-                            ease.</span
-                        >
+                        <span class="font-semibold text-primary">
+                            Manage your business, inventory, and sales with
+                            ease.
+                        </span>
                     </p>
                     <button
                         @click="scrollToGetStarted"

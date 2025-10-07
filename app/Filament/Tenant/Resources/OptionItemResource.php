@@ -2,12 +2,15 @@
 namespace App\Filament\Tenant\Resources;
 
 use App\Filament\Tenant\Resources\OptionItemResource\Pages;
+use App\Models\Option;
 use App\Models\OptionItem;
+use App\Models\ProductPackaging;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 class OptionItemResource extends Resource
@@ -20,41 +23,49 @@ class OptionItemResource extends Resource
     {
         return $form
             ->schema([
-                Select::make('product_option_id')
-                    ->label('Product Option')
-                    ->relationship('productOption', 'name')
+                Select::make('option_id')
+                    ->label('Option')
+                    ->relationship('option', 'option_name')
                     ->required()
                     ->searchable()
                     ->preload()
                     ->reactive()
                     ->getOptionLabelFromRecordUsing(function ($record) {
-                        $optionName = $record->name ?? '';
+                        $optionName  = $record->option_name ?? '';
                         $productName = $record->productPackaging?->product?->name ?? '';
                         $unitMeasure = $record->productPackaging?->unit_measure ?? '';
-                        return trim(  $productName . ' ' . $unitMeasure . ' - ' .$optionName);
+                        return trim("{$productName} {$unitMeasure} - {$optionName}");
                     }),
+
+                Select::make('product_id')
+                    ->label('Product')
+                    ->relationship('product', 'name')
+                    ->required()
+                    ->searchable()
+                    ->preload(),
 
                 Select::make('product_packaging_id')
                     ->label('Product Option Item')
                     ->relationship('productPackaging', 'unit_measure')
-                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->unit_measure . ' - ' . $record->product->name)
+                    ->getOptionLabelFromRecordUsing(fn($record) => $record->unit_measure . ' - ' . $record->product->name)
                     ->options(function ($get) {
-                        $productOptionId = $get('product_option_id');
-                        if (!$productOptionId) {
+                        $optionId = $get('option_id');
+
+                        if (! $optionId) {
                             return [];
                         }
-                        $productOption = \App\Models\ProductOption::find($productOptionId);
-                        $productId = $productOption?->productPackaging?->product_id;
-                        return \App\Models\ProductPackaging::where('product_id', '!=', $productId)
+
+                        $option    = Option::find($optionId);
+                        $productId = $option?->productPackaging?->product_id;
+
+                        return ProductPackaging::where('product_id', '!=', $productId)
                             ->with('product')
                             ->get()
-                            ->mapWithKeys(function ($packaging) {
-                                return [$packaging->id => $packaging->product->name . ' - ' . $packaging->unit_measure];
-                            });
+                            ->mapWithKeys(fn($packaging) => [$packaging->id => $packaging->product->name . ' - ' . $packaging->unit_measure]);
                     }),
 
-                TextInput::make('additional_price')
-                    ->label('Additional Price')
+                TextInput::make('price')
+                    ->label('Price')
                     ->numeric()
                     ->required()
                     ->minValue(0)
@@ -66,24 +77,27 @@ class OptionItemResource extends Resource
     {
         return $table
             ->columns([
-
-                Tables\Columns\TextColumn::make('productOption.productPackaging.product.name')
+                TextColumn::make('option.productPackaging.product.name')
                     ->label('Main Product')
                     ->sortable()
                     ->searchable(),
-                Tables\Columns\TextColumn::make('productOption.name')
+
+                TextColumn::make('option.option_name')
                     ->label('Product Option')
                     ->sortable()
                     ->searchable(),
-                Tables\Columns\TextColumn::make('productPackaging.product.name')
+
+                TextColumn::make('productPackaging.product.name')
                     ->label('Item Option')
                     ->sortable()
                     ->searchable(),
-                Tables\Columns\TextColumn::make('productPackaging.unit_measure')
+
+                TextColumn::make('productPackaging.unit_measure')
                     ->label('Product Packaging')
                     ->sortable()
                     ->searchable(),
-                Tables\Columns\TextColumn::make('additional_price')
+
+                TextColumn::make('price')
                     ->sortable()
                     ->searchable(),
             ])
@@ -123,6 +137,6 @@ class OptionItemResource extends Resource
 
     public static function getNavigationSort(): ?int
     {
-        return 7; // Second in group
+        return 8; // Second in group
     }
 }

@@ -58,7 +58,7 @@ class OptionItemsRelationManager extends RelationManager
                     ->sortable()
                     ->searchable(),
                 Tables\Columns\TextColumn::make('additional_price'),
-                
+
             ])
             ->filters([
                 //

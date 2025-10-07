@@ -11,6 +11,8 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
 use App\Filament\Tenant\Resources\ProductPackagingResource\Pages;
 use App\Filament\Tenant\Resources\ProductPackagingResource\RelationManagers\ProductOptionsRelationManager;
+use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
+use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
 
 class ProductPackagingResource extends Resource
 {
@@ -43,6 +45,11 @@ class ProductPackagingResource extends Resource
                     ->label('Quantity')
                     ->numeric()
                     ->required(),
+
+                SpatieMediaLibraryFileUpload::make('featured_image')
+                    ->collection('featured_image')
+                    ->image()
+                    ->imageEditor()
             ]);
     }
 
@@ -50,6 +57,10 @@ class ProductPackagingResource extends Resource
     {
         return $table
             ->columns([
+                SpatieMediaLibraryImageColumn::make('featured_image')
+                    ->collection('featured_image')
+                    ->circular(),
+
                 TextColumn::make('product.name')
                     ->sortable()
                     ->searchable(),

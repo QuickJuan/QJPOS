@@ -4,10 +4,12 @@ namespace App\Filament\Tenant\Resources;
 use App\Filament\Tenant\Resources\GroupResource\Pages;
 use App\Models\Group;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -25,12 +27,15 @@ class GroupResource extends Resource
                     ->required()
                     ->rules('required'),
 
-                // SpatieMediaLibraryFileUpload::make('featured_image')
-                //     ->collection('featured_image')
-
                 Select::make('products')
                     ->relationship('products', 'name')
+                    ->preload()
                     ->multiple(),
+
+                SpatieMediaLibraryFileUpload::make('featured_image')
+                    ->collection('featured_image')
+                    ->image()
+                    ->imageEditor(),
             ]);
     }
 
@@ -38,6 +43,10 @@ class GroupResource extends Resource
     {
         return $table
             ->columns([
+                SpatieMediaLibraryImageColumn::make('featured_image')
+                    ->collection('featured_image')
+                    ->circular(),
+
                 TextColumn::make('name')
                     ->sortable()
                     ->searchable(),

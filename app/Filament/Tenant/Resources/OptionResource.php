@@ -1,9 +1,9 @@
 <?php
 namespace App\Filament\Tenant\Resources;
 
-use App\Filament\Tenant\Resources\CategoryResource\Pages;
-use App\Filament\Tenant\Resources\CategoryResource\RelationManagers\ProductsRelationManager;
-use App\Models\Category;
+use App\Filament\Tenant\Resources\OptionResource\Pages;
+use App\Models\Option;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
@@ -13,9 +13,9 @@ use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
-class CategoryResource extends Resource
+class OptionResource extends Resource
 {
-    protected static ?string $model = Category::class;
+    protected static ?string $model = Option::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
@@ -23,14 +23,20 @@ class CategoryResource extends Resource
     {
         return $form
             ->schema([
-                TextInput::make('name')
-                    ->required(),
+                TextInput::make('option_name')
+                    ->required()
+                    ->maxLength(255),
+
+                Select::make('products')
+                    ->relationship('products', 'name')
+                    ->multiple()
+                    ->searchable()
+                    ->preload(),
 
                 SpatieMediaLibraryFileUpload::make('featured_image')
                     ->collection('featured_image')
                     ->image()
                     ->imageEditor(),
-
             ]);
     }
 
@@ -42,9 +48,20 @@ class CategoryResource extends Resource
                     ->collection('featured_image')
                     ->circular(),
 
-                TextColumn::make('name')
+                TextColumn::make('option_name')
+                    ->label('Option Name')
                     ->sortable()
                     ->searchable(),
+
+                TextColumn::make('created_at')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('updated_at')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 //
@@ -62,16 +79,16 @@ class CategoryResource extends Resource
     public static function getRelations(): array
     {
         return [
-            ProductsRelationManager::class,
+            //
         ];
     }
 
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListCategories::route('/'),
-            'create' => Pages\CreateCategory::route('/create'),
-            'edit'   => Pages\EditCategory::route('/{record}/edit'),
+            'index'  => Pages\ListOptions::route('/'),
+            'create' => Pages\CreateOption::route('/create'),
+            'edit'   => Pages\EditOption::route('/{record}/edit'),
         ];
     }
 
@@ -82,6 +99,6 @@ class CategoryResource extends Resource
 
     public static function getNavigationSort(): ?int
     {
-        return 1; // Second in group
+        return 7; // Second in group
     }
 }

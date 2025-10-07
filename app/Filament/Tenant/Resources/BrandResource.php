@@ -6,6 +6,7 @@ use Filament\Forms;
 use Filament\Tables;
 use App\Models\Brand;
 use Filament\Forms\Form;
+use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
 use Filament\Tables\Table;
 use Filament\Resources\Resource;
 use Filament\Tables\Columns\TextColumn;
@@ -15,6 +16,7 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 use App\Filament\Tenant\Resources\BrandResource\Pages;
 use App\Filament\Tenant\Resources\BrandResource\RelationManagers;
 use App\Filament\Tenant\Resources\BrandResource\RelationManagers\ProductsRelationManager;
+use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 
 class BrandResource extends Resource
 {
@@ -26,7 +28,13 @@ class BrandResource extends Resource
     {
         return $form
             ->schema([
-                TextInput::make('name'),
+                TextInput::make('name')
+                    ->required(),
+
+                SpatieMediaLibraryFileUpload::make('featured_image')
+                    ->collection('featured_image')
+                    ->image()
+                    ->imageEditor(),
             ]);
     }
 
@@ -34,7 +42,13 @@ class BrandResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('name'),
+                SpatieMediaLibraryImageColumn::make('featured_image')
+                    ->collection('featured_image')
+                    ->circular(),
+                    
+                TextColumn::make('name')
+                    ->sortable()
+                    ->searchable(),
             ])
             ->filters([
                 //
