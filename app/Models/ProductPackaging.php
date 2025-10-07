@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class ProductPackaging extends Model implements HasMedia
 {
     use InteractsWithMedia;
-    
+
     protected $fillable = [
         'product_id',
         'cost',
@@ -24,10 +24,9 @@ class ProductPackaging extends Model implements HasMedia
     {
         $this->addMediaCollection('featured_image')
             ->singleFile();
-            // ->usePathGenerator(new MediaPathGenerator());
     }
 
-    public function getFeaturedImageUrlAttribute()
+    public function getFeaturedImageUrlAttribute(): string
     {
         return $this->getFirstMediaUrl('featured_image');
     }

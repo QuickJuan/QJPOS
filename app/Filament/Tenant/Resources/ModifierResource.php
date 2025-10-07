@@ -22,7 +22,7 @@ class ModifierResource extends Resource
     public static function form(Form $form): Form
     {
         return $form
-        
+
             ->schema([
                 Select::make('product_id')
                     ->relationship('product', 'name')
@@ -92,6 +92,6 @@ class ModifierResource extends Resource
 
     public static function getNavigationSort(): ?int
     {
-        return 8; // Second in group
+        return 9; // Second in group
     }
 }

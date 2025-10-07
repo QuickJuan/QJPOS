@@ -9,9 +9,12 @@ use Filament\Tables\Table;
 use Filament\Resources\Resource;
 use Filament\Forms\Components\Select;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\RichEditor;
 use App\Filament\Tenant\Resources\ProductResource\Pages;
 use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 use App\Filament\Tenant\Resources\ProductResource\RelationManagers;
+use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
 
 class ProductResource extends Resource
 {
@@ -23,27 +26,33 @@ class ProductResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('uuid')
+                TextInput::make('uuid')
                     ->required()
                     ->maxLength(150)
                     ->label('UUID'),
 
-                Forms\Components\TextInput::make('name')
+                TextInput::make('name')
                     ->required()
                     ->maxLength(150)
                     ->label('Product Name'),
 
-                Forms\Components\TextInput::make('receipt_alias')
+                TextInput::make('receipt_alias')
                     ->required()
                     ->maxLength(150)
                     ->label('Receipt Name'),
 
-                Forms\Components\RichEditor::make('description')
+                Select::make('options')
+                    ->relationship('options', 'option_name')
+                    ->multiple()
+                    ->searchable()
+                    ->preload(),
+
+                RichEditor::make('description')
                     ->maxLength(500)
                     ->ColumnSpan(2)
                     ->label('Description'),
 
-                Forms\Components\Select::make('category_id')
+                Select::make('category_id')
                     ->relationship('category', 'name')
                     ->required()
                     ->label('Category')
@@ -51,13 +60,13 @@ class ProductResource extends Resource
                     ->preload()
                     ->placeholder('Select a category')
                     ->createOptionForm([
-                        Forms\Components\TextInput::make('name')
+                        TextInput::make('name')
                             ->required()
                             ->maxLength(255)
                             ->label('Category Name'),
                     ]),
 
-                Forms\Components\Select::make('brand_id')
+                Select::make('brand_id')
                     ->relationship('brand', 'name')
                     ->required()
                     ->label('Brand')
@@ -65,7 +74,7 @@ class ProductResource extends Resource
                     ->preload()
                     ->placeholder('Select a brand')
                     ->createOptionForm([
-                        Forms\Components\TextInput::make('name')
+                        TextInput::make('name')
                             ->required()
                             ->maxLength(255)
                             ->label('Brand Name'),
@@ -73,18 +82,22 @@ class ProductResource extends Resource
 
                 Select::make('groups')
                     ->relationship('groups', 'name')
-                    ->multiple(),
+                    ->multiple()
+                    ->preload(),
 
                 SpatieMediaLibraryFileUpload::make('featured_image')
+                    ->label('Featured Image')
                     ->collection('featured_image')
                     ->image()
-                    ->label('Featured Image'),
+                    ->imageEditor(),
 
                 SpatieMediaLibraryFileUpload::make('product_images')
+                    ->label('Product Images')
                     ->collection('product_images')
                     ->multiple()
                     ->image()
-                    ->label('Product Images'),
+                    ->imageEditor(),
+
             ])->columns(2)
             ->columns([
                 'sm' => 1,
@@ -96,26 +109,30 @@ class ProductResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('id')
-                    ->label('ID')
-                    ->searchable()
-                    ->sortable(),
+                SpatieMediaLibraryImageColumn::make('featured_image')
+                    ->collection('featured_image')
+                    ->circular(),
+
                 TextColumn::make('name')
                     ->label('Product Name')
                     ->searchable()
                     ->sortable(),
+
                 TextColumn::make('receipt_alias')
                     ->label('Receipt Name')
                     ->searchable()
                     ->sortable(),
+
                 TextColumn::make('category.name')
                     ->label('Category')
                     ->searchable()
                     ->sortable(),
+
                 TextColumn::make('brand.name')
                     ->label('Brand')
                     ->searchable()
                     ->sortable(),
+
             ])
             ->filters([
                 //
