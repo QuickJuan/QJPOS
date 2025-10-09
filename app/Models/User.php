@@ -82,4 +82,9 @@ class User extends Authenticatable
     {
         return $this->branches()->where('branches.id', $branch->id)->exists();
     }
+
+    public function inventoryLogs(): HasMany
+    {
+        return $this->hasMany(InventoryLog::class);
+    }
 }
