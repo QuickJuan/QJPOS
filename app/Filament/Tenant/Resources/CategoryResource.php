@@ -1,17 +1,22 @@
 <?php
 namespace App\Filament\Tenant\Resources;
 
-use App\Filament\Tenant\Resources\CategoryResource\Pages;
-use App\Filament\Tenant\Resources\CategoryResource\RelationManagers\ProductsRelationManager;
-use App\Models\Category;
-use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
-use Filament\Resources\Resource;
 use Filament\Tables;
-use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
-use Filament\Tables\Columns\TextColumn;
+use App\Models\Category;
+use Filament\Forms\Form;
 use Filament\Tables\Table;
+use Filament\Resources\Resource;
+use Filament\Tables\Actions\Action;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
+use Filament\Tables\Actions\ActionGroup;
+use Filament\Tables\Actions\ImportAction;
+use App\Filament\Imports\CategoryImporter;
+use App\Filament\Tenant\Resources\CategoryResource\Pages;
+use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
+use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
+use App\Filament\Tenant\Resources\CategoryResource\RelationManagers\ProductsRelationManager;
 
 class CategoryResource extends Resource
 {
@@ -51,6 +56,27 @@ class CategoryResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+            ])
+            ->headerActions([
+                ActionGroup::make([
+                    Action::make('OpenCSVTemplate')
+                        ->label('Open CSV Template')
+                        ->icon('heroicon-m-document')
+                        ->url(config('csv-template.templates.category'))
+                        ->openUrlInNewTab(),
+
+                    ImportAction::make('importCategories')
+                        ->label('Import')
+                        ->icon('heroicon-m-arrow-top-right-on-square')
+                        ->importer(CategoryImporter::class)
+                        ->after(function () {
+                            Notification::make()
+                                ->title('Category Imported')
+                                ->body('Your CSV file has been successfully imported.')
+                                ->success()
+                                ->send();
+                        }),
+                ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
