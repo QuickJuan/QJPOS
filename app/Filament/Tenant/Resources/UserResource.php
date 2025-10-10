@@ -1,15 +1,15 @@
 <?php
 namespace App\Filament\Tenant\Resources;
 
-use Filament\Forms;
+use App\Filament\Tenant\Resources\UserResource\Pages;
 use App\Models\User;
-use Filament\Tables;
-use Filament\Forms\Form;
-use Filament\Tables\Table;
-use Filament\Resources\Resource;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use App\Filament\Tenant\Resources\UserResource\Pages;
+use Filament\Forms\Form;
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
 
 class UserResource extends Resource
 {
@@ -54,7 +54,17 @@ class UserResource extends Resource
     {
         return $table
             ->columns([
-                //
+                TextColumn::make('name')
+                    ->sortable()
+                    ->searchable(),
+
+                TextColumn::make('email')
+                    ->sortable()
+                    ->searchable(),
+
+                TextColumn::make('branches.name')
+                    ->sortable()
+                    ->searchable(),
             ])
             ->filters([
                 //

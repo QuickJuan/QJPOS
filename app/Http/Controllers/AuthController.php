@@ -1,18 +1,16 @@
 <?php
 namespace App\Http\Controllers;
 
-use App\Models\User;
-use Inertia\Inertia;
 use App\Models\Branch;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
 
 class AuthController extends Controller
 {
-    //
-
     public function index()
     {
         $branches = Branch::query()->select('id', 'name', 'branch_code')->get();

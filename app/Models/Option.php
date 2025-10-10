@@ -22,7 +22,7 @@ class Option extends Model implements HasMedia
 
     public function optionItems(): HasMany
     {
-        return $this->hasMany(Option::class);
+        return $this->hasMany(OptionItem::class);
     }
 
     public function products(): BelongsToMany

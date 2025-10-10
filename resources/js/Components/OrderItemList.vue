@@ -29,7 +29,9 @@
                         v-model="orderItem.checked"
                         :value="orderItem.id.toString()"
                         class="w-5 h-5"
-                        @change="(checked) => handleItemSelection(orderItem, checked)"
+                        @change="
+                            (checked) => handleItemSelection(orderItem, checked)
+                        "
                     />
                 </div>
 
@@ -67,20 +69,21 @@
                                     }}
                                 </span>
                             </div>
-                            <div class="flex gap-2">
-                                <button
-                                    @click="$emit('edit', orderItem)"
-                                    class="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                                >
-                                    Edit
-                                </button>
-                                <button
-                                    @click="$emit('delete', orderItem)"
-                                    class="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-                                >
-                                    Delete
-                                </button>
-                            </div>
+                        </div>
+
+                        <div class="flex gap-2">
+                            <button
+                                @click="$emit('edit', orderItem)"
+                                class="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                            >
+                                Edit
+                            </button>
+                            <button
+                                @click="$emit('delete', orderItem)"
+                                class="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                            >
+                                Delete
+                            </button>
                         </div>
                     </div>
                 </div>
