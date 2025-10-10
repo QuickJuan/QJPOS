@@ -7,14 +7,19 @@ use App\Models\Product;
 use Filament\Forms\Form;
 use Filament\Tables\Table;
 use Filament\Resources\Resource;
+use Filament\Tables\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
+use Filament\Tables\Actions\ActionGroup;
+use App\Filament\Imports\ProductImporter;
 use Filament\Forms\Components\RichEditor;
+use Filament\Tables\Actions\ImportAction;
 use App\Filament\Tenant\Resources\ProductResource\Pages;
+use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
 use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 use App\Filament\Tenant\Resources\ProductResource\RelationManagers;
-use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
 
 class ProductResource extends Resource
 {
@@ -139,6 +144,27 @@ class ProductResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+            ])
+            ->headerActions([
+                ActionGroup::make([
+                    Action::make('OpenCSVTemplate')
+                        ->label('Open CSV Template')
+                        ->icon('heroicon-m-document')
+                        ->url(config('csv-template.templates.product'))
+                        ->openUrlInNewTab(),
+
+                    ImportAction::make('importProducts')
+                        ->label('Import')
+                        ->icon('heroicon-m-arrow-top-right-on-square')
+                        ->importer(ProductImporter::class)
+                        ->after(function () {
+                            Notification::make()
+                                ->title('Product Imported')
+                                ->body('Your CSV file has been successfully imported.')
+                                ->success()
+                                ->send();
+                        }),
+                ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
