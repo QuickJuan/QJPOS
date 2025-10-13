@@ -114,167 +114,41 @@
 
             <!-- Navigation Cards -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <!-- Dashboard -->
-                <Link
-                    :href="route('dashboard')"
-                    class="group bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 p-6 border hover:border-primary transform hover:scale-105"
-                >
-                    <div
-                        class="flex flex-col items-center text-center space-y-4"
+                <template v-for="(action, key) in actions" :key="key">
+                    <!-- Dashboard -->
+                    <Link
+                        :href="route(action.route)"
+                        class="group bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 p-6 border hover:border-primary transform hover:scale-105"
                     >
                         <div
-                            class="bg-blue-500 group-hover:bg-blue-600 p-4 rounded-full transition-colors duration-300"
+                            class="flex flex-col items-center text-center space-y-4"
                         >
-                            <svg
-                                class="w-8 h-8 text-white"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                                ></path>
-                            </svg>
-                        </div>
-                        <div>
-                            <h3
-                                class="text-xl font-semibold text-gray-900 group-hover:text-primary transition-colors duration-300"
-                            >
-                                Dashboard
-                            </h3>
-                            <p class="text-sm text-gray-600 mt-2">
-                                View reports, analytics, and business insights
-                            </p>
-                        </div>
-                    </div>
-                </Link>
+                            <component :is="action.icon" />
 
-                <!-- Start Cashiering -->
-                <button
-                    @click="startCashiering"
-                    class="group bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 p-6 border hover:border-green-500 transform hover:scale-105"
-                >
-                    <div
-                        class="flex flex-col items-center text-center space-y-4"
-                    >
-                        <div
-                            class="bg-green-500 group-hover:bg-green-600 p-4 rounded-full transition-colors duration-300"
-                        >
-                            <svg
-                                class="w-8 h-8 text-white"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
-                                ></path>
-                            </svg>
-                        </div>
-                        <div>
-                            <h3
-                                class="text-xl font-semibold text-gray-900 group-hover:text-green-600 transition-colors duration-300"
-                            >
-                                Start Cashiering
-                            </h3>
-                            <p class="text-sm text-gray-600 mt-2">
-                                Process sales transactions and manage POS
-                            </p>
-                        </div>
-                    </div>
-                </button>
-
-                <!-- Table Ordering -->
-                <button
-                    @click="tableOrdering"
-                    class="group bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 p-6 border hover:border-purple-500 transform hover:scale-105"
-                >
-                    <div
-                        class="flex flex-col items-center text-center space-y-4"
-                    >
-                        <div
-                            class="bg-purple-500 group-hover:bg-purple-600 p-4 rounded-full transition-colors duration-300"
-                        >
-                            <svg
-                                class="w-8 h-8 text-white"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                                ></path>
-                            </svg>
-                        </div>
-                        <div>
-                            <h3
-                                class="text-xl font-semibold text-gray-900 group-hover:text-purple-600 transition-colors duration-300"
-                            >
-                                Table Ordering
-                            </h3>
-                            <p class="text-sm text-gray-600 mt-2">
-                                Manage restaurant orders and table service
-                            </p>
-                        </div>
-                    </div>
-                </button>
-
-                <!-- Clock In/Out -->
-                <button
-                    @click="toggleAttendance"
-                    class="group bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 p-6 border hover:border-orange-500 transform hover:scale-105"
-                >
-                    <div
-                        class="flex flex-col items-center text-center space-y-4"
-                    >
-                        <div
-                            class="bg-orange-500 group-hover:bg-orange-600 p-4 rounded-full transition-colors duration-300"
-                        >
-                            <svg
-                                class="w-8 h-8 text-white"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                                ></path>
-                            </svg>
-                        </div>
-                        <div>
-                            <h3
-                                class="text-xl font-semibold text-gray-900 group-hover:text-orange-600 transition-colors duration-300"
-                            >
-                                Clock In/Out
-                            </h3>
-                            <p class="text-sm text-gray-600 mt-2">
-                                Manage your work attendance
-                            </p>
-                            <div v-if="isClockedIn" class="mt-2">
-                                <span
-                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                            <div>
+                                <h3
+                                    class="text-xl font-semibold text-gray-900 group-hover:text-primary transition-colors duration-300"
                                 >
-                                    <div
-                                        class="w-2 h-2 bg-green-400 rounded-full mr-1 animate-pulse"
-                                    ></div>
-                                    On duty
-                                </span>
+                                    {{ action.name }}
+                                </h3>
+                                <p class="text-sm text-gray-600 mt-2">
+                                    {{ action.description }}
+                                </p>
+
+                                <div v-if="isClockedIn" class="mt-2">
+                                    <span
+                                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                                    >
+                                        <div
+                                            class="w-2 h-2 bg-green-400 rounded-full mr-1 animate-pulse"
+                                        ></div>
+                                        On duty
+                                    </span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </button>
+                    </Link>
+                </template>
             </div>
         </main>
 
@@ -288,6 +162,10 @@ import { ref, computed } from "vue";
 import { Head, Link, router, usePage } from "@inertiajs/vue3";
 import { useToast } from "primevue";
 import { Toast } from "primevue";
+import AnalyticsIcon from "@/Components/icons/HomeIcons/AnalyticsIcon.vue";
+import CashieringIcon from "@/Components/icons/HomeIcons/CashieringIcon.vue";
+import TableOrderingIcon from "@/Components/icons/HomeIcons/TableOrderingIcon.vue";
+import ClockInOutIcon from "@/Components/icons/HomeIcons/ClockInOutIcon.vue";
 
 const page = usePage();
 const toast = useToast();
@@ -332,27 +210,6 @@ const logout = () => {
     );
 };
 
-const startCashiering = () => {
-    if (!activeBranch.value) {
-        toast.add({
-            severity: "warn",
-            summary: "No Branch Selected",
-            detail: "Please select a branch before starting cashiering.",
-            life: 4000,
-        });
-        return;
-    }
-
-    // Navigate to cashiering system
-    // router.visit(route('cashier'));
-    toast.add({
-        severity: "info",
-        summary: "Starting Cashier",
-        detail: "Launching cashiering system...",
-        life: 3000,
-    });
-};
-
 const tableOrdering = () => {
     if (!activeBranch.value) {
         toast.add({
@@ -374,8 +231,30 @@ const tableOrdering = () => {
     });
 };
 
-const toggleAttendance = () => {
-    // Navigate to attendance page
-    router.visit(route("attendance.index"));
-};
+const actions = [
+    {
+        route: "dashboard",
+        name: "Dashboard",
+        description: "View reports, analytics, and business insights",
+        icon: AnalyticsIcon,
+    },
+    {
+        route: "retail-cashier",
+        name: "Start Cashiering",
+        description: "Process sales transactions and manage POS",
+        icon: CashieringIcon,
+    },
+    {
+        route: "dashboard",
+        name: "Table Ordering",
+        description: "Manage restaurant orders and table service",
+        icon: TableOrderingIcon,
+    },
+    {
+        route: "attendance.index",
+        name: "Clock In/Out",
+        description: "Manage your work attendance",
+        icon: ClockInOutIcon,
+    },
+];
 </script>
