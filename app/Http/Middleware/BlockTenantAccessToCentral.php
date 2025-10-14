@@ -18,6 +18,7 @@ class BlockTenantAccessToCentral
     {
         // Block if request is coming from a tenant domain
         if (!in_array($request->getHost(), config('tenancy.central_domains', []))) {
+            info('Blocked tenant access to central domain: ' . $request->getHost());
             abort(403, 'Access denied! Tenant can visit this page.');
         }
 
