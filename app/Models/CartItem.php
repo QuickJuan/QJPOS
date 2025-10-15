@@ -17,6 +17,13 @@ class CartItem extends Model
         'discount_id',
         'coupon_code',
         'sub_total',
+        'selected_options',
+        'meta_data',
+    ];
+
+    protected $casts = [
+        'selected_options' => 'array',
+        'meta_data' => 'array',
     ];
 
     public function cart(): BelongsTo

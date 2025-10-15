@@ -113,12 +113,12 @@
 </template>
 
 <script setup>
-import TextField from "@/Components/TextField.vue";
-import PasswordField from "@/Components/PasswordField.vue";
+import TextField from "@/Components/Form/TextField.vue";
+import PasswordField from "@/Components/Form/PasswordField.vue";
 import { useForm, Link, router, usePage } from "@inertiajs/vue3";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import AuthLayout from "@/Layouts/AuthLayout.vue";
-import SelectField from "@/Components/SelectField.vue";
+import SelectField from "@/Components/Form/SelectField.vue";
 import { ref, watch, computed } from "vue";
 import { useToast } from "primevue";
 

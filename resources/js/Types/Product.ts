@@ -1,5 +1,6 @@
 import Category from '@/Types/Category';
 import Brand from './Brand';
+import Option from './Option';
 
 export default interface Product {
     id: number;
@@ -13,17 +14,5 @@ export default interface Product {
     total_onhand: string;
     category: Category;
     brand: Brand;
-    options?: ProductOption[];
-}
-
-export interface ProductOption {
-    id: number;
-    name: string;
-    option_items: OptionItem[];
-}
-
-export interface OptionItem {
-    id: number;
-    name: string;
-    price: string;
+    options?: Option[];
 }

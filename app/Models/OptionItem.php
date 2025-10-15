@@ -8,7 +8,7 @@ class OptionItem extends Model
 {
     protected $fillable = [
         'option_id',
-
+        'product_id',
         'product_packaging_id',
         'price',
     ];

@@ -87,4 +87,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(InventoryLog::class);
     }
+
+    public function cashieringSessions(): HasMany
+    {
+        return $this->hasMany(CashierSession::class, 'cashier_id');
+    }
 }

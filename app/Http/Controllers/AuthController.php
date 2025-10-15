@@ -67,6 +67,6 @@ class AuthController extends Controller
     {
         auth()->logout();
 
-        return redirect()->route('tenant.login');
+        return redirect()->route('login');
     }
 }

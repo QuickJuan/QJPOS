@@ -1,3 +1,5 @@
+import User from "./User";
+
 export default interface CashieringSession {
     id: number;
     business_date: string;
@@ -9,4 +11,5 @@ export default interface CashieringSession {
     total_sales: number;
     check_by: string;
     cash_denomination: Object;
+    cashier: User;
 }
