@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Resources;
 
+use App\Http\Resources\OptionResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -24,21 +25,8 @@ class ProductResource extends JsonResource
             'brand_id'      => $this->category_id,
             'category'      => $this->whenLoaded('category'),
             'brand'         => $this->whenLoaded('brand'),
-            'options'       => $this->whenLoaded('options', function () {
-                return $this->options->map(function ($option) {
-                    return [
-                        'id' => $option->id,
-                        'name' => $option->name,
-                        'option_items' => $option->optionItems->map(function ($item) {
-                            return [
-                                'id' => $item->id,
-                                'name' => $item->name,
-                                'price' => $item->price,
-                            ];
-                        }),
-                    ];
-                });
-            }),
+            'options'       => OptionResource::collection($this->options),
+            'productImage'  => $this->getFirstMediaUrl('featured_image'),
         ];
     }
 }

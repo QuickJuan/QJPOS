@@ -46,7 +46,7 @@
 <script setup lang="ts">
 import { Link, useForm } from "@inertiajs/vue3";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
-import TextField from "@/Components/TextField.vue";
+import TextField from "@/Components/Form/TextField.vue";
 import BackIcon from "@/Components/icons/BackIcon.vue";
 import AuthLayout from "@/Layouts/AuthLayout.vue";
 

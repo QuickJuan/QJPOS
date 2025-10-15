@@ -2,16 +2,17 @@
 
 declare (strict_types = 1);
 
-use App\Http\Controllers\AttendanceController;
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\CashierSessionController;
-use App\Http\Controllers\HomeController;
-use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\CashierSessionController;
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
-use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
+use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 
 /*
 |--------------------------------------------------------------------------
@@ -98,9 +99,20 @@ Route::middleware([
             // ROUTE FOR RETAIL CASHIER
             Route::as('retail-cashier.')
                 ->prefix('/retail-cashier')
-                ->controller(CashierSessionController::class)
                 ->group(function () {
-                    Route::get('/', 'index')->name('index');
+                    Route::controller(CashierSessionController::class)->group(function () {
+                        Route::get('/', 'index')->name('index');
+                        Route::get('/preview', 'preview')->name('preview');
+                        Route::get('/product/{product}/options', 'productOptions')->name('product.options');
+                        Route::post('/session/start', 'startSession')->name('session.start');
+                        Route::post('/session/close', 'closeSession')->name('session.close');
+                    });
+
+                    Route::controller(CartController::class)->group(function () {
+                        Route::post('/cart/add', 'addToCart')->name('cart.add');
+                        Route::put('/cart/item/{cartItemId}', 'updateCartItem')->name('cart.update');
+                        Route::delete('/cart/item/{cartItemId}', 'deleteCartItem')->name('cart.delete');
+                    });
                 });
         });
 });

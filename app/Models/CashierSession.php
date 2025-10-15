@@ -2,6 +2,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CashierSession extends Model
 {
@@ -16,4 +17,9 @@ class CashierSession extends Model
         'check_by',
         'cash_denomination',
     ];
+
+    public function cashier(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cashier_id');
+    }
 }

@@ -77,7 +77,7 @@ class OptionItemResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('option.productPackaging.product.name')
+                TextColumn::make('product.name')
                     ->label('Main Product')
                     ->sortable()
                     ->searchable(),

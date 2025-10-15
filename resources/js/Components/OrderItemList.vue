@@ -30,7 +30,7 @@
                         :value="orderItem.id.toString()"
                         class="w-5 h-5"
                         @change="
-                            (checked) => handleItemSelection(orderItem, checked)
+                            (checked: any) => handleItemSelection(orderItem, checked)
                         "
                     />
                 </div>
@@ -45,16 +45,32 @@
                             >
                                 {{ orderItem.name }}
                             </h3>
+                            <!-- Selected Options -->
+                            <div
+                                v-if="orderItem.selected_options"
+                                class="mb-2 space-y-1"
+                            >
+                                <div
+                                    v-for="option in orderItem.selected_options"
+                                    :key="option.id"
+                                    class="text-xs text-gray-600 flex justify-between"
+                                >
+                                    <span>+ {{ option.product.name }}</span>
+                                    <span class="font-medium">
+                                        {{ formatMoney(option.price) }}
+                                    </span>
+                                </div>
+                            </div>
                             <div
                                 class="flex items-center gap-3 text-sm text-gray-600"
                             >
-                                <span class="font-medium"
-                                    >Qty: {{ orderItem.quantity }}</span
-                                >
+                                <span class="font-medium">
+                                    Qty: {{ orderItem.quantity }}
+                                </span>
                                 <span>×</span>
-                                <span class="font-medium"
-                                    >${{ formatPrice(orderItem.price) }}</span
-                                >
+                                <span class="font-medium">
+                                    {{ formatMoney(orderItem.price) }}
+                                </span>
                             </div>
                         </div>
 
@@ -62,8 +78,8 @@
                         <div class="flex flex-col items-end gap-3">
                             <div class="text-right">
                                 <span class="text-lg font-bold text-gray-900">
-                                    ${{
-                                        formatPrice(
+                                    {{
+                                        formatMoney(
                                             orderItem.quantity * orderItem.price
                                         )
                                     }}
@@ -102,7 +118,8 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import Checkbox from "./Checkbox.vue";
+import Checkbox from "./Form/Checkbox.vue";
+import { formatMoney } from "@/Utils/FormatMoney";
 
 interface OrderItem {
     id: number;
@@ -110,6 +127,7 @@ interface OrderItem {
     quantity: number;
     price: number;
     checked?: boolean;
+    selected_options?: any[];
 }
 
 const props = defineProps<{
@@ -145,10 +163,5 @@ const deleteSelected = () => {
     if (selectedItems.value.length > 0) {
         emit("delete-selected", selectedItems.value);
     }
-};
-
-// Format price to 2 decimal places
-const formatPrice = (price: number): string => {
-    return price.toFixed(2);
 };
 </script>
