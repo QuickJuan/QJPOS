@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Lora:ital,wght@0,400..700;1,400..700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -25,7 +27,7 @@
     .bg-opacity-15 {
         @apply bg-opacity-30;
     }
-    
+
     .text-gray-100,
     .text-gray-200 {
         @apply text-white;
@@ -37,13 +39,13 @@
     .animate-pulse {
         animation: none;
     }
-    
+
     .transition-transform,
     .transition-colors,
     .transition-all {
         transition: none;
     }
-    
+
     .transform {
         transform: none !important;
     }

@@ -2,8 +2,8 @@
 namespace App\Models;
 
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CouponCode extends Model
@@ -49,7 +49,7 @@ class CouponCode extends Model
         return Attribute::make(
             get: function () {
                 if ($this->type === 'percentage') {
-                    return $this->value . '%';
+                    return "$this->value%";
                 }
                 return '$' . number_format($this->value / 100, 2);
             }

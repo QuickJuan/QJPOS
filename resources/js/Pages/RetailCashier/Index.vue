@@ -65,6 +65,7 @@
             <OrderPanel
                 :orderItems="orderItems"
                 :selected-order-item="selectedOrderItem"
+                :available-discounts="props.availableDiscounts"
             />
         </div>
     </CashieringLayout>
@@ -91,6 +92,7 @@ const props = defineProps<{
     products: Product[];
     currentUser: any;
     cartItems: any[];
+    availableDiscounts: any[];
 }>();
 
 const page = usePage<PageProps>();

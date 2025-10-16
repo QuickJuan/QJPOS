@@ -19,7 +19,7 @@ class ProductOption extends Model
         return $this->belongsTo(ProductPackaging::class, 'product_packaging_id');
     }
 
-    public function getFeaturedImageUrlAttribute()
+    public function getFeaturedImageUrlAttribute(): mixed
     {
         return $this->getFirstMediaUrl('featured_image');
     }
@@ -31,7 +31,7 @@ class ProductOption extends Model
             // ->usePathGenerator(new MediaPathGenerator());
     }
 
-    public function getFeaturedImageUrl()
+    public function getFeaturedImageUrl(): mixed
     {
         return $this->getFirstMediaUrl('featured_image');
     }

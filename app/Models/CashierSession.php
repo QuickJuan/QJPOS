@@ -1,8 +1,10 @@
 <?php
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Auth;
 
 class CashierSession extends Model
 {
@@ -28,8 +30,19 @@ class CashierSession extends Model
         'meta_data'         => 'array',
     ];
 
+    public function scopeOpenSession(Builder $query): void
+    {
+        $query->where('cashier_id', Auth::id())
+            ->whereNull('closing_time');
+    }
+
     public function cashier(): BelongsTo
     {
         return $this->belongsTo(User::class, 'cashier_id');
+    }
+
+    public function checkBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'check_by');
     }
 }
