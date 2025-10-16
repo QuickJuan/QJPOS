@@ -1,9 +1,11 @@
 <template>
     <CashieringLayout :current-user="props.currentUser">
-        <!-- Main grid: categories, products, and order panel -->
-        <div class="flex h-full min-w-0">
-            <!-- Left: Categories Sidebar -->
-            <aside class="w-64 bg-gray-50 flex-shrink-0 overflow-hidden">
+        <!-- Main responsive grid: categories, products, and order panel -->
+        <div class="flex flex-col lg:flex-row h-full min-w-0">
+            <!-- Categories - Top horizontal on mobile, left sidebar on desktop -->
+            <aside
+                class="bg-gray-50 flex-shrink-0 overflow-hidden w-full lg:w-28 xl:w-64 lg:h-full"
+            >
                 <CategoryThumbnails
                     :categories="activeCategories"
                     :selected-category-id="selectedCategoryId"
@@ -12,9 +14,9 @@
             </aside>
 
             <!-- Center: Products Area -->
-            <section class="flex-1 bg-gray-50 overflow-hidden">
+            <section class="flex-1 bg-gray-50 overflow-hidden min-h-0">
                 <!-- Products - Scrollable area -->
-                <div class="h-full p-6 overflow-y-auto">
+                <div class="h-full p-3 sm:p-4 lg:p-6 overflow-y-auto">
                     <ProductThumbnails
                         v-if="selectedCategoryId"
                         :products="filteredProducts"
@@ -23,14 +25,19 @@
                         @addToCart="addToCart"
                     />
                     <div v-else class="flex items-center justify-center h-full">
-                        <p class="text-gray-500 text-lg">
+                        <p
+                            class="text-gray-500 text-base sm:text-lg text-center px-4"
+                        >
                             Select a category to view products
                         </p>
                     </div>
                 </div>
             </section>
-            <section class="w-[500px] md:w-[30%]">
-                <!-- Right: Order Summary -->
+
+            <!-- Right: Order Summary - Full width on mobile, fixed width on desktop -->
+            <section
+                class="w-full lg:w-[400px] xl:w-[450px] 2xl:w-[500px] flex-shrink-0"
+            >
                 <OrderSummary
                     :orderItems="orderItems"
                     :selected-order-item="selectedOrderItem"

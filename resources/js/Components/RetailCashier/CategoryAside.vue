@@ -6,7 +6,7 @@
         <h3
             class="text-sm font-semibold text-slate-700 uppercase tracking-wide mb-4"
         >
-            Categories
+            Categoriessdasds
         </h3>
         <div class="space-y-2">
             <button
