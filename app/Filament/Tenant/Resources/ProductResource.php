@@ -31,31 +31,6 @@ class ProductResource extends Resource
     {
         return $form
             ->schema([
-                TextInput::make('uuid')
-                    ->required()
-                    ->maxLength(150)
-                    ->label('UUID'),
-
-                TextInput::make('name')
-                    ->required()
-                    ->maxLength(150)
-                    ->label('Product Name'),
-
-                TextInput::make('receipt_alias')
-                    ->required()
-                    ->maxLength(150)
-                    ->label('Receipt Name'),
-
-                Select::make('options')
-                    ->relationship('options', 'option_name')
-                    ->multiple()
-                    ->searchable()
-                    ->preload(),
-
-                RichEditor::make('description')
-                    ->maxLength(500)
-                    ->ColumnSpan(2)
-                    ->label('Description'),
 
                 Select::make('category_id')
                     ->relationship('category', 'name')
@@ -89,6 +64,38 @@ class ProductResource extends Resource
                     ->relationship('groups', 'name')
                     ->multiple()
                     ->preload(),
+
+
+                TextInput::make('uuid')
+                    ->required()
+                    ->maxLength(150)
+                    ->label('UUID')
+                    ->default(fn () => (string) \Illuminate\Support\Str::uuid())
+                    ->disabled()
+                    ->dehydrated(),
+
+                TextInput::make('name')
+                    ->required()
+                    ->maxLength(150)
+                    ->label('Product Name'),
+
+                TextInput::make('receipt_alias')
+                    ->required()
+                    ->maxLength(150)
+                    ->label('Receipt Name'),
+
+                Select::make('options')
+                    ->relationship('options', 'option_name')
+                    ->multiple()
+                    ->searchable()
+                    ->preload(),
+
+                RichEditor::make('description')
+                    ->maxLength(500)
+                    ->ColumnSpan(2)
+                    ->label('Description'),
+
+
 
                 SpatieMediaLibraryFileUpload::make('featured_image')
                     ->label('Featured Image')

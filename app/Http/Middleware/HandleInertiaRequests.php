@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Middleware;
 
+use App\Services\DiscountService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -40,6 +41,7 @@ class HandleInertiaRequests extends Middleware
                 'error'   => fn()   => $request->session()->get('error'),
             ],
             'active_branch' => $request->session()->get('active_branch'),
+            'available_discounts' => fn() => app(DiscountService::class)->getActiveDiscounts(),
         ]);
     }
 }

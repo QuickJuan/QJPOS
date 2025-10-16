@@ -27,6 +27,11 @@ class ProductPackagingResource extends Resource
                 Select::make('product_id')
                     ->relationship('product', 'name'),
 
+                TextInput::make('barcode')
+                    ->label('Barcode / SKU')
+                    ->required()
+                    ->maxLength(50),
+
                 TextInput::make('cost')
                     ->label('Cost')
                     ->numeric()

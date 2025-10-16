@@ -15,4 +15,6 @@ export default interface Product {
     category: Category;
     brand: Brand;
     options?: Option[];
+    featured_image_url?: string;
+    product_images_urls?: string[];
 }

@@ -1,95 +1,65 @@
 <template>
-    <CashieringLayout>
-        <!-- Main grid: left catalog, right order panel -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 p-4 lg:p-8">
-            <!-- Left: Sidebar / Categories + Products -->
-            <section
-                class="col-span-1 lg:col-span-8 bg-white rounded-xl shadow-lg overflow-hidden border border-slate-200"
-            >
-                <div
-                    class="flex items-center justify-between px-8 py-6 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white"
-                >
-                    <div class="flex items-center gap-6">
-                        <div class="flex items-center gap-3">
-                            <img
-                                :src="
-                                    props.currentUser?.profile_photo_url ||
-                                    '/images/default-avatar.png'
-                                "
-                                :alt="props.currentUser?.name || 'Cashier'"
-                                class="w-10 h-10 rounded-full object-cover border-2 border-slate-200"
-                            />
-                            <div>
-                                <div class="text-lg font-bold text-slate-800">
-                                    {{ props.currentUser?.name || "Cashier" }}
-                                </div>
-                                <div class="text-xs text-slate-600">
-                                    Shift #12
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-4">
-                        <button
-                            class="px-4 py-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-colors shadow-sm flex items-center gap-2"
-                        >
-                            <span class="text-slate-500">
-                                <ChartBarIcon class="w-4 h-4" />
-                            </span>
-                            Review Transactions
-                        </button>
-                        <button
-                            class="px-4 py-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-colors shadow-sm flex items-center gap-2"
-                        >
-                            <span class="text-slate-500">
-                                <CogIcon class="w-4 h-4" />
-                            </span>
-                            More
-                        </button>
-                    </div>
-                </div>
+    <CashieringLayout :current-user="props.currentUser">
+        <!-- Main grid: categories, products, and order panel -->
+        <div class="flex h-full min-w-0">
+            <!-- Left: Categories Sidebar -->
+            <aside class="w-64 bg-gray-50 flex-shrink-0 overflow-hidden">
+                <CategoryThumbnails
+                    :categories="activeCategories"
+                    :selected-category-id="selectedCategoryId"
+                    @categorySelected="handleCategorySelection"
+                />
+            </aside>
 
-                <div class="flex">
-                    <!-- Category Grid -->
-                    <CategoryAside :categories="props.categories" />
-
-                    <!-- Products Grid -->
-                    <ProductGrid
-                        :products="props.products"
-                        @add-to-cart="addToCart"
+            <!-- Center: Products Area -->
+            <section class="flex-1 bg-gray-50 overflow-hidden">
+                <!-- Products - Scrollable area -->
+                <div class="h-full p-6 overflow-y-auto">
+                    <ProductThumbnails
+                        v-if="selectedCategoryId"
+                        :products="filteredProducts"
+                        :category-name="selectedCategoryName"
+                        @backToCategories="backToCategories"
+                        @addToCart="addToCart"
                     />
+                    <div v-else class="flex items-center justify-center h-full">
+                        <p class="text-gray-500 text-lg">
+                            Select a category to view products
+                        </p>
+                    </div>
                 </div>
             </section>
-
-            <!-- Right: Order panel -->
-            <OrderPanel
-                :orderItems="orderItems"
-                :selected-order-item="selectedOrderItem"
-                :available-discounts="props.availableDiscounts"
-            />
+            <section class="w-[500px] md:w-[30%]">
+                <!-- Right: Order Summary -->
+                <OrderSummary
+                    :orderItems="orderItems"
+                    :selected-order-item="selectedOrderItem"
+                    :available-discounts="props.availableDiscounts"
+                />
+            </section>
         </div>
     </CashieringLayout>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, nextTick } from "vue";
 import { ChartBarIcon, CogIcon } from "@heroicons/vue/24/outline";
 import { router, usePage } from "@inertiajs/vue3";
 import { route } from "ziggy-js";
 import { useToast } from "primevue";
 import CashieringSession from "@/Types/CashieringSession";
 import Category from "@/Types/Category";
-import CategoryAside from "@/Components/RetailCashier/CategoryAside.vue";
+import CategoryThumbnails from "@/Components/RetailCashier/CategoryThumbnails.vue";
 import Product from "@/Types/Product";
-import ProductGrid from "@/Components/RetailCashier/ProductGrid.vue";
+import ProductThumbnails from "@/Components/RetailCashier/ProductThumbnails.vue";
 import PageProps from "@/Types/PageProps";
-import OrderPanel from "@/Components/RetailCashier/OrderPanel.vue";
+import OrderSummary from "@/Components/RetailCashier/OrderSummary.vue";
 import CashieringLayout from "@/Layouts/CashieringLayout.vue";
+import { useCashierCache } from "@/composables/useCashierCache";
 
 const props = defineProps<{
     pendingCashiering: CashieringSession;
-    categories: Category[];
-    products: Product[];
+    categories: { data: Category[] } | Category[];
     currentUser: any;
     cartItems: any[];
     availableDiscounts: any[];
@@ -99,14 +69,157 @@ const page = usePage<PageProps>();
 const toast = useToast();
 const showPendingCashieringDialog = ref(false);
 const selectedOrderItem = ref<any>(null);
+const selectedCategoryId = ref<number | null>(null);
+
+// Initialize client-side cache
+const {
+    categories: cachedCategories,
+    discounts: cachedDiscounts,
+    loadCategories,
+    loadDiscounts,
+} = useCashierCache();
 
 // Use cart items from props instead of local state
 const orderItems = computed(() => props.cartItems || []);
 
+// Use cached categories if available, otherwise use props
+const activeCategories = computed(() => {
+    // Helper to safely extract categories data
+    const getCategoriesData = (): Category[] => {
+        if (Array.isArray(props.categories)) {
+            return props.categories;
+        } else if (
+            props.categories &&
+            typeof props.categories === "object" &&
+            "data" in props.categories &&
+            Array.isArray(props.categories.data)
+        ) {
+            return props.categories.data;
+        }
+        return [];
+    };
+
+    const categoriesData = getCategoriesData();
+    console.log("Raw props.categories (computed):", categoriesData);
+    console.log("Cached categories:", cachedCategories.value);
+
+    // Prioritize cached categories if available
+    if (cachedCategories.value.length > 0) {
+        console.log("Using cached categories:", cachedCategories.value);
+        return cachedCategories.value;
+    }
+
+    // Fall back to props categories
+    const filtered = categoriesData.filter(
+        (category) => category && category.id && category.name
+    );
+
+    console.log("Using props categories:", filtered);
+    return filtered;
+});
+
+// Get all products from all categories
+const allProducts = computed(() => {
+    return activeCategories.value.flatMap(
+        (category) => category.products || []
+    );
+});
+
+// Filter products based on selected category
+const filteredProducts = computed(() => {
+    if (selectedCategoryId.value === null) {
+        return allProducts.value;
+    }
+    const selectedCategory = activeCategories.value.find(
+        (cat) => cat.id === selectedCategoryId.value
+    );
+    return selectedCategory?.products || [];
+});
+
+// Get selected category name
+const selectedCategoryName = computed(() => {
+    if (selectedCategoryId.value === null) {
+        return null;
+    }
+    const category = activeCategories.value.find(
+        (cat) => cat.id === selectedCategoryId.value
+    );
+    return category?.name || "Unknown Category";
+});
+
+// Handle category selection
+const handleCategorySelection = (categoryId: number | null) => {
+    selectedCategoryId.value = categoryId;
+};
+
+// Back to categories
+const backToCategories = () => {
+    selectedCategoryId.value = null;
+};
+
 // Check for pending cashiering on mount
 onMounted(() => {
-    const pendingCashiering = props.pendingCashiering;
+    console.log("=== CATEGORY DEBUG INFO ===");
+    console.log("All props received:", props);
+    console.log("Props categories type:", typeof props.categories);
+    console.log("Props categories is array:", Array.isArray(props.categories));
+    console.log("Props categories:", props.categories);
 
+    // Helper to safely extract categories data
+    const getCategoriesData = (): Category[] => {
+        if (Array.isArray(props.categories)) {
+            return props.categories;
+        } else if (
+            props.categories &&
+            typeof props.categories === "object" &&
+            "data" in props.categories &&
+            Array.isArray(props.categories.data)
+        ) {
+            return props.categories.data;
+        }
+        return [];
+    };
+
+    const categoriesData = getCategoriesData();
+    console.log("Extracted categories data:", categoriesData);
+    console.log("Categories data length:", categoriesData.length);
+
+    console.log("Initializing categories cache...");
+
+    // First, try to load from localStorage
+    loadCategories();
+
+    // If we have fresh server data and no cached data, or server data is newer
+    if (categoriesData && categoriesData.length > 0) {
+        console.log("Server categories available:", categoriesData.length);
+
+        // Always update cache with server data on page load to ensure fresh data
+        loadCategories(categoriesData);
+    } else if (cachedCategories.value.length === 0) {
+        console.warn("No categories available from server or cache");
+    }
+
+    // Load discounts (keeping existing logic)
+    if (props.availableDiscounts && props.availableDiscounts.length > 0) {
+        loadDiscounts(props.availableDiscounts);
+    }
+
+    // Use nextTick to ensure activeCategories is computed after cache is loaded
+    nextTick(() => {
+        // Select first category by default if no category is selected
+        if (
+            selectedCategoryId.value === null &&
+            activeCategories.value.length > 0
+        ) {
+            console.log(
+                "Auto-selecting first category:",
+                activeCategories.value[0].name
+            );
+            selectedCategoryId.value = activeCategories.value[0].id;
+        }
+    });
+
+    const pendingCashiering = props.pendingCashiering;
     if (pendingCashiering != null) {
         showPendingCashieringDialog.value = true;
     }

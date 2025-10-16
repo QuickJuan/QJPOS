@@ -1,0 +1,141 @@
+<template>
+    <div ref="cartContainer" class="flex-1 overflow-auto p-4">
+        <div v-if="orderItems.length === 0" class="text-center py-8">
+            <ShoppingCartIcon class="w-12 h-12 text-gray-300 mx-auto mb-2" />
+            <p class="text-secondary-500">No items in cart</p>
+            <p class="text-sm text-secondary-400">Add items to get started</p>
+        </div>
+
+        <div v-else ref="cartItemsList" class="divide-y divide-gray-200">
+            <div
+                v-for="(item, index) in orderItems"
+                :key="item.id"
+                class="py-3 hover:bg-gray-50 transition-colors"
+            >
+                <div class="flex items-start gap-3">
+                    <!-- Checkbox -->
+                    <input
+                        type="checkbox"
+                        :checked="selectedItemsForDiscount.includes(item.id)"
+                        @change="
+                            (e) =>
+                                $emit(
+                                    'toggleItemForDiscount',
+                                    item.id,
+                                    (e.target as HTMLInputElement).checked
+                                )
+                        "
+                        @click.stop
+                        class="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary-500 focus:ring-2 mt-1 flex-shrink-0"
+                    />
+
+                    <!-- Clickable Main Item Content -->
+                    <div
+                        @click="$emit('editItem', item)"
+                        class="flex-1 cursor-pointer"
+                    >
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1 min-w-0">
+                                <h4
+                                    class="font-medium text-secondary-900 text-sm leading-tight"
+                                >
+                                    {{ item.name }}
+                                </h4>
+                                <p class="text-xs text-secondary-600 mt-0.5">
+                                    {{ item.quantity }} ×
+                                    {{ formatMoney(item.price) }}
+                                </p>
+                            </div>
+                            <div class="text-right ml-3">
+                                <p
+                                    class="font-semibold text-secondary-900 text-sm"
+                                >
+                                    {{
+                                        formatMoney(
+                                            (
+                                                item.quantity * item.price
+                                            ).toFixed(2)
+                                        )
+                                    }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Selected Options as Sub-items -->
+                        <div
+                            v-if="
+                                item.selected_options &&
+                                item.selected_options.length > 0
+                            "
+                            class="mt-2 ml-4 space-y-1"
+                        >
+                            <div
+                                v-for="option in item.selected_options"
+                                :key="option.id"
+                                class="flex items-center justify-between py-1"
+                            >
+                                <div class="flex items-center gap-2">
+                                    <div
+                                        class="w-1 h-1 bg-secondary-400 rounded-full flex-shrink-0"
+                                    ></div>
+                                    <span class="text-xs text-secondary-600">
+                                        {{ option.product.name }}
+                                    </span>
+                                </div>
+                                <span class="text-xs text-secondary-600">
+                                    +{{ formatMoney(option.price) }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Delete Button -->
+                    <button
+                        @click="$emit('deleteItem', item)"
+                        class="p-1 text-secondary-400 hover:text-error-600 transition-colors flex-shrink-0 mt-0.5"
+                        title="Remove item"
+                    >
+                        <TrashIcon class="w-4 h-4" />
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<script setup lang="ts">
+import { ref, watch, nextTick } from "vue";
+import { ShoppingCartIcon, TrashIcon } from "@heroicons/vue/24/outline";
+import { formatMoney } from "@/Utils/FormatMoney";
+
+const props = defineProps<{
+    orderItems: any[];
+    selectedItemsForDiscount: number[];
+}>();
+
+defineEmits<{
+    toggleItemForDiscount: [itemId: number, checked: boolean];
+    editItem: [item: any];
+    deleteItem: [item: any];
+}>();
+
+// Refs for the scrollable container
+const cartContainer = ref<HTMLDivElement>();
+const cartItemsList = ref<HTMLDivElement>();
+
+// Watch for changes in order items and auto-scroll to bottom when new items are added
+watch(
+    () => props.orderItems.length,
+    (newLength, oldLength) => {
+        // Only scroll to bottom if items were added (length increased)
+        if (newLength > oldLength && cartContainer.value) {
+            nextTick(() => {
+                cartContainer.value?.scrollTo({
+                    top: cartContainer.value.scrollHeight,
+                    behavior: "smooth",
+                });
+            });
+        }
+    }
+);
+</script>
