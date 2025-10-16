@@ -6,12 +6,14 @@ use App\Http\Requests\CashierSessionRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Cart;
 use App\Models\Category;
+use App\Models\Discount;
 use App\Models\Product;
 use App\Services\CashierSessionService;
+use Exception;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class CashierSessionController extends Controller
 {
@@ -20,16 +22,16 @@ class CashierSessionController extends Controller
         $this->cashierSessionService = $cashierSessionService;
     }
 
-    public function index()
+    public function index(): Response
     {
         // Check if the current auth user has pending cashiering.
         $pendingCashiering = $this->cashierSessionService->model
-            ->where('cashier_id', Auth::id())
-            ->whereNull('closing_time')
+            ->openSession()
             ->first();
 
         $products   = Product::with(['options.optionItems', 'media'])->get();
         $categories = Category::query()->get();
+        $discounts  = Discount::query()->get();
 
         // Get cart items for current session
         $cartItems = [];
@@ -41,40 +43,37 @@ class CashierSessionController extends Controller
 
             if ($cart) {
                 $cartItems = $cart->cartItems
-                    ->map(function ($item) {
-                        return [
-                            'id'               => $item->id,
-                            'product_id'       => $item->product_id,
-                            'name'             => $item->product->name ?? 'Unknown Product',
-                            'quantity'         => $item->quantity,
-                            'price'            => $item->price,
-                            'amount'           => $item->amount,
-                            'sub_total'        => $item->sub_total,
-                            'selected_options' => $item->selected_options ?? [],
-                            'checked'          => false,
-                        ];
-                    })->toArray();
-
+                    ->map(fn($item) => [
+                        'id'               => $item->id,
+                        'product_id'       => $item->product_id,
+                        'name'             => $item->product->name ?? 'Unknown Product',
+                        'quantity'         => $item->quantity,
+                        'price'            => $item->price,
+                        'amount'           => $item->amount,
+                        'sub_total'        => $item->sub_total,
+                        'selected_options' => $item->selected_options ?? [],
+                        'checked'          => false,
+                    ])->toArray();
             }
         }
 
         return Inertia::render('RetailCashier/Index', [
-            'products'          => ProductResource::collection($products),
-            'categories'        => $categories,
-            'pendingCashiering' => $pendingCashiering,
-            'currentUser'       => Auth::user(),
-            'cartItems'         => $cartItems,
+            'products'           => ProductResource::collection($products),
+            'categories'         => $categories,
+            'pendingCashiering'  => $pendingCashiering,
+            'currentUser'        => Auth::user(),
+            'cartItems'          => $cartItems,
+            'availableDiscounts' => $discounts,
         ]);
     }
 
-    public function preview()
+    public function preview(): Response
     {
         $activeBranch = session('active_branch');
 
         // Check if the current auth user has an open cashier session (closing_time is null)
         $openSession = $this->cashierSessionService->model
-            ->where('cashier_id', Auth::id())
-            ->whereNull('closing_time')
+            ->openSession()
             ->first();
 
         return Inertia::render('RetailCashier/Preview', [
@@ -83,31 +82,18 @@ class CashierSessionController extends Controller
         ]);
     }
 
-    public function startSession(CashierSessionRequest $request)
+    public function startSession(CashierSessionRequest $request): RedirectResponse
     {
-        // Check if user already has an open session
-        $existingSession = $this->cashierSessionService->model
-            ->where('cashier_id', Auth::id())
-            ->whereNull('closing_time')
-            ->first();
+        try {
+            $this->cashierSessionService->startSession($request);
 
-        if ($existingSession) {
-            return redirect()->back()->with('error', 'You already have an open session. Please continue or close it first before starting new one.');
+            return redirect()->route('retail-cashier.index')->with('success', 'New session successfully created');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'There was an error while starting new session.');
         }
-
-        $session = $this->cashierSessionService->model->create([
-            'business_date'  => now()->toDateString(),
-            'cashier_id'     => Auth::id(),
-            'started_time'   => now(),
-            'beginning_cash' => $request['beginning_cash'],
-            'total_sales'    => 0,
-            'closing_cash'   => 0,
-        ]);
-
-        return redirect()->route('retail-cashier.index')->with('success', 'New session successfully created');
     }
 
-    public function productOptions(Request $request, $productId)
+    public function productOptions(int $productId): Response
     {
         $product = Product::with(['options.optionItems.product.media'])->findOrFail($productId);
 
@@ -116,70 +102,25 @@ class CashierSessionController extends Controller
         ]);
     }
 
-    public function closeSession(Request $request)
+    public function closeSession(CashierSessionRequest $request): RedirectResponse
     {
-        $request->validate([
-            'cash_denomination' => 'required|array',
-            'closing_cash'      => 'required|numeric|min:0',
-        ]);
+        try {
+            $this->cashierSessionService->closeSession($request);
 
-        $session = $this->cashierSessionService->model
-            ->where('cashier_id', Auth::id())
-            ->whereNull('closing_time')
-            ->first();
-
-        if (! $session) {
-            return redirect()->back()->with('error', 'No open session found');
+            return redirect()->back()->with('success', 'Session closed successfully');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'There was an error while closing the session.');
         }
-
-        $session->update([
-            'closing_time'      => now(),
-            'closing_cash'      => $request->closing_cash,
-            'cash_denomination' => $request->cash_denomination,
-        ]);
-
-        return redirect()->back()->with('error', 'Session closed successfully');
     }
 
     public function addToCart(CartRequest $request): RedirectResponse
     {
-        // Get or create cart for current cashier session
-        $cashierSession = $this->cashierSessionService->model
-            ->where('cashier_id', Auth::id())
-            ->whereNull('closing_time')
-            ->first();
+        try {
+            $this->cashierSessionService->addToCart($request);
 
-        if (! $cashierSession) {
-            return redirect()->back()->with('error', 'No active cashier session found.');
+            return redirect()->back()->with('success', 'Item added to cart successfully.');
+        } catch (Exception $e) {
+            return redirect()->back()->with('success', 'There was an error in adding item to cart.');
         }
-
-        $cart = Cart::firstOrCreate([
-            'cashier_id'         => Auth::id(),
-            'cashier_session_id' => $cashierSession->id,
-        ]);
-
-        // Check if item already exists in cart
-        $existingItem = $cart->cartItems()
-            ->where('product_id', $request['product_id'])
-            ->first();
-
-        if ($existingItem) {
-            // If yes, Update quantity if item exists
-            $existingItem->update([
-                'quantity'  => $existingItem->quantity + ($request['quantity'] ?? 1),
-                'sub_total' => ($existingItem->quantity + ($request['quantity'] ?? 1)) * $existingItem->price,
-            ]);
-        } else {
-            // If no, create new cart item
-            $cart->cartItems()->create([
-                'product_id'       => $request['product_id'],
-                'quantity'         => $request['quantity'] ?? 1,
-                'price'            => $request['total_price'] / ($request['quantity'] ?? 1),
-                'amount'           => $request['total_price'],
-                'sub_total'        => $request['total_price'],
-                'selected_options' => $request['selected_options'] ?? [],
-            ]);
-        }
-        return redirect()->back()->with('success', 'Item added to cart successfully.');
     }
 }

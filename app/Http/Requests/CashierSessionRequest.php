@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
@@ -22,7 +21,9 @@ class CashierSessionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'beginning_cash' => 'required|numeric|min:0',
+            'beginning_cash'    => 'sometimes|required|numeric|min:0',
+            'cash_denomination' => 'sometimes|required|array',
+            'closing_cash'      => 'sometimes|required|numeric|min:0',
         ];
     }
 }

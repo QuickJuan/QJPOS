@@ -10,9 +10,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TableRoom extends Model  implements HasMedia
 {
-
     use InteractsWithMedia;
-    
+
     protected $fillable = [
         'branch_id',
         'name',
@@ -51,7 +50,7 @@ class TableRoom extends Model  implements HasMedia
             // ->usePathGenerator(new MediaPathGenerator());
     }
 
-    public function getFeaturedImageUrl()
+    public function getFeaturedImageUrl(): string
     {
         return $this->getFirstMediaUrl('featured_image');
     }
