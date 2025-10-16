@@ -13,7 +13,10 @@ return new class extends Migration
     {
         Schema::create('cashier_sessions', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('cashier_id');
+            $table->foreignId('cashier_id')
+                ->references('id')
+                ->on('users')
+                ->cascadeOnDelete();
             $table->datetime('business_date');
             $table->datetime('started_time')->nullable();
             $table->datetime('closing_time')->nullable();
@@ -22,6 +25,8 @@ return new class extends Migration
             $table->integer('total_sales')->nullable();
             $table->unsignedBigInteger('check_by')->nullable();
             $table->json('cash_denomination')->nullable();
+            $table->longText('notes')->nullable();
+            $table->json('meta_data')->nullable();
             $table->timestamps();
         });
     }
