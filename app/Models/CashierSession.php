@@ -16,6 +16,16 @@ class CashierSession extends Model
         'total_sales',
         'check_by',
         'cash_denomination',
+        'meta_data',
+        'notes',
+    ];
+
+    protected $casts = [
+        'business_date'     => 'datetime',
+        'started_time'      => 'datetime',
+        'closing_time'      => 'datetime',
+        'cash_denomination' => 'array',
+        'meta_data'         => 'array',
     ];
 
     public function cashier(): BelongsTo
