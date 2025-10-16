@@ -1,22 +1,20 @@
 <template>
     <CashieringLayout :current-user="props.currentUser">
-        <!-- Main grid: content and order panel -->
-        <div class="flex flex-col md:flex-row h-full min-w-0">
-            <!-- Left: Main Content Area -->
-            <section
-                class="flex flex-col bg-red-400 flex-1 min-w-0 overflow-hidden"
-            >
-                <!-- Categories - Fixed at top (outside scroll area) -->
-                <div class="flex-shrink-0 p-6 pb-0">
-                    <CategoryThumbnails
-                        :categories="activeCategories"
-                        :selected-category-id="selectedCategoryId"
-                        @categorySelected="handleCategorySelection"
-                    />
-                </div>
+        <!-- Main grid: categories, products, and order panel -->
+        <div class="flex h-full min-w-0">
+            <!-- Left: Categories Sidebar -->
+            <aside class="w-64 bg-gray-50 flex-shrink-0 overflow-hidden">
+                <CategoryThumbnails
+                    :categories="activeCategories"
+                    :selected-category-id="selectedCategoryId"
+                    @categorySelected="handleCategorySelection"
+                />
+            </aside>
 
-                <!-- Products - Scrollable area only -->
-                <div class="flex-1 px-6 pb-6 overflow-y-auto">
+            <!-- Center: Products Area -->
+            <section class="flex-1 bg-gray-50 overflow-hidden">
+                <!-- Products - Scrollable area -->
+                <div class="h-full p-6 overflow-y-auto">
                     <ProductThumbnails
                         v-if="selectedCategoryId"
                         :products="filteredProducts"
@@ -24,6 +22,11 @@
                         @backToCategories="backToCategories"
                         @addToCart="addToCart"
                     />
+                    <div v-else class="flex items-center justify-center h-full">
+                        <p class="text-gray-500 text-lg">
+                            Select a category to view products
+                        </p>
+                    </div>
                 </div>
             </section>
             <section class="w-[500px] bg-blue-200 md:w-[30%]">
@@ -151,6 +154,14 @@ onMounted(() => {
 
     if (props.availableDiscounts && props.availableDiscounts.length > 0) {
         loadDiscounts(props.availableDiscounts);
+    }
+
+    // Select first category by default if no category is selected
+    if (
+        selectedCategoryId.value === null &&
+        activeCategories.value.length > 0
+    ) {
+        selectedCategoryId.value = activeCategories.value[0].id;
     }
 
     const pendingCashiering = props.pendingCashiering;

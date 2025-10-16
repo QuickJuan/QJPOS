@@ -13,6 +13,7 @@ class ProductPackaging extends Model implements HasMedia
 
     protected $fillable = [
         'product_id',
+        'barcode',
         'cost',
         'price',
         'unit_measure',

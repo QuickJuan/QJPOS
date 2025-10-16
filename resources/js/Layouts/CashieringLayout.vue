@@ -1,6 +1,6 @@
 <template>
-    <div class="h-screen bg-slate-50 flex flex-col">
-        <div class="flex-1 flex flex-col bg-yellow-300 overflow-hidden">
+    <div class="h-screen bg-gray-50 flex flex-col">
+        <div class="flex-1 flex flex-col bg-gray-50 overflow-hidden">
             <slot />
         </div>
 

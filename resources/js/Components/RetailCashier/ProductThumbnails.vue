@@ -6,8 +6,7 @@
         <div
             v-for="product in products"
             :key="product.id"
-            @click="$emit('addToCart', product)"
-            class="bg-white rounded-lg cursor-pointer hover:shadow-lg transition-all duration-200 border border-gray-100 hover:border-gray-200 group flex flex-col h-full"
+            class="bg-white rounded-lg cursor-pointer hover:shadow-lg transition-all duration-200 border border-gray-200 hover:border-primary-300 group flex flex-col h-full"
         >
             <!-- Product Image -->
             <div class="relative">
@@ -31,13 +30,13 @@
                 <!-- Stock Status Badge -->
                 <div
                     v-if="parseFloat(product.total_onhand || '0') <= 0"
-                    class="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-lg font-medium"
+                    class="absolute top-2 right-2 bg-error text-white text-xs px-2 py-1 rounded-lg font-medium"
                 >
                     Out of Stock
                 </div>
                 <div
                     v-else-if="parseFloat(product.total_onhand || '0') <= 10"
-                    class="absolute top-2 right-2 bg-orange-500 text-white text-xs px-2 py-1 rounded-lg font-medium"
+                    class="absolute top-2 right-2 bg-warning text-white text-xs px-2 py-1 rounded-lg font-medium"
                 >
                     Low Stock
                 </div>
@@ -47,7 +46,7 @@
             <div class="flex flex-col flex-1 p-3">
                 <!-- Product Name -->
                 <h3
-                    class="text-gray-900 text-sm leading-tight line-clamp-2 mb-2"
+                    class="text-secondary-800 text-sm leading-tight line-clamp-2 mb-2 font-semibold"
                 >
                     {{ product.name }}
                 </h3>
@@ -57,7 +56,7 @@
 
                 <!-- Price and Pick Button - Always at bottom -->
                 <div class="flex flex-row justify-between items-center mt-auto">
-                    <p class="text-lg font-bold text-gray-900">
+                    <p class="text-lg font-bold text-secondary-800">
                         {{
                             formatMoney(
                                 parseFloat(product.average_cost || "0").toFixed(
@@ -67,7 +66,8 @@
                         }}
                     </p>
                     <button
-                        class="text-xs rounded-xl bg-blue-300 px-2 py-1 hover:bg-blue-400 transition-colors"
+                        @click="$emit('addToCart', product)"
+                        class="text-xs rounded-xl bg-primary text-white px-2 py-1 hover:bg-primary-600 transition-colors"
                     >
                         Pick
                     </button>

@@ -1,55 +1,67 @@
 <template>
-    <!-- Category Thumbnails Row -->
-    <div class="w-full max-w-full">
-        <h2 class="text-xl font-bold text-gray-800 mb-4">Categories</h2>
-        <div class="flex gap-4 overflow-x-auto scrollbar-hide pb-2 max-w-full">
+    <!-- Category Thumbnails Vertical Sidebar -->
+    <div class="h-full flex flex-col bg-gray-100">
+        <h2 class="text-xl font-bold text-secondary-800 p-4 pb-2">
+            Categories
+        </h2>
+        <div class="flex-1 overflow-y-auto scrollbar-hide p-4 pt-2 space-y-3">
             <!-- Category Thumbnails -->
             <div
                 v-for="category in categories"
                 :key="category.id"
                 @click="$emit('categorySelected', category.id)"
                 :class="[
-                    'bg-white rounded-2xl  cursor-pointer hover:shadow-lg transition-all duration-200 border group flex-shrink-0 w-40 min-w-40',
+                    'rounded-lg cursor-pointer hover:shadow-lg transition-all duration-200 border group w-full',
                     selectedCategoryId === category.id
-                        ? 'border-blue-300 bg-blue-50'
-                        : 'border-gray-100 hover:border-gray-200',
+                        ? 'border-primary-600 bg-primary text-white shadow-md'
+                        : 'bg-white border-gray-200 hover:border-primary-300 hover:bg-gray-100',
                 ]"
             >
-                <!-- Category Image -->
-                <div class="relative">
-                    <div
-                        class="aspect-square rounded-t-xl overflow-hidden bg-gray-50"
-                    >
-                        <img
-                            v-if="category.featured_image_url"
-                            :src="category.featured_image_url"
-                            :alt="category.name"
-                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                        />
+                <!-- Category Content - Horizontal layout for sidebar -->
+                <div class="flex items-center p-3 space-x-3">
+                    <!-- Category Image -->
+                    <div class="relative flex-shrink-0">
                         <div
-                            v-else
-                            class="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200"
+                            class="w-12 h-12 rounded-lg overflow-hidden bg-gray-50"
                         >
-                            <component
-                                :is="getCategoryIconComponent(category.name)"
-                                class="w-8 h-8 text-gray-500"
+                            <img
+                                v-if="category.featured_image_url"
+                                :src="category.featured_image_url"
+                                :alt="category.name"
+                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                             />
+                            <div
+                                v-else
+                                class="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200"
+                            >
+                                <component
+                                    :is="
+                                        getCategoryIconComponent(category.name)
+                                    "
+                                    :class="[
+                                        'w-6 h-6',
+                                        selectedCategoryId === category.id
+                                            ? 'text-white'
+                                            : 'text-secondary-500',
+                                    ]"
+                                />
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Category Info -->
-                <div class="text-center">
-                    <h3
-                        :class="[
-                            'font-semibold text-sm leading-tight line-clamp-2',
-                            selectedCategoryId === category.id
-                                ? 'text-blue-700'
-                                : 'text-gray-900',
-                        ]"
-                    >
-                        {{ category.name }}
-                    </h3>
+                    <!-- Category Info -->
+                    <div class="flex-1 min-w-0">
+                        <h3
+                            :class="[
+                                'font-semibold text-sm leading-tight line-clamp-2',
+                                selectedCategoryId === category.id
+                                    ? 'text-white'
+                                    : 'text-secondary-800',
+                            ]"
+                        >
+                            {{ category.name }}
+                        </h3>
+                    </div>
                 </div>
             </div>
         </div>

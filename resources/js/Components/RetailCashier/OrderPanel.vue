@@ -1,6 +1,6 @@
 <template>
     <aside
-        class="h-full flex flex-col bg-red-400 shadow-lg border-2 border-gray-200"
+        class="h-full flex flex-col bg-gray-50 shadow-lg border-2 border-gray-200"
     >
         <!-- Row 1: Customer Information -->
         <div class="p-4 border-b border-gray-200 bg-gray-50">
