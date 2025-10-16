@@ -29,9 +29,9 @@
                     </div>
                 </div>
             </section>
-            <section class="w-[500px] bg-blue-200 md:w-[30%]">
-                <!-- Right: Order panel -->
-                <OrderPanel
+            <section class="w-[500px] md:w-[30%]">
+                <!-- Right: Order Summary -->
+                <OrderSummary
                     :orderItems="orderItems"
                     :selected-order-item="selectedOrderItem"
                     :available-discounts="activeDiscounts"
@@ -53,7 +53,7 @@ import CategoryThumbnails from "@/Components/RetailCashier/CategoryThumbnails.vu
 import Product from "@/Types/Product";
 import ProductThumbnails from "@/Components/RetailCashier/ProductThumbnails.vue";
 import PageProps from "@/Types/PageProps";
-import OrderPanel from "@/Components/RetailCashier/OrderPanel.vue";
+import OrderSummary from "@/Components/RetailCashier/OrderSummary.vue";
 import CashieringLayout from "@/Layouts/CashieringLayout.vue";
 import { useCashierCache } from "@/composables/useCashierCache";
 
