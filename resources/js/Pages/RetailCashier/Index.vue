@@ -1,72 +1,39 @@
 <template>
-    <CashieringLayout>
-        <!-- Main grid: left catalog, right order panel -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 p-4 lg:p-8">
-            <!-- Left: Sidebar / Categories + Products -->
+    <CashieringLayout :current-user="props.currentUser">
+        <!-- Main grid: content and order panel -->
+        <div class="flex flex-col md:flex-row h-full min-w-0">
+            <!-- Left: Main Content Area -->
             <section
-                class="col-span-1 lg:col-span-8 bg-white rounded-xl shadow-lg overflow-hidden border border-slate-200"
+                class="flex flex-col bg-red-400 flex-1 min-w-0 overflow-hidden"
             >
-                <div
-                    class="flex items-center justify-between px-8 py-6 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white"
-                >
-                    <div class="flex items-center gap-6">
-                        <div class="flex items-center gap-3">
-                            <img
-                                :src="
-                                    props.currentUser?.profile_photo_url ||
-                                    '/images/default-avatar.png'
-                                "
-                                :alt="props.currentUser?.name || 'Cashier'"
-                                class="w-10 h-10 rounded-full object-cover border-2 border-slate-200"
-                            />
-                            <div>
-                                <div class="text-lg font-bold text-slate-800">
-                                    {{ props.currentUser?.name || "Cashier" }}
-                                </div>
-                                <div class="text-xs text-slate-600">
-                                    Shift #12
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-4">
-                        <button
-                            class="px-4 py-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-colors shadow-sm flex items-center gap-2"
-                        >
-                            <span class="text-slate-500">
-                                <ChartBarIcon class="w-4 h-4" />
-                            </span>
-                            Review Transactions
-                        </button>
-                        <button
-                            class="px-4 py-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-400 transition-colors shadow-sm flex items-center gap-2"
-                        >
-                            <span class="text-slate-500">
-                                <CogIcon class="w-4 h-4" />
-                            </span>
-                            More
-                        </button>
-                    </div>
+                <!-- Categories - Fixed at top (outside scroll area) -->
+                <div class="flex-shrink-0 p-6 pb-0">
+                    <CategoryThumbnails
+                        :categories="activeCategories"
+                        :selected-category-id="selectedCategoryId"
+                        @categorySelected="handleCategorySelection"
+                    />
                 </div>
 
-                <div class="flex">
-                    <!-- Category Grid -->
-                    <CategoryAside :categories="props.categories" />
-
-                    <!-- Products Grid -->
-                    <ProductGrid
-                        :products="props.products"
-                        @add-to-cart="addToCart"
+                <!-- Products - Scrollable area only -->
+                <div class="flex-1 px-6 pb-6 overflow-y-auto">
+                    <ProductThumbnails
+                        v-if="selectedCategoryId"
+                        :products="filteredProducts"
+                        :category-name="selectedCategoryName"
+                        @backToCategories="backToCategories"
+                        @addToCart="addToCart"
                     />
                 </div>
             </section>
-
-            <!-- Right: Order panel -->
-            <OrderPanel
-                :orderItems="orderItems"
-                :selected-order-item="selectedOrderItem"
-                :available-discounts="props.availableDiscounts"
-            />
+            <section class="w-[500px] bg-blue-200 md:w-[30%]">
+                <!-- Right: Order panel -->
+                <OrderPanel
+                    :orderItems="orderItems"
+                    :selected-order-item="selectedOrderItem"
+                    :available-discounts="activeDiscounts"
+                />
+            </section>
         </div>
     </CashieringLayout>
 </template>
@@ -79,17 +46,17 @@ import { route } from "ziggy-js";
 import { useToast } from "primevue";
 import CashieringSession from "@/Types/CashieringSession";
 import Category from "@/Types/Category";
-import CategoryAside from "@/Components/RetailCashier/CategoryAside.vue";
+import CategoryThumbnails from "@/Components/RetailCashier/CategoryThumbnails.vue";
 import Product from "@/Types/Product";
-import ProductGrid from "@/Components/RetailCashier/ProductGrid.vue";
+import ProductThumbnails from "@/Components/RetailCashier/ProductThumbnails.vue";
 import PageProps from "@/Types/PageProps";
 import OrderPanel from "@/Components/RetailCashier/OrderPanel.vue";
 import CashieringLayout from "@/Layouts/CashieringLayout.vue";
+import { useCashierCache } from "@/composables/useCashierCache";
 
 const props = defineProps<{
     pendingCashiering: CashieringSession;
     categories: Category[];
-    products: Product[];
     currentUser: any;
     cartItems: any[];
     availableDiscounts: any[];
@@ -99,14 +66,94 @@ const page = usePage<PageProps>();
 const toast = useToast();
 const showPendingCashieringDialog = ref(false);
 const selectedOrderItem = ref<any>(null);
+const selectedCategoryId = ref<number | null>(null);
+
+// Initialize client-side cache
+const {
+    categories: cachedCategories,
+    discounts: cachedDiscounts,
+    loadCategories,
+    loadDiscounts,
+} = useCashierCache();
 
 // Use cart items from props instead of local state
 const orderItems = computed(() => props.cartItems || []);
 
+// Use cached categories if available, otherwise use props
+const activeCategories = computed(() => {
+    const cached =
+        cachedCategories.value.length > 0
+            ? cachedCategories.value
+            : props.categories.data;
+    // Ensure we have valid category data and it's an array
+    const validCached = Array.isArray(cached) ? cached : [];
+    return validCached.filter(
+        (category) => category && category.id && category.name
+    );
+});
+
+// Use cached discounts if available, otherwise use props
+const activeDiscounts = computed(() => {
+    const cached =
+        cachedDiscounts.value.length > 0
+            ? cachedDiscounts.value
+            : props.availableDiscounts;
+    // Ensure we have valid discount data and it's an array
+    const validCached = Array.isArray(cached) ? cached : [];
+    return validCached.filter((discount) => discount && discount.id);
+});
+
+// Get all products from all categories
+const allProducts = computed(() => {
+    return activeCategories.value.flatMap(
+        (category) => category.products || []
+    );
+});
+
+// Filter products based on selected category
+const filteredProducts = computed(() => {
+    if (selectedCategoryId.value === null) {
+        return allProducts.value;
+    }
+    const selectedCategory = activeCategories.value.find(
+        (cat) => cat.id === selectedCategoryId.value
+    );
+    return selectedCategory?.products || [];
+});
+
+// Get selected category name
+const selectedCategoryName = computed(() => {
+    if (selectedCategoryId.value === null) {
+        return null;
+    }
+    const category = activeCategories.value.find(
+        (cat) => cat.id === selectedCategoryId.value
+    );
+    return category?.name || "Unknown Category";
+});
+
+// Handle category selection
+const handleCategorySelection = (categoryId: number | null) => {
+    selectedCategoryId.value = categoryId;
+};
+
+// Back to categories
+const backToCategories = () => {
+    selectedCategoryId.value = null;
+};
+
 // Check for pending cashiering on mount
 onMounted(() => {
-    const pendingCashiering = props.pendingCashiering;
+    // Load data into cache if we have fresh server data
+    if (props.categories && props.categories.length > 0) {
+        loadCategories(props.categories);
+    }
 
+    if (props.availableDiscounts && props.availableDiscounts.length > 0) {
+        loadDiscounts(props.availableDiscounts);
+    }
+
+    const pendingCashiering = props.pendingCashiering;
     if (pendingCashiering != null) {
         showPendingCashieringDialog.value = true;
     }

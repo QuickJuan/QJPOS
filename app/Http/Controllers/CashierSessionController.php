@@ -1,24 +1,27 @@
 <?php
 namespace App\Http\Controllers;
 
-use App\Http\Requests\CartRequest;
-use App\Http\Requests\CashierSessionRequest;
-use App\Http\Resources\ProductResource;
-use App\Models\Cart;
-use App\Models\Category;
-use App\Models\Discount;
-use App\Models\Product;
-use App\Services\CashierSessionService;
 use Exception;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Auth;
+use App\Models\Cart;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Models\Category;
+use App\Models\Discount;
+use App\Models\CouponCode;
+use App\Http\Requests\CartRequest;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\RedirectResponse;
+use App\Http\Resources\ProductResource;
+use App\Services\CashierSessionService;
+use App\Http\Resources\CategoryResource;
+use App\Http\Resources\DiscountResource;
+use App\Http\Requests\CashierSessionRequest;
 
 class CashierSessionController extends Controller
 {
-    public function __construct(protected CashierSessionService $cashierSessionService)
-    {
+    public function __construct(
+        protected CashierSessionService $cashierSessionService
+    ) {
         $this->cashierSessionService = $cashierSessionService;
     }
 
@@ -29,9 +32,17 @@ class CashierSessionController extends Controller
             ->openSession()
             ->first();
 
-        $products   = Product::with(['options.optionItems', 'media'])->get();
-        $categories = Category::query()->get();
-        $discounts  = Discount::query()->get();
+        // Get categories with products directly (will be cached in browser)
+        $categories = CategoryResource::collection(
+            Category::with(['products' => function ($query) {
+                $query->where('is_active', true);
+            }])->get()
+        );
+
+        // Get available discounts
+        $discounts = DiscountResource::collection(
+            Discount::all()
+        );
 
         // Get cart items for current session
         $cartItems = [];
@@ -58,7 +69,6 @@ class CashierSessionController extends Controller
         }
 
         return Inertia::render('RetailCashier/Index', [
-            'products'           => ProductResource::collection($products),
             'categories'         => $categories,
             'pendingCashiering'  => $pendingCashiering,
             'currentUser'        => Auth::user(),
@@ -121,6 +131,20 @@ class CashierSessionController extends Controller
             return redirect()->back()->with('success', 'Item added to cart successfully.');
         } catch (Exception $e) {
             return redirect()->back()->with('success', 'There was an error in adding item to cart.');
+        }
+    }
+
+    /**
+     * Refresh cached data for categories and discounts
+     */
+    public function refreshCache(): RedirectResponse
+    {
+        try {
+            $this->cashierDataService->refreshCache();
+
+            return redirect()->back()->with('success', 'Cache refreshed successfully.');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'There was an error refreshing the cache.');
         }
     }
 }

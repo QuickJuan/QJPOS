@@ -22,11 +22,13 @@ class ProductResource extends JsonResource
             'receipt_alias' => $this->receipt_alias,
             'description'   => $this->description,
             'category_id'   => $this->category_id,
-            'brand_id'      => $this->category_id,
+            'brand_id'      => $this->brand_id,
+            'total_onhand'  => $this->total_onhand ?? '0',
             'category'      => $this->whenLoaded('category'),
             'brand'         => $this->whenLoaded('brand'),
-            'options'       => OptionResource::collection($this->options),
-            'productImage'  => $this->getFirstMediaUrl('featured_image'),
+            'options'       => OptionResource::collection($this->whenLoaded('options')),
+            'featured_image_url' => $this->getFirstMediaUrl('featured_image'),
+            'product_images_urls' => $this->getMedia('product_images')->map(fn($media) => $media->getUrl())->toArray(),
         ];
     }
 }
