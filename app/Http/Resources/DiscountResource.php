@@ -16,17 +16,13 @@ class DiscountResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'name' => $this->name,
-            'description' => $this->description,
+            'discount_name' => $this->discount_name,
+            'description' => $this->description ?? null,
+            'amount' => $this->amount,
             'type' => $this->type,
-            'value' => $this->value,
-            'minimum_amount' => $this->minimum_amount,
-            'maximum_discount' => $this->maximum_discount,
-            'is_active' => $this->is_active,
-            'starts_at' => $this->starts_at?->toISOString(),
-            'expires_at' => $this->expires_at?->toISOString(),
-            'usage_limit' => $this->usage_limit,
-            'used_count' => $this->used_count,
+            'discount_type' => $this->discount_type,
+            'remove_tax' => $this->remove_tax,
+            'requires_customer_info' => $this->require_customer_info,
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];

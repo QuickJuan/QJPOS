@@ -19,7 +19,7 @@
                     </div>
 
                     <!-- Center Column: Barcode Scanner & Options -->
-                    <div class="col-span-8 bg-red-400">
+                    <div class="col-span-8">
                         <div class="flex items-center gap-4 justify-start">
                             <!-- Barcode Scanner -->
                             <div class="flex items-center gap-2">
@@ -33,7 +33,7 @@
                                 />
                                 <button
                                     @click="handleBarcodeSearch"
-                                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                    class="px-4 py-2 bg-primary text-white rounded-lg transition-colors"
                                 >
                                     Search
                                 </button>
@@ -42,28 +42,19 @@
                             <!-- Hold Button -->
                             <button
                                 @click="handleTablesClick"
-                                class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                class="flex items-center gap-2 px-4 py-2 text-white rounded-lg bg-primary transition-colors"
                             >
                                 <TableCellsIcon class="w-5 h-5" />
-                                Hold
-                            </button>
-
-                            <!-- Discount Button -->
-                            <button
-                                @click="handleTablesClick"
-                                class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                            >
-                                <TableCellsIcon class="w-5 h-5" />
-                                Discount
+                                Customers
                             </button>
 
                             <!-- Tables Button -->
                             <button
                                 @click="handleTablesClick"
-                                class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                class="flex items-center gap-2 px-4 py-2 text-white rounded-lg bg-primary transition-colors"
                             >
                                 <TableCellsIcon class="w-5 h-5" />
-                                Tables
+                                Review Transactions
                             </button>
 
                             <!-- More Options -->

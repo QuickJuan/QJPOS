@@ -97,22 +97,30 @@ export const useCashierCache = () => {
     const DISCOUNTS_KEY = 'available_discounts';
 
     const loadCategories = (serverData?: any[]) => {
-        if (serverData && Array.isArray(serverData)) {
+        if (serverData && Array.isArray(serverData) && serverData.length > 0) {
             // Validate and filter server data
             const validCategories = serverData.filter(cat => cat && cat.id && cat.name);
-            categories.value = validCategories;
-            cache.set(CATEGORIES_KEY, validCategories);
-            console.log('Categories cached:', validCategories.length, 'items');
-        } else {
-            // Try to load from cache
-            const cached = cache.get<any[]>(CATEGORIES_KEY);
-            if (cached && Array.isArray(cached)) {
-                // Validate cached data
-                const validCategories = cached.filter(cat => cat && cat.id && cat.name);
+            if (validCategories.length > 0) {
                 categories.value = validCategories;
-                console.log('Categories loaded from cache:', validCategories.length, 'items');
+                cache.set(CATEGORIES_KEY, validCategories);
+                console.log('Categories saved to localStorage and loaded:', validCategories.length, 'items');
+                return;
             }
         }
+
+        // If no valid server data provided, try to load from localStorage
+        const cached = cache.get<any[]>(CATEGORIES_KEY);
+        if (cached && Array.isArray(cached) && cached.length > 0) {
+            // Validate cached data
+            const validCategories = cached.filter(cat => cat && cat.id && cat.name);
+            if (validCategories.length > 0) {
+                categories.value = validCategories;
+                console.log('Categories loaded from localStorage cache:', validCategories.length, 'items');
+                return;
+            }
+        }
+
+        console.log('No valid categories found in server data or cache');
     };
 
     const loadDiscounts = (serverData?: any[]) => {

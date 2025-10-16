@@ -10,12 +10,6 @@
 
         <!-- Cart Items Area -->
         <div class="flex-1 flex flex-col min-h-0">
-            <!-- Discount Section -->
-            <DiscountSection
-                :selected-items-for-discount="selectedItemsForDiscount"
-                @open-discount-modal="openDiscountModal"
-            />
-
             <!-- Cart Items -->
             <CartItems
                 :order-items="orderItems"
@@ -38,9 +32,11 @@
         <ActionButtons
             :selected-order-type="selectedOrderType"
             :order-items="orderItems"
+            :selected-items-for-discount="selectedItemsForDiscount"
             @update-order-type="updateOrderType"
             @save-order="handleSaveOrder"
             @checkout="handleCheckout"
+            @open-discount-modal="openDiscountModal"
         />
 
         <!-- Edit Item Modal -->
@@ -54,7 +50,7 @@
         <DiscountModal
             v-model:visible="showDiscountModal"
             :selected-items="selectedItemsForModal"
-            :available-discounts="availableDiscounts"
+            :available-discounts="props.availableDiscounts"
             @apply="handleDiscountApplied"
         />
 
@@ -72,7 +68,6 @@ import PageProps from "@/Types/PageProps";
 
 // Import components
 import CustomerInfo from "./OrderSummary/CustomerInfo.vue";
-import DiscountSection from "./OrderSummary/DiscountSection.vue";
 import CartItems from "./OrderSummary/CartItems.vue";
 import OrderTotals from "./OrderSummary/OrderTotals.vue";
 import ActionButtons from "./OrderSummary/ActionButtons.vue";
@@ -102,6 +97,12 @@ const showEditModal = ref(false);
 const showDiscountModal = ref(false);
 const selectedOrderItem = ref(props.selectedOrderItem);
 const selectedItemsForDiscount = ref<number[]>([]);
+
+// Debug: Check what discounts we have from props
+console.log("=== ORDER SUMMARY DISCOUNT DEBUG ===");
+console.log("Available discounts from props:", props.availableDiscounts);
+console.log("Type of availableDiscounts:", typeof props.availableDiscounts);
+console.log("Is array:", Array.isArray(props.availableDiscounts));
 
 // Discount state
 const appliedDiscount = ref<{
@@ -231,6 +232,7 @@ const saveEdit = (editedItem: any) => {
 };
 
 const toggleItemForDiscount = (itemId: number, checked: boolean) => {
+    console.log("Toggle item for discount:", itemId, "checked:", checked);
     if (checked) {
         if (!selectedItemsForDiscount.value.includes(itemId)) {
             selectedItemsForDiscount.value.push(itemId);
@@ -240,9 +242,14 @@ const toggleItemForDiscount = (itemId: number, checked: boolean) => {
             (id) => id !== itemId
         );
     }
+    console.log("Selected items for discount:", selectedItemsForDiscount.value);
 };
 
 const openDiscountModal = () => {
+    console.log(
+        "Opening discount modal, selected items:",
+        selectedItemsForDiscount.value
+    );
     showDiscountModal.value = true;
 };
 

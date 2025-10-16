@@ -33,11 +33,23 @@ class CashierSessionController extends Controller
             ->first();
 
         // Get categories with products directly (will be cached in browser)
-        $categories = CategoryResource::collection(
-            Category::with(['products' => function ($query) {
-                $query->where('is_active', true);
-            }])->get()
-        );
+        $categoriesQuery = Category::with(['products' => function ($query) {
+            $query->where('is_active', true);
+        }])->get();
+
+        // Debug: Log what we're getting from the database
+        \Log::info('Categories from database:', [
+            'count' => $categoriesQuery->count(),
+            'categories' => $categoriesQuery->pluck('name')->toArray()
+        ]);
+
+        $categories = CategoryResource::collection($categoriesQuery);
+
+        // Debug: Log the resource collection
+        \Log::info('Categories after resource transformation:', [
+            'count' => $categories->count(),
+            'data' => $categories->toArray(request())
+        ]);
 
         // Get available discounts
         $discounts = DiscountResource::collection(

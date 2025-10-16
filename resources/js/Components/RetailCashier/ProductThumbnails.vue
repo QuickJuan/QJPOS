@@ -1,7 +1,7 @@
 <template>
     <h2 class="text-xl font-bold text-gray-800 mb-4">{{ categoryName }}</h2>
     <div
-        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4"
+        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 2xl:grid-cols-5 gap-4"
     >
         <div
             v-for="product in products"

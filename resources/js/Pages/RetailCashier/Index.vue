@@ -34,7 +34,7 @@
                 <OrderSummary
                     :orderItems="orderItems"
                     :selected-order-item="selectedOrderItem"
-                    :available-discounts="activeDiscounts"
+                    :available-discounts="props.availableDiscounts"
                 />
             </section>
         </div>
@@ -42,7 +42,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, nextTick } from "vue";
 import { ChartBarIcon, CogIcon } from "@heroicons/vue/24/outline";
 import { router, usePage } from "@inertiajs/vue3";
 import { route } from "ziggy-js";
@@ -59,7 +59,7 @@ import { useCashierCache } from "@/composables/useCashierCache";
 
 const props = defineProps<{
     pendingCashiering: CashieringSession;
-    categories: Category[];
+    categories: { data: Category[] } | Category[];
     currentUser: any;
     cartItems: any[];
     availableDiscounts: any[];
@@ -84,26 +84,38 @@ const orderItems = computed(() => props.cartItems || []);
 
 // Use cached categories if available, otherwise use props
 const activeCategories = computed(() => {
-    const cached =
-        cachedCategories.value.length > 0
-            ? cachedCategories.value
-            : props.categories.data;
-    // Ensure we have valid category data and it's an array
-    const validCached = Array.isArray(cached) ? cached : [];
-    return validCached.filter(
+    // Helper to safely extract categories data
+    const getCategoriesData = (): Category[] => {
+        if (Array.isArray(props.categories)) {
+            return props.categories;
+        } else if (
+            props.categories &&
+            typeof props.categories === "object" &&
+            "data" in props.categories &&
+            Array.isArray(props.categories.data)
+        ) {
+            return props.categories.data;
+        }
+        return [];
+    };
+
+    const categoriesData = getCategoriesData();
+    console.log("Raw props.categories (computed):", categoriesData);
+    console.log("Cached categories:", cachedCategories.value);
+
+    // Prioritize cached categories if available
+    if (cachedCategories.value.length > 0) {
+        console.log("Using cached categories:", cachedCategories.value);
+        return cachedCategories.value;
+    }
+
+    // Fall back to props categories
+    const filtered = categoriesData.filter(
         (category) => category && category.id && category.name
     );
-});
 
-// Use cached discounts if available, otherwise use props
-const activeDiscounts = computed(() => {
-    const cached =
-        cachedDiscounts.value.length > 0
-            ? cachedDiscounts.value
-            : props.availableDiscounts;
-    // Ensure we have valid discount data and it's an array
-    const validCached = Array.isArray(cached) ? cached : [];
-    return validCached.filter((discount) => discount && discount.id);
+    console.log("Using props categories:", filtered);
+    return filtered;
 });
 
 // Get all products from all categories
@@ -147,22 +159,65 @@ const backToCategories = () => {
 
 // Check for pending cashiering on mount
 onMounted(() => {
-    // Load data into cache if we have fresh server data
-    if (props.categories && props.categories.length > 0) {
-        loadCategories(props.categories);
+    console.log("=== CATEGORY DEBUG INFO ===");
+    console.log("All props received:", props);
+    console.log("Props categories type:", typeof props.categories);
+    console.log("Props categories is array:", Array.isArray(props.categories));
+    console.log("Props categories:", props.categories);
+
+    // Helper to safely extract categories data
+    const getCategoriesData = (): Category[] => {
+        if (Array.isArray(props.categories)) {
+            return props.categories;
+        } else if (
+            props.categories &&
+            typeof props.categories === "object" &&
+            "data" in props.categories &&
+            Array.isArray(props.categories.data)
+        ) {
+            return props.categories.data;
+        }
+        return [];
+    };
+
+    const categoriesData = getCategoriesData();
+    console.log("Extracted categories data:", categoriesData);
+    console.log("Categories data length:", categoriesData.length);
+
+    console.log("Initializing categories cache...");
+
+    // First, try to load from localStorage
+    loadCategories();
+
+    // If we have fresh server data and no cached data, or server data is newer
+    if (categoriesData && categoriesData.length > 0) {
+        console.log("Server categories available:", categoriesData.length);
+
+        // Always update cache with server data on page load to ensure fresh data
+        loadCategories(categoriesData);
+    } else if (cachedCategories.value.length === 0) {
+        console.warn("No categories available from server or cache");
     }
 
+    // Load discounts (keeping existing logic)
     if (props.availableDiscounts && props.availableDiscounts.length > 0) {
         loadDiscounts(props.availableDiscounts);
     }
 
-    // Select first category by default if no category is selected
-    if (
-        selectedCategoryId.value === null &&
-        activeCategories.value.length > 0
-    ) {
-        selectedCategoryId.value = activeCategories.value[0].id;
-    }
+    // Use nextTick to ensure activeCategories is computed after cache is loaded
+    nextTick(() => {
+        // Select first category by default if no category is selected
+        if (
+            selectedCategoryId.value === null &&
+            activeCategories.value.length > 0
+        ) {
+            console.log(
+                "Auto-selecting first category:",
+                activeCategories.value[0].name
+            );
+            selectedCategoryId.value = activeCategories.value[0].id;
+        }
+    });
 
     const pendingCashiering = props.pendingCashiering;
     if (pendingCashiering != null) {
