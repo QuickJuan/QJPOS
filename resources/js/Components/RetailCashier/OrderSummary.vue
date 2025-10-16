@@ -1,6 +1,6 @@
 <template>
     <aside
-        class="h-full flex flex-col bg-gray-50 shadow-lg border-2 border-gray-200"
+        class="h-full flex flex-col bg-gray-50 shadow-lg border-2 border-gray-200 w-full"
     >
         <!-- Customer Information -->
         <CustomerInfo
