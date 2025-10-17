@@ -1,18 +1,21 @@
 <?php
-
 namespace App\Filament\Tenant\Resources;
 
-use App\Enums\TableReservationStatusType;
-use App\Filament\Tenant\Resources\TableReservationResource\Pages;
-use App\Filament\Tenant\Resources\TableReservationResource\RelationManagers;
-use App\Models\TableReservation;
 use Filament\Forms;
-use Filament\Forms\Form;
-use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Forms\Form;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
+use App\Models\TableReservation;
+use Filament\Resources\Resource;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Textarea;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Forms\Components\TextInput;
+use App\Enums\TableReservationStatusType;
+use Filament\Tables\Columns\SelectColumn;
+use Filament\Forms\Components\DateTimePicker;
+use App\Filament\Tenant\Resources\TableReservationResource\Pages;
 
 class TableReservationResource extends Resource
 {
@@ -24,63 +27,63 @@ class TableReservationResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Select::make('table_room_id')
+                Select::make('table_room_id')
                     ->label('Table Room')
                     ->relationship('tableRoom', 'name')
                     ->required()
                     ->searchable()
                     ->preload(),
 
-                Forms\Components\Select::make('user_id')
+                Select::make('user_id')
                     ->label('User')
                     ->relationship('user', 'name')
                     ->required()
                     ->searchable()
                     ->preload(),
 
-                Forms\Components\Section::make('Reservation Details')
+                Section::make('Reservation Details')
                     ->columnSpan(1)
                     ->schema([
-                        Forms\Components\DateTimePicker::make('reservation_from')
+                        DateTimePicker::make('reservation_from')
                             ->label('Reservation From')
                             ->required(),
 
-                        Forms\Components\DateTimePicker::make('reservation_to')
+                        DateTimePicker::make('reservation_to')
                             ->label('Reservation To')
                             ->required(),
 
-                        Forms\Components\Select::make('status')
+                        Select::make('status')
                             ->label('Status')
                             ->options(TableReservationStatusType::filamentOptions())
                             ->default(TableReservationStatusType::ACTIVE->value),
                     ]),
 
-                Forms\Components\Section::make('Contact Information')
+                Section::make('Contact Information')
                     ->columnSpan(1)
                     ->schema([
-                        Forms\Components\TextInput::make('name')
+                        TextInput::make('name')
                             ->label('Customer Name')
                             ->required()
                             ->maxLength(150),
 
-                        Forms\Components\TextInput::make('pax')
+                        TextInput::make('pax')
                             ->label('Number of Pax')
                             ->numeric()
                             ->minValue(1)
                             ->maxValue(100)
                             ->default(1),
 
-                        Forms\Components\TextInput::make('contact_phone')
+                        TextInput::make('contact_phone')
                             ->tel()
                             ->maxLength(20)
                             ->label('Contact Phone'),
 
-                        Forms\Components\TextInput::make('contact_email')
+                        TextInput::make('contact_email')
                             ->email()
                             ->maxLength(150)
                             ->label('Contact Email'),
 
-                        Forms\Components\Textarea::make('notes')
+                        Textarea::make('notes')
                             ->label('Notes'),
                     ]),
             ]);
@@ -90,40 +93,40 @@ class TableReservationResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('tableRoom.name')
+                TextColumn::make('tableRoom.name')
                     ->label('Table Room')
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('user.name')
+                TextColumn::make('user.name')
                     ->label('User')
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('reservation_from')
+                TextColumn::make('reservation_from')
                     ->label('Reservation From')
                     ->dateTime()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('reservation_to')
+                TextColumn::make('reservation_to')
                     ->label('Reservation To')
                     ->dateTime()
                     ->sortable(),
 
-                Tables\Columns\SelectColumn::make('status')
+                SelectColumn::make('status')
                     ->options(TableReservationStatusType::filamentOptions())
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('pax')
+                TextColumn::make('pax')
                     ->label('Number of Pax'),
 
-                Tables\Columns\TextColumn::make('contact_phone')
+                TextColumn::make('contact_phone')
                     ->label('Contact Phone'),
 
-                Tables\Columns\TextColumn::make('contact_email')
+                TextColumn::make('contact_email')
                     ->label('Contact Email'),
 
-                Tables\Columns\TextColumn::make('notes')
+                TextColumn::make('notes')
                     ->limit(50)
                     ->wrap(),
             ])
@@ -131,7 +134,9 @@ class TableReservationResource extends Resource
                 //
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -150,9 +155,10 @@ class TableReservationResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListTableReservations::route('/'),
+            'index'  => Pages\ListTableReservations::route('/'),
             'create' => Pages\CreateTableReservation::route('/create'),
-            'edit' => Pages\EditTableReservation::route('/{record}/edit'),
+            'edit'   => Pages\EditTableReservation::route('/{record}/edit'),
+            'view'   => Pages\ViewTableReservation::route('/{record}/view'),
         ];
     }
 

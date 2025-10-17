@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Filament\Tenant\Resources\TableReservationResource\Pages;
 
 use App\Filament\Tenant\Resources\TableReservationResource;
@@ -15,5 +14,10 @@ class EditTableReservation extends EditRecord
         return [
             Actions\DeleteAction::make(),
         ];
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        return route('filament.tenant.resources.table-reservations.view', $this->record);
     }
 }

@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Filament\Tenant\Resources\ProductResource\Pages;
 
 use App\Filament\Tenant\Resources\ProductResource;
@@ -15,5 +14,10 @@ class EditProduct extends EditRecord
         return [
             Actions\DeleteAction::make(),
         ];
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        return route('filament.tenant.resources.products.view', $this->record);
     }
 }

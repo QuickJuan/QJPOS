@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Filament\Tenant\Resources\CartResource\Pages;
 
 use App\Filament\Tenant\Resources\CartResource;
@@ -15,5 +14,10 @@ class EditCart extends EditRecord
         return [
             Actions\DeleteAction::make(),
         ];
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        return route('filament.tenant.resources.carts.view', $this->record);
     }
 }

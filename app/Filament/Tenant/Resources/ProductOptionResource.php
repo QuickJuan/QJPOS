@@ -1,24 +1,24 @@
 <?php
 namespace App\Filament\Tenant\Resources;
 
-use Filament\Tables;
-use Filament\Forms\Form;
-use Filament\Tables\Table;
-use App\Models\ProductOption;
-use Filament\Resources\Resource;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Checkbox;
-use Filament\Tables\Columns\IconColumn;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Forms\Components\TextInput;
 use App\Filament\Tenant\Resources\ProductOptionResource\Pages;
 use App\Filament\Tenant\Resources\ProductOptionResource\RelationManagers\OptionItemsRelationManager;
+use App\Models\ProductOption;
+use Filament\Forms\Components\Checkbox;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Form;
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
 
 class ProductOptionResource extends Resource
 {
-    protected static ?string $model = ProductOption::class;
-
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $model                 = ProductOption::class;
+    protected static bool $shouldRegisterNavigation = false;
+    protected static ?string $navigationIcon        = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form
     {
@@ -27,7 +27,7 @@ class ProductOptionResource extends Resource
                 Select::make('product_packaging_id')
                     ->label('Product Packaging')
                     ->relationship('productPackaging', 'unit_measure')
-                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->product->name . ' - ' . $record->unit_measure),
+                    ->getOptionLabelFromRecordUsing(fn($record) => $record->product->name . ' - ' . $record->unit_measure),
 
                 TextInput::make('name')
                     ->label('Option Name')
@@ -53,20 +53,20 @@ class ProductOptionResource extends Resource
 
                 TextColumn::make('productPackaging')
                     ->label('Product & Packaging')
-                    ->formatStateUsing(fn ($record) => $record->productPackaging?->product?->name . ' - ' . $record->productPackaging?->unit_measure)
+                    ->formatStateUsing(fn($record) => $record->productPackaging?->product?->name . ' - ' . $record->productPackaging?->unit_measure)
                     ->sortable()
                     ->searchable(),
 
-               TextColumn::make('name')
+                TextColumn::make('name')
                     ->label('Option Name')
                     ->sortable()
                     ->searchable(),
 
-               TextColumn::make('qty')
+                TextColumn::make('qty')
                     ->label('Limit quantity')
                     ->sortable(),
 
-               IconColumn::make('is_default')
+                IconColumn::make('is_default')
                     ->label('Is Default')
                     ->boolean(),
             ])
@@ -98,7 +98,7 @@ class ProductOptionResource extends Resource
             'edit'   => Pages\EditProductOption::route('/{record}/edit'),
         ];
     }
-    
+
     public static function getNavigationGroup(): ?string
     {
         return 'Products';

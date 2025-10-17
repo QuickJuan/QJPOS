@@ -31,7 +31,6 @@ class ProductResource extends Resource
     {
         return $form
             ->schema([
-
                 Select::make('category_id')
                     ->relationship('category', 'name')
                     ->required()
@@ -150,7 +149,9 @@ class ProductResource extends Resource
                 //
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->headerActions([
                 ActionGroup::make([
@@ -196,6 +197,7 @@ class ProductResource extends Resource
             'index'  => Pages\ListProducts::route('/'),
             'create' => Pages\CreateProduct::route('/create'),
             'edit'   => Pages\EditProduct::route('/{record}/edit'),
+            'view'   => Pages\ViewProduct::route('/{record}/view'),
         ];
     }
 

@@ -9,4 +9,9 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateTableRoom extends CreateRecord
 {
     protected static string $resource = TableRoomResource::class;
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

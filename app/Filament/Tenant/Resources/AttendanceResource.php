@@ -1,15 +1,18 @@
 <?php
 namespace App\Filament\Tenant\Resources;
 
-use Filament\Tables;
-use Filament\Forms\Form;
+use App\Filament\Tenant\Resources\AttendanceResource\Pages;
 use App\Models\Attendance;
-use Filament\Tables\Table;
-use Filament\Resources\Resource;
-use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
-use App\Filament\Tenant\Resources\AttendanceResource\Pages;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Form;
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
 
 class AttendanceResource extends Resource
 {
@@ -21,6 +24,15 @@ class AttendanceResource extends Resource
     {
         return $form
             ->schema([
+                Select::make('branch_id')
+                    ->relationship('branch', 'name')
+                    ->required()
+                    ->preload()
+                    ->searchable(),
+
+                Hidden::make('user_id')
+                    ->default(Auth::id()),
+
                 DatePicker::make('attendance_date')
                     ->label('Attendance Date')
                     ->required()
@@ -48,31 +60,41 @@ class AttendanceResource extends Resource
     {
         return $table
             ->columns([
+                TextColumn::make('branch.name')
+                    ->sortable()
+                    ->searchable(),
+
+                TextColumn::make('user.name')
+                    ->sortable()
+                    ->searchable(),
+
                 TextColumn::make('attendance_date')
                     ->label('Attendance Date')
                     ->date(),
 
                 TextColumn::make('schedule_timein')
                     ->label('Scheduled Time In')
-                    ->dateTime(),
+                    ->dateTime('F d, Y h:i:s A'),
 
                 TextColumn::make('schedule_timeout')
                     ->label('Scheduled Time Out')
-                    ->dateTime(),
+                    ->dateTime('F d, Y h:i:s A'),
 
                 TextColumn::make('actual_timein')
                     ->label('Actual Time In')
-                    ->dateTime(),
+                    ->dateTime('F d, Y h:i:s A'),
 
                 TextColumn::make('actual_timeout')
                     ->label('Actual Time Out')
-                    ->dateTime(),
+                    ->dateTime('F d, Y h:i:s A'),
             ])
             ->filters([
                 //
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -94,6 +116,7 @@ class AttendanceResource extends Resource
             'index'  => Pages\ListAttendances::route('/'),
             'create' => Pages\CreateAttendance::route('/create'),
             'edit'   => Pages\EditAttendance::route('/{record}/edit'),
+            'view'   => Pages\ViewAttendance::route('/{record}/view'),
         ];
     }
 }

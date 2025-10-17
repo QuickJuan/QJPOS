@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Filament\Tenant\Resources\TableRoomResource\Pages;
 
 use App\Filament\Tenant\Resources\TableRoomResource;
@@ -15,5 +14,10 @@ class EditTableRoom extends EditRecord
         return [
             Actions\DeleteAction::make(),
         ];
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        return route('filament.tenant.resources.table-rooms.view', $this->record);
     }
 }

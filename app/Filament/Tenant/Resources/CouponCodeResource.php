@@ -9,6 +9,8 @@ use Filament\Forms\Components\Section;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 class CouponCodeResource extends Resource
@@ -34,15 +36,15 @@ class CouponCodeResource extends Resource
                                     ->required()
                                     ->maxLength(20)
                                     ->unique(ignoreRecord: true)
-                                    ->placeholder('e.g., BLACKFRIDAY20')
-                                    // ->suffixAction(
-                                    //     Forms\Components\Actions\Action::make('generate')
-                                    //         ->icon('heroicon-m-sparkles')
-                                    //         ->action(function (Forms\Set $set) {
-                                    //             $couponService = app(CouponService::class);
-                                    //             $set('code', $couponService->generateUniqueCouponCode());
-                                    //         })
-                                    // ),
+                                    ->placeholder('e.g., BLACKFRIDAY20'),
+                                // ->suffixAction(
+                                //     Forms\Components\Actions\Action::make('generate')
+                                //         ->icon('heroicon-m-sparkles')
+                                //         ->action(function (Forms\Set $set) {
+                                //             $couponService = app(CouponService::class);
+                                //             $set('code', $couponService->generateUniqueCouponCode());
+                                //         })
+                                // ),
                             ]),
 
                         Forms\Components\Textarea::make('description')
@@ -180,13 +182,65 @@ class CouponCodeResource extends Resource
     {
         return $table
             ->columns([
-                //
+                TextColumn::make('code')
+                    ->sortable()
+                    ->searchable(),
+
+                TextColumn::make('name')
+                    ->sortable()
+                    ->searchable(),
+
+                TextColumn::make('description')
+                    ->sortable()
+                    ->searchable()
+                    ->words(4),
+
+                TextColumn::make('type')
+                    ->sortable()
+                    ->searchable(),
+
+                TextColumn::make('value')
+                    ->sortable()
+                    ->searchable(),
+
+                TextColumn::make('minimum_amount')
+                    ->sortable()
+                    ->searchable(),
+
+                TextColumn::make('usage_limit')
+                    ->sortable()
+                    ->searchable(),
+
+                TextColumn::make('usage_limit_per_user')
+                    ->sortable()
+                    ->searchable(),
+
+                TextColumn::make('used_count')
+                    ->sortable()
+                    ->searchable(),
+
+                TextColumn::make('valid_from')
+                    ->sortable()
+                    ->searchable()
+                    ->dateTime('F d Y, h:i:s A'),
+
+                TextColumn::make('valid_until')
+                    ->sortable()
+                    ->searchable()
+                    ->dateTime('F d Y, h:i:s A'),
+
+                IconColumn::make('is_active')
+                    ->sortable()
+                    ->searchable()
+                    ->boolean(),
             ])
             ->filters([
                 //
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -208,6 +262,7 @@ class CouponCodeResource extends Resource
             'index'  => Pages\ListCouponCodes::route('/'),
             'create' => Pages\CreateCouponCode::route('/create'),
             'edit'   => Pages\EditCouponCode::route('/{record}/edit'),
+            'view'   => Pages\ViewCouponCode::route('/{record}/view'),
         ];
     }
 }

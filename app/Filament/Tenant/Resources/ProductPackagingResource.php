@@ -92,7 +92,9 @@ class ProductPackagingResource extends Resource
                 //
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -104,7 +106,7 @@ class ProductPackagingResource extends Resource
     public static function getRelations(): array
     {
         return [
-            ProductOptionsRelationManager::class,
+            // ProductOptionsRelationManager::class,
         ];
     }
 
@@ -114,6 +116,7 @@ class ProductPackagingResource extends Resource
             'index'  => Pages\ListProductPackagings::route('/'),
             'create' => Pages\CreateProductPackaging::route('/create'),
             'edit'   => Pages\EditProductPackaging::route('/{record}/edit'),
+            'view'   => Pages\ViewProductPackaging::route('/{record}/view'),
         ];
     }
 

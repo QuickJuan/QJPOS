@@ -55,7 +55,9 @@ class GroupResource extends Resource
                 //
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -77,6 +79,7 @@ class GroupResource extends Resource
             'index'  => Pages\ListGroups::route('/'),
             'create' => Pages\CreateGroup::route('/create'),
             'edit'   => Pages\EditGroup::route('/{record}/edit'),
+            'view'   => Pages\ViewGroup::route('/{record}/view'),
         ];
     }
 

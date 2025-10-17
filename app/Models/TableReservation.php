@@ -15,6 +15,7 @@ class TableReservation extends Model
         'status',
         'notes',
         'pax',
+        'name',
         'contact_phone',
         'contact_email',
     ];

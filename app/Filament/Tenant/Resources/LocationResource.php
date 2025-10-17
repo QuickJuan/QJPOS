@@ -37,6 +37,7 @@ class LocationResource extends Resource
                 //
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])
@@ -60,6 +61,7 @@ class LocationResource extends Resource
             'index'  => Pages\ListLocations::route('/'),
             'create' => Pages\CreateLocation::route('/create'),
             'edit'   => Pages\EditLocation::route('/{record}/edit'),
+            'view'   => Pages\ViewLocation::route('/{record}/view'),
         ];
     }
 }

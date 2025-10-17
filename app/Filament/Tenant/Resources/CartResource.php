@@ -1,38 +1,40 @@
 <?php
 namespace App\Filament\Tenant\Resources;
 
-use Filament\Forms;
-use App\Models\Cart;
-use Filament\Tables;
-use Filament\Forms\Form;
-use Filament\Tables\Table;
-use Filament\Resources\Resource;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\KeyValue;
-use Filament\Forms\Components\Textarea;
-use Filament\Tables\Columns\TextColumn;
 use App\Filament\Tenant\Resources\CartResource\Pages;
+use App\Filament\Tenant\Resources\CartResource\RelationManagers\CartItemsRelationManager;
+use App\Models\Cart;
+use Filament\Forms\Components\KeyValue;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Form;
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
 
 class CartResource extends Resource
 {
-    protected static ?string $model = Cart::class;
-
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $model           = Cart::class;
+    protected static ?string $navigationGroup = "Cart";
+    protected static ?string $navigationIcon  = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Select::make('customer_id')
-                    ->label('Customer')
-                    ->relationship('customer', 'name')
+                Select::make('cashier_id')
+                    ->label('Cashier')
+                    ->relationship('cashier', 'name')
                     ->required()
+                    ->preload()
                     ->searchable(),
 
-                Select::make('cashier_shift_id')
-                    ->label('Cashier Shift')
-                    ->relationship('cashierShift', 'name')
+                Select::make('cashier_session_id')
+                    ->label('Cashier Session')
+                    ->relationship('cashierSession', 'beginning_cash')
                     ->required()
+                    ->preload()
                     ->searchable(),
 
                 Textarea::make('notes')
@@ -51,13 +53,13 @@ class CartResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('customer.name')
-                    ->label('Customer')
+                TextColumn::make('cashier.name')
+                    ->label('Cashier')
                     ->sortable()
                     ->searchable(),
 
-                TextColumn::make('cashierShift.name')
-                    ->label('Cashier Shift')
+                TextColumn::make('cashierSession.beginning_cash')
+                    ->label('Cashier Session')
                     ->sortable()
                     ->searchable(),
 
@@ -76,7 +78,9 @@ class CartResource extends Resource
                 //
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -88,7 +92,7 @@ class CartResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            CartItemsRelationManager::class,
         ];
     }
 
@@ -98,6 +102,7 @@ class CartResource extends Resource
             'index'  => Pages\ListCarts::route('/'),
             'create' => Pages\CreateCart::route('/create'),
             'edit'   => Pages\EditCart::route('/{record}/edit'),
+            'view'   => Pages\ViewCart::route('/{record}/view'),
         ];
     }
 }

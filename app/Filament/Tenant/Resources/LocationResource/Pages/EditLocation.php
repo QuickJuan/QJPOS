@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Filament\Tenant\Resources\LocationResource\Pages;
 
 use App\Filament\Tenant\Resources\LocationResource;
@@ -15,5 +14,10 @@ class EditLocation extends EditRecord
         return [
             Actions\DeleteAction::make(),
         ];
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        return route('filament.tenant.resources.locations.view', $this->record);
     }
 }
