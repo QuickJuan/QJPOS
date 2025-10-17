@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Filament\Tenant\Resources\ProductPackagingResource\Pages;
 
 use App\Filament\Tenant\Resources\ProductPackagingResource;
@@ -15,5 +14,10 @@ class EditProductPackaging extends EditRecord
         return [
             Actions\DeleteAction::make(),
         ];
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        return route('filament.tenant.resources.product-packagings.view', $this->record);
     }
 }

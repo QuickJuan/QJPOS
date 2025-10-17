@@ -1,14 +1,16 @@
 <?php
-
 namespace App\Filament\Tenant\Resources\CategoryResource\RelationManagers;
 
-use Filament\Forms;
+use Filament\Forms\Components\RichEditor;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
+use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
+use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class ProductsRelationManager extends RelationManager
 {
@@ -18,9 +20,66 @@ class ProductsRelationManager extends RelationManager
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('name')
+                Select::make('brand_id')
+                    ->relationship('brand', 'name')
                     ->required()
-                    ->maxLength(255),
+                    ->label('Brand')
+                    ->searchable()
+                    ->preload()
+                    ->placeholder('Select a brand')
+                    ->createOptionForm([
+                        TextInput::make('name')
+                            ->required()
+                            ->maxLength(255)
+                            ->label('Brand Name'),
+                    ]),
+
+                Select::make('groups')
+                    ->relationship('groups', 'name')
+                    ->multiple()
+                    ->preload(),
+
+                TextInput::make('uuid')
+                    ->required()
+                    ->maxLength(150)
+                    ->label('UUID')
+                    ->default(fn() => (string) \Illuminate\Support\Str::uuid())
+                    ->disabled()
+                    ->dehydrated(),
+
+                TextInput::make('name')
+                    ->required()
+                    ->maxLength(150)
+                    ->label('Product Name'),
+
+                TextInput::make('receipt_alias')
+                    ->required()
+                    ->maxLength(150)
+                    ->label('Receipt Name'),
+
+                Select::make('options')
+                    ->relationship('options', 'option_name')
+                    ->multiple()
+                    ->searchable()
+                    ->preload(),
+
+                RichEditor::make('description')
+                    ->maxLength(500)
+                    ->ColumnSpan(2)
+                    ->label('Description'),
+
+                SpatieMediaLibraryFileUpload::make('featured_image')
+                    ->label('Featured Image')
+                    ->collection('featured_image')
+                    ->image()
+                    ->imageEditor(),
+
+                SpatieMediaLibraryFileUpload::make('product_images')
+                    ->label('Product Images')
+                    ->collection('product_images')
+                    ->multiple()
+                    ->image()
+                    ->imageEditor(),
             ]);
     }
 
@@ -29,7 +88,24 @@ class ProductsRelationManager extends RelationManager
         return $table
             ->recordTitleAttribute('name')
             ->columns([
-                Tables\Columns\TextColumn::make('name'),
+                SpatieMediaLibraryImageColumn::make('featured_image')
+                    ->collection('featured_image')
+                    ->circular(),
+
+                TextColumn::make('name')
+                    ->label('Product Name')
+                    ->searchable()
+                    ->sortable(),
+
+                TextColumn::make('receipt_alias')
+                    ->label('Receipt Name')
+                    ->searchable()
+                    ->sortable(),
+
+                TextColumn::make('brand.name')
+                    ->label('Brand')
+                    ->searchable()
+                    ->sortable(),
             ])
             ->filters([
                 //

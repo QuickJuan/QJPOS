@@ -16,4 +16,9 @@ class EditInventoryLog extends EditRecord
             Actions\DeleteAction::make(),
         ];
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return route('filament.tenant.resources.inventory-logs.view', $this->record);
+    }
 }

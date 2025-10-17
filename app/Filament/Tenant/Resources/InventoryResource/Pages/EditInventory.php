@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Filament\Tenant\Resources\InventoryResource\Pages;
 
 use App\Filament\Tenant\Resources\InventoryResource;
@@ -15,5 +14,10 @@ class EditInventory extends EditRecord
         return [
             Actions\DeleteAction::make(),
         ];
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        return route('filament.tenant.resources.inventories.view', $this->record);
     }
 }

@@ -1,17 +1,18 @@
 <?php
 namespace App\Filament\Tenant\Resources;
 
-use App\Filament\Tenant\Resources\OptionResource\Pages;
-use App\Models\Option;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
-use Filament\Resources\Resource;
 use Filament\Tables;
-use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
-use Filament\Tables\Columns\TextColumn;
+use App\Models\Option;
+use Filament\Forms\Form;
 use Filament\Tables\Table;
+use Filament\Resources\Resource;
+use Filament\Forms\Components\Select;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Forms\Components\TextInput;
+use App\Filament\Tenant\Resources\OptionResource\Pages;
+use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
+use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
+use App\Filament\Tenant\Resources\OptionResource\RelationManagers\OptionItemsRelationManager;
 
 class OptionResource extends Resource
 {
@@ -24,6 +25,7 @@ class OptionResource extends Resource
         return $form
             ->schema([
                 TextInput::make('option_name')
+                    ->label('Option Name')
                     ->required()
                     ->maxLength(255),
 
@@ -67,7 +69,9 @@ class OptionResource extends Resource
                 //
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -79,7 +83,7 @@ class OptionResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            OptionItemsRelationManager::class,
         ];
     }
 
@@ -89,6 +93,7 @@ class OptionResource extends Resource
             'index'  => Pages\ListOptions::route('/'),
             'create' => Pages\CreateOption::route('/create'),
             'edit'   => Pages\EditOption::route('/{record}/edit'),
+            'view'   => Pages\ViewOption::route('/{record}/view'),
         ];
     }
 

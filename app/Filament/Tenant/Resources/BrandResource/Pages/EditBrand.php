@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Filament\Tenant\Resources\BrandResource\Pages;
 
 use App\Filament\Tenant\Resources\BrandResource;
@@ -15,5 +14,10 @@ class EditBrand extends EditRecord
         return [
             Actions\DeleteAction::make(),
         ];
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        return route('filament.tenant.resources.brands.view', $this->record);
     }
 }

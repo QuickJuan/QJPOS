@@ -1,27 +1,22 @@
 <?php
-
 namespace App\Filament\Tenant\Resources;
 
-use Filament\Forms;
-use Filament\Tables;
-use App\Models\Brand;
-use Filament\Forms\Form;
-use Filament\Tables\Table;
-use Filament\Resources\Resource;
-use Filament\Tables\Actions\Action;
 use App\Filament\Imports\BrandImporter;
-use Filament\Tables\Columns\TextColumn;
+use App\Filament\Tenant\Resources\BrandResource\Pages;
+use App\Filament\Tenant\Resources\BrandResource\RelationManagers\ProductsRelationManager;
+use App\Models\Brand;
+use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Form;
 use Filament\Notifications\Notification;
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Actions\ImportAction;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
-use App\Filament\Tenant\Resources\BrandResource\Pages;
 use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
-use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
-use App\Filament\Tenant\Resources\BrandResource\RelationManagers;
-use App\Filament\Tenant\Resources\BrandResource\RelationManagers\ProductsRelationManager;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
 
 class BrandResource extends Resource
 {
@@ -59,7 +54,9 @@ class BrandResource extends Resource
                 //
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->headerActions([
                 ActionGroup::make([
@@ -99,9 +96,10 @@ class BrandResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListBrands::route('/'),
+            'index'  => Pages\ListBrands::route('/'),
             'create' => Pages\CreateBrand::route('/create'),
-            'edit' => Pages\EditBrand::route('/{record}/edit'),
+            'edit'   => Pages\EditBrand::route('/{record}/edit'),
+            'view'   => Pages\ViewBrand::route('/{record}/view'),
         ];
     }
 

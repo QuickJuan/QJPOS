@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Filament\Tenant\Resources\CouponCodeResource\Pages;
 
 use App\Filament\Tenant\Resources\CouponCodeResource;
@@ -15,5 +14,10 @@ class EditCouponCode extends EditRecord
         return [
             Actions\DeleteAction::make(),
         ];
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        return route('filament.tenant.resources.coupon-codes.view', $this->record);
     }
 }

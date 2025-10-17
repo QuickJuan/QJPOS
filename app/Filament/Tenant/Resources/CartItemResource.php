@@ -1,26 +1,24 @@
 <?php
-
 namespace App\Filament\Tenant\Resources;
 
-use Filament\Forms;
-use Filament\Tables;
+use App\Filament\Tenant\Resources\CartItemResource\Pages;
 use App\Models\CartItem;
-use Filament\Forms\Form;
-use Filament\Tables\Table;
-use Filament\Resources\Resource;
 use Filament\Forms\Components\Select;
-use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Form;
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use App\Filament\Tenant\Resources\CartItemResource\Pages;
-use App\Filament\Tenant\Resources\CartItemResource\RelationManagers;
 
 class CartItemResource extends Resource
 {
-    protected static ?string $model = CartItem::class;
-
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $model                 = CartItem::class;
+    protected static ?string $navigationGroup       = "Cart";
+    protected static bool $shouldRegisterNavigation = false;
+    protected static ?string $navigationIcon        = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form
     {
@@ -28,19 +26,15 @@ class CartItemResource extends Resource
             ->schema([
                 Select::make('cart_id')
                     ->label('Cart')
-                    ->relationship('cart', 'id', fn (Builder $query) => $query->withoutGlobalScopes([SoftDeletingScope::class]))
+                    ->relationship('cart', 'id', fn(Builder $query) => $query->withoutGlobalScopes([SoftDeletingScope::class]))
+                    ->preload()
                     ->searchable()
                     ->required(),
 
                 Select::make('product_id')
                     ->label('Product')
-                    ->relationship('product', 'name', fn (Builder $query) => $query->withoutGlobalScopes([SoftDeletingScope::class]))
-                    ->searchable()
-                    ->required(),
-
-                Select::make('product_packaging_id')
-                    ->label('Product Packaging')
-                    ->relationship('productPackaging', 'name', fn (Builder $query) => $query->withoutGlobalScopes([SoftDeletingScope::class]))
+                    ->relationship('product', 'name', fn(Builder $query) => $query->withoutGlobalScopes([SoftDeletingScope::class]))
+                    ->preload()
                     ->searchable()
                     ->required(),
 
@@ -84,23 +78,20 @@ class CartItemResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('cart_id')
+                TextColumn::make('cart.id')
                     ->label('Cart')
                     ->searchable()
-                    ->sortable()
-                    ->relationship('cart', 'id'),
+                    ->sortable(),
 
-                TextColumn::make('product_id')
+                TextColumn::make('product.name')
                     ->label('Product')
                     ->searchable()
-                    ->sortable()
-                    ->relationship('product', 'name'),
+                    ->sortable(),
 
-                TextColumn::make('product_packaging_id')
+                TextColumn::make('productPackaging.name')
                     ->label('Product Packaging')
                     ->searchable()
-                    ->sortable()
-                    ->relationship('productPackaging', 'name'),
+                    ->sortable(),
 
                 TextColumn::make('quantity')
                     ->label('Quantity')
@@ -117,8 +108,9 @@ class CartItemResource extends Resource
                 TextColumn::make('discount')
                     ->label('Discount'),
 
-                TextColumn::make('discount_id')
-                    ->label('Discount ID'),
+                TextColumn::make('discount.discount_name')
+                    ->searchable()
+                    ->sortable(),
 
                 TextColumn::make('coupon_code')
                     ->label('Coupon Code'),
@@ -131,7 +123,9 @@ class CartItemResource extends Resource
                 //
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -150,9 +144,10 @@ class CartItemResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListCartItems::route('/'),
+            'index'  => Pages\ListCartItems::route('/'),
             'create' => Pages\CreateCartItem::route('/create'),
-            'edit' => Pages\EditCartItem::route('/{record}/edit'),
+            'edit'   => Pages\EditCartItem::route('/{record}/edit'),
+            'view'   => Pages\ViewCartItem::route('/{record}/view'),
         ];
     }
 }

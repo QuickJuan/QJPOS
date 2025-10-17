@@ -77,6 +77,7 @@ class InventoryLogResource extends Resource
                 //
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])
@@ -100,6 +101,7 @@ class InventoryLogResource extends Resource
             'index'  => Pages\ListInventoryLogs::route('/'),
             'create' => Pages\CreateInventoryLog::route('/create'),
             'edit'   => Pages\EditInventoryLog::route('/{record}/edit'),
+            'view'   => Pages\ViewInventoryLog::route('/{record}/view'),
         ];
     }
 }

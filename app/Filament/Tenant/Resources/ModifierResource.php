@@ -1,17 +1,16 @@
 <?php
 namespace App\Filament\Tenant\Resources;
 
-use Filament\Tables;
+use App\Filament\Tenant\Resources\ModifierResource\Pages;
 use App\Models\Modifier;
-use Filament\Forms\Form;
-use Filament\Tables\Table;
-use Filament\Resources\Resource;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\KeyValue;
-use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
-use App\Filament\Tenant\Resources\ModifierResource\Pages;
+use Filament\Forms\Form;
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
 
 class ModifierResource extends Resource
 {
@@ -22,7 +21,6 @@ class ModifierResource extends Resource
     public static function form(Form $form): Form
     {
         return $form
-
             ->schema([
                 Select::make('product_id')
                     ->relationship('product', 'name')
@@ -51,16 +49,14 @@ class ModifierResource extends Resource
                 TextColumn::make('name')
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('list')
-                    ->searchable()
-                    ->sortable()
-                    // ->formatStateUsing(fn ($state) => implode(', ', $state)),
             ])
             ->filters([
                 //
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -82,6 +78,7 @@ class ModifierResource extends Resource
             'index'  => Pages\ListModifiers::route('/'),
             'create' => Pages\CreateModifier::route('/create'),
             'edit'   => Pages\EditModifier::route('/{record}/edit'),
+            'view'   => Pages\ViewModifier::route('/{record}/view'),
         ];
     }
 

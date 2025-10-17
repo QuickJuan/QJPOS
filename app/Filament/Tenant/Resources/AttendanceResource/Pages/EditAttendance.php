@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Filament\Tenant\Resources\AttendanceResource\Pages;
 
 use App\Filament\Tenant\Resources\AttendanceResource;
@@ -15,5 +14,10 @@ class EditAttendance extends EditRecord
         return [
             Actions\DeleteAction::make(),
         ];
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        return route('filament.tenant.resources.attendances.view', $this->record);
     }
 }

@@ -1,16 +1,18 @@
 <?php
 namespace App\Filament\Tenant\Resources;
 
-use Filament\Tables;
+use App\Filament\Tenant\Resources\BranchResource\Pages;
 use App\Models\Branch;
-use Filament\Forms\Form;
-use Filament\Tables\Table;
-use Filament\Resources\Resource;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use App\Filament\Tenant\Resources\BranchResource\Pages;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Form;
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
 
 class BranchResource extends Resource
 {
@@ -76,7 +78,7 @@ class BranchResource extends Resource
                     ->multiple()
                     ->required()
                     ->searchable()
-                    ->preload()
+                    ->preload(),
             ]);
     }
 
@@ -84,43 +86,46 @@ class BranchResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('branch_code')
+                TextColumn::make('branch_code')
                     ->label('Branch Code')
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('name')
+                TextColumn::make('name')
                     ->label('Branch Name')
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('address')
+                TextColumn::make('address')
                     ->label('Address')
                     ->limit(50)
                     ->searchable(),
 
-                Tables\Columns\TextColumn::make('phone')
+                TextColumn::make('phone')
                     ->label('Phone')
                     ->searchable(),
 
-                Tables\Columns\TextColumn::make('email')
+                TextColumn::make('email')
                     ->label('Email')
                     ->searchable(),
 
-                Tables\Columns\TextColumn::make('contact_person')
+                TextColumn::make('contact_person')
                     ->label('Contact Person'),
 
-                Tables\Columns\BooleanColumn::make('is_active')
-                    ->label('Active'),
+                IconColumn::make('is_active')
+                    ->label('Active')
+                    ->boolean(),
 
-                Tables\Columns\TextColumn::make('tin')
+                TextColumn::make('tin')
                     ->label('TIN'),
             ])
             ->filters([
                 //
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -142,6 +147,7 @@ class BranchResource extends Resource
             'index'  => Pages\ListBranches::route('/'),
             'create' => Pages\CreateBranch::route('/create'),
             'edit'   => Pages\EditBranch::route('/{record}/edit'),
+            'view'   => Pages\ViewBranch::route('/{record}/view'),
         ];
     }
 

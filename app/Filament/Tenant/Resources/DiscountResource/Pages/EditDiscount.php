@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Filament\Tenant\Resources\DiscountResource\Pages;
 
 use App\Filament\Tenant\Resources\DiscountResource;
@@ -15,5 +14,10 @@ class EditDiscount extends EditRecord
         return [
             Actions\DeleteAction::make(),
         ];
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        return route('filament.tenant.resources.discounts.view', $this->record);
     }
 }

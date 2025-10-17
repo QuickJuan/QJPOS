@@ -23,7 +23,7 @@ class CartItem extends Model
 
     protected $casts = [
         'selected_options' => 'array',
-        'meta_data' => 'array',
+        'meta_data'        => 'array',
     ];
 
     public function cart(): BelongsTo
@@ -41,8 +41,8 @@ class CartItem extends Model
         return $this->belongsTo(ProductPackaging::class);
     }
 
-    // public function discount(): BelongsTo
-    // {
-    //     return $this->belongsTo(Discount::class);
-    // }
+    public function discount(): BelongsTo
+    {
+        return $this->belongsTo(Discount::class);
+    }
 }

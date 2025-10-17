@@ -9,4 +9,9 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateModifier extends CreateRecord
 {
     protected static string $resource = ModifierResource::class;
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }
