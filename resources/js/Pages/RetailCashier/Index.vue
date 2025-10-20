@@ -1,4 +1,4 @@
-<template>
+    <template>
     <CashieringLayout :current-user="props.currentUser">
         <!-- Main responsive grid: categories, products, and order panel -->
         <div class="flex flex-col lg:flex-row h-full min-w-0">

@@ -35,7 +35,7 @@ const emit = defineEmits(["update:modelValue"]);
 
 <template>
     <div class="flex flex-col">
-        <div class="flex justify-between items-end">
+        <div class="flex justify-between items-end text-gray-700 dark:text-gray-300">
             <InputLabel :for="id">
                 {{ label }}
                 <span v-if="label && required" class="text-gray-500">*</span>

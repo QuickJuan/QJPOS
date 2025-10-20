@@ -1,5 +1,5 @@
 <template>
-    <div class="flex flex-col gap-2">
+    <div class="flex flex-col">
         <div
             class="flex justify-between items-end text-gray-700 dark:text-gray-300"
         >

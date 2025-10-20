@@ -1,20 +1,20 @@
 <?php
 namespace App\Filament\Tenant\Resources;
 
-use Filament\Tables;
-use Filament\Forms\Form;
-use App\Models\TableRoom;
-use Filament\Tables\Table;
-use Filament\Resources\Resource;
 use App\Enums\TableRoomStatusType;
-use Filament\Forms\Components\Grid;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Section;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Forms\Components\TextInput;
 use App\Filament\Tenant\Resources\TableRoomResource\Pages;
-use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 use App\Filament\Tenant\Resources\TableRoomResource\RelationManagers\TableReservationsRelationManager;
+use App\Models\TableRoom;
+use Filament\Forms\Components\Grid;
+use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Form;
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
 
 class TableRoomResource extends Resource
 {
@@ -26,11 +26,19 @@ class TableRoomResource extends Resource
     {
         return $form
             ->schema([
-                Grid::make(3)
+                Grid::make(2)
+                    ->columns(3)
                     ->schema([
                         Select::make('branch_id')
                             ->label('Branch')
                             ->relationship('branch', 'name')
+                            ->required()
+                            ->searchable()
+                            ->preload(),
+
+                        Select::make('table_room_location_id')
+                            ->label('Table Room Location')
+                            ->relationship('tableRoomLocation', 'name')
                             ->required()
                             ->searchable()
                             ->preload(),
@@ -77,8 +85,7 @@ class TableRoomResource extends Resource
                             ->default(0)
                             ->required(),
 
-                    ])
-                    ->columns(3),
+                    ]),
 
                 Section::make('Table Properties')
                     ->schema([
@@ -123,6 +130,11 @@ class TableRoomResource extends Resource
             ->columns([
                 TextColumn::make('branch.name')
                     ->label('Branch')
+                    ->searchable()
+                    ->sortable(),
+
+                TextColumn::make('tableRoomLocation.name')
+                    ->label('Table Room Location')
                     ->searchable()
                     ->sortable(),
 

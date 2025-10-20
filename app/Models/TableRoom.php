@@ -1,19 +1,20 @@
 <?php
-
 namespace App\Models;
 
-use Spatie\MediaLibrary\HasMedia;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Spatie\MediaLibrary\InteractsWithMedia;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
-class TableRoom extends Model  implements HasMedia
+class TableRoom extends Model implements HasMedia
 {
     use InteractsWithMedia;
 
     protected $fillable = [
         'branch_id',
+        'table_room_location_id',
         'name',
         'chairs',
         'with_timeframe',
@@ -26,7 +27,50 @@ class TableRoom extends Model  implements HasMedia
         'table_height',
         'table_x',
         'table_y',
+        'pax_limit',
+        'screen_position',
+        'dining_start',
+        'dining_end',
+        'notes',
+        'featured_image',
     ];
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('featured_image')
+            ->singleFile();
+    }
+
+    public function getFeaturedImageUrl(): string
+    {
+        return $this->getFirstMediaUrl('featured_image');
+    }
+
+    public function scopeActiveBranch(Builder $query): mixed
+    {
+        return $query->where('branch_id', session('active_branch')['id']);
+    }
+
+    public function scopeSelectedLocation(Builder $query, $locationId): Builder
+    {
+        if ($locationId) {
+            return $query->when($locationId, fn($q) => $q->where('table_room_location_id', $locationId));
+        }
+
+        return $query;
+    }
+
+    public function getDefaultTableImage($chairs): string
+    {
+        $images = [
+            2 => '/images/round-4.png',
+            4 => '/images/square-4.png',
+            6 => '/images/rec-6.png',
+            8 => '/images/rec-8.png',
+        ];
+
+        return $images[$chairs] ?? '/images/round-4.png';
+    }
 
     public function tableReservations(): HasMany
     {
@@ -43,17 +87,8 @@ class TableRoom extends Model  implements HasMedia
         return $this->belongsTo(TableRoom::class, 'merge_to');
     }
 
-    public function registerMediaCollections(): void
+    public function tableRoomLocation(): BelongsTo
     {
-        $this->addMediaCollection('featured_image')
-            ->singleFile();
-            // ->usePathGenerator(new MediaPathGenerator());
+        return $this->belongsTo(TableRoomLocation::class);
     }
-
-    public function getFeaturedImageUrl(): string
-    {
-        return $this->getFirstMediaUrl('featured_image');
-    }
-
-
 }
