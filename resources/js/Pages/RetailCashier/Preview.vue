@@ -51,13 +51,13 @@
                 <div class="flex space-x-3">
                     <button
                         @click="continueSession"
-                        class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                        class="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-500 transition-colors"
                     >
                         Continue Session
                     </button>
                     <button
                         @click="confirmCloseSessionModal"
-                        class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+                        class="px-4 py-2 bg-red-500 text-white text-sm font-medium rounded-lg hover:bg-red-600 transition-colors"
                     >
                         Close Session
                     </button>

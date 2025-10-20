@@ -390,9 +390,9 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted } from "vue";
-import TableSidebar from "../Components/TableSidebar.vue";
-import ProductOrderPanel from "../Components/ProductOrderPanel.vue";
-import ProductCardMilktea from "../Components/ProductCardMilktea.vue";
+import TableSidebar from "@/Components/TableManagement/TableSidebar.vue";
+import ProductOrderPanel from "@/Components/TableManagement/ProductOrderPanel.vue";
+import ProductCardMilktea from "@/Components/TableManagement/ProductCardMilktea.vue";
 
 const tables = ref([]);
 const designMode = ref(false);

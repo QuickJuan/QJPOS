@@ -43,15 +43,6 @@
                 <!-- Replace status, customer name, pax, and save section with TableCustomer component -->
                 <TableCustomer :value="localTable" @save="onSave" />
 
-                <!-- TableOrder gets flex-grow min-h-0 overflow-auto for scrolling, no extra margin -->
-                <div class="flex-grow min-h-0">
-                    <TableOrder
-                        :orders="orders"
-                        @edit-order="$emit('edit-order', $event)"
-                        @remove-order="$emit('remove-order', $event)"
-                        class="text-base"
-                    />
-                </div>
 
                 <!-- Remove Take Order from previous location -->
                 <div class="flex flex-wrap gap-2">
@@ -97,7 +88,7 @@
                 <div>
                     <TableActionButtons
                         :showOrderPanel="showOrderPanel"
-                        :orders="orders"
+                        :orders="[]"
                         :status="localTable.status"
                         @toggle-order-panel="$emit('toggle-order-panel')"
                         @checkout="$emit('checkout')"
@@ -113,7 +104,7 @@
                 ref="receiptRef"
                 :tableName="tableData.name"
                 :customerName="localTable.customer"
-                :orders="orders"
+                :orders="[]"
                 :visible="showPrintReceipt"
             />
         </div>
@@ -151,7 +142,7 @@
                     <PrintBillReceipt
                         :tableName="tableData.name"
                         :customerName="localTable.customer"
-                        :orders="orders"
+                        :orders="[]"
                         :visible="showPrintReceipt"
                     />
                 </div>
@@ -237,8 +228,6 @@
 
 <script setup lang="ts">
 import { ref, watch, defineProps, defineEmits, nextTick } from "vue";
-import PrintBillReceipt from "./PrintBillReceipt.vue";
-import TableOrder from "./TableOrder.vue";
 import TableCustomer from "./TableCustomer.vue";
 import TableActionButtons from "./TableActionButtons.vue";
 interface ProductOrder {
@@ -251,10 +240,6 @@ const props = defineProps({
     tableData: {
         type: Object,
         required: true,
-    },
-    orders: {
-        type: Array,
-        default: () => [],
     },
     showOrderPanel: {
         type: Boolean,
@@ -271,8 +256,6 @@ const emit = defineEmits([
     "action",
     "toggle-order-panel",
     "checkout",
-    "edit-order",
-    "remove-order",
     "print-bill",
     "cancel-table",
     "merge-table",
@@ -351,10 +334,7 @@ function handleCustomerCancel() {
 }
 
 const onCheckout = () => {
-    const total = (props.orders as ProductOrder[]).reduce(
-        (sum, item) => sum + item.price,
-        0
-    );
+    const total = 0; // No orders in simplified version
     emit("checkout", total);
 };
 

@@ -2,17 +2,19 @@
 
 declare (strict_types = 1);
 
-use Inertia\Inertia;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
-use App\Http\Controllers\HomeController;
-use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\CashierSessionController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\TableManagementController;
+use App\Http\Controllers\TableRoomController;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
+use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
-use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 
 /*
 |--------------------------------------------------------------------------
@@ -113,6 +115,26 @@ Route::middleware([
                         Route::put('/cart/item/{cartItemId}', 'updateCartItem')->name('cart.update');
                         Route::delete('/cart/item/{cartItemId}', 'deleteCartItem')->name('cart.delete');
                     });
+                });
+
+            Route::as('table-management.')
+                ->prefix('/table-management')
+                ->controller(TableManagementController::class)
+                ->group(function () {
+                    Route::get('/', 'index')->name('index');
+                    Route::post('/locations', 'storeLocation')->name('store-location');
+                    Route::put('/locations/{location}', 'updateLocation')->name('update-location');
+                    Route::delete('/locations/{location}', 'destroyLocation')->name('destroy-location');
+                });
+
+            Route::as('table-rooms.')
+                ->prefix('/table-rooms')
+                ->controller(TableRoomController::class)
+                ->group(function () {
+                    Route::get('/list', 'list')->name('list');
+                    Route::post('/tables', 'store')->name('store');
+                    Route::put('/tables/{tableId}', 'update')->name('update');
+                    Route::delete('/tables/{tableId}', 'destroy')->name('destroy');
                 });
         });
 });

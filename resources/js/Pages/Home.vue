@@ -52,7 +52,7 @@
                                 >
                                     <div
                                         class="w-2 h-2 bg-green-400 rounded-full mr-1 animate-pulse"
-                                    ></div>
+                                    />
                                     On duty
                                 </span>
                             </div>
@@ -92,28 +92,6 @@ const isClockedIn = ref(props.attendanceStatus?.is_clocked_in || false);
 const user = computed(() => props.user);
 const activeBranch = computed(() => props.activeBranch);
 
-// Methods
-const tableOrdering = () => {
-    if (!activeBranch.value) {
-        toast.add({
-            severity: "warn",
-            summary: "No Branch Selected",
-            detail: "Please select a branch before accessing table ordering.",
-            life: 4000,
-        });
-        return;
-    }
-
-    // Navigate to table ordering system
-    // router.visit(route('table-ordering'));
-    toast.add({
-        severity: "info",
-        summary: "Table Ordering",
-        detail: "Launching table ordering system...",
-        life: 3000,
-    });
-};
-
 const actions = [
     {
         route: "dashboard",
@@ -128,7 +106,7 @@ const actions = [
         icon: CashieringIcon,
     },
     {
-        route: "dashboard",
+        route: "table-management.index",
         name: "Table Ordering",
         description: "Manage restaurant orders and table service",
         icon: TableOrderingIcon,
