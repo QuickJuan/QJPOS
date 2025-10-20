@@ -1,5 +1,5 @@
 <template>
-    <TableManagementLayout>
+    <TableManagementLayout title="Table Rooms">
         <div class="p-6">
             <div class="flex justify-between items-center mb-6">
                 <div>
@@ -7,7 +7,7 @@
                         Table Rooms
                     </h1>
                     <p class="text-gray-600">
-                        Manage all your table rooms and their configurations
+                        Manage all your table rooms and their locations
                     </p>
                 </div>
                 <div class="flex gap-3">

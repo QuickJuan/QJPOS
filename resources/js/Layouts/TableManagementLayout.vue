@@ -7,7 +7,7 @@
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-8">
                         <h1 class="text-xl font-semibold text-gray-900">
-                            Table Management
+                            {{ props.title ?? 'Table Management' }}
                         </h1>
                     </div>
                     <div class="flex items-center space-x-4">
