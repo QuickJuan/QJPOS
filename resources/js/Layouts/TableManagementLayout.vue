@@ -7,7 +7,7 @@
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-8">
                         <h1 class="text-xl font-semibold text-gray-900">
-                            {{ props.title ?? 'Table Management' }}
+                            {{ props.title ?? "Table Management" }}
                         </h1>
                     </div>
                     <div class="flex items-center space-x-4">
@@ -25,7 +25,7 @@
             </div>
         </header>
 
-        <main class="flex-1 overflow-auto">
+        <main class="flex-1 overflow-hidden">
             <slot />
         </main>
     </div>
@@ -39,7 +39,15 @@ import { Head, Link, usePage } from "@inertiajs/vue3";
 import { ConfirmPopup, Toast } from "primevue";
 import { route } from "ziggy-js";
 
-const page = usePage();
+interface AuthUser {
+    name?: string;
+    [key: string]: any;
+}
+interface PagePropsTyped {
+    auth?: { user?: AuthUser };
+    [key: string]: any;
+}
+const page = usePage<PagePropsTyped>();
 const props = defineProps<{
     title?: string;
 }>();

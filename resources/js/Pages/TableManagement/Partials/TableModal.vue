@@ -1,17 +1,17 @@
 <template>
     <Dialog
-        :visible="props.show"
+        :visible="show"
         modal
-        header="Add New Table"
+        :header="form.id ? 'Edit Table' : 'Add New Table'"
         :style="{ width: '45rem' }"
         :closable="false"
     >
-        <form @submit.prevent="handleSubmit">
+        <form @submit.prevent="submitForm">
             <div class="grid grid-cols-1 md:grid-cols-2 items-center gap-4">
                 <SelectField
                     v-model="form.table_room_location_id"
                     label="Table Room Location"
-                    :options="props.locations"
+                    :options="locations"
                     option-label="name"
                     option-value="id"
                     placeholder="Select Location"
@@ -98,6 +98,7 @@
                 </p>
             </div>
             <div
+                v-if="!form.id"
                 class="mt-6 p-3 bg-blue-50 rounded border border-blue-200 text-xs text-blue-700"
             >
                 Position (X/Y) is set after creation by dragging the table in
@@ -105,15 +106,24 @@
             </div>
         </form>
         <template #footer>
-            <Button
-                type="button"
-                label="Cancel"
-                severity="secondary"
-                @click="$emit('close')"
-            />
-            <PrimaryButton @click="handleSubmit" type="submit">
-                Add Table
-            </PrimaryButton>
+            <div class="flex items-center gap-3">
+                <Button
+                    v-if="form.id"
+                    type="button"
+                    label="Delete"
+                    severity="danger"
+                    @click="$emit('delete')"
+                />
+                <Button
+                    type="button"
+                    label="Cancel"
+                    severity="secondary"
+                    @click="$emit('close')"
+                />
+                <PrimaryButton type="submit" @click="submitForm">
+                    {{ form.id ? "Save Changes" : "Add Table" }}
+                </PrimaryButton>
+            </div>
         </template>
     </Dialog>
 </template>
@@ -130,26 +140,38 @@ const toast = useToast();
 const props = defineProps<{
     show: boolean;
     locations: any[];
+    table?: any;
+    resetToken?: number;
+    activeLocation?: number | null; // currently selected location tab from parent
 }>();
+const emit = defineEmits<{ close: []; submit: [form: any]; delete: [] }>();
 
-const emit = defineEmits<{
-    close: [];
-    submit: [form: any];
-}>();
+const getDefaultLocation = () => {
+    if (props.activeLocation) return props.activeLocation;
+    // Fallback to URL param if prop not passed
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramLoc = urlParams.get("location");
+    if (paramLoc) {
+        const parsed = parseInt(paramLoc);
+        return isNaN(parsed) ? null : parsed;
+    }
+    return null;
+};
 
 const form = ref({
+    id: null as number | null,
     name: "",
     chairs: 2,
-    table_room_location_id: null,
+    table_room_location_id: getDefaultLocation(),
     width: 150,
     height: 100,
-    img: "/images/round-4.png",
+    img: "",
+    x: 0,
+    y: 0,
 });
 
-// raw file for upload
 const imageFile = ref<File | null>(null);
 const fileInput = ref<HTMLInputElement | null>(null);
-
 const triggerFileInput = () => fileInput.value?.click();
 
 const validateAndPreviewFile = (file: File) => {
@@ -188,21 +210,82 @@ const onFileSelect = (e: Event) => {
     const file = target.files?.[0];
     if (file) validateAndPreviewFile(file);
 };
-
 const onDrop = (e: DragEvent) => {
     const file = e.dataTransfer?.files?.[0];
     if (file) validateAndPreviewFile(file);
 };
-
 const onImageLoad = (e: Event) => {
     const img = e.target as HTMLImageElement;
     form.value.width = img.naturalWidth;
     form.value.height = img.naturalHeight;
 };
 
-// removed old PrimeVue FileUpload handler
+// Apply table data or reset for add mode
+watch(
+    () => props.table,
+    (newVal) => {
+        if (newVal) {
+            form.value = {
+                id: newVal.id || null,
+                name: newVal.name || "",
+                chairs: newVal.chairs || 2,
+                table_room_location_id: newVal.table_room_location_id || null,
+                width: newVal.width || newVal.table_width || 150,
+                height: newVal.height || newVal.table_height || 100,
+                img: newVal.featured_image_url || "",
+                x: newVal.x || newVal.table_x || 0,
+                y: newVal.y || newVal.table_y || 0,
+            };
+        } else {
+            form.value = {
+                id: null,
+                name: "",
+                chairs: 2,
+                table_room_location_id: getDefaultLocation(),
+                width: 150,
+                height: 100,
+                img: "",
+                x: 0,
+                y: 0,
+            };
+            imageFile.value = null;
+        }
+    },
+    { immediate: true }
+);
 
-const handleSubmit = () => {
+// Reset form on resetToken change (add mode only) and keep default location synced
+watch(
+    () => props.resetToken,
+    () => {
+        if (!props.table) {
+            form.value = {
+                id: null,
+                name: "",
+                chairs: 2,
+                table_room_location_id: getDefaultLocation(),
+                width: 150,
+                height: 100,
+                img: "",
+                x: 0,
+                y: 0,
+            };
+            imageFile.value = null;
+        }
+    }
+);
+
+// Update location if activeLocation changes while in add mode
+watch(
+    () => props.activeLocation,
+    (loc) => {
+        if (!form.value.id && loc) {
+            form.value.table_room_location_id = loc;
+        }
+    }
+);
+
+const submitForm = () => {
     if (!form.value.table_room_location_id) {
         toast.add({
             severity: "error",
@@ -212,7 +295,6 @@ const handleSubmit = () => {
         });
         return;
     }
-
     if (!form.value.name.trim()) {
         toast.add({
             severity: "error",
@@ -222,10 +304,6 @@ const handleSubmit = () => {
         });
         return;
     }
-
-    // emit form values; position defaults handled server side; include raw file
     emit("submit", { ...form.value, imageFile: imageFile.value });
 };
-
-// removed auto-size watcher
 </script>

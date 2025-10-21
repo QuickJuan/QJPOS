@@ -23,7 +23,7 @@ class TableManagementController extends Controller
     {
         $selectedLocation = $request->get('location_id');
 
-        $tableRooms = TableRoom::with(['tableRoomLocation', 'branch'])
+        $tableRooms = TableRoom::with(['tableRoomLocation', 'branch', 'media'])
             ->activeBranch()
             ->selectedLocation($selectedLocation)
             ->get()
@@ -36,7 +36,7 @@ class TableManagementController extends Controller
                 'y'                      => $tableRoom->table_y ?? 0,
                 'width'                  => $tableRoom->table_width ?? 150,
                 'height'                 => $tableRoom->table_height ?? 100,
-                'img'                    => $tableRoom->getFeaturedImageUrl() ?: $tableRoom->getDefaultTableImage($tableRoom->chairs),
+                'featured_image_url'     => $tableRoom->getFeaturedImageUrl() ?: null,
                 'customer'               => $tableRoom->customer ?? '',
                 'orders'                 => $tableRoom->orders ?? [],
                 'table_room_location_id' => $tableRoom->table_room_location_id,

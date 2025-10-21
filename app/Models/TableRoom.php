@@ -60,17 +60,6 @@ class TableRoom extends Model implements HasMedia
         return $query;
     }
 
-    public function getDefaultTableImage($chairs): string
-    {
-        $images = [
-            2 => '/images/round-4.png',
-            4 => '/images/square-4.png',
-            6 => '/images/rec-6.png',
-            8 => '/images/rec-8.png',
-        ];
-
-        return $images[$chairs] ?? '/images/round-4.png';
-    }
 
     public function tableReservations(): HasMany
     {

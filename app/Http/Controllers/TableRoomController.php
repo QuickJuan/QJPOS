@@ -32,7 +32,7 @@ class TableRoomController extends Controller
                 'table_y'                => $tableRoom->table_y ?? 0,
                 'table_width'            => $tableRoom->table_width ?? 150,
                 'table_height'           => $tableRoom->table_height ?? 100,
-                'getFeaturedImageUrl'    => $tableRoom->getFeaturedImageUrl(),
+                'featured_image_url'     => $tableRoom->getFeaturedImageUrl(),
                 'tableRoomLocation'      => $tableRoom->tableRoomLocation,
                 'table_room_location_id' => $tableRoom->table_room_location_id,
                 'branch_id'              => $tableRoom->branch_id,
@@ -53,7 +53,13 @@ class TableRoomController extends Controller
     public function store(TableRoomRequest $request): RedirectResponse
     {
         try {
-            $this->tableRoomService->store($request);
+            $table = $this->tableRoomService->store($request);
+
+            if ($request->hasFile('featured_image')) {
+                $table->clearMediaCollection('featured_image');
+                $table->addMediaFromRequest('featured_image')
+                    ->toMediaCollection('featured_image');
+            }
 
             return redirect()->back()->with('success', 'Table/Room created successfully.');
         } catch (Exception $e) {
@@ -82,6 +88,32 @@ class TableRoomController extends Controller
 
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'Failed to delete table.');
+        }
+    }
+
+    public function bulkUpdatePositions(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'positions'               => ['required', 'array'],
+            'positions.*.id'          => ['required', 'integer', 'exists:table_rooms,id'],
+            'positions.*.table_x'     => ['required', 'integer'],
+            'positions.*.table_y'     => ['required', 'integer'],
+        ]);
+
+        try {
+            foreach ($validated['positions'] as $pos) {
+                $table = $this->tableRoomService->model->find($pos['id']);
+                if ($table) {
+                    $table->update([
+                        'table_x' => $pos['table_x'],
+                        'table_y' => $pos['table_y'],
+                    ]);
+                }
+            }
+
+            return redirect()->back()->with('success', 'Table positions updated successfully.');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'Failed to bulk update positions.');
         }
     }
 }

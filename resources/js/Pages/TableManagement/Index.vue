@@ -1,148 +1,153 @@
-b
 <template>
     <TableManagementLayout>
-        <div class="relative w-full h-screen bg-gray-100">
-            <!-- main content -->
-            <div class="flex flex-col h-full overflow-hidden">
-                <!-- Location Tabs -->
-                <div class="bg-white border-b border-gray-200 px-4">
+        <div class="flex flex-col h-screen bg-gray-100 overflow-y-hidden">
+            <!-- Toolbar (sticky) -->
+            <div
+                class="flex flex-col md:flex-row md:items-center gap-3 p-3 bg-white shadow sticky top-0 z-40"
+            >
+                <div class="flex w-full items-center justify-between gap-4">
+                    <!-- Location Tabs (left) -->
                     <div
-                        class="flex flex-col md:flex-row items-center justify-between"
+                        class="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 flex-1"
                     >
                         <div
-                            class="flex flex-wrap overflow-x-auto scrollbar-hide"
+                            v-for="loc in locations"
+                            :key="loc.id"
+                            @click="selectedLocation = loc.id"
+                            :class="[
+                                'cursor-pointer whitespace-nowrap px-3 py-1 rounded text-sm font-semibold border flex items-center gap-1 transition-colors',
+                                selectedLocation === loc.id
+                                    ? 'bg-blue-600 text-white border-blue-600 shadow'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300',
+                            ]"
                         >
-                            <button
-                                @click="selectedLocation = null"
-                                class="px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap mr-2"
-                                :class="
-                                    selectedLocation === null
-                                        ? 'border-blue-500 text-blue-600 bg-blue-50'
-                                        : 'border-transparent text-gray-600 hover:text-gray-800 hover:bg-gray-50'
-                                "
+                            <span>{{ loc.name }}</span>
+                            <span class="text-[10px] font-normal opacity-80"
+                                >({{ getTableCount(loc.id) }})</span
                             >
-                                <i class="pi pi-home mr-2"></i>
-                                All Locations
-                            </button>
-                            <button
-                                v-for="location in locations"
-                                :key="location.id"
-                                @click="selectedLocation = location.id"
-                                class="px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap mr-2 rounded-t-lg"
-                                :class="
-                                    selectedLocation === location.id
-                                        ? 'border-blue-500 text-blue-600 bg-blue-50'
-                                        : 'border-transparent text-gray-600 hover:text-gray-800 hover:bg-gray-50'
-                                "
-                            >
-                                <i class="pi pi-map-marker mr-2"></i>
-                                {{ location.name }}
-                                <span
-                                    class="ml-2 px-2 py-1 text-xs bg-gray-200 rounded-full"
-                                >
-                                    {{ getTableCount(location.id) }}
-                                </span>
-                            </button>
-                        </div>
-                        <Button
-                            label="Manage Locations"
-                            icon="pi pi-cog"
-                            size="small"
-                            severity="secondary"
-                            @click="showLocationManagerModal = true"
-                            class="ml-4"
-                        />
-                        <div
-                            class="flex justify-end gap-3 p-4 bg-white shadow-sm border-b border-gray-200 w-auto"
-                        >
-                            <PrimaryButton
-                                type="button"
-                                @click="openAddTableModal"
-                            >
-                                Add Table
-                            </PrimaryButton>
-                            <button
-                                class="px-4 py-2 rounded-lg bg-gray-600 text-white hover:bg-gray-700 transition-colors font-medium"
-                                @click="designMode = !designMode"
-                            >
-                                {{
-                                    designMode
-                                        ? "Exit Design Mode"
-                                        : "Enter Design Mode"
-                                }}
-                            </button>
                         </div>
                     </div>
+                    <!-- Action Buttons (right) -->
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <button
+                            @click="designMode = !designMode"
+                            class="px-3 py-1 rounded text-sm font-semibold"
+                            :class="
+                                designMode
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-gray-200 text-gray-700'
+                            "
+                        >
+                            {{
+                                designMode ? "Exit Design Mode" : "Design Mode"
+                            }}
+                        </button>
+                        <button
+                            v-if="designMode && dirtyCount > 0"
+                            @click="saveAllPositions"
+                            class="px-3 py-1 rounded bg-green-600 text-white text-sm font-semibold"
+                        >
+                            Save {{ dirtyCount }} Position{{
+                                dirtyCount > 1 ? "s" : ""
+                            }}
+                        </button>
+                        <button
+                            @click="openAddTableModal"
+                            class="px-3 py-1 rounded bg-indigo-600 text-white text-sm font-semibold"
+                        >
+                            + New Table
+                        </button>
+                        <button
+                            @click="showLocationManagerModal = true"
+                            class="px-3 py-1 rounded bg-yellow-500 text-white text-sm font-semibold"
+                        >
+                            Manage Locations
+                        </button>
+                    </div>
                 </div>
+            </div>
 
-                <!-- Floor canvas (full width) -->
+            <!-- Scrollable Floor Grid (single scroll area) -->
+            <div
+                ref="floorContainer"
+                class="flex-1 bg-gray-50 relative custom-scroll-container"
+            >
+                <!-- Canvas sized dynamically -->
                 <div
-                    class="relative flex-grow bg-gray-50 overflow-auto"
-                    :class="{ floor: designMode }"
+                    class="relative"
+                    :style="{
+                        width: floorWidth + 'px',
+                        height: floorHeight + 'px',
+                    }"
                 >
+                    <div
+                        class="floor absolute inset-0 pointer-events-none"
+                    ></div>
                     <div
                         v-for="(table, index) in filteredTables"
                         :key="table.id"
-                        class="absolute text-center select-none rounded-lg shadow-sm border"
-                        :class="[
-                            designMode
-                                ? 'cursor-move border-2 border-gray-400 bg-gray-100'
-                                : 'cursor-pointer hover:shadow-md transition-shadow',
-                            !designMode &&
-                                table.status === 'occupied' &&
-                                'bg-red-100 border-red-200',
-                            !designMode &&
-                                table.status === 'reserved' &&
-                                'bg-yellow-100 border-yellow-200',
-                            !designMode &&
-                                table.status === 'vacant' &&
-                                'bg-green-100 border-green-200',
-                        ]"
+                        class="absolute shadow rounded select-none group bg-transparent"
                         :style="{
-                            left: `${table.x}px`,
-                            top: `${table.y}px`,
-                            width: `${table.width}px`,
-                            height: `${table.height}px`,
-                            lineHeight: `${table.height}px`,
+                            left: table.x + 'px',
+                            top: table.y + 'px',
+                            width: table.width + 'px',
+                            height: table.height + 'px',
                         }"
                         @mousedown="startDrag($event, table.id)"
-                        @click.stop="
-                            !designMode ? openTableStatusModal(index) : null
-                        "
+                        @click="!designMode ? openEditTableModal(index) : null"
                     >
-                        <!-- Edit icon in top right corner (only in design mode) -->
+                        <!-- Status Badge -->
+                        <div
+                            v-if="!designMode"
+                            class="absolute -top-2 -left-2 z-30"
+                        >
+                            <span
+                                :class="[
+                                    'px-2 py-1 text-[10px] rounded-full font-semibold shadow',
+                                    table.status === 'occupied' &&
+                                        'bg-red-600 text-white',
+                                    table.status === 'reserved' &&
+                                        'bg-yellow-500 text-white',
+                                    table.status === 'vacant' &&
+                                        'bg-green-600 text-white',
+                                ]"
+                            >
+                                {{ table.status }}
+                            </span>
+                        </div>
+
+                        <!-- Edit Button -->
                         <button
                             v-if="designMode"
                             @click.stop="openEditTableModal(index)"
                             class="absolute top-1 right-1 z-20 bg-white rounded-full p-1 shadow hover:bg-blue-100 focus:outline-none"
                             title="Edit Table"
-                            tabindex="0"
-                            aria-label="Edit Table"
                         >
                             <PencilIcon class="h-4 w-4 text-blue-600" />
                         </button>
+
+                        <!-- Image & Centered Name Overlay -->
                         <div
-                            class="relative w-full h-full flex justify-center items-center p-2"
+                            class="relative w-full h-full flex items-center justify-center p-1"
                         >
                             <img
-                                :src="table.img"
-                                :alt="`Table with ${table.chairs} chairs`"
-                                class="w-auto h-auto transparent-blend mx-auto"
-                                style="pointer-events: none"
+                                v-if="getTableImage(table)"
+                                :src="getTableImage(table)"
+                                :alt="table.name || 'Table image'"
+                                class="absolute inset-0 w-full h-full object-contain pointer-events-none select-none"
+                                draggable="false"
                             />
-                            <div
-                                class="absolute inset-0 flex items-center justify-center z-10 pointer-events-none"
-                            >
+                            <div class="flex items-center justify-center">
                                 <div
-                                    class="bg-white bg-opacity-90 px-3 py-1 rounded-full shadow-sm text-center"
+                                    class="rounded-full bg-white/90 backdrop-blur-sm shadow px-3 py-2 flex items-center justify-center"
                                 >
-                                    <p
-                                        class="text-xs font-semibold text-gray-800"
+                                    <span
+                                        class="text-[11px] font-semibold text-gray-800 whitespace-nowrap"
                                     >
                                         {{
                                             table.name || `Table #${index + 1}`
                                         }}
-                                    </p>
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -150,30 +155,16 @@ b
                 </div>
             </div>
 
-            <!-- Add Table Modal -->
-            <AddTableModal
-                :show="showAddTableModal"
+            <!-- Unified Table Modal -->
+            <TableModal
+                :show="showTableModal"
+                :table="activeTable"
                 :locations="locations"
-                @close="showAddTableModal = false"
-                @submit="handleAddTableSubmit"
-            />
-
-            <!-- Edit Table Modal -->
-            <EditTableModal
-                :show="showEditTableModal"
-                :table="editTableData"
-                :locations="locations"
-                @close="showEditTableModal = false"
-                @submit="handleEditTableSubmit"
+                :active-location="selectedLocation"
+                :resetToken="modalResetToken"
+                @close="closeTableModal"
+                @submit="handleUnifiedModalSubmit"
                 @delete="handleDeleteTableSubmit"
-            />
-
-            <!-- Table Status Modal -->
-            <TableStatusModal
-                :show="showTableStatusModal"
-                :table="selectedTableForStatus"
-                @close="showTableStatusModal = false"
-                @update="handleTableStatusUpdate"
             />
 
             <!-- Location Manager Modal -->
@@ -191,444 +182,480 @@ b
 </template>
 
 <script setup lang="ts">
-import PrimaryButton from "@/Components/PrimaryButton.vue";
-import AddTableModal from "./Partials/AddTableModal.vue";
-import EditTableModal from "./Partials/EditTableModal.vue";
-import LocationManagerModal from "./Partials/LocationManagerModal.vue";
-import { PencilIcon } from "@heroicons/vue/24/outline";
 import { ref, watch, onMounted, computed } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
-import TableManagementLayout from "@/Layouts/TableManagementLayout.vue";
-import TableStatusModal from "./Partials/TableStatusModal.vue";
 import { useToast } from "primevue";
+import { PencilIcon } from "@heroicons/vue/24/outline";
+import TableManagementLayout from "@/Layouts/TableManagementLayout.vue";
+import TableModal from "./Partials/TableModal.vue";
+import LocationManagerModal from "./Partials/LocationManagerModal.vue";
 import PageProps from "@/Types/PageProps";
 
-// ===== TOAST NOTIFICATION =====
-const toast = useToast();
-const page = usePage<PageProps>();
-
-// ===== PROPS =====
+// Props
 const props = defineProps<{
     tables: any[];
     locations: any[];
     selectedLocation: any;
 }>();
 
-// ===== CONSTANTS =====
+// Toast & page
+const toast = useToast();
+const page = usePage<PageProps>();
+
+// Constants
 const GRID_SIZE = 20;
-
-// ===== REACTIVE STATE =====
-const tables = ref(props.tables);
-const designMode = ref(false);
-const locations = ref(props.locations);
-const selectedLocation = ref(props.selectedLocation);
-
-// ===== LOCAL STORAGE FOR LOCATION PERSISTENCE =====
 const LOCATION_STORAGE_KEY = "table-management-selected-location";
 
-// Load selected location from localStorage on mount
+// Reactive State
+const tables = ref(props.tables);
+const locations = ref(props.locations);
+// Selected location (will also sync with URL ?location=ID)
+const selectedLocation = ref<number | null>(props.selectedLocation);
+const designMode = ref(false);
+const showTableModal = ref(false);
+const showLocationManagerModal = ref(false);
+const editTableIndex = ref<number | null>(null);
+const activeTable = ref<any>(null);
+const modalResetToken = ref(0);
+// Floor container ref for potential future viewport-based calculations
+const floorContainer = ref<HTMLElement | null>(null);
+
+// Dynamic canvas sizing: depend on table extents + generous padding.
+// Additionally enforce a minimum base size so that when moving from a large screen to a very small one
+// you still retain horizontal/vertical scroll room to reach distant tables placed previously.
+const FLOOR_PADDING = 400; // extra workspace beyond farthest table
+const MIN_BASE_WIDTH = 1800; // guaranteed minimum virtual width
+const MIN_BASE_HEIGHT = 1200; // guaranteed minimum virtual height
+const floorWidth = computed(() => {
+    const locTables = filteredTables.value;
+    const maxRight = locTables.length
+        ? Math.max(...locTables.map((t) => t.x + (t.width || 0)))
+        : 0;
+    // width based on farthest right table + padding or minimum baseline (whichever larger)
+    return snapToGrid(Math.max(maxRight + FLOOR_PADDING, MIN_BASE_WIDTH));
+});
+const floorHeight = computed(() => {
+    const locTables = filteredTables.value;
+    const maxBottom = locTables.length
+        ? Math.max(...locTables.map((t) => t.y + (t.height || 0)))
+        : 0;
+    return snapToGrid(Math.max(maxBottom + FLOOR_PADDING, MIN_BASE_HEIGHT));
+});
+
+// Lifecycle: load persisted location
 onMounted(() => {
-    const savedLocation = localStorage.getItem(LOCATION_STORAGE_KEY);
-    if (savedLocation) {
-        const locationId =
-            savedLocation === "null" ? null : parseInt(savedLocation);
-        if (
-            locationId === null ||
-            locations.value.some((loc) => loc.id === locationId)
-        ) {
-            selectedLocation.value = locationId;
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramLoc = urlParams.get("location");
+    if (paramLoc) {
+        const locId = parseInt(paramLoc);
+        if (locations.value.some((l) => l.id === locId)) {
+            selectedLocation.value = locId;
         }
     }
-});
-
-// Watch for location changes and save to localStorage
-watch(selectedLocation, (newLocation) => {
-    localStorage.setItem(
-        LOCATION_STORAGE_KEY,
-        newLocation?.toString() || "null"
-    );
-});
-
-// ===== COMPUTED PROPERTIES =====
-const currentLocationName = computed(() => {
-    if (selectedLocation.value === null) return "All Locations";
-    const location = locations.value.find(
-        (loc) => loc.id === selectedLocation.value
-    );
-    return location ? location.name : "Unknown Location";
-});
-
-const filteredTables = computed(() => {
-    if (selectedLocation.value === null) return tables.value;
-    return tables.value.filter(
-        (table) => table.table_room_location_id === selectedLocation.value
-    );
-});
-
-const getTableCount = (locationId: number) => {
-    return tables.value.filter(
-        (table) => table.table_room_location_id === locationId
-    ).length;
-};
-
-// ===== MODAL STATE =====
-const showAddTableModal = ref(false);
-const showEditTableModal = ref(false);
-const showTableStatusModal = ref(false);
-const showLocationManagerModal = ref(false);
-
-// ===== FORM DATA =====
-const newTable = ref({
-    name: "",
-    chairs: 2,
-    table_room_location_id: null,
-    width: 150,
-    height: 100,
-    img: "/images/round-4.png",
-});
-
-const editTable = ref({
-    name: "",
-    chairs: 2,
-    width: 150,
-    height: 100,
-    img: "/images/round-4.png",
-});
-
-const editTableIndex = ref(null);
-const editTableData = ref(null);
-const selectedTableForStatus = ref(null);
-
-// ===== STATUS MODAL FUNCTIONS =====
-const handleTableStatusUpdate = (data: {
-    status: string;
-    customer?: string;
-}) => {
-    if (selectedTableForStatus.value) {
-        const tableIndex = selectedTableForStatus.value.index;
-        tables.value[tableIndex] = {
-            ...tables.value[tableIndex],
-            status: data.status,
-            customer: data.customer || "",
-        };
+    // 2. Fallback to localStorage
+    if (!selectedLocation.value) {
+        const savedLocation = localStorage.getItem(LOCATION_STORAGE_KEY);
+        if (savedLocation) {
+            const locationId = parseInt(savedLocation);
+            if (locations.value.some((l) => l.id === locationId)) {
+                selectedLocation.value = locationId;
+            }
+        }
     }
-    showTableStatusModal.value = false;
-};
-
-// ===== LOCATION MANAGEMENT FUNCTIONS =====
-const handleAddLocation = (name: string) => {
-    try {
-        router.post("/table-management/locations", { name });
-        showLocationManagerModal.value = false;
-    } catch (error) {
-        console.error("Error adding location:", error);
+    // 3. Default to first
+    if (!selectedLocation.value && locations.value.length) {
+        selectedLocation.value = locations.value[0].id;
     }
-};
+    // Ensure URL reflects current selection
+    syncLocationParam();
+});
 
-const handleEditLocation = (id: number, name: string) => {
-    try {
-        router.put(`/table-management/locations/${id}`, { name });
-        showLocationManagerModal.value = false;
-    } catch (error) {
-        console.error("Error updating location:", error);
+// Persist location changes
+watch(selectedLocation, (loc) => {
+    if (loc === null) return;
+    localStorage.setItem(LOCATION_STORAGE_KEY, loc.toString());
+    syncLocationParam();
+    // If adding a new table (modal open and no active table), trigger modal reset so default location field updates
+    if (showTableModal.value && !activeTable.value) {
+        modalResetToken.value++;
     }
+});
+
+// Update browser URL without full reload
+const syncLocationParam = () => {
+    if (selectedLocation.value === null) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("location", selectedLocation.value.toString());
+    window.history.replaceState({}, "", url.toString());
 };
 
-const handleDeleteLocation = (id: number) => {
-    try {
-        router.delete(`/table-management/locations/${id}`);
-        showLocationManagerModal.value = false;
-    } catch (error) {
-        console.error("Error deleting location:", error);
+// Computeds
+const filteredTables = computed(() =>
+    tables.value.filter(
+        (t) => t.table_room_location_id === selectedLocation.value
+    )
+);
+const getTableCount = (locationId: number) =>
+    tables.value.filter((t) => t.table_room_location_id === locationId).length;
+
+// Auto-scroll horizontally if new tables extend beyond current viewport
+watch(filteredTables, (newTables) => {
+    const container = floorContainer.value;
+    if (!container || !newTables.length) return;
+    const maxRight = Math.max(...newTables.map((t) => t.x + (t.width || 0)));
+    if (maxRight > container.scrollLeft + container.clientWidth) {
+        container.scrollLeft = Math.max(
+            0,
+            maxRight - container.clientWidth + 80
+        );
     }
-};
+    const maxBottom = Math.max(...newTables.map((t) => t.y + (t.height || 0)));
+    if (maxBottom > container.scrollTop + container.clientHeight) {
+        container.scrollTop = Math.max(
+            0,
+            maxBottom - container.clientHeight + 80
+        );
+    }
+});
 
-// ===== DRAG STATE =====
-let dragInfo = {
+// Drag State
+interface DragInfo {
+    dragging: boolean;
+    tableId: number | null;
+    offsetX: number;
+    offsetY: number;
+}
+let dragInfo: DragInfo = {
     dragging: false,
     tableId: null,
     offsetX: 0,
     offsetY: 0,
 };
 
-// ===== TABLE SIZE MAPPINGS =====
-const tableSizeMap = {
-    2: { width: 150, height: 100, img: "/images/round-4.png" },
-    4: { width: 150, height: 100, img: "/images/square-4.png" },
-    6: { width: 150, height: 100, img: "/images/rec-6.png" },
-    8: { width: 150, height: 100, img: "/images/rec-8.png" },
-};
-
-// ===== UTILITY FUNCTIONS =====
-const snapToGrid = (value: any) => Math.round(value / GRID_SIZE) * GRID_SIZE;
-
-const isOverlapping = (tableA: any, tableB: any) => {
+const snapToGrid = (val: number) => Math.round(val / GRID_SIZE) * GRID_SIZE;
+const isOverlapping = (a: any, b: any) => {
     const padding = 8;
     return !(
-        tableA.x + tableA.width + padding < tableB.x ||
-        tableA.x > tableB.x + tableB.width + padding ||
-        tableA.y + tableA.height + padding < tableB.y ||
-        tableA.y > tableB.y + tableB.height + padding
+        a.x + a.width + padding < b.x ||
+        a.x > b.x + b.width + padding ||
+        a.y + a.height + padding < b.y ||
+        a.y > b.y + b.height + padding
     );
 };
-
-// ===== DRAG FUNCTIONS =====
-const startDrag = (event, id) => {
+const startDrag = (e: MouseEvent, id: number) => {
     if (!designMode.value) return;
-
     const table = tables.value.find((t) => t.id === id);
+    if (!table) return;
     dragInfo.dragging = true;
     dragInfo.tableId = id;
-    dragInfo.offsetX = event.clientX - table.x;
-    dragInfo.offsetY = event.clientY - table.y;
-
+    // Account for scroll offsets of the floor container
+    const scrollLeft = floorContainer.value?.scrollLeft || 0;
+    const scrollTop = floorContainer.value?.scrollTop || 0;
+    dragInfo.offsetX = e.clientX + scrollLeft - table.x;
+    dragInfo.offsetY = e.clientY + scrollTop - table.y;
     window.addEventListener("mousemove", onDrag);
     window.addEventListener("mouseup", endDrag);
 };
-
-const onDrag = (event) => {
-    if (!dragInfo.dragging) return;
-
+const onDrag = (e: MouseEvent) => {
+    if (!dragInfo.dragging || dragInfo.tableId === null) return;
     const table = tables.value.find((t) => t.id === dragInfo.tableId);
+    if (!table) return;
+    const scrollLeft = floorContainer.value?.scrollLeft || 0;
+    const scrollTop = floorContainer.value?.scrollTop || 0;
+    let newX = snapToGrid(e.clientX + scrollLeft - dragInfo.offsetX);
+    let newY = snapToGrid(e.clientY + scrollTop - dragInfo.offsetY);
 
-    let newX = event.clientX - dragInfo.offsetX;
-    let newY = event.clientY - dragInfo.offsetY;
+    // Auto-scroll near right/bottom edges to expand working area
+    const container = floorContainer.value;
+    if (container) {
+        const edgeThreshold = 60; // px from edge to trigger scroll
+        const speed = 25; // scroll delta
+        const relativeX = e.clientX - container.getBoundingClientRect().left;
+        const relativeY = e.clientY - container.getBoundingClientRect().top;
 
-    newX = snapToGrid(newX);
-    newY = snapToGrid(newY);
-
-    const tempTable = { ...table, x: newX, y: newY };
-
-    const collides = tables.value.some((other) => {
-        if (other.id === table.id) return false;
-        return isOverlapping(tempTable, other);
-    });
-
+        // Horizontal auto-scroll
+        if (relativeX > container.clientWidth - edgeThreshold) {
+            container.scrollLeft += speed;
+        } else if (relativeX < edgeThreshold) {
+            container.scrollLeft = Math.max(container.scrollLeft - speed, 0);
+        }
+        // Vertical auto-scroll
+        if (relativeY > container.clientHeight - edgeThreshold) {
+            container.scrollTop += speed;
+        } else if (relativeY < edgeThreshold) {
+            container.scrollTop = Math.max(container.scrollTop - speed, 0);
+        }
+        // Recalculate with new scroll positions after auto-scroll
+        const updatedScrollLeft = container.scrollLeft;
+        const updatedScrollTop = container.scrollTop;
+        newX = snapToGrid(e.clientX + updatedScrollLeft - dragInfo.offsetX);
+        newY = snapToGrid(e.clientY + updatedScrollTop - dragInfo.offsetY);
+    }
+    const temp = { ...table, x: newX, y: newY };
+    const collides = tables.value.some((other) =>
+        other.id === table.id ? false : isOverlapping(temp, other)
+    );
     if (!collides) {
         table.x = newX;
         table.y = newY;
     }
 };
-
 const endDrag = () => {
+    if (dragInfo.dragging && dragInfo.tableId) {
+        const t = tables.value.find((tb) => tb.id === dragInfo.tableId);
+        if (t) markDirty(t);
+    }
     dragInfo.dragging = false;
     dragInfo.tableId = null;
-
     window.removeEventListener("mousemove", onDrag);
     window.removeEventListener("mouseup", endDrag);
 };
 
-// ===== MODAL FUNCTIONS =====
-const openAddTableModal = () => {
-    newTable.value = {
-        name: "",
-        chairs: 2,
-        table_room_location_id: null,
-        width: 150,
-        height: 100,
-        img: "/images/round-4.png",
-    };
-    showAddTableModal.value = true;
+// Bulk Position Save
+const dirtyPositions = ref<Record<number, { x: number; y: number }>>({});
+const markDirty = (table: any) => {
+    if (!designMode.value) return;
+    dirtyPositions.value[table.id] = { x: table.x, y: table.y };
 };
-
-const openEditTableModal = (idx) => {
-    const t = tables.value[idx];
-    editTableIndex.value = idx;
-    editTableData.value = { ...t };
-    showEditTableModal.value = true;
-};
-
-const openTableStatusModal = (idx: number) => {
-    const t = tables.value[idx];
-    selectedTableForStatus.value = { ...t, index: idx };
-    showTableStatusModal.value = true;
-};
-
-const updateTableDefaults = () => {
-    const size = tableSizeMap[newTable.value.chairs];
-    if (size) {
-        newTable.value.width = size.width;
-        newTable.value.height = size.height;
-        newTable.value.img = size.img;
-    }
-};
-
-const handleAddTableSubmit = (formData: any) => {
-    try {
-        router.post(
-            "/table-rooms/tables",
-            {
-                name: formData.name,
-                chairs: formData.chairs,
-                table_room_location_id: formData.table_room_location_id,
-                table_width: formData.width,
-                table_height: formData.height,
-                table_x: formData.x || 0,
-                table_y: formData.y || 0,
-            },
-            {
-                onSuccess: () => {
-                    toast.add({
-                        severity: "success",
-                        summary: "Success",
-                        detail:
-                            page.props.flash.success ||
-                            "Table added successfully.",
-                        life: 3000,
-                    });
-                },
-
-                onError: () => {
-                    toast.add({
-                        severity: "error",
-                        summary: "Error",
-                        detail:
-                            page.props.flash.error || "Failed to add table.",
-                        life: 3000,
-                    });
-                },
-            }
-        );
-
-        showAddTableModal.value = false;
-    } catch (error) {
-        console.error("Error adding table:", error);
-    }
-};
-
-const handleEditTableSubmit = (formData: any) => {
-    if (editTableIndex.value === null) return;
-
-    try {
-        const tableId = tables.value[editTableIndex.value].id;
-        router.put(
-            `/table-rooms/tables/${tableId}`,
-            {
-                name: formData.name,
-                chairs: formData.chairs,
-                table_room_location_id: formData.table_room_location_id,
-                table_width: formData.width,
-                table_height: formData.height,
-                table_x: formData.x || 0,
-                table_y: formData.y || 0,
-            },
-            {
-                onSuccess: () => {
-                    toast.add({
-                        severity: "success",
-                        summary: "Success",
-                        detail:
-                            page.props.flash.success ||
-                            "Table updated successfully.",
-                        life: 3000,
-                    });
-                },
-
-                onError: () => {
-                    toast.add({
-                        severity: "error",
-                        summary: "Error",
-                        detail:
-                            page.props.flash.error || "Failed to update table.",
-                        life: 3000,
-                    });
-                },
-            }
-        );
-
-        showEditTableModal.value = false;
-    } catch (error) {
-        console.error("Error updating table:", error);
-    }
-};
-
-const handleDeleteTableSubmit = () => {
-    if (editTableIndex.value === null) return;
-
-    try {
-        const tableId = tables.value[editTableIndex.value].id;
-        router.delete(`/table-rooms/tables/${tableId}`, {
+const dirtyCount = computed(() => Object.keys(dirtyPositions.value).length);
+const saveAllPositions = () => {
+    if (!designMode.value || dirtyCount.value === 0) return;
+    const payload = Object.entries(dirtyPositions.value).map(([id, pos]) => ({
+        id: Number(id),
+        table_x: pos.x,
+        table_y: pos.y,
+    }));
+    router.post(
+        "/table-rooms/tables/bulk-update-positions",
+        { positions: payload },
+        {
+            preserveScroll: true,
             onSuccess: () => {
                 toast.add({
                     severity: "success",
-                    summary: "Success",
-                    detail:
-                        page.props.flash.success ||
-                        "Table deleted successfully.",
-                    life: 3000,
+                    summary: "Positions Saved",
+                    detail: "All table positions updated.",
+                    life: 2500,
                 });
+                dirtyPositions.value = {};
             },
-
             onError: () => {
                 toast.add({
                     severity: "error",
-                    summary: "Error",
-                    detail: page.props.flash.error || "Failed to delete table.",
+                    summary: "Save Failed",
+                    detail: "Bulk save failed. Please try again.",
                     life: 3000,
                 });
             },
-        });
+        }
+    );
+};
 
-        showEditTableModal.value = false;
-    } catch (error) {
-        console.error("Error deleting table:", error);
+// Modal Helpers
+const openAddTableModal = () => {
+    activeTable.value = null;
+    editTableIndex.value = null;
+    modalResetToken.value++;
+    showTableModal.value = true;
+};
+const openEditTableModal = (idx: number) => {
+    const t = tables.value[idx];
+    editTableIndex.value = idx;
+    activeTable.value = { ...t };
+    showTableModal.value = true;
+};
+const closeTableModal = () => {
+    showTableModal.value = false;
+    activeTable.value = null;
+    editTableIndex.value = null;
+};
+
+// CRUD Operations
+const handleAddTableSubmit = (formData: any) => {
+    const data = new FormData();
+    // Ensure location defaults to active selectedLocation if form didn't set it
+    const locationId =
+        formData.table_room_location_id || selectedLocation.value;
+    data.append("name", formData.name);
+    data.append("chairs", formData.chairs);
+    data.append("table_room_location_id", locationId);
+    data.append("table_width", formData.width);
+    data.append("table_height", formData.height);
+    data.append("table_x", formData.x || 0);
+    data.append("table_y", formData.y || 0);
+    if (formData.imageFile) data.append("featured_image", formData.imageFile);
+    router.post("/table-rooms/tables", data, {
+        forceFormData: true,
+        onSuccess: () => {
+            toast.add({
+                severity: "success",
+                summary: "Success",
+                detail: page.props.flash.success || "Table added successfully.",
+                life: 3000,
+            });
+            // Pull latest tables from page props if reloaded or append optimistically
+            // Prefer optimistic append if backend returns new table in flash or we can infer values
+            if (selectedLocation.value === locationId) {
+                // Attempt to find newly added table from updated page props (if inertia replaced props)
+                const newPropsTables: any[] =
+                    (usePage<PageProps>().props as any).tables || [];
+                if (
+                    newPropsTables.length &&
+                    newPropsTables.length > tables.value.length
+                ) {
+                    tables.value = newPropsTables as any[];
+                } else {
+                    // Optimistic append (minimal fields); actual record will be corrected on next reload
+                    tables.value.push({
+                        id: Date.now(), // temporary id placeholder
+                        name: formData.name,
+                        chairs: formData.chairs,
+                        table_room_location_id: locationId,
+                        width: formData.width,
+                        height: formData.height,
+                        x: formData.x || 0,
+                        y: formData.y || 0,
+                        status: "vacant",
+                        featured_image_url: "",
+                    });
+                }
+            }
+        },
+        onError: () => {
+            toast.add({
+                severity: "error",
+                summary: "Error",
+                detail: page.props.flash.error || "Failed to add table.",
+                life: 3000,
+            });
+        },
+    });
+    closeTableModal();
+};
+const handleEditTableSubmit = (formData: any) => {
+    if (editTableIndex.value === null) return;
+    const tableId = tables.value[editTableIndex.value].id;
+    const data = new FormData();
+    data.append("name", formData.name);
+    data.append("chairs", formData.chairs);
+    data.append("table_room_location_id", formData.table_room_location_id);
+    data.append("table_width", formData.width);
+    data.append("table_height", formData.height);
+    data.append("table_x", formData.x || 0);
+    data.append("table_y", formData.y || 0);
+    if (formData.imageFile) data.append("featured_image", formData.imageFile);
+    router.post(`/table-rooms/tables/${tableId}?_method=PUT`, data, {
+        forceFormData: true,
+        onSuccess: () => {
+            toast.add({
+                severity: "success",
+                summary: "Success",
+                detail:
+                    page.props.flash.success || "Table updated successfully.",
+                life: 3000,
+            });
+            // Refresh only tables; then apply cache-bust to updated table
+            router.reload({
+                only: ["tables"],
+                onSuccess: () => {
+                    const newPropsTables: any[] =
+                        (usePage<PageProps>().props as any).tables || [];
+                    if (newPropsTables.length) {
+                        tables.value = newPropsTables.map((t) => {
+                            if (t.id === tableId && t.featured_image_url) {
+                                const v = Date.now();
+                                return {
+                                    ...t,
+                                    featured_image_url: `${t.featured_image_url}?v=${v}`,
+                                };
+                            }
+                            return t;
+                        });
+                    }
+                },
+            });
+        },
+        onError: () => {
+            toast.add({
+                severity: "error",
+                summary: "Error",
+                detail: page.props.flash.error || "Failed to update table.",
+                life: 3000,
+            });
+        },
+    });
+    closeTableModal();
+};
+const handleDeleteTableSubmit = () => {
+    if (editTableIndex.value === null || !activeTable.value) return;
+    const tableId = tables.value[editTableIndex.value].id;
+    router.delete(`/table-rooms/tables/${tableId}`, {
+        onSuccess: () => {
+            toast.add({
+                severity: "success",
+                summary: "Success",
+                detail:
+                    page.props.flash.success || "Table deleted successfully.",
+                life: 3000,
+            });
+        },
+        onError: () => {
+            toast.add({
+                severity: "error",
+                summary: "Error",
+                detail: page.props.flash.error || "Failed to delete table.",
+                life: 3000,
+            });
+        },
+    });
+    closeTableModal();
+};
+const handleUnifiedModalSubmit = (formData: any) => {
+    if (activeTable.value && activeTable.value.id) {
+        handleEditTableSubmit(formData);
+    } else {
+        handleAddTableSubmit(formData);
     }
 };
 
-// ===== WATCHERS =====
-watch(() => newTable.value.chairs, updateTableDefaults);
-watch(
-    () => editTable.value.chairs,
-    () => {
-        const size = tableSizeMap[editTable.value.chairs];
-        if (size) {
-            editTable.value.width = size.width;
-            editTable.value.height = size.height;
-            editTable.value.img = size.img;
-        }
-    }
-);
+// Image helper
+const getTableImage = (table: any) => {
+    if (!table.featured_image_url) return "";
+    // If URL already has a version param, return as-is; else add updated_at or timestamp for cache bust.
+    if (/\bv=\d+/.test(table.featured_image_url))
+        return table.featured_image_url;
+    const version = table.updated_at
+        ? new Date(table.updated_at).getTime()
+        : Date.now();
+    const separator = table.featured_image_url.includes("?") ? "&" : "?";
+    return `${table.featured_image_url}${separator}v=${version}`;
+};
+
+// Location CRUD handlers (missing earlier)
+const handleAddLocation = (name: string) => {
+    router.post("/table-management/locations", { name });
+    showLocationManagerModal.value = false;
+};
+const handleEditLocation = (id: number, name: string) => {
+    router.put(`/table-management/locations/${id}`, { name });
+    showLocationManagerModal.value = false;
+};
+const handleDeleteLocation = (id: number) => {
+    router.delete(`/table-management/locations/${id}`);
+    showLocationManagerModal.value = false;
+};
 </script>
 
 <style scoped>
-.floor {
-    background-image: linear-gradient(#e5e7eb 1px, transparent 1px),
-        linear-gradient(to right, #e5e7eb 1px, transparent 1px);
-    background-size: 20px 20px;
+/* Ensure scrollbars reserve space and become visible across platforms */
+.custom-scroll-container {
+    overflow: auto; /* both axes as needed */
+    scrollbar-gutter: stable both-axis; /* keep layout stable when scrollbars appear */
 }
-
-.transparent-blend {
-    mix-blend-mode: multiply;
-}
-
-/* Modal transitions */
-.modal-enter-active,
-.modal-leave-active {
-    transition: opacity 0.3s ease;
-}
-
-.modal-enter-from,
-.modal-leave-to {
-    opacity: 0;
-}
-
-.modal-enter-active > div,
-.modal-leave-active > div {
-    transition: transform 0.3s ease;
-}
-
-.modal-enter-from > div,
-.modal-leave-to > div {
-    transform: scale(0.95);
-}
-
-/* Slide transition for sidebar */
-.slide-enter-active,
-.slide-leave-active {
-    transition: transform 0.3s ease;
-}
-.slide-enter,
-.slide-leave-to {
-    transform: translateX(-100%);
+/* Optional: always show horizontal scrollbar track even if macOS auto-hides (will show when content wider) */
+@supports not (scrollbar-gutter: stable) {
+    .custom-scroll-container {
+        overflow: scroll;
+    }
 }
 </style>
