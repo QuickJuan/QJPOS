@@ -135,6 +135,7 @@ Route::middleware([
                     Route::post('/tables', 'store')->name('store');
                     Route::put('/tables/{tableId}', 'update')->name('update');
                     Route::delete('/tables/{tableId}', 'destroy')->name('destroy');
+                    Route::post('/tables/bulk-update-positions', 'bulkUpdatePositions')->name('bulk-update-positions');
                 });
         });
 });
