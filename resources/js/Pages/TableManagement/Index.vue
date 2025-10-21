@@ -392,9 +392,13 @@ const onDrag = (e: MouseEvent) => {
         newY = snapToGrid(e.clientY + updatedScrollTop - dragInfo.offsetY);
     }
     const temp = { ...table, x: newX, y: newY };
-    const collides = tables.value.some((other) =>
-        other.id === table.id ? false : isOverlapping(temp, other)
-    );
+    // Only check collision against tables in the same location
+    const collides = tables.value.some((other) => {
+        if (other.id === table.id) return false;
+        if (other.table_room_location_id !== selectedLocation.value)
+            return false;
+        return isOverlapping(temp, other);
+    });
     if (!collides) {
         table.x = newX;
         table.y = newY;
@@ -631,18 +635,82 @@ const getTableImage = (table: any) => {
     return `${table.featured_image_url}${separator}v=${version}`;
 };
 
-// Location CRUD handlers (missing earlier)
+// Location CRUD handlers with immediate tab updates
+const refreshLocationsFromProps = () => {
+    const newLocs: any[] = (usePage<PageProps>().props as any).locations || [];
+    if (newLocs.length) {
+        locations.value = newLocs;
+    }
+};
 const handleAddLocation = (name: string) => {
-    router.post("/table-management/locations", { name });
-    showLocationManagerModal.value = false;
+    router.post(
+        "/table-management/locations",
+        { name },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                refreshLocationsFromProps();
+                // Select newly added location (last in list) so user can start adding tables immediately
+                const last = locations.value[locations.value.length - 1];
+                if (last) {
+                    selectedLocation.value = last.id;
+                }
+                showLocationManagerModal.value = false;
+            },
+            onError: () => {
+                toast.add({
+                    severity: "error",
+                    summary: "Location Error",
+                    detail: "Failed to add location.",
+                    life: 3000,
+                });
+            },
+        }
+    );
 };
 const handleEditLocation = (id: number, name: string) => {
-    router.put(`/table-management/locations/${id}`, { name });
-    showLocationManagerModal.value = false;
+    router.put(
+        `/table-management/locations/${id}`,
+        { name },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                refreshLocationsFromProps();
+                showLocationManagerModal.value = false;
+            },
+            onError: () => {
+                toast.add({
+                    severity: "error",
+                    summary: "Location Error",
+                    detail: "Failed to update location.",
+                    life: 3000,
+                });
+            },
+        }
+    );
 };
 const handleDeleteLocation = (id: number) => {
-    router.delete(`/table-management/locations/${id}`);
-    showLocationManagerModal.value = false;
+    router.delete(`/table-management/locations/${id}`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            refreshLocationsFromProps();
+            // If deleted selected location, choose first available
+            if (!locations.value.some((l) => l.id === selectedLocation.value)) {
+                selectedLocation.value = locations.value.length
+                    ? locations.value[0].id
+                    : null;
+            }
+            showLocationManagerModal.value = false;
+        },
+        onError: () => {
+            toast.add({
+                severity: "error",
+                summary: "Location Error",
+                detail: "Failed to delete location.",
+                life: 3000,
+            });
+        },
+    });
 };
 </script>
 
