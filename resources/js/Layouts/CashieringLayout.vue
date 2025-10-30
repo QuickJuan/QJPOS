@@ -188,8 +188,7 @@ const handleBarcodeSearch = () => {
 };
 
 const handleTablesClick = () => {
-    // Navigate to tables page or show table selection
-    router.visit(route("table-ordering.index"));
+    router.visit(route("retail-cashier.tables"));
 };
 
 const toggleMoreOptions = () => {
