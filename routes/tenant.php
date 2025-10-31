@@ -104,10 +104,12 @@ Route::middleware([
                 ->group(function () {
                     Route::controller(CashierSessionController::class)->group(function () {
                         Route::get('/', 'index')->name('index');
+                        Route::get('/tables', 'tables')->name('tables');
                         Route::get('/preview', 'preview')->name('preview');
                         Route::get('/product/{product}/options', 'productOptions')->name('product.options');
                         Route::post('/session/start', 'startSession')->name('session.start');
                         Route::post('/session/close', 'closeSession')->name('session.close');
+                        Route::post('/cart/create-order', 'createOrder')->name('cart.create-order');
                     });
 
                     Route::controller(CartController::class)->group(function () {

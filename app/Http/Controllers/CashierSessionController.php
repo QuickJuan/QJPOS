@@ -1,21 +1,23 @@
 <?php
 namespace App\Http\Controllers;
 
-use Exception;
-use App\Models\Cart;
-use Inertia\Inertia;
-use Inertia\Response;
-use App\Models\Category;
-use App\Models\Discount;
-use App\Models\CouponCode;
 use App\Http\Requests\CartRequest;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\RedirectResponse;
-use App\Http\Resources\ProductResource;
-use App\Services\CashierSessionService;
+use App\Http\Requests\CashierSessionRequest;
 use App\Http\Resources\CategoryResource;
 use App\Http\Resources\DiscountResource;
-use App\Http\Requests\CashierSessionRequest;
+use App\Http\Resources\ProductResource;
+use App\Models\Cart;
+use App\Models\Category;
+use App\Models\Discount;
+use App\Models\Product;
+use App\Models\TableRoom;
+use App\Services\CashierSessionService;
+use Exception;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class CashierSessionController extends Controller
 {
@@ -37,19 +39,7 @@ class CashierSessionController extends Controller
             $query->where('is_active', true);
         }])->get();
 
-        // Debug: Log what we're getting from the database
-        \Log::info('Categories from database:', [
-            'count' => $categoriesQuery->count(),
-            'categories' => $categoriesQuery->pluck('name')->toArray()
-        ]);
-
         $categories = CategoryResource::collection($categoriesQuery);
-
-        // Debug: Log the resource collection
-        \Log::info('Categories after resource transformation:', [
-            'count' => $categories->count(),
-            'data' => $categories->toArray(request())
-        ]);
 
         // Get available discounts
         $discounts = DiscountResource::collection(
@@ -135,6 +125,47 @@ class CashierSessionController extends Controller
         }
     }
 
+    public function tables(): Response
+    {
+        $tables = TableRoom::with(['tableRoomLocation'])
+            ->activeBranch()
+            ->get()
+            ->map(fn($table) => [
+                'id'                     => $table->id,
+                'name'                   => $table->name,
+                'chairs'                 => $table->chairs,
+                'status'                 => $table->status,
+                'sort_number'            => $table->sort_number,
+                'table_room_location_id' => $table->table_room_location_id,
+                'featured_image_url'     => $table->getFeaturedImageUrl() ?: null,
+                'current_order'          => null,
+            ]);
+
+        // Get locations
+        $locations = \App\Models\TableRoomLocation::all()
+            ->map(fn($location) => [
+                'id'   => $location->id,
+                'name' => $location->name,
+            ]);
+
+        return Inertia::render('RetailCashier/Tables', [
+            'tables'      => $tables,
+            'locations'   => $locations,
+            'currentUser' => Auth::user(),
+        ]);
+    }
+
+    public function createOrder(Request $request): RedirectResponse
+    {
+        try {
+            $table = TableRoom::findOrFail($request->table_id);
+            $table->update(['status' => 'occupied']);
+            return redirect()->route('retail-cashier.index')->with('success', 'Order started successfully');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'Failed to start order: ' . $e->getMessage());
+        }
+    }
+
     public function addToCart(CartRequest $request): RedirectResponse
     {
         try {
@@ -143,20 +174,6 @@ class CashierSessionController extends Controller
             return redirect()->back()->with('success', 'Item added to cart successfully.');
         } catch (Exception $e) {
             return redirect()->back()->with('success', 'There was an error in adding item to cart.');
-        }
-    }
-
-    /**
-     * Refresh cached data for categories and discounts
-     */
-    public function refreshCache(): RedirectResponse
-    {
-        try {
-            $this->cashierDataService->refreshCache();
-
-            return redirect()->back()->with('success', 'Cache refreshed successfully.');
-        } catch (Exception $e) {
-            return redirect()->back()->with('error', 'There was an error refreshing the cache.');
         }
     }
 }
