@@ -148,6 +148,7 @@ import { route } from "ziggy-js";
 import { useToast } from "primevue";
 import CashieringLayout from "@/Layouts/CashieringLayout.vue";
 import TableActionModal from "./Partials/TableActionModal.vue";
+import PageProps from "@/Types/PageProps";
 
 // Props
 const props = defineProps<{
@@ -157,6 +158,7 @@ const props = defineProps<{
 }>();
 
 // Reactive State
+const page = usePage<PageProps>();
 const tables = ref(props.tables || []);
 const locations = ref(props.locations || []);
 const selectedLocation = ref<number | null>(null);
@@ -270,7 +272,7 @@ const handleTakeOrder = (data: any) => {
         // For occupied tables, continue existing order
         router.visit(
             route("retail-cashier.index", {
-                table_id: selectedTable.value.id,
+                tableId: selectedTable.value.id,
             })
         );
         closeTableModal();
@@ -337,6 +339,24 @@ onMounted(() => {
     // Auto-select first location if none selected
     if (!selectedLocation.value && locations.value.length > 0) {
         selectedLocation.value = locations.value[0].id;
+    }
+
+    if (page.props.flash.success) {
+        toast.add({
+            severity: "success",
+            summary: "Success",
+            detail: page.props.flash.success,
+            life: 3000,
+        });
+    }
+
+    if (page.props.flash.error) {
+        toast.add({
+            severity: "error",
+            summary: "Error",
+            detail: page.props.flash.error,
+            life: 3000,
+        });
     }
 });
 </script>

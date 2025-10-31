@@ -1,11 +1,13 @@
 <?php
 namespace App\Services;
 
-use Exception;
 use App\Models\Cart;
 use App\Models\CartItem;
-use Illuminate\Http\Request;
 use App\Models\CashierSession;
+use App\Models\TableReservation;
+use App\Models\TableRoom;
+use Exception;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class CashierSessionService
@@ -57,7 +59,43 @@ class CashierSessionService
         return $closeSession;
     }
 
-    public function addToCart(Request $request): bool|CartItem
+    public function createOrder(Request $request)
+    {
+        $table = TableRoom::findOrFail($request->table_id);
+        $table->update([
+            'status' => 'occupied',
+        ]);
+
+        // $tableReservation = TableReservation::create([
+        //     'table_room_id' => $request->table_id,
+        //     'name'          => $request->guest_name,
+        //     'pax'           => $request->pax,
+        // ]);
+
+        // if (! $tableReservation) {
+        //     throw new Exception('There was an error in creating table reservation');
+        // }
+
+        $cashierSession = $this->model->openSession()->first();
+
+        if (! $cashierSession) {
+            throw new Exception('No active cashier session found.');
+        }
+
+        $cart = Cart::firstOrCreate([
+            'cashier_id'         => Auth::id(),
+            'cashier_session_id' => $cashierSession->id,
+            'table_room_id'      => $table->id,
+        ]);
+
+        if (! $cart) {
+            throw new Exception('There was an error in creating cart.');
+        }
+
+        return $cart;
+    }
+
+    public function addToCart(Request $request): bool | CartItem
     {
         // Get or create cart for current cashier session
         $cashierSession = $this->model

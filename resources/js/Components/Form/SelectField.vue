@@ -15,6 +15,7 @@
             :optionLabel="optionLabel"
             :optionValue="optionValue"
             :defaultValue="defaultValue"
+            :disabled="disabled"
             :placeholder="placeholder || 'Select an option'"
             :filter="searchable"
             @filter="onFilter"
@@ -36,17 +37,18 @@ import { computed } from "vue";
 const props = defineProps<{
     id?: string;
     label: string;
-    required?: boolean;
+    error?: string;
     optionLabel: string;
     optionValue: string;
     defaultValue?: string;
     placeholder?: string;
-    options: Array<any>;
-    error?: string;
-    modelValue: any;
-    searchable?: boolean;
+    required?: boolean;
+    disabled?: boolean;
     readonly?: boolean;
     showClear?: boolean;
+    searchable?: boolean;
+    modelValue: any;
+    options: Array<any>;
 }>();
 
 const computedOptions = computed(() => [

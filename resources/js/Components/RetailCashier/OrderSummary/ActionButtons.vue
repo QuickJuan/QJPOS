@@ -22,11 +22,15 @@
                     <ChevronDownIcon class="w-4 h-4" />
                 </button>
                 <button
-                    @click="$emit('checkout')"
+                    @click="
+                        $emit('checkout', {
+                            cart_id: props.cart.id,
+                        })
+                    "
                     :disabled="orderItems.length === 0"
                     class="py-3 px-4 bg-success-600 text-white rounded-lg font-semibold hover:bg-success-700 disabled:bg-success-400 disabled:cursor-not-allowed transition-colors"
                 >
-                    Checkout
+                    {{ tableId ? "Place Order" : "Settle" }}
                 </button>
             </div>
         </div>
@@ -127,15 +131,17 @@ import {
 } from "@heroicons/vue/24/outline";
 
 const props = defineProps<{
-    selectedOrderType: string;
+    cart: any;
+    tableId: number;
     orderItems: any[];
+    selectedOrderType: string;
     selectedItemsForDiscount: number[];
 }>();
 
 const emit = defineEmits<{
     updateOrderType: [type: string];
     saveOrder: [];
-    checkout: [];
+    checkout: [data: any];
     openDiscountModal: [];
 }>();
 

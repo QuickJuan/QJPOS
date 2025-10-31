@@ -25,6 +25,7 @@ class CartRequest extends FormRequest
             'selected_options' => 'nullable|array',
             'quantity'         => 'nullable|integer|min:1',
             'total_price'      => 'required|numeric|min:0',
+            'table_id'         => 'nullable|exists:table_rooms,id',
         ];
     }
 }

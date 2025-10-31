@@ -3,9 +3,9 @@
         <div class="space-y-2">
             <div class="flex justify-between text-sm">
                 <span class="text-secondary-600">Subtotal</span>
-                <span class="font-medium">{{
-                    formatMoney(orderSubtotal.toFixed(2))
-                }}</span>
+                <span class="font-medium">
+                    {{ formatMoney(orderSubtotal.toFixed(2)) }}
+                </span>
             </div>
             <div
                 v-if="appliedDiscount"
@@ -13,16 +13,15 @@
             >
                 <span>Discount ({{ appliedDiscount.discountName }})</span>
                 <span
-                    >-{{
-                        formatMoney(appliedDiscount.discountAmount.toFixed(2))
-                    }}</span
-                >
+                    >-
+                    {{ formatMoney(appliedDiscount.discountAmount.toFixed(2)) }}
+                </span>
             </div>
             <div class="flex justify-between text-sm">
                 <span class="text-secondary-600">Tax (12%)</span>
-                <span class="font-medium">{{
-                    formatMoney(taxAmount.toFixed(2))
-                }}</span>
+                <span class="font-medium">
+                    {{ formatMoney(taxAmount.toFixed(2)) }}
+                </span>
             </div>
             <hr class="border-gray-300" />
             <div class="flex justify-between text-lg font-bold">

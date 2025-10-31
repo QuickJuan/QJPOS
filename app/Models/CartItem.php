@@ -2,6 +2,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CartItem extends Model
@@ -13,11 +14,15 @@ class CartItem extends Model
         'quantity',
         'price',
         'amount',
+        'order_type',
         'discount',
         'discount_id',
         'coupon_code',
         'sub_total',
         'selected_options',
+        'is_served',
+        'is_void',
+        'reason',
         'meta_data',
     ];
 
@@ -25,6 +30,12 @@ class CartItem extends Model
         'selected_options' => 'array',
         'meta_data'        => 'array',
     ];
+
+    // SCOPES
+    public function scopeIsVoid(Builder $query, bool $condition = false)
+    {
+        $query->where('is_void', $condition);
+    }
 
     public function cart(): BelongsTo
     {

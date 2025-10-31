@@ -107,7 +107,7 @@ const actions = [
     },
     {
         route: "table-management.index",
-        name: "Table Ordering",
+        name: "Table Management",
         description: "Manage restaurant orders and table service",
         icon: TableOrderingIcon,
     },

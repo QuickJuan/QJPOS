@@ -32,7 +32,9 @@
         <ActionButtons
             :selected-order-type="selectedOrderType"
             :order-items="orderItems"
+            :table-id="tableId"
             :selected-items-for-discount="selectedItemsForDiscount"
+            :cart="cart"
             @update-order-type="updateOrderType"
             @save-order="handleSaveOrder"
             @checkout="handleCheckout"
@@ -54,6 +56,13 @@
             @apply="handleDiscountApplied"
         />
 
+        <!-- Required Reason Modal -->
+        <RequiredReasonModal
+            v-model:visible="showRequiredReasonModal"
+            :order-item="selectedOrderItem"
+            @submit="handleRequiredReason"
+        />
+
         <Toast />
         <ConfirmPopup />
     </aside>
@@ -73,8 +82,11 @@ import OrderTotals from "./OrderSummary/OrderTotals.vue";
 import ActionButtons from "./OrderSummary/ActionButtons.vue";
 import EditItemModal from "./OrderSummary/EditItemModal.vue";
 import DiscountModal from "./OrderSummary/DiscountModal.vue";
+import RequiredReasonModal from "./OrderSummary/RequiredReasonModal.vue";
 
 const props = defineProps<{
+    cart: any;
+    tableId: number;
     orderItems: any[];
     selectedOrderItem: any;
     availableDiscounts: any[];
@@ -95,14 +107,9 @@ const customerInfo = ref({
 
 const showEditModal = ref(false);
 const showDiscountModal = ref(false);
+const showRequiredReasonModal = ref(false);
 const selectedOrderItem = ref(props.selectedOrderItem);
 const selectedItemsForDiscount = ref<number[]>([]);
-
-// Debug: Check what discounts we have from props
-console.log("=== ORDER SUMMARY DISCOUNT DEBUG ===");
-console.log("Available discounts from props:", props.availableDiscounts);
-console.log("Type of availableDiscounts:", typeof props.availableDiscounts);
-console.log("Is array:", Array.isArray(props.availableDiscounts));
 
 // Discount state
 const appliedDiscount = ref<{
@@ -178,23 +185,32 @@ const handleDelete = (orderItem: any) => {
             label: "Remove",
         },
         accept: () => {
-            router.delete(route("retail-cashier.cart.delete", orderItem.id), {
-                onSuccess: () => {
-                    toast.add({
-                        severity: "success",
-                        summary: "Success",
-                        detail: page.props.flash.success,
-                        life: 3000,
-                    });
-                },
-                onError: (errors) => {
-                    toast.add({
-                        severity: "error",
-                        summary: "Error",
-                        detail: page.props.flash.error,
-                        life: 3000,
-                    });
-                },
+            if (orderItem.is_served) {
+                showRequiredReasonModal.value = true;
+                selectedOrderItem.value = orderItem;
+            } else {
+                removeOrder(orderItem);
+            }
+        },
+    });
+};
+
+const removeOrder = (orderItem: any) => {
+    router.delete(route("retail-cashier.cart.delete", orderItem.id), {
+        onSuccess: () => {
+            toast.add({
+                severity: "success",
+                summary: "Success",
+                detail: page.props.flash.success,
+                life: 3000,
+            });
+        },
+        onError: (errors) => {
+            toast.add({
+                severity: "error",
+                summary: "Error",
+                detail: page.props.flash.error,
+                life: 3000,
             });
         },
     });
@@ -232,7 +248,6 @@ const saveEdit = (editedItem: any) => {
 };
 
 const toggleItemForDiscount = (itemId: number, checked: boolean) => {
-    console.log("Toggle item for discount:", itemId, "checked:", checked);
     if (checked) {
         if (!selectedItemsForDiscount.value.includes(itemId)) {
             selectedItemsForDiscount.value.push(itemId);
@@ -242,14 +257,9 @@ const toggleItemForDiscount = (itemId: number, checked: boolean) => {
             (id) => id !== itemId
         );
     }
-    console.log("Selected items for discount:", selectedItemsForDiscount.value);
 };
 
 const openDiscountModal = () => {
-    console.log(
-        "Opening discount modal, selected items:",
-        selectedItemsForDiscount.value
-    );
     showDiscountModal.value = true;
 };
 
@@ -293,7 +303,7 @@ const handleSaveOrder = () => {
     });
 };
 
-const handleCheckout = () => {
+const handleCheckout = (data: any) => {
     if (props.orderItems.length === 0) {
         toast.add({
             severity: "warn",
@@ -304,6 +314,38 @@ const handleCheckout = () => {
         return;
     }
 
-    router.visit(route("retail-cashier.preview"));
+    router.put(
+        route("retail-cashier.cart.place-order", { cartId: data.cart_id })
+    );
+};
+
+const handleRequiredReason = (data: any) => {
+    console.log(data);
+    router.put(
+        route("retail-cashier.cart.void-cart", {
+            cartItemId: data.orderItem.id,
+        }),
+        {
+            reason: data.reason,
+        },
+        {
+            onSuccess: () => {
+                toast.add({
+                    severity: "success",
+                    summary: "Success",
+                    detail: page.props.flash.success,
+                    life: 3000,
+                });
+            },
+            onError: (errors) => {
+                toast.add({
+                    severity: "error",
+                    summary: "Error",
+                    detail: page.props.flash.error,
+                    life: 3000,
+                });
+            },
+        }
+    );
 };
 </script>

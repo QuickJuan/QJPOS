@@ -1,11 +1,13 @@
 <?php
 namespace App\Services;
 
-use App\Models\Cart;
-use App\Models\CashierSession;
 use Exception;
+use App\Models\Cart;
+use App\Models\CartItem;
 use Illuminate\Http\Request;
+use App\Models\CashierSession;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\RedirectResponse;
 
 class CartService
 {
@@ -15,21 +17,25 @@ class CartService
         $this->cashierSession = $cashierSession;
     }
 
-    public function addToCart(Request $request)
+    public function addToCart(Request $request): void
     {
         // Get or create cart for current cashier session
-        $cashierSession = $this->cashierSession
-            ->openSession()
-            ->first();
+        $cashierSession = $this->cashierSession->openSession()->first();
 
         if (! $cashierSession) {
             throw new Exception('No active cashier session found.');
         }
 
-        $cart = Cart::firstOrCreate([
+        $cartAttributes = [
             'cashier_id'         => Auth::id(),
             'cashier_session_id' => $cashierSession->id,
-        ]);
+        ];
+
+        if ($request->filled('table_id')) {
+            $cartAttributes['table_room_id'] = $request->input('table_id');
+        }
+
+        $cart = Cart::firstOrCreate($cartAttributes);
 
         // Check if item already exists in cart with same product
         $existingItem = $cart->cartItems()
@@ -53,7 +59,6 @@ class CartService
                     'sub_total' => ($existingItem->quantity + $quantity) * $existingItem->price,
                 ]);
             } else {
-                                                                                            // Different options - merge selected options
                 $mergedOptions = array_merge($currentSelectedOptions, $newSelectedOptions); // Recalculate total price based on merged options
                 $basePrice     = $existingItem->price;                                      // This should be the base product price
                 $optionsTotal  = collect($mergedOptions)->sum('price');
@@ -79,7 +84,7 @@ class CartService
         }
     }
 
-    public function updateCartItem(Request $request, int $cartItemId)
+    public function updateCartItem(Request $request, int $cartItemId): mixed
     {
         $cashierSession = $this->cashierSession
             ->openSession()
@@ -89,8 +94,8 @@ class CartService
             throw new Exception('No active cashier session found.');
         }
 
-        $cart = Cart::where('cashier_id', Auth::id())
-            ->where('cashier_session_id', $cashierSession->id)
+        $cart = Cart::authCashier()
+            ->cashierSession($cashierSession->id)
             ->first();
 
         if (! $cart) {
@@ -106,7 +111,6 @@ class CartService
         $quantity        = $request['quantity'] ?? $cartItem->quantity;
         $selectedOptions = $request['selected_options'] ?? $cartItem->selected_options ?? [];
 
-                                          // Recalculate price based on base product price + options
         $basePrice    = $cartItem->price; // This should be the base product price
         $optionsTotal = collect($selectedOptions)->sum('price');
         $totalPrice   = ($basePrice + $optionsTotal) * $quantity;
@@ -119,7 +123,33 @@ class CartService
         ]);
     }
 
-    public function deleteCartItem(int $cartItemId)
+    public function voidCartItem(Request $request, int $cartItemId): mixed
+    {
+        $cashierSession = $this->cashierSession->openSession()->first();
+
+        if (! $cashierSession) {
+            throw new Exception('No active cashier session found.');
+        }
+
+        $cart = Cart::authCashier()->cashierSession($cashierSession->id)->first();
+
+        if (! $cart) {
+            throw new Exception('Cart not found.');
+        }
+
+        $cartItem = CartItem::find($cartItemId);
+
+        if (! $cartItem) {
+            throw new Exception('Cart item not found.');
+        }
+
+        return $cartItem->update([
+            'is_void' => true,
+            'reason'  => $request->reason,
+        ]);
+    }
+
+    public function deleteCartItem(int $cartItemId): mixed
     {
         $cashierSession = $this->cashierSession
             ->openSession()
@@ -144,5 +174,13 @@ class CartService
         }
 
         return $cartItem->delete();
+    }
+
+    public function placeOrder(int $cartId): int|RedirectResponse
+    {
+        // Get the current open cashier session
+        $cart = Cart::findOrFail($cartId);
+
+        return $cart->cartItems()->update(['is_served' => true]);
     }
 }

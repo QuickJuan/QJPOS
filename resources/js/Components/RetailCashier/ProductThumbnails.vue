@@ -103,7 +103,6 @@
 </template>
 
 <script setup lang="ts">
-import { ArrowLeftIcon, CubeIcon } from "@heroicons/vue/24/outline";
 import Product from "@/Types/Product";
 import ImageIcon from "../icons/ImageIcon.vue";
 import { formatMoney } from "@/Utils/FormatMoney";

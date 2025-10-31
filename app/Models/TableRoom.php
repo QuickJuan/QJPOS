@@ -80,4 +80,9 @@ class TableRoom extends Model implements HasMedia
     {
         return $this->belongsTo(TableRoomLocation::class);
     }
+
+    public function carts(): HasMany
+    {
+        return $this->hasMany(Cart::class);
+    }
 }

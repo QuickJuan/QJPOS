@@ -102,21 +102,25 @@ Route::middleware([
             Route::as('retail-cashier.')
                 ->prefix('/retail-cashier')
                 ->group(function () {
-                    Route::controller(CashierSessionController::class)->group(function () {
-                        Route::get('/', 'index')->name('index');
-                        Route::get('/tables', 'tables')->name('tables');
-                        Route::get('/preview', 'preview')->name('preview');
-                        Route::get('/product/{product}/options', 'productOptions')->name('product.options');
-                        Route::post('/session/start', 'startSession')->name('session.start');
-                        Route::post('/session/close', 'closeSession')->name('session.close');
-                        Route::post('/cart/create-order', 'createOrder')->name('cart.create-order');
-                    });
+                    Route::controller(CashierSessionController::class)
+                        ->group(function () {
+                            Route::get('/', 'index')->name('index');
+                            Route::get('/tables', 'tables')->name('tables');
+                            Route::get('/preview', 'preview')->name('preview');
+                            Route::get('/product/{product}/options', 'productOptions')->name('product.options');
+                            Route::post('/session/start', 'startSession')->name('session.start');
+                            Route::post('/session/close', 'closeSession')->name('session.close');
+                            Route::post('/cart/create-order', 'createOrder')->name('cart.create-order');
+                        });
 
-                    Route::controller(CartController::class)->group(function () {
-                        Route::post('/cart/add', 'addToCart')->name('cart.add');
-                        Route::put('/cart/item/{cartItemId}', 'updateCartItem')->name('cart.update');
-                        Route::delete('/cart/item/{cartItemId}', 'deleteCartItem')->name('cart.delete');
-                    });
+                    Route::controller(CartController::class)
+                        ->group(function () {
+                            Route::post('/cart/add', 'addToCart')->name('cart.add');
+                            Route::put('/cart/item/place-order/{cartId}', 'placeOrder')->name('cart.place-order');
+                            Route::put('/cart/item/{cartItemId}', 'updateCartItem')->name('cart.update');
+                            Route::put('/cart/item/void/{cartItemId}', 'voidCartItem')->name('cart.void-cart');
+                            Route::delete('/cart/item/{cartItemId}', 'deleteCartItem')->name('cart.delete');
+                        });
                 });
 
             Route::as('table-management.')
