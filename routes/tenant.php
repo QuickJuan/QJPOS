@@ -140,6 +140,7 @@ Route::middleware([
                     Route::get('/list', 'list')->name('list');
                     Route::post('/tables', 'store')->name('store');
                     Route::put('/tables/{tableId}', 'update')->name('update');
+                    Route::put('/tables/{tableId}/merge', 'mergeTable')->name('merge');
                     Route::delete('/tables/{tableId}', 'destroy')->name('destroy');
                     Route::post('/tables/bulk-update-positions', 'bulkUpdatePositions')->name('bulk-update-positions');
                 });

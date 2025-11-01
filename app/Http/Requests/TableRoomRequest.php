@@ -28,6 +28,7 @@ class TableRoomRequest extends FormRequest
             'table_height'           => 'nullable|integer|min:0|max:1000',
             'table_x'                => 'nullable|integer',
             'table_y'                => 'nullable|integer',
+            'merge_to'               => 'nullable|integer|exists:table_rooms,id',
             'featured_image'         => 'nullable|image|mimes:jpg,jpeg,png,webp|max:3072',
         ];
     }

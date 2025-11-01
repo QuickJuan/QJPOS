@@ -144,6 +144,7 @@ class CashierSessionController extends Controller
                 'name'                   => $table->name,
                 'chairs'                 => $table->chairs,
                 'status'                 => $table->status,
+                'merge_to'               => $table->merge_to,
                 'sort_number'            => $table->sort_number,
                 'table_room_location_id' => $table->table_room_location_id,
                 'featured_image_url'     => $table->getFeaturedImageUrl() ?: null,

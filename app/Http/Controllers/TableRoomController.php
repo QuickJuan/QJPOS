@@ -78,6 +78,21 @@ class TableRoomController extends Controller
         }
     }
 
+    public function mergeTable(Request $request, int $tableId): RedirectResponse
+    {
+        $validated = $request->validate([
+            'merge_to' => 'required|integer|exists:table_rooms,id',
+        ]);
+
+        try {
+            $this->tableRoomService->mergeTable($tableId, $validated['merge_to']);
+
+            return redirect()->back()->with('success', 'Table merged successfully.');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+    }
+
     public function destroy(int $tableId): RedirectResponse
     {
         try {

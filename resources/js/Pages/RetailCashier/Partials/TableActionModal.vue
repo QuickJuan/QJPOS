@@ -61,14 +61,14 @@
                     @click="$emit('viewOrder')"
                 />
 
-                <!-- Merge Table -->
+                <!-- Merge Table (only for vacant tables) -->
                 <Button
+                    v-if="table && table.status === 'vacant'"
                     label="Merge Table"
                     icon="pi pi-link"
                     class="w-full"
                     severity="secondary"
                     @click="$emit('mergeTable')"
-                    :disabled="!table"
                 />
 
                 <!-- Reserve/Unreserve -->
