@@ -4,8 +4,7 @@
     >
         <!-- Customer Information -->
         <CustomerInfo
-            :current-shift="currentShift"
-            :customer-info="customerInfo"
+            :table-info="tableInfo"
         />
 
         <!-- Cart Items Area -->
@@ -35,10 +34,12 @@
             :table-id="tableId"
             :selected-items-for-discount="selectedItemsForDiscount"
             :cart="cart"
+            :total-amount="finalTotal"
             @update-order-type="updateOrderType"
             @save-order="handleSaveOrder"
             @checkout="handleCheckout"
             @open-discount-modal="openDiscountModal"
+            @settle-bill="handleSettleBill"
         />
 
         <!-- Edit Item Modal -->
@@ -90,20 +91,20 @@ const props = defineProps<{
     orderItems: any[];
     selectedOrderItem: any;
     availableDiscounts: any[];
+    currentTable: any;
 }>();
 
 const toast = useToast();
 const page = usePage<PageProps>();
 const confirm = useConfirm();
+const emit = defineEmits<{
+    selectedOrderType: [value: string];
+    showReceipt: [data: any];
+}>();
 
 // State
 const selectedOrderType = ref<string>("dine-in");
-const currentShift = ref("12");
-const customerInfo = ref({
-    name: "Walk-in Customer",
-    table: "Table 1",
-    guests: 2,
-});
+const tableInfo = ref(props.currentTable);
 
 const showEditModal = ref(false);
 const showDiscountModal = ref(false);
@@ -164,6 +165,7 @@ const selectedItemsForModal = computed(() =>
 
 // Methods
 const updateOrderType = (type: string) => {
+    emit("selectedOrderType", type);
     selectedOrderType.value = type;
 };
 
@@ -196,24 +198,27 @@ const handleDelete = (orderItem: any) => {
 };
 
 const removeOrder = (orderItem: any) => {
-    router.delete(route("retail-cashier.cart.delete", orderItem.id), {
-        onSuccess: () => {
-            toast.add({
-                severity: "success",
-                summary: "Success",
-                detail: page.props.flash.success,
-                life: 3000,
-            });
-        },
-        onError: (errors) => {
-            toast.add({
-                severity: "error",
-                summary: "Error",
-                detail: page.props.flash.error,
-                life: 3000,
-            });
-        },
-    });
+    router.delete(
+        route("retail-cashier.cart.delete", { cartItemId: orderItem.id }),
+        {
+            onSuccess: () => {
+                toast.add({
+                    severity: "success",
+                    summary: "Success",
+                    detail: page.props.flash.success,
+                    life: 3000,
+                });
+            },
+            onError: (errors) => {
+                toast.add({
+                    severity: "error",
+                    summary: "Error",
+                    detail: page.props.flash.error,
+                    life: 3000,
+                });
+            },
+        }
+    );
 };
 
 const saveEdit = (editedItem: any) => {
@@ -319,8 +324,47 @@ const handleCheckout = (data: any) => {
     );
 };
 
+const handleSettleBill = (data: any) => {
+    if (props.orderItems.length === 0) {
+        toast.add({
+            severity: "warn",
+            summary: "Warning",
+            detail: "No items in cart to settle",
+            life: 3000,
+        });
+        return;
+    }
+
+    router.post(
+        route("retail-cashier.cart.settle-bill", { cartId: data.cart_id }),
+        {
+            amount_paid: data.amount_paid,
+            total_amount: data.total_amount,
+        },
+        {
+            onSuccess: () => {
+                toast.add({
+                    severity: "success",
+                    summary: "Success",
+                    detail: "Bill settled successfully",
+                    life: 3000,
+                });
+                // Emit event to show receipt modal
+                emit("showReceipt", data);
+            },
+            onError: (errors) => {
+                toast.add({
+                    severity: "error",
+                    summary: "Error",
+                    detail: page.props.flash.error || "Failed to settle bill",
+                    life: 3000,
+                });
+            },
+        }
+    );
+};
+
 const handleRequiredReason = (data: any) => {
-    console.log(data);
     router.put(
         route("retail-cashier.cart.void-cart", {
             cartItemId: data.orderItem.id,

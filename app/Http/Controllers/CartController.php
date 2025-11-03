@@ -48,6 +48,17 @@ class CartController extends Controller
         }
     }
 
+    public function applyDiscountToCartItem(Request $request, int $cartItemId): RedirectResponse
+    {
+        try {
+            $this->cartService->applyDiscountToCartItem($request, $cartItemId);
+
+            return redirect()->back()->with('success', 'Discount applied to cart item successfully.');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'There was an error applying discount to cart item.');
+        }
+    }
+
     public function deleteCartItem(int $cartItemId): RedirectResponse
     {
         try {
@@ -67,6 +78,17 @@ class CartController extends Controller
             return redirect()->route('retail-cashier.tables')->with('success', 'Successfully Placed Order.');
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'There was an error placing order.');
+        }
+    }
+
+    public function settleBill(Request $request, int $cartId): RedirectResponse
+    {
+        try {
+            $this->cartService->settleBill($request, $cartId);
+
+            return redirect()->back()->with('success', 'Bill settled successfully.');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'There was an error settling the bill.');
         }
     }
 }

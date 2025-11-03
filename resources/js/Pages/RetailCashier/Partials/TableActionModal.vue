@@ -135,7 +135,6 @@
                         label="Start Order"
                         severity="success"
                         class="flex-1"
-                        :disabled="!isValidOrder"
                         @click="confirmTakeOrder"
                     />
                 </div>
@@ -167,10 +166,6 @@ const pax = ref(1);
 const guestName = ref("");
 const showPaxInput = ref(false);
 
-const isValidOrder = computed(
-    () => pax.value >= 1 && guestName.value.trim().length > 0
-);
-
 watch(
     () => props.show,
     (newShow) => {
@@ -197,12 +192,10 @@ const handleClose = () => {
 };
 
 const confirmTakeOrder = () => {
-    if (isValidOrder.value) {
-        emit("takeOrder", {
-            pax: pax.value,
-            guest_name: guestName.value.trim(),
-        });
-    }
+    emit("takeOrder", {
+        pax: pax.value,
+        guest_name: guestName.value.trim(),
+    });
 };
 
 const cancelPaxInput = () => {

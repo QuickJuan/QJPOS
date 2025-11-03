@@ -95,25 +95,31 @@
                         </div>
 
                         <!-- Table Info -->
-                        <div class="text-center text-sm text-gray-600">
+                        <div
+                            class="text-center text-sm text-gray-600 space-y-1"
+                        >
                             <p
                                 v-if="table.current_order"
                                 class="text-blue-600 font-medium"
                             >
                                 Order #{{ table.current_order.id }}
                             </p>
-                        </div>
-
-                        <!-- Table Image -->
-                        <div class="mt-3 flex justify-center">
                             <div
-                                class="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center"
+                                v-if="
+                                    table.status === 'occupied' &&
+                                    table.number_of_pax
+                                "
+                                class="space-y-0.5"
                             >
-                                <img
-                                    :src="getTableImage(table)"
-                                    :alt="`Table with ${table.chairs} chairs`"
-                                    class="w-12 h-12 object-contain"
-                                />
+                                <p class="text-gray-700 font-medium">
+                                    {{ table.number_of_pax }} pax
+                                </p>
+                                <p
+                                    v-if="table.time_in"
+                                    class="text-xs text-gray-500"
+                                >
+                                    {{ formatTimeOccupied(table.time_in) }}
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -329,6 +335,24 @@ import Button from "primevue/button";
 import CashieringLayout from "@/Layouts/CashieringLayout.vue";
 import TableActionModal from "./Partials/TableActionModal.vue";
 import PageProps from "@/Types/PageProps";
+
+// Helper function to format time occupied
+const formatTimeOccupied = (timeIn: string) => {
+    const start = new Date(timeIn);
+    // Format as date and time
+    const dateStr = start.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+    });
+    const timeStr = start.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+    });
+
+    return `${dateStr} ${timeStr}`;
+};
 
 // Props
 const props = defineProps<{

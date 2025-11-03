@@ -86,6 +86,11 @@ Route::middleware([
                 ]);
             })->name('dashboard');
 
+            // Receipt Preview Route (for testing)
+            Route::get('/receipt-preview', function () {
+                return Inertia::render('ReceiptPreview');
+            })->name('receipt-preview');
+
             // ROUTE FOR ATTENDANCE
             Route::as('attendance.')
                 ->prefix('/attendance')
@@ -117,7 +122,9 @@ Route::middleware([
                         ->group(function () {
                             Route::post('/cart/add', 'addToCart')->name('cart.add');
                             Route::put('/cart/item/place-order/{cartId}', 'placeOrder')->name('cart.place-order');
+                            Route::post('/cart/settle-bill/{cartId}', 'settleBill')->name('cart.settle-bill');
                             Route::put('/cart/item/{cartItemId}', 'updateCartItem')->name('cart.update');
+                            Route::put('/cart/item/discount/{cartItemId}', 'applyDiscountToCartItem')->name('cart.apply-discount');
                             Route::put('/cart/item/void/{cartItemId}', 'voidCartItem')->name('cart.void-cart');
                             Route::delete('/cart/item/{cartItemId}', 'deleteCartItem')->name('cart.delete');
                         });

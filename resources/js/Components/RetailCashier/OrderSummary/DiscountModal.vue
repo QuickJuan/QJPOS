@@ -381,13 +381,7 @@ const calculatedDiscountAmount = computed(() => {
 // Group discounts by type (using props data)
 const percentageDiscounts = computed(() => {
     const discounts = getDiscountsArray();
-    console.log("=== DISCOUNT MODAL DEBUG ===");
-    console.log("Available discounts in modal:", props.availableDiscounts);
-    console.log("Extracted discounts array:", discounts);
-    console.log("Available discounts length:", discounts.length);
-
     const percentage = discounts.filter((d) => d.type === "percentage");
-    console.log("Percentage discounts:", percentage);
     return percentage;
 });
 
@@ -396,7 +390,6 @@ const fixedDiscounts = computed(() => {
     const fixed = discounts.filter(
         (d) => d.type === "fixed" || d.type === "amount"
     );
-    console.log("Fixed discounts:", fixed);
     return fixed;
 });
 
@@ -406,7 +399,7 @@ const otherDiscounts = computed(() => {
         (d) =>
             d.type !== "percentage" && d.type !== "fixed" && d.type !== "amount"
     );
-    console.log("Other discounts:", other);
+
     return other;
 });
 

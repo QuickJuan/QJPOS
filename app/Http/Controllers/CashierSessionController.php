@@ -54,6 +54,7 @@ class CashierSessionController extends Controller
 
             if ($request->has('tableId')) {
                 $cartQuery->where('table_room_id', $request->input('tableId'));
+                $currentTable = TableRoom::find($request->input('tableId'));
             }
 
             $cart = $cartQuery->where('cashier_id', Auth::id())
@@ -72,6 +73,7 @@ class CashierSessionController extends Controller
                         'amount'           => $item->amount,
                         'sub_total'        => $item->sub_total,
                         'is_served'        => (bool) $item->is_served,
+                        'order_type'       => $item->order_type,
                         'selected_options' => $item->selected_options ?? [],
                         'checked'          => false,
                     ])->toArray();
@@ -85,6 +87,7 @@ class CashierSessionController extends Controller
             'cart'               => $cart,
             'cartItems'          => $cartItems,
             'availableDiscounts' => $discounts,
+            'currentTable'       => $currentTable ?? [],
         ]);
     }
 
@@ -149,6 +152,9 @@ class CashierSessionController extends Controller
                 'table_room_location_id' => $table->table_room_location_id,
                 'featured_image_url'     => $table->getFeaturedImageUrl() ?: null,
                 'current_order'          => null,
+                'number_of_pax'          => $table->number_of_pax,
+                'time_in'                => $table->time_in,
+                'customer_name'          => $table->customer_name,
             ]);
 
         // Get locations
@@ -170,7 +176,7 @@ class CashierSessionController extends Controller
         try {
             $this->cashierSessionService->createOrder($request);
 
-            return redirect()->route('retail-cashier.index', ['tableId' => (int) $request->table_id])->with('success', 'Order started successfully');
+            return redirect()->route('retail-cashier.index', ['tableId' => $request->table_id])->with('success', 'Order started successfully');
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'Failed to start order: ' . $e->getMessage());
         }

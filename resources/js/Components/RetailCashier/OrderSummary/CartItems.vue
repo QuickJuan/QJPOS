@@ -36,28 +36,30 @@
                     >
                         <div class="flex items-start justify-between">
                             <div class="flex-1 min-w-0">
-                                <h4
-                                    class="font-medium text-secondary-900 text-sm leading-tight"
-                                >
-                                    {{ item.name }}
-                                </h4>
-                                <p class="text-xs text-secondary-600 mt-0.5">
-                                    {{ item.quantity }} ×
-                                    {{ formatMoney(item.price) }}
-                                </p>
-                            </div>
-                            <div class="text-right ml-3">
-                                <p
-                                    class="font-semibold text-secondary-900 text-sm"
-                                >
-                                    {{
-                                        formatMoney(
-                                            (
-                                                item.quantity * item.price
-                                            ).toFixed(2)
-                                        )
-                                    }}
-                                </p>
+                                <div class="flex items-start justify-between mb-1">
+                                    <h4
+                                        class="font-medium text-secondary-900 text-sm leading-tight flex-1"
+                                    >
+                                        {{ item.name }}
+                                    </h4>
+                                    <!-- Order Type Badge -->
+                                    <span
+                                        v-if="item.order_type"
+                                        :class="getOrderTypeBadgeClass(item.order_type)"
+                                        class="text-xs px-2 py-0.5 rounded-full font-medium ml-2 flex-shrink-0"
+                                    >
+                                        {{ getOrderTypeLabel(item.order_type) }}
+                                    </span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <p class="text-xs text-secondary-600">
+                                        {{ item.quantity }} ×
+                                        {{ formatMoney(item.price) }}
+                                    </p>
+                                    <p class="text-xs text-secondary-500 font-medium">
+                                        {{ formatMoney((item.quantity * item.price).toFixed(2)) }}
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
@@ -122,6 +124,33 @@ defineEmits<{
 // Refs for the scrollable container
 const cartContainer = ref<HTMLDivElement>();
 const cartItemsList = ref<HTMLDivElement>();
+
+// Order type utilities
+const getOrderTypeBadgeClass = (orderType: string) => {
+    switch (orderType) {
+        case "dine-in":
+            return "bg-blue-100 text-blue-800";
+        case "takeout":
+            return "bg-green-100 text-green-800";
+        case "delivery":
+            return "bg-orange-100 text-orange-800";
+        default:
+            return "bg-gray-100 text-gray-800";
+    }
+};
+
+const getOrderTypeLabel = (orderType: string) => {
+    switch (orderType) {
+        case "dine-in":
+            return "Dine-in";
+        case "takeout":
+            return "Takeout";
+        case "delivery":
+            return "Delivery";
+        default:
+            return orderType;
+    }
+};
 
 // Watch for changes in order items and auto-scroll to bottom when new items are added
 watch(

@@ -26,6 +26,7 @@ class CartRequest extends FormRequest
             'quantity'         => 'nullable|integer|min:1',
             'total_price'      => 'required|numeric|min:0',
             'table_id'         => 'nullable|exists:table_rooms,id',
+            'order_type'       => 'nullable|string|in:dine-in,takeout,delivery',
         ];
     }
 }

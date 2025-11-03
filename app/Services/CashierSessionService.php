@@ -1,11 +1,12 @@
 <?php
 namespace App\Services;
 
+use App\Enums\TableRoomStatusType;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\CashierSession;
-use App\Models\TableReservation;
 use App\Models\TableRoom;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -63,18 +64,11 @@ class CashierSessionService
     {
         $table = TableRoom::findOrFail($request->table_id);
         $table->update([
-            'status' => 'occupied',
+            'status'        => TableRoomStatusType::OCCUPIED->value,
+            'time_in'       => Carbon::now(),
+            'customer_name' => $request->guest_name,
+            'number_of_pax' => $request->pax,
         ]);
-
-        // $tableReservation = TableReservation::create([
-        //     'table_room_id' => $request->table_id,
-        //     'name'          => $request->guest_name,
-        //     'pax'           => $request->pax,
-        // ]);
-
-        // if (! $tableReservation) {
-        //     throw new Exception('There was an error in creating table reservation');
-        // }
 
         $cashierSession = $this->model->openSession()->first();
 
@@ -98,9 +92,7 @@ class CashierSessionService
     public function addToCart(Request $request): bool | CartItem
     {
         // Get or create cart for current cashier session
-        $cashierSession = $this->model
-            ->openSession()
-            ->first();
+        $cashierSession = $this->model->openSession()->first();
 
         if (! $cashierSession) {
             throw new Exception('No active cashier session found.');
@@ -131,6 +123,7 @@ class CashierSessionService
                 'amount'           => $request['total_price'],
                 'sub_total'        => $request['total_price'],
                 'selected_options' => $request['selected_options'] ?? [],
+                'order_type'       => $request['order_type'],
             ]);
         }
 

@@ -23,6 +23,8 @@ class TableRoom extends Model implements HasMedia
         'time_in',
         'time_out',
         'limit_hours',
+        'customer_name',
+        'number_of_pax',
         'table_width',
         'table_height',
         'table_x',
