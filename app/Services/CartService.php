@@ -175,23 +175,23 @@ class CartService
             throw new Exception('Cart item not found.');
         }
 
-        $discountId = $request->input('discount_id');
+        $discountId     = $request->input('discount_id');
         $discountAmount = $request->input('discount_amount', 0);
-        $couponCode = $request->input('coupon_code');
+        $couponCode     = $request->input('coupon_code');
 
         // Recalculate subtotal with discount
-        $quantity = $cartItem->quantity;
-        $price = $cartItem->price;
+        $quantity        = $cartItem->quantity;
+        $price           = $cartItem->price;
         $selectedOptions = $cartItem->selected_options ?? [];
-        $optionsTotal = collect($selectedOptions)->sum('price');
-        $baseTotal = ($price + $optionsTotal) * $quantity;
-        $newSubTotal = $baseTotal - $discountAmount;
+        $optionsTotal    = collect($selectedOptions)->sum('price');
+        $baseTotal       = ($price + $optionsTotal) * $quantity;
+        $newSubTotal     = $baseTotal - $discountAmount;
 
         return $cartItem->update([
             'discount_id' => $discountId,
-            'discount' => $discountAmount,
+            'discount'    => $discountAmount,
             'coupon_code' => $couponCode,
-            'sub_total' => max(0, $newSubTotal), // Ensure subtotal doesn't go negative
+            'sub_total'   => max(0, $newSubTotal), // Ensure subtotal doesn't go negative
         ]);
     }
 
@@ -234,36 +234,36 @@ class CartService
 
         // Create the order
         $order = Order::create([
-            'cashier_id' => $cart->cashier_id,
+            'cashier_id'         => $cart->cashier_id,
             'cashier_session_id' => $cart->cashier_session_id,
-            'table_room_id' => $cart->table_room_id,
-            'notes' => $cart->notes,
-            'meta_data' => [
-                'amount_paid' => $request->amount_paid,
+            'table_room_id'      => $cart->table_room_id,
+            'notes'              => $cart->notes,
+            'meta_data'          => [
+                'amount_paid'  => $request->amount_paid,
                 'total_amount' => $request->total_amount,
-                'change' => $request->amount_paid - $request->total_amount,
-                'settled_at' => now(),
+                'change'       => $request->amount_paid - $request->total_amount,
+                'settled_at'   => now(),
             ],
         ]);
 
         // Convert cart items to order items
         foreach ($cart->cartItems as $cartItem) {
             OrderItem::create([
-                'order_id' => $order->id,
-                'product_id' => $cartItem->product_id,
+                'order_id'             => $order->id,
+                'product_id'           => $cartItem->product_id,
                 'product_packaging_id' => $cartItem->product_packaging_id,
-                'quantity' => $cartItem->quantity,
-                'price' => $cartItem->price,
-                'amount' => $cartItem->amount,
-                'order_type' => $cartItem->order_type,
-                'discount' => $cartItem->discount,
-                'discount_id' => $cartItem->discount_id,
-                'coupon_code' => $cartItem->coupon_code,
-                'sub_total' => $cartItem->sub_total,
-                'is_served' => true,
-                'is_void' => $cartItem->is_void,
-                'reason' => $cartItem->reason,
-                'selected_options' => $cartItem->selected_options,
+                'quantity'             => $cartItem->quantity,
+                'price'                => $cartItem->price,
+                'amount'               => $cartItem->amount,
+                'order_type'           => $cartItem->order_type,
+                'discount'             => $cartItem->discount,
+                'discount_id'          => $cartItem->discount_id,
+                'coupon_code'          => $cartItem->coupon_code,
+                'sub_total'            => $cartItem->sub_total,
+                'is_served'            => true,
+                'is_void'              => $cartItem->is_void,
+                'reason'               => $cartItem->reason,
+                'selected_options'     => $cartItem->selected_options,
             ]);
         }
 

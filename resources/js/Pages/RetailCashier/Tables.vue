@@ -3,7 +3,7 @@
         <div class="flex flex-col h-screen bg-gray-100 overflow-y-hidden">
             <!-- Toolbar (sticky) -->
             <div
-                class="flex flex-col md:flex-row md:items-center gap-3 p-3 bg-white shadow sticky top-0 z-40"
+                class="flex flex-col md:flex-row md:items-center gap-3 p-3 bg-white shadow sticky top-0"
             >
                 <div class="flex w-full items-center justify-between gap-4">
                     <!-- Location Tabs (left) -->

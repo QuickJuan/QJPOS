@@ -45,7 +45,7 @@
             <div class="text-center font-bold mb-2">ORDER ITEMS</div>
             <div v-for="item in orderItems" :key="item.id" class="mb-1">
                 <div class="flex justify-between">
-                    <span class="flex-1">{{ item.product_name }}</span>
+                    <span class="flex-1">{{ item.name }}</span>
                     <span>{{ formatMoney(item.price) }}</span>
                 </div>
                 <div
@@ -93,12 +93,44 @@
                 <span>Subtotal:</span>
                 <span>{{ formatMoney(subtotal) }}</span>
             </div>
-            <div class="flex justify-between" v-if="taxAmount > 0">
+            <div
+                class="flex justify-between"
+                v-if="isSeniorDiscount && removeTax && discountAmount > 0"
+            >
+                <span class="text-red-600">Senior Citizen Discount (20%):</span>
+                <span class="text-red-600"
+                    >-{{ formatMoney(discountAmount) }}</span
+                >
+            </div>
+            <div
+                class="flex justify-between"
+                v-if="removeTax && !isSeniorDiscount && discountAmount > 0"
+            >
+                <span class="text-red-600"
+                    >Discount{{
+                        discountName ? ` (${discountName})` : ""
+                    }}:</span
+                >
+                <span class="text-red-600"
+                    >-{{ formatMoney(discountAmount) }}</span
+                >
+            </div>
+            <div
+                class="flex justify-between"
+                v-if="taxAmount > 0 && !isSeniorDiscount"
+            >
                 <span>Tax (12%):</span>
                 <span>{{ formatMoney(taxAmount) }}</span>
             </div>
-            <div class="flex justify-between" v-if="discountAmount > 0">
-                <span class="text-red-600">Discount:</span>
+            <div
+                class="flex justify-between"
+                v-if="!removeTax && discountAmount > 0"
+            >
+                <span class="text-red-600"
+                    >Discount{{
+                        discountName ? ` (${discountName})` : ""
+                    }}:</span
+                >
                 <span class="text-red-600"
                     >-{{ formatMoney(discountAmount) }}</span
                 >
@@ -156,6 +188,10 @@ const props = defineProps<{
     subtotal?: number;
     taxAmount?: number;
     discountAmount?: number;
+    discountName?: string;
+    discountType?: string;
+    removeTax?: boolean;
+    isSeniorDiscount?: boolean;
     totalAmount?: number;
     paymentInfo?: any;
     footerMessage?: string;

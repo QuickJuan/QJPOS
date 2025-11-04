@@ -91,6 +91,13 @@ Route::middleware([
                 return Inertia::render('ReceiptPreview');
             })->name('receipt-preview');
 
+            // Receipt Route
+            Route::get('/receipt/{id}', function ($id) {
+                return Inertia::render('Receipt', [
+                    'receiptId' => $id,
+                ]);
+            })->name('receipt');
+
             // ROUTE FOR ATTENDANCE
             Route::as('attendance.')
                 ->prefix('/attendance')

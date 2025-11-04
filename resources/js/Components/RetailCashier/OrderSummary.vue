@@ -3,9 +3,7 @@
         class="h-full flex flex-col bg-gray-50 shadow-lg border-2 border-gray-200 w-full"
     >
         <!-- Customer Information -->
-        <CustomerInfo
-            :table-info="tableInfo"
-        />
+        <CustomerInfo :table-info="tableInfo" />
 
         <!-- Cart Items Area -->
         <div class="flex-1 flex flex-col min-h-0">
@@ -35,6 +33,7 @@
             :selected-items-for-discount="selectedItemsForDiscount"
             :cart="cart"
             :total-amount="finalTotal"
+            :applied-discount="appliedDiscount"
             @update-order-type="updateOrderType"
             @save-order="handleSaveOrder"
             @checkout="handleCheckout"
@@ -119,6 +118,7 @@ const appliedDiscount = ref<{
     selectedItems: number[];
     discountAmount: number;
     discountType: string;
+    removeTax?: boolean;
 } | null>(null);
 
 // Computed values
@@ -143,13 +143,54 @@ const vatableSubtotal = computed(() => {
 
 const discountAmount = computed(() => {
     if (!appliedDiscount.value) return 0;
-    return appliedDiscount.value.discountAmount;
+
+    const discount = appliedDiscount.value;
+    const isSeniorDiscount = discount.discountType === 'senior' ||
+                           discount.discountName?.toLowerCase().includes('senior');
+
+    if (discount.removeTax && isSeniorDiscount) {
+        // Special calculation for Senior Citizen Discount (20% on VAT-exempt amount)
+        const vatableAmount = subtotal.value / 1.12;
+        return vatableAmount * 0.2; // 20% discount on VAT-exempt amount
+    }
+
+    return discount.discountAmount;
 });
 
-const discountedVatableSubtotal = computed(
-    () => vatableSubtotal.value - discountAmount.value
-);
-const tax = computed(() => discountedVatableSubtotal.value * 0.12);
+const discountedVatableSubtotal = computed(() => {
+    if (!appliedDiscount.value) return vatableSubtotal.value;
+
+    const discount = appliedDiscount.value;
+    const isSeniorDiscount = discount.discountType === 'senior' ||
+                           discount.discountName?.toLowerCase().includes('senior');
+
+    if (discount.removeTax && isSeniorDiscount) {
+        // For Senior Citizen: VAT-exempt amount - 20% discount
+        const vatableAmount = subtotal.value / 1.12;
+        return vatableAmount - discountAmount.value;
+    } else if (discount.removeTax) {
+        // Remove tax first, then apply discount
+        const vatableAmount = subtotal.value / 1.12;
+        return vatableAmount - discountAmount.value;
+    } else {
+        // Standard: apply discount after tax calculation
+        return vatableSubtotal.value - discountAmount.value;
+    }
+});
+
+const tax = computed(() => {
+    const discount = appliedDiscount.value;
+    const isSeniorDiscount = discount && (discount.discountType === 'senior' ||
+                           discount.discountName?.toLowerCase().includes('senior'));
+
+    if (discount?.removeTax && isSeniorDiscount) {
+        // Senior Citizens are VAT-exempt
+        return 0;
+    }
+
+    return discountedVatableSubtotal.value * 0.12;
+});
+
 const total = computed(() => discountedVatableSubtotal.value + tax.value);
 
 // Aliases for template compatibility
@@ -274,6 +315,7 @@ const handleDiscountApplied = (discountData: {
     selectedItems: number[];
     discountAmount: number;
     discountType: string;
+    removeTax?: boolean;
 }) => {
     appliedDiscount.value = discountData;
     selectedItemsForDiscount.value = [];
