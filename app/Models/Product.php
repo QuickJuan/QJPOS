@@ -28,6 +28,7 @@ class Product extends Model implements HasMedia
         'vat_inclusive',
         'vat_rate',
         'track_inventory',
+        'total_onhand',
         'minimum_stock_level',
         'maximum_stock_level',
     ];

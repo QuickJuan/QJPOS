@@ -36,7 +36,9 @@
                     >
                         <div class="flex items-start justify-between">
                             <div class="flex-1 min-w-0">
-                                <div class="flex items-start justify-between mb-1">
+                                <div
+                                    class="flex items-start justify-between mb-1"
+                                >
                                     <h4
                                         class="font-medium text-secondary-900 text-sm leading-tight flex-1"
                                     >
@@ -45,30 +47,69 @@
                                     <!-- Order Type Badge -->
                                     <span
                                         v-if="item.order_type"
-                                        :class="getOrderTypeBadgeClass(item.order_type)"
+                                        :class="
+                                            getOrderTypeBadgeClass(
+                                                item.order_type
+                                            )
+                                        "
                                         class="text-xs px-2 py-0.5 rounded-full font-medium ml-2 flex-shrink-0"
                                     >
                                         {{ getOrderTypeLabel(item.order_type) }}
                                     </span>
                                 </div>
                                 <div class="flex items-center justify-between">
-                                    <p class="text-xs text-secondary-600">
-                                        {{ item.quantity }} ×
-                                        {{ formatMoney(item.price) }}
-                                    </p>
-                                    <p class="text-xs text-secondary-500 font-medium">
-                                        {{ formatMoney((item.quantity * item.price).toFixed(2)) }}
-                                    </p>
+                                    <div class="flex flex-col">
+                                        <p class="text-xs text-secondary-600">
+                                            {{ item.quantity }} ×
+                                            <span
+                                                v-if="hasDiscount(item.id)"
+                                                class="line-through text-red-500"
+                                            >
+                                                {{ formatMoney(getBasePrice(item)) }}
+                                            </span>
+                                            <span v-else>
+                                                {{ formatMoney(getBasePrice(item)) }}
+                                            </span>
+                                        </p>
+                                        <p
+                                            v-if="hasDiscount(item.id)"
+                                            class="text-xs text-green-600 font-medium"
+                                        >
+                                            Discounted:
+                                            {{ getDiscountedPrice(item) }}
+                                        </p>
+                                    </div>
+                                    <div class="flex flex-col items-end">
+                                        <p
+                                            v-if="hasDiscount(item.id)"
+                                            class="text-xs text-secondary-500 line-through"
+                                        >
+                                            {{
+                                                formatMoney(
+                                                    (
+                                                        item.quantity *
+                                                        item.price
+                                                    ).toFixed(2)
+                                                )
+                                            }}
+                                        </p>
+                                        <p
+                                            class="text-xs text-secondary-500 font-medium"
+                                        >
+                                            {{
+                                                hasDiscount(item.id)
+                                                    ? getDiscountedTotal(item)
+                                                    : formatMoney(item.sub_total)
+                                            }}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Selected Options as Sub-items -->
                         <div
-                            v-if="
-                                item.selected_options &&
-                                item.selected_options.length > 0
-                            "
+                            v-if="item.selected_options && item.selected_options.length > 0"
                             class="mt-2 ml-4 space-y-1"
                         >
                             <div
@@ -81,11 +122,13 @@
                                         class="w-1 h-1 bg-secondary-400 rounded-full flex-shrink-0"
                                     ></div>
                                     <span class="text-xs text-secondary-600">
-                                        {{ option.product.name }}
+                                        {{
+                                            option.product?.name || option.name
+                                        }}
                                     </span>
                                 </div>
                                 <span class="text-xs text-secondary-600">
-                                    +{{ formatMoney(option.price) }}
+                                    +{{ formatMoney(option.price || 0) }}
                                 </span>
                             </div>
                         </div>
@@ -113,6 +156,14 @@ import { formatMoney } from "@/Utils/FormatMoney";
 const props = defineProps<{
     orderItems: any[];
     selectedItemsForDiscount: number[];
+    appliedDiscount?: {
+        discountId: string;
+        discountName: string;
+        selectedItems: number[];
+        discountAmount: number;
+        discountType: string;
+        removeTax?: boolean;
+    } | null;
 }>();
 
 defineEmits<{
@@ -120,6 +171,116 @@ defineEmits<{
     editItem: [item: any];
     deleteItem: [item: any];
 }>();
+
+// Helper functions for discount display
+const hasDiscount = (itemId: number) => {
+    return props.appliedDiscount?.selectedItems?.includes(itemId) || false;
+};
+
+const getBasePrice = (item: any) => {
+    // The item.price is already the total price including options
+    // We need to calculate the base price by subtracting options
+    let optionsTotal = 0;
+    if (item.selected_options && Array.isArray(item.selected_options)) {
+        optionsTotal = item.selected_options.reduce((sum: number, option: any) => {
+            return sum + parseFloat(String(option.price || 0));
+        }, 0);
+    }
+    const basePrice = parseFloat(String(item.price)) - optionsTotal;
+    return basePrice;
+};
+
+const getDiscountedPrice = (item: any) => {
+    if (!props.appliedDiscount || !hasDiscount(item.id)) {
+        return formatMoney(item.price);
+    }
+
+    const discount = props.appliedDiscount;
+    const itemPrice = parseFloat(item.price || item.average_cost || "0");
+    const quantity = item.quantity;
+    const lineTotal = itemPrice * quantity;
+
+    const isSeniorDiscount =
+        discount.discountName?.toLowerCase().includes("senior") ||
+        discount.discountType === "senior";
+
+    if (discount.removeTax && isSeniorDiscount) {
+        // Special calculation for Senior Citizen Discount (20% on VAT-exempt amount)
+        const vatableAmount = lineTotal / 1.12;
+        const discountedPrice =
+            (vatableAmount - vatableAmount * 0.2) / quantity;
+        return formatMoney(discountedPrice.toFixed(2));
+    } else if (discount.removeTax) {
+        // Remove tax first, then apply discount
+        const vatableAmount = lineTotal / 1.12;
+        let discountedAmount = vatableAmount;
+        if (discount.discountType === "percentage") {
+            discountedAmount =
+                vatableAmount -
+                (vatableAmount * (discount.discountAmount / 100)) / quantity;
+        } else {
+            discountedAmount =
+                vatableAmount - discount.discountAmount / quantity;
+        }
+        return formatMoney(discountedAmount.toFixed(2));
+    } else {
+        // Standard calculation based on vatable amount
+        const vatableAmount = lineTotal / 1.12;
+        let discountedAmount = vatableAmount;
+        if (discount.discountType === "percentage") {
+            discountedAmount =
+                vatableAmount -
+                (vatableAmount * (discount.discountAmount / 100)) / quantity;
+        } else {
+            discountedAmount =
+                vatableAmount - discount.discountAmount / quantity;
+        }
+        return formatMoney(discountedAmount.toFixed(2));
+    }
+};
+
+const getDiscountedTotal = (item: any) => {
+    if (!props.appliedDiscount || !hasDiscount(item.id)) {
+        return formatMoney((item.quantity * item.price).toFixed(2));
+    }
+
+    const discount = props.appliedDiscount;
+    const itemPrice = parseFloat(item.price || item.average_cost || "0");
+    const quantity = item.quantity;
+    const lineTotal = itemPrice * quantity;
+
+    const isSeniorDiscount =
+        discount.discountName?.toLowerCase().includes("senior") ||
+        discount.discountType === "senior";
+
+    let discountedLineTotal = lineTotal;
+
+    if (discount.removeTax && isSeniorDiscount) {
+        // Special calculation for Senior Citizen Discount (20% on VAT-exempt amount)
+        const vatableAmount = lineTotal / 1.12;
+        discountedLineTotal = vatableAmount - vatableAmount * 0.2;
+    } else if (discount.removeTax) {
+        // Remove tax first, then apply discount
+        const vatableAmount = lineTotal / 1.12;
+        if (discount.discountType === "percentage") {
+            discountedLineTotal =
+                vatableAmount - vatableAmount * (discount.discountAmount / 100);
+        } else {
+            discountedLineTotal = vatableAmount - discount.discountAmount;
+        }
+    } else {
+        // Standard calculation based on vatable amount
+        const vatableAmount = lineTotal / 1.12;
+        if (discount.discountType === "percentage") {
+            discountedLineTotal =
+                lineTotal - vatableAmount * (discount.discountAmount / 100);
+        } else {
+            discountedLineTotal = lineTotal - discount.discountAmount;
+        }
+    }
+
+    return formatMoney(discountedLineTotal.toFixed(2));
+};
 
 // Refs for the scrollable container
 const cartContainer = ref<HTMLDivElement>();

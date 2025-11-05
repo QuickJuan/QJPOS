@@ -57,4 +57,9 @@ class CartItem extends Model
     {
         return $this->belongsTo(Discount::class);
     }
+
+    public function selectedOptions()
+    {
+        return $this->belongsToMany(OptionItem::class, 'cart_item_options', 'cart_item_id', 'option_item_id');
+    }
 }

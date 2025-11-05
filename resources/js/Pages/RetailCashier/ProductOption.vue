@@ -231,7 +231,6 @@ import {
 } from "primevue";
 import Header from "./Partials/Header.vue";
 import ChevronLeftIcon from "@/Components/icons/ChevronLeftIcon.vue";
-import CubeIcon from "@/Components/icons/CubeIcon.vue";
 import Product from "@/Types/Product";
 import CheckIcon from "@/Components/icons/CheckIcon.vue";
 import ImageIcon from "@/Components/icons/ImageIcon.vue";
@@ -265,26 +264,36 @@ const calculateTotal = () => {
 };
 
 const addToCart = () => {
+    // Get table ID and order type from URL params
+    const params = new URLSearchParams(window.location.search);
+    const tableId = params.get("tableId");
+    const orderType = params.get("orderType") || "dine-in";
+
     router.post(
         route("retail-cashier.cart.add"),
         {
-            product_id: props.product.data?.id,
+            product_id: props.product?.data?.id,
             selected_options: selectedOptions.value,
             quantity: 1,
             total_price: calculateTotal(),
+            table_id: tableId,
+            order_type: orderType,
         },
         {
             onSuccess: () => {
                 // Navigate back to index
-                router.visit(route("retail-cashier.index"));
+                router.visit(
+                    route("retail-cashier.index", { tableId: tableId })
+                );
                 toast.add({
-                    severity: "error",
-                    summary: "Error",
-                    detail: page.props.flash.error,
+                    severity: "success",
+                    summary: "Success",
+                    detail: page.props.flash.success,
                     life: 3000,
                 });
             },
             onError: (errors) => {
+                console.log(errors);
                 alert(
                     "Failed to add item to cart: " +
                         (errors.message || "Unknown error")

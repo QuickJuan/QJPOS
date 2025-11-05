@@ -7,7 +7,7 @@
             <h1 class="text-lg font-bold mb-1">{{ businessName }}</h1>
             <p class="text-xs">{{ businessAddress }}</p>
             <p class="text-xs">{{ businessPhone }}</p>
-            <div class="border-b border-dashed my-2"></div>
+            <div class="border-b border-dashed"></div>
         </div>
 
         <!-- Receipt Info -->
@@ -38,7 +38,7 @@
             </div>
         </div>
 
-        <div class="border-b border-dashed my-2"></div>
+        <div class="border-b border-dashed"></div>
 
         <!-- Order Items -->
         <div class="mb-3">
@@ -46,7 +46,24 @@
             <div v-for="item in orderItems" :key="item.id" class="mb-1">
                 <div class="flex justify-between">
                     <span class="flex-1">{{ item.name }}</span>
-                    <span>{{ formatMoney(item.price) }}</span>
+                    <div class="text-right">
+                        <span
+                            v-if="item.discount > 0"
+                            class="line-through text-red-500 text-xs"
+                        >
+                            {{ formatMoney(item.price) }}
+                        </span>
+                        <span v-if="item.discount > 0" class="block">
+                            {{
+                                formatMoney(
+                                    item.price - item.discount / item.quantity
+                                )
+                            }}
+                        </span>
+                        <span v-else>
+                            {{ formatMoney(item.price) }}
+                        </span>
+                    </div>
                 </div>
                 <div
                     class="flex justify-between text-xs text-gray-600 ml-2"
@@ -54,8 +71,24 @@
                 >
                     <span
                         >{{ item.quantity }} x
-                        {{ formatMoney(item.unit_price) }}</span
-                    >
+                        <span
+                            v-if="item.discount > 0"
+                            class="line-through text-red-500"
+                        >
+                            {{ formatMoney(item.unit_price) }}
+                        </span>
+                        <span v-if="item.discount > 0" class="inline">
+                            {{
+                                formatMoney(
+                                    item.unit_price -
+                                        item.discount / item.quantity
+                                )
+                            }}
+                        </span>
+                        <span v-else>
+                            {{ formatMoney(item.unit_price) }}
+                        </span>
+                    </span>
                     <span></span>
                 </div>
                 <!-- Selected Options -->
@@ -85,7 +118,7 @@
             </div>
         </div>
 
-        <div class="border-b border-dashed my-2"></div>
+        <div class="border-b border-dashed"></div>
 
         <!-- Totals -->
         <div class="mb-3">
@@ -136,7 +169,7 @@
                 >
             </div>
             <div
-                class="border-t border-dashed my-1 pt-1 flex justify-between font-bold"
+                class="border-t border-dashed pt-1 flex justify-between font-bold"
             >
                 <span>TOTAL:</span>
                 <span>{{ formatMoney(totalAmount) }}</span>
@@ -160,7 +193,7 @@
             </div>
         </div>
 
-        <div class="border-b border-dashed my-2"></div>
+        <div class="border-b border-dashed"></div>
 
         <!-- Footer -->
         <div class="text-center text-xs">
