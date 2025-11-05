@@ -3,7 +3,7 @@
         class="h-full flex flex-col bg-gray-50 shadow-lg border-2 border-gray-200 w-full"
     >
         <!-- Customer Information -->
-        <CustomerInfo :table-info="tableInfo" />
+        <CustomerInfo :table-info="tableInfo" :cart="cart" />
 
         <!-- Cart Items Area -->
         <div class="flex-1 flex flex-col min-h-0">
@@ -145,8 +145,9 @@ const discountAmount = computed(() => {
     if (!appliedDiscount.value) return 0;
 
     const discount = appliedDiscount.value;
-    const isSeniorDiscount = discount.discountType === 'senior' ||
-                           discount.discountName?.toLowerCase().includes('senior');
+    const isSeniorDiscount =
+        discount.discountType === "senior" ||
+        discount.discountName?.toLowerCase().includes("senior");
 
     if (discount.removeTax && isSeniorDiscount) {
         // Special calculation for Senior Citizen Discount (20% on VAT-exempt amount)
@@ -161,8 +162,9 @@ const discountedVatableSubtotal = computed(() => {
     if (!appliedDiscount.value) return vatableSubtotal.value;
 
     const discount = appliedDiscount.value;
-    const isSeniorDiscount = discount.discountType === 'senior' ||
-                           discount.discountName?.toLowerCase().includes('senior');
+    const isSeniorDiscount =
+        discount.discountType === "senior" ||
+        discount.discountName?.toLowerCase().includes("senior");
 
     if (discount.removeTax && isSeniorDiscount) {
         // For Senior Citizen: VAT-exempt amount - 20% discount
@@ -180,8 +182,10 @@ const discountedVatableSubtotal = computed(() => {
 
 const tax = computed(() => {
     const discount = appliedDiscount.value;
-    const isSeniorDiscount = discount && (discount.discountType === 'senior' ||
-                           discount.discountName?.toLowerCase().includes('senior'));
+    const isSeniorDiscount =
+        discount &&
+        (discount.discountType === "senior" ||
+            discount.discountName?.toLowerCase().includes("senior"));
 
     if (discount?.removeTax && isSeniorDiscount) {
         // Senior Citizens are VAT-exempt
@@ -362,7 +366,8 @@ const handleCheckout = (data: any) => {
     }
 
     router.put(
-        route("retail-cashier.cart.place-order", { cartId: data.cart_id })
+        route("retail-cashier.cart.place-order", { cartId: data.cart_id }),
+        { discountId: data.discount_id }
     );
 };
 

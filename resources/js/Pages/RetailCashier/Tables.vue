@@ -460,7 +460,7 @@ const handleTakeOrder = (data: any) => {
                 guest_name: data.guest_name,
             },
             {
-                onSuccess: () => {
+                    onSuccess: () => {
                     toast.add({
                         severity: "success",
                         summary: "Order Started",
@@ -468,7 +468,6 @@ const handleTakeOrder = (data: any) => {
                         life: 3000,
                     });
                     closeTableModal();
-                    router.visit(route("retail-cashier.index"));
                 },
                 onError: () => {
                     toast.add({

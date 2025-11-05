@@ -27,6 +27,18 @@ class ProductResource extends JsonResource
             'category'      => $this->whenLoaded('category'),
             'brand'         => $this->whenLoaded('brand'),
             'options'       => OptionResource::collection($this->whenLoaded('options')),
+            'product_packagings' => $this->whenLoaded('productPackagings', function () {
+                return $this->productPackagings->map(function ($packaging) {
+                    return [
+                        'id' => $packaging->id,
+                        'unit_measure' => $packaging->unit_measure,
+                        'price' => $packaging->price,
+                        'qty' => $packaging->qty,
+                        'cost' => $packaging->cost,
+                        'featured_image_url' => $packaging->getFirstMediaUrl('featured_image'),
+                    ];
+                });
+            }),
             'featured_image_url' => $this->getFirstMediaUrl('featured_image'),
             'product_images_urls' => $this->getMedia('product_images')->map(fn($media) => $media->getUrl())->toArray(),
         ];

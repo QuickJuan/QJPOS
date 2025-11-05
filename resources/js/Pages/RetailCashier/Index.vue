@@ -81,7 +81,6 @@ const tableId = ref(null);
 const selectedOrderItem = ref<any>(null);
 const selectedCategoryId = ref<number | null>(null);
 const selectedOrderType = ref<any>("dine-in");
-const showReceiptModal = ref(false);
 const receiptData = ref({
     receiptNumber: "",
     date: "",
@@ -250,20 +249,31 @@ onMounted(() => {
     tableId.value = params.get("tableId");
 });
 
-const addToCart = (product: any) => {
+const addToCart = (product: any, packaging?: any) => {
     // Check if product has options
     if (product.options && product.options.length > 0) {
-        // Navigate to options page
-        router.visit(route("retail-cashier.product.options", product.id));
+        // Navigate to options page with order type
+        router.visit(
+            route("retail-cashier.product.options", {
+                product: product.id,
+                orderType: selectedOrderType.value,
+                tableId: tableId.value,
+            })
+        );
     } else {
         // Add directly to cart
+        const price = packaging
+            ? parseFloat(packaging.price || 0)
+            : parseFloat(product.average_cost || "0");
+
         router.post(
             route("retail-cashier.cart.add"),
             {
                 quantity: 1,
                 product_id: product.id,
+                product_packaging_id: packaging?.id || null,
                 table_id: tableId.value,
-                total_price: parseFloat(product.average_cost || "0"),
+                total_price: price,
                 order_type: selectedOrderType.value,
                 selected_options: [],
             },

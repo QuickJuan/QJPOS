@@ -70,10 +70,10 @@ class CartController extends Controller
         }
     }
 
-    public function placeOrder(int $cartId): RedirectResponse
+    public function placeOrder(Request $request, int $cartId): RedirectResponse
     {
         try {
-            $this->cartService->placeOrder($cartId);
+            $this->cartService->placeOrder($request, $cartId);
 
             return redirect()->route('retail-cashier.tables')->with('success', 'Successfully Placed Order.');
         } catch (Exception $e) {

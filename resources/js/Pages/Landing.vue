@@ -97,6 +97,19 @@
                             >Contact Us</a
                         >
                     </li>
+                    <li>
+                        <Link
+                            href="login"
+                            :class="
+                                isSticky
+                                    ? 'text-white hover:text-primary'
+                                    : 'text-primary hover:text-third'
+                            "
+                            class="transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                        >
+                            Sign in
+                        </Link>
+                    </li>
                 </ul>
             </nav>
             <!-- Mobile Nav Dropdown -->
@@ -320,6 +333,7 @@ import HowQuickJuanHelps from "@/Components/HowQuickJuanHelps.vue";
 import ProductsSection from "./Home/ProductsSection.vue";
 
 import ProductPage from "./Products/Index.vue";
+import { Link } from "@inertiajs/vue3";
 
 // Animated client numbers for products
 const fnbClients = ref(0);

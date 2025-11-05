@@ -37,9 +37,10 @@
 import { UserIcon, MapPinIcon } from "@heroicons/vue/24/outline";
 import { ref } from "vue";
 
-defineProps<{
+const props = defineProps<{
+    cart: any;
     tableInfo: any;
 }>();
 
-const currentShift = ref("12");
+const currentShift = ref(props.cart.id);
 </script>

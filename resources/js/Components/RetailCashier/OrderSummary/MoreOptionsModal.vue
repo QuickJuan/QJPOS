@@ -1,0 +1,78 @@
+<template>
+    <Dialog
+        :visible="props.visible"
+        modal
+        header="More Options"
+        :style="{ width: '20rem' }"
+        @update:visible="handleClose"
+    >
+        <div class="space-y-3">
+            <button
+                @click="handleSaveOrder"
+                :disabled="orderItems.length === 0"
+                class="w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center gap-3 bg-gray-100 text-secondary-700 hover:bg-gray-200 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
+            >
+                <BookmarkIcon class="w-5 h-5" />
+                <div class="text-left">
+                    <div class="font-semibold">Save Order</div>
+                    <div class="text-xs opacity-75">
+                        Save order for later processing
+                    </div>
+                </div>
+            </button>
+
+            <button
+                @click="handleApplyDiscount"
+                :disabled="selectedItemsForDiscount.length === 0"
+                class="w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center gap-3 bg-gray-100 text-secondary-700 hover:bg-gray-200 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
+            >
+                <TagIcon class="w-5 h-5" />
+                <div class="text-left flex-1">
+                    <div class="font-semibold flex items-center gap-2">
+                        Apply Discount
+                        <span
+                            v-if="selectedItemsForDiscount.length > 0"
+                            class="bg-yellow-600 text-white text-xs px-1.5 py-0.5 rounded-full"
+                        >
+                            {{ selectedItemsForDiscount.length }}
+                        </span>
+                    </div>
+                    <div class="text-xs opacity-75">
+                        Apply discount to selected items
+                    </div>
+                </div>
+            </button>
+        </div>
+    </Dialog>
+</template>
+
+<script setup lang="ts">
+import { Dialog } from "primevue";
+import { BookmarkIcon, TagIcon } from "@heroicons/vue/24/outline";
+
+const props = defineProps<{
+    visible: boolean;
+    orderItems: any[];
+    selectedItemsForDiscount: number[];
+}>();
+
+const emit = defineEmits<{
+    saveOrder: [];
+    openDiscountModal: [];
+    "update:visible": [value: boolean];
+}>();
+
+const handleSaveOrder = () => {
+    emit("saveOrder");
+    emit("update:visible", false);
+};
+
+const handleApplyDiscount = () => {
+    emit("openDiscountModal");
+    emit("update:visible", false);
+};
+
+const handleClose = () => {
+    emit("update:visible", false);
+};
+</script>

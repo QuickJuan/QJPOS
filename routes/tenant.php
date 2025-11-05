@@ -80,11 +80,11 @@ Route::middleware([
         ->group(function () {
             Route::get('/home', [HomeController::class, 'index'])->name('home');
 
-            Route::get('/dashboard', function () {
-                return Inertia::render('Dashboard', [
-                    'tenant' => tenant(),
-                ]);
-            })->name('dashboard');
+            // Route::get('/dashboard', function () {
+            //     return Inertia::render('Dashboard', [
+            //         'tenant' => tenant(),
+            //     ]);
+            // })->name('dashboard');
 
             // Receipt Preview Route (for testing)
             Route::get('/receipt-preview', function () {

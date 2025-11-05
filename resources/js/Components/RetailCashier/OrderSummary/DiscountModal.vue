@@ -28,18 +28,26 @@
                                 <p class="font-medium text-secondary-900">
                                     {{ item.name }}
                                 </p>
-                                <p class="text-sm text-secondary-600">
-                                    Qty: {{ item.quantity }} ×
-                                    {{ formatMoney(item.price) }}
+                                <div class="text-sm text-secondary-600">
+                                    <p>Qty: {{ item.quantity }} × {{ formatMoney(item.price) }}</p>
+                                    <div v-if="selectedDiscountId && selectedDiscount" class="mt-1">
+                                        <span class="line-through text-red-500">
+                                            {{ formatMoney((item.quantity * item.price).toFixed(2)) }}
+                                        </span>
+                                        <span class="ml-2 text-green-600 font-medium">
+                                            {{ getDiscountedPrice(item) }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-right ml-4">
+                                <p v-if="selectedDiscountId && selectedDiscount" class="text-xs text-secondary-500 line-through">
+                                    {{ formatMoney((item.quantity * item.price).toFixed(2)) }}
+                                </p>
+                                <p class="font-semibold text-secondary-900">
+                                    {{ selectedDiscountId && selectedDiscount ? getDiscountedPrice(item) : formatMoney((item.quantity * item.price).toFixed(2)) }}
                                 </p>
                             </div>
-                            <p class="font-semibold text-secondary-900 ml-4">
-                                {{
-                                    formatMoney(
-                                        (item.quantity * item.price).toFixed(2)
-                                    )
-                                }}
-                            </p>
                         </div>
                     </div>
                 </div>
@@ -434,6 +442,45 @@ const discountTotal = computed(() => {
     }
 });
 
+// Get discounted price for an item
+const getDiscountedPrice = (item: any) => {
+    if (!selectedDiscount.value) return formatMoney((item.quantity * item.price).toFixed(2));
+
+    const discount = selectedDiscount.value;
+    const itemPrice = parseFloat(item.price || item.average_cost || "0");
+    const quantity = item.quantity;
+    const lineTotal = itemPrice * quantity;
+
+    const isSeniorDiscount = discount.discount_name?.toLowerCase().includes("senior") ||
+                           discount.type === 'senior';
+
+    let discountedLineTotal = lineTotal;
+
+    if (discount.remove_tax && isSeniorDiscount) {
+        // Special calculation for Senior Citizen Discount (20% on VAT-exempt amount)
+        const vatableAmount = lineTotal / 1.12;
+        discountedLineTotal = vatableAmount - (vatableAmount * 0.2); // 20% discount on VAT-exempt amount
+    } else if (discount.remove_tax) {
+        // Remove tax first, then apply discount
+        const vatableAmount = lineTotal / 1.12;
+        if (discount.type === "percentage") {
+            discountedLineTotal = vatableAmount - (vatableAmount * (discount.amount / 100));
+        } else {
+            discountedLineTotal = vatableAmount - Math.min(discount.amount, vatableAmount);
+        }
+    } else {
+        // Standard calculation based on vatable amount
+        const vatableAmount = lineTotal / 1.12;
+        if (discount.type === "percentage") {
+            discountedLineTotal = lineTotal - (vatableAmount * (discount.amount / 100));
+        } else {
+            discountedLineTotal = lineTotal - Math.min(discount.amount, vatableAmount);
+        }
+    }
+
+    return formatMoney(discountedLineTotal.toFixed(2));
+};
+
 // Select discount method
 const selectDiscount = (discountId: string | number) => {
     selectedDiscountId.value = String(discountId);
@@ -442,11 +489,58 @@ const selectDiscount = (discountId: string | number) => {
 const applyDiscount = () => {
     if (!selectedDiscount.value) return;
 
+    // Apply discount to individual cart items instead of overall total
+    const selectedItemIds = props.selectedItems.map((item) => item.id);
+
+    // Calculate discount per item based on the selected discount
+    const discount = selectedDiscount.value;
+    const isSeniorDiscount = discount.discount_name?.toLowerCase().includes("senior") ||
+                           discount.type === 'senior';
+
+    let totalDiscountAmount = 0;
+
+    // Apply discount to each selected item
+    props.selectedItems.forEach((item) => {
+        const itemPrice = parseFloat(item.price || item.average_cost || "0");
+        const quantity = item.quantity;
+        const lineTotal = itemPrice * quantity;
+
+        let itemDiscountAmount = 0;
+
+        if (discount.remove_tax && isSeniorDiscount) {
+            // Special calculation for Senior Citizen Discount (20% on VAT-exempt amount)
+            const vatableAmount = lineTotal / 1.12;
+            itemDiscountAmount = vatableAmount * 0.2; // 20% discount on VAT-exempt amount
+        } else if (discount.remove_tax) {
+            // Remove tax first, then apply discount
+            const vatableAmount = lineTotal / 1.12;
+            if (discount.type === "percentage") {
+                itemDiscountAmount = vatableAmount * (discount.amount / 100);
+            } else {
+                itemDiscountAmount = Math.min(discount.amount, vatableAmount);
+            }
+        } else {
+            // Standard calculation based on vatable amount
+            const vatableAmount = lineTotal / 1.12;
+            if (discount.type === "percentage") {
+                itemDiscountAmount = vatableAmount * (discount.amount / 100);
+            } else {
+                itemDiscountAmount = Math.min(discount.amount, vatableAmount);
+            }
+        }
+
+        // Apply discount to the cart item via API
+        // This would need to be implemented in the backend to apply per-item discounts
+        // For now, we'll emit the data for the parent component to handle
+
+        totalDiscountAmount += itemDiscountAmount;
+    });
+
     const discountData = {
         discountId: selectedDiscountId.value,
         discountName: selectedDiscount.value.discount_name,
-        selectedItems: props.selectedItems.map((item) => item.id),
-        discountAmount: calculatedDiscountAmount.value,
+        selectedItems: selectedItemIds,
+        discountAmount: totalDiscountAmount,
         discountType: selectedDiscount.value.type,
         removeTax: selectedDiscount.value.remove_tax,
     };

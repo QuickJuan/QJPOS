@@ -38,7 +38,7 @@
             <div class="flex gap-3 pt-4 border-t">
                 <button
                     type="button"
-                    @click="visible = false"
+                    @click="handleClose"
                     class="flex-1 py-2 px-2 bg-gray-400 text-white rounded-md hover:bg-gray-500 transition-colors"
                 >
                     Close
@@ -60,6 +60,8 @@
 import { ref, computed, nextTick, watch } from "vue";
 import { Dialog } from "primevue";
 import ReceiptLayout from "@/Components/ReceiptLayout.vue";
+import { route } from "ziggy-js";
+import { router } from "@inertiajs/vue3";
 
 const props = defineProps<{
     visible: boolean;
@@ -103,8 +105,26 @@ const handleKeydown = (event: KeyboardEvent) => {
     }
 };
 
+// Handle close modal
+const handleClose = () => {
+    router.visit(route("retail-cashier.tables"));
+    visible.value = false;
+};
+
 // Print receipt
 const printReceipt = () => {
+    // Get the ReceiptLayout element from the modal
+    const receiptElement = document.querySelector(
+        ".receipt-container"
+    ) as HTMLElement;
+    if (!receiptElement) {
+        console.error("Receipt element not found");
+        return;
+    }
+
+    // Clone the receipt content
+    const receiptClone = receiptElement.cloneNode(true) as HTMLElement;
+
     // Create a print-friendly popup window
     const printWindow = window.open("", "_blank", "width=400,height=600");
     if (printWindow) {
@@ -135,98 +155,25 @@ const printReceipt = () => {
                     .font-bold { font-weight: bold; }
                     .mb-2 { margin-bottom: 8px; }
                     .mb-4 { margin-bottom: 16px; }
-                    .border-t { border-top: 1px solid #000; padding-top: 8px; }
-                    .border-b { border-bottom: 1px solid #000; padding-bottom: 8px; }
+                    .border-t { border-top: 1px solid #000; }
+                    .border-b { border-bottom: 1px solid #000; }
+                    .text-red-600 { color: #dc2626; }
+                    .text-gray-500 { color: #6b7280; }
+                    .text-gray-600 { color: #4b5563; }
+                    .text-xs { font-size: 10px; }
+                    .flex { display: flex; }
+                    .justify-between { justify-content: space-between; }
+                    .flex-1 { flex: 1; }
+                    .ml-2 { margin-left: 8px; }
+                    .mt-2 { margin-top: 8px; }
+                    .mt-4 { margin-top: 16px; }
+                    .mb-1 { margin-bottom: 4px; }
+                    .pt-1 { padding-top: 4px; }
+                    .border-dashed { border-style: dashed; border-width: 1px; }
                 </style>
             </head>
             <body>
-                <div class="receipt-container">
-                    <div class="text-center mb-4">
-                        <div class="font-bold">Quick Juan Restaurant</div>
-                        <div>123 Main Street, Makati City, Philippines</div>
-                        <div>(02) 123-4567</div>
-                    </div>
-
-                    <div class="border-b mb-2">
-                        <div>Receipt: ${props.receiptData.receiptNumber}</div>
-                        <div>Date: ${new Date(
-                            props.receiptData.date
-                        ).toLocaleString()}</div>
-                        <div>Table: ${
-                            props.receiptData.tableNumber || "N/A"
-                        }</div>
-                        <div>Cashier: ${props.receiptData.cashierName}</div>
-                        <div>Order Type: ${props.receiptData.orderType}</div>
-                    </div>
-
-                    <div class="mb-2">
-                        ${props.receiptData.orderItems
-                            .map(
-                                (item) => `
-                            <div class="mb-1">
-                                <div>${item.quantity}x ${
-                                    item.product_name
-                                }</div>
-                                ${
-                                    item.selected_options &&
-                                    item.selected_options.length > 0
-                                        ? item.selected_options
-                                              .map(
-                                                  (opt: any) =>
-                                                      `<div class="text-right">+ ${opt.name}</div>`
-                                              )
-                                              .join("")
-                                        : ""
-                                }
-                                <div class="text-right">₱${item.price}</div>
-                            </div>
-                        `
-                            )
-                            .join("")}
-                    </div>
-
-                    <div class="border-t">
-                        <div class="text-right mb-1">Subtotal: ₱${props.receiptData.subtotal.toFixed(
-                            2
-                        )}</div>
-                        ${
-                            props.receiptData.discountAmount > 0
-                                ? `<div class="text-right mb-1">Discount: -₱${props.receiptData.discountAmount.toFixed(
-                                      2
-                                  )}</div>`
-                                : ""
-                        }
-                        <div class="text-right mb-1">Tax (12%): ₱${props.receiptData.taxAmount.toFixed(
-                            2
-                        )}</div>
-                        <div class="text-right font-bold">Total: ₱${props.receiptData.totalAmount.toFixed(
-                            2
-                        )}</div>
-                    </div>
-
-                    ${
-                        props.receiptData.paymentInfo
-                            ? `
-                        <div class="border-t mt-2">
-                            <div class="text-right mb-1">Paid: ₱${
-                                props.receiptData.paymentInfo.amount_paid
-                            }</div>
-                            <div class="text-right mb-1">Change: ₱${props.receiptData.paymentInfo.change.toFixed(
-                                2
-                            )}</div>
-                            <div class="text-right">Method: ${
-                                props.receiptData.paymentInfo.method
-                            }</div>
-                        </div>
-                    `
-                            : ""
-                    }
-
-                    <div class="text-center mt-4">
-                        <div>Thank you for your business!</div>
-                        <div>Generated by Quick Juan POS System</div>
-                    </div>
-                </div>
+                ${receiptClone.outerHTML}
 
                 <div class="no-print text-center mt-4">
                     <button onclick="window.print()">Print</button>
@@ -238,6 +185,7 @@ const printReceipt = () => {
         printWindow.document.close();
     }
 };
+
 
 // Auto-focus print button when modal opens
 watch(

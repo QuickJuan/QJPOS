@@ -37,7 +37,8 @@ class CashierSessionController extends Controller
 
         // Get categories with products directly (will be cached in browser)
         $categoriesQuery = Category::with(['products' => function ($query) {
-            $query->where('is_active', true);
+            $query->where('is_active', true)
+                ->with('productPackagings', 'options');
         }])->get();
 
         $categories = CategoryResource::collection($categoriesQuery);
@@ -122,7 +123,7 @@ class CashierSessionController extends Controller
         $product = Product::with(['options.optionItems.product.media'])->findOrFail($productId);
 
         return Inertia::render('RetailCashier/ProductOption', [
-            'product' => new ProductResource($product),
+            'product' => ProductResource::make($product),
         ]);
     }
 

@@ -81,9 +81,7 @@
                     >
                         {{
                             formatMoney(
-                                parseFloat(product.average_cost || "0").toFixed(
-                                    2
-                                )
+                                parseFloat(product.average_cost || "0").toFixed(2)
                             )
                         }}
                     </p>
@@ -98,6 +96,7 @@
             </div>
         </div>
     </div>
+
 </template>
 
 <script setup lang="ts">
@@ -105,13 +104,15 @@ import Product from "@/Types/Product";
 import ImageIcon from "../icons/ImageIcon.vue";
 import { formatMoney } from "@/Utils/FormatMoney";
 
-defineProps<{
+
+const props = defineProps<{
     products: Product[];
     categoryName?: string;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
     backToCategories: [];
     addToCart: [product: Product];
 }>();
+
 </script>

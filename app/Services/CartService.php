@@ -1,6 +1,7 @@
 <?php
 namespace App\Services;
 
+use App\Enums\TableRoomStatusType;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\CashierSession;
@@ -220,12 +221,15 @@ class CartService
         return $cartItem->delete();
     }
 
-    public function placeOrder(int $cartId): int | RedirectResponse
+    public function placeOrder(Request $request, int $cartId): int | RedirectResponse
     {
         // Get the current open cashier session
         $cart = Cart::findOrFail($cartId);
 
-        return $cart->cartItems()->update(['is_served' => true]);
+        return $cart->cartItems()->update([
+            'is_served'   => true,
+            'discount_id' => $request->filled('discountId') ?? null,
+        ]);
     }
 
     public function settleBill(Request $request, int $cartId): mixed
@@ -267,14 +271,22 @@ class CartService
             ]);
         }
 
-        // Mark cart items as served
-        $cart->cartItems()->update(['is_served' => true]);
+        // Delete cart items after converting to order items
+        $cart->cartItems()->delete();
+
+        // Delete the cart itself
+        $cart->delete();
 
         // If there's a table, mark it as vacant
         if ($cart->table_room_id) {
             $tableRoom = $cart->tableRoom;
             if ($tableRoom) {
-                $tableRoom->update(['status' => 'vacant']);
+                $tableRoom->update([
+                    'status'        => TableRoomStatusType::VACANT->value,
+                    'time_in'       => null,
+                    'customer_name' => null,
+                    'number_of_pax' => null,
+                ]);
             }
         }
 

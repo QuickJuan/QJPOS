@@ -1,25 +1,24 @@
 <?php
 namespace App\Filament\Tenant\Resources;
 
-use Filament\Forms;
-use Filament\Tables;
-use App\Models\Product;
-use Filament\Forms\Form;
-use Filament\Tables\Table;
-use Filament\Resources\Resource;
-use Filament\Tables\Actions\Action;
-use Filament\Forms\Components\Select;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Forms\Components\TextInput;
-use Filament\Notifications\Notification;
-use Filament\Tables\Actions\ActionGroup;
 use App\Filament\Imports\ProductImporter;
-use Filament\Forms\Components\RichEditor;
-use Filament\Tables\Actions\ImportAction;
 use App\Filament\Tenant\Resources\ProductResource\Pages;
-use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
-use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 use App\Filament\Tenant\Resources\ProductResource\RelationManagers;
+use App\Models\Product;
+use Filament\Forms\Components\RichEditor;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Form;
+use Filament\Notifications\Notification;
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Actions\Action;
+use Filament\Tables\Actions\ActionGroup;
+use Filament\Tables\Actions\ImportAction;
+use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
 
 class ProductResource extends Resource
 {
@@ -64,12 +63,11 @@ class ProductResource extends Resource
                     ->multiple()
                     ->preload(),
 
-
                 TextInput::make('uuid')
                     ->required()
                     ->maxLength(150)
                     ->label('UUID')
-                    ->default(fn () => (string) \Illuminate\Support\Str::uuid())
+                    ->default(fn() => (string) \Illuminate\Support\Str::uuid())
                     ->disabled()
                     ->dehydrated(),
 
@@ -89,12 +87,22 @@ class ProductResource extends Resource
                     ->searchable()
                     ->preload(),
 
+                TextInput::make('total_onhand')
+                    ->required()
+                    ->default(0)
+                    ->numeric()
+                    ->label('Total Onhand'),
+
+                TextInput::make('average_cost')
+                    ->required()
+                    ->default(0)
+                    ->numeric()
+                    ->label('Price'),
+
                 RichEditor::make('description')
                     ->maxLength(500)
                     ->ColumnSpan(2)
                     ->label('Description'),
-
-
 
                 SpatieMediaLibraryFileUpload::make('featured_image')
                     ->label('Featured Image')
