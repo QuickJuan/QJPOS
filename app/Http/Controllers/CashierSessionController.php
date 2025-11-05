@@ -11,6 +11,7 @@ use App\Models\Category;
 use App\Models\Discount;
 use App\Models\Product;
 use App\Models\TableRoom;
+use App\Models\TableRoomLocation;
 use App\Services\CashierSessionService;
 use Exception;
 use Illuminate\Http\RedirectResponse;
@@ -27,7 +28,7 @@ class CashierSessionController extends Controller
         $this->cashierSessionService = $cashierSessionService;
     }
 
-    public function index(): Response
+    public function index(Request $request): Response
     {
         // Check if the current auth user has pending cashiering.
         $pendingCashiering = $this->cashierSessionService->model
@@ -49,7 +50,14 @@ class CashierSessionController extends Controller
         // Get cart items for current session
         $cartItems = [];
         if ($pendingCashiering) {
-            $cart = Cart::where('cashier_id', Auth::id())
+            $cartQuery = Cart::query();
+
+            if ($request->has('tableId')) {
+                $cartQuery->where('table_room_id', $request->input('tableId'));
+                $currentTable = TableRoom::find($request->input('tableId'));
+            }
+
+            $cart = $cartQuery->where('cashier_id', Auth::id())
                 ->where('cashier_session_id', $pendingCashiering->id)
                 ->with(['cartItems.product'])
                 ->first();
@@ -64,6 +72,8 @@ class CashierSessionController extends Controller
                         'price'            => $item->price,
                         'amount'           => $item->amount,
                         'sub_total'        => $item->sub_total,
+                        'is_served'        => (bool) $item->is_served,
+                        'order_type'       => $item->order_type,
                         'selected_options' => $item->selected_options ?? [],
                         'checked'          => false,
                     ])->toArray();
@@ -74,8 +84,10 @@ class CashierSessionController extends Controller
             'categories'         => $categories,
             'pendingCashiering'  => $pendingCashiering,
             'currentUser'        => Auth::user(),
+            'cart'               => $cart,
             'cartItems'          => $cartItems,
             'availableDiscounts' => $discounts,
+            'currentTable'       => $currentTable ?? [],
         ]);
     }
 
@@ -135,14 +147,18 @@ class CashierSessionController extends Controller
                 'name'                   => $table->name,
                 'chairs'                 => $table->chairs,
                 'status'                 => $table->status,
+                'merge_to'               => $table->merge_to,
                 'sort_number'            => $table->sort_number,
                 'table_room_location_id' => $table->table_room_location_id,
                 'featured_image_url'     => $table->getFeaturedImageUrl() ?: null,
                 'current_order'          => null,
+                'number_of_pax'          => $table->number_of_pax,
+                'time_in'                => $table->time_in,
+                'customer_name'          => $table->customer_name,
             ]);
 
         // Get locations
-        $locations = \App\Models\TableRoomLocation::all()
+        $locations = TableRoomLocation::all()
             ->map(fn($location) => [
                 'id'   => $location->id,
                 'name' => $location->name,
@@ -158,9 +174,9 @@ class CashierSessionController extends Controller
     public function createOrder(Request $request): RedirectResponse
     {
         try {
-            $table = TableRoom::findOrFail($request->table_id);
-            $table->update(['status' => 'occupied']);
-            return redirect()->route('retail-cashier.index')->with('success', 'Order started successfully');
+            $this->cashierSessionService->createOrder($request);
+
+            return redirect()->route('retail-cashier.index', ['tableId' => $request->table_id])->with('success', 'Order started successfully');
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'Failed to start order: ' . $e->getMessage());
         }

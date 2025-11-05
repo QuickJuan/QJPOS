@@ -86,6 +86,18 @@ Route::middleware([
                 ]);
             })->name('dashboard');
 
+            // Receipt Preview Route (for testing)
+            Route::get('/receipt-preview', function () {
+                return Inertia::render('ReceiptPreview');
+            })->name('receipt-preview');
+
+            // Receipt Route
+            Route::get('/receipt/{id}', function ($id) {
+                return Inertia::render('Receipt', [
+                    'receiptId' => $id,
+                ]);
+            })->name('receipt');
+
             // ROUTE FOR ATTENDANCE
             Route::as('attendance.')
                 ->prefix('/attendance')
@@ -102,21 +114,27 @@ Route::middleware([
             Route::as('retail-cashier.')
                 ->prefix('/retail-cashier')
                 ->group(function () {
-                    Route::controller(CashierSessionController::class)->group(function () {
-                        Route::get('/', 'index')->name('index');
-                        Route::get('/tables', 'tables')->name('tables');
-                        Route::get('/preview', 'preview')->name('preview');
-                        Route::get('/product/{product}/options', 'productOptions')->name('product.options');
-                        Route::post('/session/start', 'startSession')->name('session.start');
-                        Route::post('/session/close', 'closeSession')->name('session.close');
-                        Route::post('/cart/create-order', 'createOrder')->name('cart.create-order');
-                    });
+                    Route::controller(CashierSessionController::class)
+                        ->group(function () {
+                            Route::get('/', 'index')->name('index');
+                            Route::get('/tables', 'tables')->name('tables');
+                            Route::get('/preview', 'preview')->name('preview');
+                            Route::get('/product/{product}/options', 'productOptions')->name('product.options');
+                            Route::post('/session/start', 'startSession')->name('session.start');
+                            Route::post('/session/close', 'closeSession')->name('session.close');
+                            Route::post('/cart/create-order', 'createOrder')->name('cart.create-order');
+                        });
 
-                    Route::controller(CartController::class)->group(function () {
-                        Route::post('/cart/add', 'addToCart')->name('cart.add');
-                        Route::put('/cart/item/{cartItemId}', 'updateCartItem')->name('cart.update');
-                        Route::delete('/cart/item/{cartItemId}', 'deleteCartItem')->name('cart.delete');
-                    });
+                    Route::controller(CartController::class)
+                        ->group(function () {
+                            Route::post('/cart/add', 'addToCart')->name('cart.add');
+                            Route::put('/cart/item/place-order/{cartId}', 'placeOrder')->name('cart.place-order');
+                            Route::post('/cart/settle-bill/{cartId}', 'settleBill')->name('cart.settle-bill');
+                            Route::put('/cart/item/{cartItemId}', 'updateCartItem')->name('cart.update');
+                            Route::put('/cart/item/discount/{cartItemId}', 'applyDiscountToCartItem')->name('cart.apply-discount');
+                            Route::put('/cart/item/void/{cartItemId}', 'voidCartItem')->name('cart.void-cart');
+                            Route::delete('/cart/item/{cartItemId}', 'deleteCartItem')->name('cart.delete');
+                        });
                 });
 
             Route::as('table-management.')
@@ -136,6 +154,7 @@ Route::middleware([
                     Route::get('/list', 'list')->name('list');
                     Route::post('/tables', 'store')->name('store');
                     Route::put('/tables/{tableId}', 'update')->name('update');
+                    Route::put('/tables/{tableId}/merge', 'mergeTable')->name('merge');
                     Route::delete('/tables/{tableId}', 'destroy')->name('destroy');
                     Route::post('/tables/bulk-update-positions', 'bulkUpdatePositions')->name('bulk-update-positions');
                 });

@@ -1,11 +1,14 @@
 <?php
 namespace App\Services;
 
-use Exception;
+use App\Enums\TableRoomStatusType;
 use App\Models\Cart;
 use App\Models\CartItem;
-use Illuminate\Http\Request;
 use App\Models\CashierSession;
+use App\Models\TableRoom;
+use Carbon\Carbon;
+use Exception;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class CashierSessionService
@@ -57,12 +60,39 @@ class CashierSessionService
         return $closeSession;
     }
 
-    public function addToCart(Request $request): bool|CartItem
+    public function createOrder(Request $request)
+    {
+        $table = TableRoom::findOrFail($request->table_id);
+        $table->update([
+            'status'        => TableRoomStatusType::OCCUPIED->value,
+            'time_in'       => Carbon::now(),
+            'customer_name' => $request->guest_name,
+            'number_of_pax' => $request->pax,
+        ]);
+
+        $cashierSession = $this->model->openSession()->first();
+
+        if (! $cashierSession) {
+            throw new Exception('No active cashier session found.');
+        }
+
+        $cart = Cart::firstOrCreate([
+            'cashier_id'         => Auth::id(),
+            'cashier_session_id' => $cashierSession->id,
+            'table_room_id'      => $table->id,
+        ]);
+
+        if (! $cart) {
+            throw new Exception('There was an error in creating cart.');
+        }
+
+        return $cart;
+    }
+
+    public function addToCart(Request $request): bool | CartItem
     {
         // Get or create cart for current cashier session
-        $cashierSession = $this->model
-            ->openSession()
-            ->first();
+        $cashierSession = $this->model->openSession()->first();
 
         if (! $cashierSession) {
             throw new Exception('No active cashier session found.');
@@ -93,6 +123,7 @@ class CashierSessionService
                 'amount'           => $request['total_price'],
                 'sub_total'        => $request['total_price'],
                 'selected_options' => $request['selected_options'] ?? [],
+                'order_type'       => $request['order_type'],
             ]);
         }
 

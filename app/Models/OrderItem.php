@@ -1,14 +1,14 @@
 <?php
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class CartItem extends Model
+class OrderItem extends Model
 {
     protected $fillable = [
-        'cart_id',
+        'order_id',
         'product_id',
         'product_packaging_id',
         'quantity',
@@ -29,6 +29,11 @@ class CartItem extends Model
 
     protected $casts = [
         'selected_options' => 'array',
+        'quantity'         => 'decimal:2',
+        'price'            => 'decimal:2',
+        'amount'           => 'decimal:2',
+        'discount'         => 'decimal:2',
+        'sub_total'        => 'decimal:2',
         'meta_data'        => 'array',
     ];
 
@@ -38,9 +43,9 @@ class CartItem extends Model
         $query->where('is_void', $condition);
     }
 
-    public function cart(): BelongsTo
+    public function order(): BelongsTo
     {
-        return $this->belongsTo(Cart::class);
+        return $this->belongsTo(Order::class);
     }
 
     public function product(): BelongsTo

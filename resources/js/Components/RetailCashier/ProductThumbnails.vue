@@ -14,9 +14,7 @@
     </div>
 
     <!-- Responsive product grid -->
-    <div
-        class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-3 lg:gap-4"
-    >
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3 lg:gap-4">
         <div
             v-for="product in products"
             :key="product.id"
@@ -103,7 +101,6 @@
 </template>
 
 <script setup lang="ts">
-import { ArrowLeftIcon, CubeIcon } from "@heroicons/vue/24/outline";
 import Product from "@/Types/Product";
 import ImageIcon from "../icons/ImageIcon.vue";
 import { formatMoney } from "@/Utils/FormatMoney";

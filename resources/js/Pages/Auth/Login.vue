@@ -20,6 +20,7 @@
                         :options="props.branches"
                         optionLabel="name"
                         optionValue="id"
+                        :disabled="props.branches.length <= 1 ? true : false"
                         placeholder="Choose your branch location"
                         required
                         searchable
@@ -58,7 +59,7 @@
                         type="submit"
                         :disabled="
                             form.processing ||
-                            !form.branch ||
+                            // !form.branch ||
                             !form.email ||
                             !form.password
                         "
@@ -133,7 +134,7 @@ const currentYear = computed(() => new Date().getFullYear());
 const form = useForm({
     email: "",
     password: "",
-    branch: null,
+    branch: props.branches.length <= 1 ? props.branches?.[0]?.id : [],
 });
 
 const login = () => {

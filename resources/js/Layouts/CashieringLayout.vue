@@ -45,7 +45,7 @@
                                 class="flex items-center gap-2 px-4 py-2 text-white rounded-lg bg-primary transition-colors"
                             >
                                 <TableCellsIcon class="w-5 h-5" />
-                                Customers
+                                Tables
                             </button>
 
                             <!-- Tables Button -->

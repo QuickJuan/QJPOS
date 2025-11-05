@@ -3,10 +3,7 @@
         class="h-full flex flex-col bg-gray-50 shadow-lg border-2 border-gray-200 w-full"
     >
         <!-- Customer Information -->
-        <CustomerInfo
-            :current-shift="currentShift"
-            :customer-info="customerInfo"
-        />
+        <CustomerInfo :table-info="tableInfo" />
 
         <!-- Cart Items Area -->
         <div class="flex-1 flex flex-col min-h-0">
@@ -32,11 +29,16 @@
         <ActionButtons
             :selected-order-type="selectedOrderType"
             :order-items="orderItems"
+            :table-id="tableId"
             :selected-items-for-discount="selectedItemsForDiscount"
+            :cart="cart"
+            :total-amount="finalTotal"
+            :applied-discount="appliedDiscount"
             @update-order-type="updateOrderType"
             @save-order="handleSaveOrder"
             @checkout="handleCheckout"
             @open-discount-modal="openDiscountModal"
+            @settle-bill="handleSettleBill"
         />
 
         <!-- Edit Item Modal -->
@@ -52,6 +54,13 @@
             :selected-items="selectedItemsForModal"
             :available-discounts="props.availableDiscounts"
             @apply="handleDiscountApplied"
+        />
+
+        <!-- Required Reason Modal -->
+        <RequiredReasonModal
+            v-model:visible="showRequiredReasonModal"
+            :order-item="selectedOrderItem"
+            @submit="handleRequiredReason"
         />
 
         <Toast />
@@ -73,36 +82,34 @@ import OrderTotals from "./OrderSummary/OrderTotals.vue";
 import ActionButtons from "./OrderSummary/ActionButtons.vue";
 import EditItemModal from "./OrderSummary/EditItemModal.vue";
 import DiscountModal from "./OrderSummary/DiscountModal.vue";
+import RequiredReasonModal from "./OrderSummary/RequiredReasonModal.vue";
 
 const props = defineProps<{
+    cart: any;
+    tableId: number;
     orderItems: any[];
     selectedOrderItem: any;
     availableDiscounts: any[];
+    currentTable: any;
 }>();
 
 const toast = useToast();
 const page = usePage<PageProps>();
 const confirm = useConfirm();
+const emit = defineEmits<{
+    selectedOrderType: [value: string];
+    showReceipt: [data: any];
+}>();
 
 // State
 const selectedOrderType = ref<string>("dine-in");
-const currentShift = ref("12");
-const customerInfo = ref({
-    name: "Walk-in Customer",
-    table: "Table 1",
-    guests: 2,
-});
+const tableInfo = ref(props.currentTable);
 
 const showEditModal = ref(false);
 const showDiscountModal = ref(false);
+const showRequiredReasonModal = ref(false);
 const selectedOrderItem = ref(props.selectedOrderItem);
 const selectedItemsForDiscount = ref<number[]>([]);
-
-// Debug: Check what discounts we have from props
-console.log("=== ORDER SUMMARY DISCOUNT DEBUG ===");
-console.log("Available discounts from props:", props.availableDiscounts);
-console.log("Type of availableDiscounts:", typeof props.availableDiscounts);
-console.log("Is array:", Array.isArray(props.availableDiscounts));
 
 // Discount state
 const appliedDiscount = ref<{
@@ -111,6 +118,7 @@ const appliedDiscount = ref<{
     selectedItems: number[];
     discountAmount: number;
     discountType: string;
+    removeTax?: boolean;
 } | null>(null);
 
 // Computed values
@@ -135,13 +143,54 @@ const vatableSubtotal = computed(() => {
 
 const discountAmount = computed(() => {
     if (!appliedDiscount.value) return 0;
-    return appliedDiscount.value.discountAmount;
+
+    const discount = appliedDiscount.value;
+    const isSeniorDiscount = discount.discountType === 'senior' ||
+                           discount.discountName?.toLowerCase().includes('senior');
+
+    if (discount.removeTax && isSeniorDiscount) {
+        // Special calculation for Senior Citizen Discount (20% on VAT-exempt amount)
+        const vatableAmount = subtotal.value / 1.12;
+        return vatableAmount * 0.2; // 20% discount on VAT-exempt amount
+    }
+
+    return discount.discountAmount;
 });
 
-const discountedVatableSubtotal = computed(
-    () => vatableSubtotal.value - discountAmount.value
-);
-const tax = computed(() => discountedVatableSubtotal.value * 0.12);
+const discountedVatableSubtotal = computed(() => {
+    if (!appliedDiscount.value) return vatableSubtotal.value;
+
+    const discount = appliedDiscount.value;
+    const isSeniorDiscount = discount.discountType === 'senior' ||
+                           discount.discountName?.toLowerCase().includes('senior');
+
+    if (discount.removeTax && isSeniorDiscount) {
+        // For Senior Citizen: VAT-exempt amount - 20% discount
+        const vatableAmount = subtotal.value / 1.12;
+        return vatableAmount - discountAmount.value;
+    } else if (discount.removeTax) {
+        // Remove tax first, then apply discount
+        const vatableAmount = subtotal.value / 1.12;
+        return vatableAmount - discountAmount.value;
+    } else {
+        // Standard: apply discount after tax calculation
+        return vatableSubtotal.value - discountAmount.value;
+    }
+});
+
+const tax = computed(() => {
+    const discount = appliedDiscount.value;
+    const isSeniorDiscount = discount && (discount.discountType === 'senior' ||
+                           discount.discountName?.toLowerCase().includes('senior'));
+
+    if (discount?.removeTax && isSeniorDiscount) {
+        // Senior Citizens are VAT-exempt
+        return 0;
+    }
+
+    return discountedVatableSubtotal.value * 0.12;
+});
+
 const total = computed(() => discountedVatableSubtotal.value + tax.value);
 
 // Aliases for template compatibility
@@ -157,6 +206,7 @@ const selectedItemsForModal = computed(() =>
 
 // Methods
 const updateOrderType = (type: string) => {
+    emit("selectedOrderType", type);
     selectedOrderType.value = type;
 };
 
@@ -178,26 +228,38 @@ const handleDelete = (orderItem: any) => {
             label: "Remove",
         },
         accept: () => {
-            router.delete(route("retail-cashier.cart.delete", orderItem.id), {
-                onSuccess: () => {
-                    toast.add({
-                        severity: "success",
-                        summary: "Success",
-                        detail: page.props.flash.success,
-                        life: 3000,
-                    });
-                },
-                onError: (errors) => {
-                    toast.add({
-                        severity: "error",
-                        summary: "Error",
-                        detail: page.props.flash.error,
-                        life: 3000,
-                    });
-                },
-            });
+            if (orderItem.is_served) {
+                showRequiredReasonModal.value = true;
+                selectedOrderItem.value = orderItem;
+            } else {
+                removeOrder(orderItem);
+            }
         },
     });
+};
+
+const removeOrder = (orderItem: any) => {
+    router.delete(
+        route("retail-cashier.cart.delete", { cartItemId: orderItem.id }),
+        {
+            onSuccess: () => {
+                toast.add({
+                    severity: "success",
+                    summary: "Success",
+                    detail: page.props.flash.success,
+                    life: 3000,
+                });
+            },
+            onError: (errors) => {
+                toast.add({
+                    severity: "error",
+                    summary: "Error",
+                    detail: page.props.flash.error,
+                    life: 3000,
+                });
+            },
+        }
+    );
 };
 
 const saveEdit = (editedItem: any) => {
@@ -232,7 +294,6 @@ const saveEdit = (editedItem: any) => {
 };
 
 const toggleItemForDiscount = (itemId: number, checked: boolean) => {
-    console.log("Toggle item for discount:", itemId, "checked:", checked);
     if (checked) {
         if (!selectedItemsForDiscount.value.includes(itemId)) {
             selectedItemsForDiscount.value.push(itemId);
@@ -242,14 +303,9 @@ const toggleItemForDiscount = (itemId: number, checked: boolean) => {
             (id) => id !== itemId
         );
     }
-    console.log("Selected items for discount:", selectedItemsForDiscount.value);
 };
 
 const openDiscountModal = () => {
-    console.log(
-        "Opening discount modal, selected items:",
-        selectedItemsForDiscount.value
-    );
     showDiscountModal.value = true;
 };
 
@@ -259,6 +315,7 @@ const handleDiscountApplied = (discountData: {
     selectedItems: number[];
     discountAmount: number;
     discountType: string;
+    removeTax?: boolean;
 }) => {
     appliedDiscount.value = discountData;
     selectedItemsForDiscount.value = [];
@@ -293,7 +350,7 @@ const handleSaveOrder = () => {
     });
 };
 
-const handleCheckout = () => {
+const handleCheckout = (data: any) => {
     if (props.orderItems.length === 0) {
         toast.add({
             severity: "warn",
@@ -304,6 +361,77 @@ const handleCheckout = () => {
         return;
     }
 
-    router.visit(route("retail-cashier.preview"));
+    router.put(
+        route("retail-cashier.cart.place-order", { cartId: data.cart_id })
+    );
+};
+
+const handleSettleBill = (data: any) => {
+    if (props.orderItems.length === 0) {
+        toast.add({
+            severity: "warn",
+            summary: "Warning",
+            detail: "No items in cart to settle",
+            life: 3000,
+        });
+        return;
+    }
+
+    router.post(
+        route("retail-cashier.cart.settle-bill", { cartId: data.cart_id }),
+        {
+            amount_paid: data.amount_paid,
+            total_amount: data.total_amount,
+        },
+        {
+            onSuccess: () => {
+                toast.add({
+                    severity: "success",
+                    summary: "Success",
+                    detail: "Bill settled successfully",
+                    life: 3000,
+                });
+                // Emit event to show receipt modal
+                emit("showReceipt", data);
+            },
+            onError: (errors) => {
+                toast.add({
+                    severity: "error",
+                    summary: "Error",
+                    detail: page.props.flash.error || "Failed to settle bill",
+                    life: 3000,
+                });
+            },
+        }
+    );
+};
+
+const handleRequiredReason = (data: any) => {
+    router.put(
+        route("retail-cashier.cart.void-cart", {
+            cartItemId: data.orderItem.id,
+        }),
+        {
+            reason: data.reason,
+        },
+        {
+            onSuccess: () => {
+                toast.add({
+                    severity: "success",
+                    summary: "Success",
+                    detail: page.props.flash.success,
+                    life: 3000,
+                });
+            },
+            onError: (errors) => {
+                toast.add({
+                    severity: "error",
+                    summary: "Error",
+                    detail: page.props.flash.error,
+                    life: 3000,
+                });
+            },
+        }
+    );
 };
 </script>

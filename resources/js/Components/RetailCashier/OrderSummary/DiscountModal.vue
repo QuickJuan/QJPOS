@@ -51,9 +51,9 @@
                 >
                     <div class="flex justify-between text-lg font-semibold">
                         <span class="text-secondary-700">Subtotal:</span>
-                        <span class="text-secondary-900">{{
-                            formatMoney(selectedItemsSubtotal.toFixed(2))
-                        }}</span>
+                        <span class="text-secondary-900">
+                            {{ formatMoney(selectedItemsSubtotal.toFixed(2)) }}
+                        </span>
                     </div>
 
                     <!-- Discount Amount -->
@@ -61,11 +61,9 @@
                         v-if="selectedDiscountId && selectedDiscount"
                         class="flex justify-between text-md"
                     >
-                        <span class="text-success-700"
-                            >Discount ({{
-                                selectedDiscount.discount_name
-                            }}):</span
-                        >
+                        <span class="text-success-700">
+                            {{ getDiscountLabel(selectedDiscount) }}:
+                        </span>
                         <span class="font-medium text-success-600">
                             -{{
                                 formatMoney(calculatedDiscountAmount.toFixed(2))
@@ -79,16 +77,7 @@
                         class="flex justify-between text-lg font-bold border-t pt-2"
                     >
                         <span class="text-secondary-900">Total:</span>
-                        <span class="text-secondary-900">
-                            {{
-                                formatMoney(
-                                    (
-                                        selectedItemsSubtotal -
-                                        calculatedDiscountAmount
-                                    ).toFixed(2)
-                                )
-                            }}
-                        </span>
+                        <span class="text-secondary-900"> {{ discountTotal }} </span>
                     </div>
                 </div>
             </div>
@@ -161,9 +150,7 @@
                         <h5
                             class="text-md font-medium text-secondary-700 mb-3 flex items-center gap-2"
                         >
-                            <div
-                                class="w-3 h-3 bg-green-500 rounded-full"
-                            ></div>
+                            <div class="w-3 h-3 bg-green-500 rounded-full" />
                             Fixed Amount Discounts
                         </h5>
                         <div class="grid grid-cols-2 gap-3">
@@ -217,9 +204,7 @@
                         <h5
                             class="text-md font-medium text-secondary-700 mb-3 flex items-center gap-2"
                         >
-                            <div
-                                class="w-3 h-3 bg-purple-500 rounded-full"
-                            ></div>
+                            <div class="w-3 h-3 bg-purple-500 rounded-full" />
                             Other Discounts
                         </h5>
                         <div class="grid grid-cols-2 gap-3">
@@ -310,6 +295,7 @@ const emit = defineEmits<{
             selectedItems: number[];
             discountAmount: number;
             discountType: string;
+            removeTax?: boolean;
         }
     ];
     "update:visible": [value: boolean];
@@ -317,7 +303,7 @@ const emit = defineEmits<{
 
 const selectedDiscountId = ref("");
 
-// Helper function to extract discounts array from props (handles both direct array and ResourceCollection formats)
+// Helper function to extract discounts array from props
 const getDiscountsArray = () => {
     if (Array.isArray(props.availableDiscounts)) {
         return props.availableDiscounts;
@@ -347,47 +333,62 @@ const selectedItemsSubtotal = computed(() => {
     }, 0);
 });
 
+const vatExemptSales = ref(0);
 const calculatedDiscountAmount = computed(() => {
     if (!selectedDiscount.value) return 0;
 
-    // Calculate discount based on vatable subtotal
-    const selectedItemsVatableSubtotal = props.selectedItems.reduce(
-        (sum, item) => {
-            const itemPrice = parseFloat(
-                item.price || item.average_cost || "0"
-            );
-            const quantity = item.quantity;
-            const lineTotal = itemPrice * quantity;
-            // Calculate vatable amount: total / (1 + vat_rate/100)
-            const vatableAmount = lineTotal / 1.12;
-            return sum + vatableAmount;
-        },
-        0
-    );
+    const discount = selectedDiscount.value;
+    const isSeniorDiscount = discount.discount_name
+        ?.toLowerCase()
+        .includes("senior");
 
-    if (selectedDiscount.value.type === "percentage") {
-        return (
-            selectedItemsVatableSubtotal * (selectedDiscount.value.amount / 100)
-        );
+    // Calculate subtotal for selected items
+    const selectedItemsTotal = props.selectedItems.reduce((sum, item) => {
+        const itemPrice = parseFloat(item.price || item.average_cost || "0");
+        return sum + itemPrice * item.quantity;
+    }, 0);
+
+    if (discount.remove_tax && isSeniorDiscount) {
+        // Special calculation for Senior Citizen Discount (20% on VAT-exempt amount)
+        const vatableAmount = selectedItemsTotal / 1.12; // Remove VAT first
+        vatExemptSales.value = vatableAmount;
+
+        return vatableAmount * 0.2; // 20% discount on VAT-exempt amount
+    } else if (discount.remove_tax) {
+        // Remove tax first, then apply discount (general case)
+        const vatableAmount = selectedItemsTotal / 1.12;
+        if (discount.type === "percentage") {
+            return vatableAmount * (discount.amount / 100);
+        } else {
+            return Math.min(discount.amount, vatableAmount);
+        }
     } else {
-        // Fixed amount discount
-        return Math.min(
-            selectedDiscount.value.amount,
-            selectedItemsVatableSubtotal
+        // Standard calculation based on vatable subtotal
+        const selectedItemsVatableSubtotal = props.selectedItems.reduce(
+            (sum, item) => {
+                const itemPrice = parseFloat(
+                    item.price || item.average_cost || "0"
+                );
+                const quantity = item.quantity;
+                const lineTotal = itemPrice * quantity;
+                const vatableAmount = lineTotal / 1.12;
+                return sum + vatableAmount;
+            },
+            0
         );
+
+        if (discount.type === "percentage") {
+            return selectedItemsVatableSubtotal * (discount.amount / 100);
+        } else {
+            return Math.min(discount.amount, selectedItemsVatableSubtotal);
+        }
     }
 });
 
 // Group discounts by type (using props data)
 const percentageDiscounts = computed(() => {
     const discounts = getDiscountsArray();
-    console.log("=== DISCOUNT MODAL DEBUG ===");
-    console.log("Available discounts in modal:", props.availableDiscounts);
-    console.log("Extracted discounts array:", discounts);
-    console.log("Available discounts length:", discounts.length);
-
     const percentage = discounts.filter((d) => d.type === "percentage");
-    console.log("Percentage discounts:", percentage);
     return percentage;
 });
 
@@ -396,7 +397,6 @@ const fixedDiscounts = computed(() => {
     const fixed = discounts.filter(
         (d) => d.type === "fixed" || d.type === "amount"
     );
-    console.log("Fixed discounts:", fixed);
     return fixed;
 });
 
@@ -406,8 +406,32 @@ const otherDiscounts = computed(() => {
         (d) =>
             d.type !== "percentage" && d.type !== "fixed" && d.type !== "amount"
     );
-    console.log("Other discounts:", other);
+
     return other;
+});
+
+// Get discount label based on type
+const getDiscountLabel = (discount: any) => {
+    const isSeniorDiscount = discount.discount_name?.toLowerCase().includes('senior') ||
+                           discount.type === 'senior';
+
+    if (isSeniorDiscount && discount.remove_tax) {
+        return 'Senior Citizen Discount (20%)';
+    }
+
+    return `Discount (${discount.discount_name})`;
+};
+
+const discountTotal = computed(() => {
+    const discount = selectedDiscount.value;
+    const isSeniorDiscount = discount?.discount_name?.toLowerCase().includes("senior") ||
+                           discount?.type === 'senior';
+
+    if (discount?.remove_tax && isSeniorDiscount) {
+        return formatMoney((vatExemptSales.value - calculatedDiscountAmount.value).toFixed(2));
+    } else {
+        return formatMoney((selectedItemsSubtotal.value - calculatedDiscountAmount.value).toFixed(2));
+    }
 });
 
 // Select discount method
@@ -424,6 +448,7 @@ const applyDiscount = () => {
         selectedItems: props.selectedItems.map((item) => item.id),
         discountAmount: calculatedDiscountAmount.value,
         discountType: selectedDiscount.value.type,
+        removeTax: selectedDiscount.value.remove_tax,
     };
 
     emit("apply", discountData);

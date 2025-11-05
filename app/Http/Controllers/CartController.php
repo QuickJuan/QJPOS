@@ -30,10 +30,32 @@ class CartController extends Controller
     {
         try {
             $this->cartService->updateCartItem($request, $cartItemId);
-            
+
             return redirect()->back()->with('success', 'Cart item updated successfully.');
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'There was an error in updating cart item.');
+        }
+    }
+
+    public function voidCartItem(Request $request, int $cartItemId): RedirectResponse
+    {
+        try {
+            $this->cartService->voidCartItem($request, $cartItemId);
+
+            return redirect()->back()->with('success', 'Cart item removed successfully.');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'There was an error in removing cart item.');
+        }
+    }
+
+    public function applyDiscountToCartItem(Request $request, int $cartItemId): RedirectResponse
+    {
+        try {
+            $this->cartService->applyDiscountToCartItem($request, $cartItemId);
+
+            return redirect()->back()->with('success', 'Discount applied to cart item successfully.');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'There was an error applying discount to cart item.');
         }
     }
 
@@ -45,6 +67,28 @@ class CartController extends Controller
             return redirect()->back()->with('success', 'Cart item deleted successfully.');
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'There was an error deleting cart item.');
+        }
+    }
+
+    public function placeOrder(int $cartId): RedirectResponse
+    {
+        try {
+            $this->cartService->placeOrder($cartId);
+
+            return redirect()->route('retail-cashier.tables')->with('success', 'Successfully Placed Order.');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'There was an error placing order.');
+        }
+    }
+
+    public function settleBill(Request $request, int $cartId): RedirectResponse
+    {
+        try {
+            $this->cartService->settleBill($request, $cartId);
+
+            return redirect()->back()->with('success', 'Bill settled successfully.');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'There was an error settling the bill.');
         }
     }
 }

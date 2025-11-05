@@ -49,6 +49,7 @@ class TableRoomService
             'table_height'           => $request->input('table_height'),
             'table_x'                => $request->input('table_x'),
             'table_y'                => $request->input('table_y'),
+            'merge_to'               => $request->input('merge_to'),
         ]);
 
         if (! $tableRoom) {
@@ -62,5 +63,31 @@ class TableRoomService
         }
 
         return $tableRoom;
+    }
+
+    public function mergeTable(int $tableId, int $mergeToId): bool
+    {
+        $tableRoom = $this->model->findOrFail($tableId);
+
+        if (! $tableRoom) {
+            throw new Exception('Table/Room not found.');
+        }
+
+        // Validate that the merge target exists and is occupied
+        $mergeTarget = $this->model->findOrFail($mergeToId);
+        if ($mergeTarget->status !== 'occupied') {
+            throw new Exception('Can only merge into occupied tables.');
+        }
+
+        // Validate that the source table is vacant
+        if ($tableRoom->status !== 'vacant') {
+            throw new Exception('Can only merge vacant tables.');
+        }
+
+        $tableRoom->update([
+            'merge_to' => $mergeToId,
+        ]);
+
+        return true;
     }
 }

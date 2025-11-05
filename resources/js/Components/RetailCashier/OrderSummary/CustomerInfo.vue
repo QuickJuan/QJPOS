@@ -15,18 +15,18 @@
                 <UserIcon class="w-4 h-4 text-secondary-500" />
                 <span class="text-sm text-secondary-600">Customer:</span>
                 <span class="text-sm font-medium text-secondary-800">
-                    {{ customerInfo.name || "Walk-in Customer" }}
+                    {{ tableInfo?.customer_name || "Walk-in Customer" }}
                 </span>
             </div>
             <div class="flex items-center gap-2">
                 <MapPinIcon class="w-4 h-4 text-secondary-500" />
                 <span class="text-sm text-secondary-600">Table:</span>
                 <span class="text-sm font-medium text-secondary-800">
-                    {{ customerInfo.table || "No Table" }}
+                    {{ tableInfo.name || "No Table" }}
                 </span>
                 <span class="text-xs text-secondary-500">•</span>
                 <span class="text-sm text-secondary-600">
-                    {{ customerInfo.guests || 1 }} guests
+                    {{ tableInfo?.number_of_pax || 1 }} guests
                 </span>
             </div>
         </div>
@@ -35,13 +35,11 @@
 
 <script setup lang="ts">
 import { UserIcon, MapPinIcon } from "@heroicons/vue/24/outline";
+import { ref } from "vue";
 
 defineProps<{
-    currentShift: string;
-    customerInfo: {
-        name?: string;
-        table?: string;
-        guests?: number;
-    };
+    tableInfo: any;
 }>();
+
+const currentShift = ref("12");
 </script>

@@ -3,26 +3,25 @@
         <div class="space-y-2">
             <div class="flex justify-between text-sm">
                 <span class="text-secondary-600">Subtotal</span>
-                <span class="font-medium">{{
-                    formatMoney(orderSubtotal.toFixed(2))
-                }}</span>
+                <span class="font-medium">
+                    {{ formatMoney(orderSubtotal.toFixed(2)) }}
+                </span>
             </div>
             <div
                 v-if="appliedDiscount"
                 class="flex justify-between text-sm text-success-600"
             >
-                <span>Discount ({{ appliedDiscount.discountName }})</span>
+                <span>{{ getDiscountLabel(appliedDiscount) }}</span>
                 <span
-                    >-{{
-                        formatMoney(appliedDiscount.discountAmount.toFixed(2))
-                    }}</span
-                >
+                    >-
+                    {{ formatMoney(appliedDiscount.discountAmount.toFixed(2)) }}
+                </span>
             </div>
             <div class="flex justify-between text-sm">
                 <span class="text-secondary-600">Tax (12%)</span>
-                <span class="font-medium">{{
-                    formatMoney(taxAmount.toFixed(2))
-                }}</span>
+                <span class="font-medium">
+                    {{ formatMoney(taxAmount.toFixed(2)) }}
+                </span>
             </div>
             <hr class="border-gray-300" />
             <div class="flex justify-between text-lg font-bold">
@@ -36,13 +35,27 @@
 <script setup lang="ts">
 import { formatMoney } from "@/Utils/FormatMoney";
 
-defineProps<{
+const props = defineProps<{
     orderSubtotal: number;
     taxAmount: number;
     finalTotal: number;
     appliedDiscount: {
         discountName: string;
         discountAmount: number;
+        discountType?: string;
+        removeTax?: boolean;
     } | null;
 }>();
+
+// Get discount label based on type
+const getDiscountLabel = (discount: any) => {
+    const isSeniorDiscount = discount.discountType === 'senior' ||
+                           discount.discountName?.toLowerCase().includes('senior');
+
+    if (isSeniorDiscount && discount.removeTax) {
+        return 'Senior Citizen Discount (20%)';
+    }
+
+    return `Discount (${discount.discountName})`;
+};
 </script>

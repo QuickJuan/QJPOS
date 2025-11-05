@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
@@ -7,13 +8,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Auth;
 
-class Cart extends Model
+class Order extends Model
 {
     protected $fillable = [
         'cashier_id',
         'cashier_session_id',
         'table_room_id',
-        'session_id',
         'notes',
         'meta_data',
     ];
@@ -45,9 +45,9 @@ class Cart extends Model
         return $this->belongsTo(CashierSession::class, 'cashier_session_id');
     }
 
-    public function cartItems(): HasMany
+    public function orderItems(): HasMany
     {
-        return $this->hasMany(CartItem::class)->isVoid(false);
+        return $this->hasMany(OrderItem::class)->isVoid(false);
     }
 
     public function tableRoom(): BelongsTo

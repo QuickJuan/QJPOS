@@ -12,9 +12,9 @@
             <!-- Table Info -->
             <div class="bg-gray-50 p-4 rounded-lg">
                 <div class="flex items-center justify-between mb-2">
-                    <span class="text-sm font-medium text-gray-700"
-                        >Status:</span
-                    >
+                    <span class="text-sm font-medium text-gray-700">
+                        Status:
+                    </span>
                     <span
                         :class="[
                             'px-2 py-1 text-xs font-medium rounded-full capitalize',
@@ -61,14 +61,14 @@
                     @click="$emit('viewOrder')"
                 />
 
-                <!-- Merge Table -->
+                <!-- Merge Table (only for vacant tables) -->
                 <Button
+                    v-if="table && table.status === 'vacant'"
                     label="Merge Table"
                     icon="pi pi-link"
                     class="w-full"
                     severity="secondary"
                     @click="$emit('mergeTable')"
-                    :disabled="!table"
                 />
 
                 <!-- Reserve/Unreserve -->
@@ -102,10 +102,8 @@
                 <h4 class="font-medium text-gray-900">Order Details</h4>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Number of Pax *
-                    </label>
-                    <InputNumber
+                    <TextField
+                        label="Number of Pax"
                         v-model="pax"
                         :min="1"
                         :max="table ? table.chairs : 10"
@@ -115,13 +113,13 @@
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Guest Name *
-                    </label>
-                    <InputText
+                    <TextField
+                        label="Guest Name"
                         v-model="guestName"
+                        :min="1"
+                        :max="table ? table.chairs : 10"
                         class="w-full"
-                        placeholder="Enter guest name"
+                        placeholder="Enter number of guests"
                         @keyup.enter="confirmTakeOrder"
                     />
                 </div>
@@ -137,7 +135,6 @@
                         label="Start Order"
                         severity="success"
                         class="flex-1"
-                        :disabled="!isValidOrder"
                         @click="confirmTakeOrder"
                     />
                 </div>
@@ -150,8 +147,7 @@
 import { ref, computed, watch } from "vue";
 import Dialog from "primevue/dialog";
 import Button from "primevue/button";
-import InputNumber from "primevue/inputnumber";
-import InputText from "primevue/inputtext";
+import TextField from "@/Components/Form/TextField.vue";
 
 const props = defineProps<{
     show: boolean;
@@ -169,10 +165,6 @@ const emit = defineEmits<{
 const pax = ref(1);
 const guestName = ref("");
 const showPaxInput = ref(false);
-
-const isValidOrder = computed(
-    () => pax.value >= 1 && guestName.value.trim().length > 0
-);
 
 watch(
     () => props.show,
@@ -200,12 +192,10 @@ const handleClose = () => {
 };
 
 const confirmTakeOrder = () => {
-    if (isValidOrder.value) {
-        emit("takeOrder", {
-            pax: pax.value,
-            guest_name: guestName.value.trim(),
-        });
-    }
+    emit("takeOrder", {
+        pax: pax.value,
+        guest_name: guestName.value.trim(),
+    });
 };
 
 const cancelPaxInput = () => {
