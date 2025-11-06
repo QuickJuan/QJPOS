@@ -242,6 +242,10 @@ const props = defineProps<{
 }>();
 
 const selectedOptions = ref<Record<string, any>>({});
+const params = new URLSearchParams(window.location.search);
+const productPackagingId = ref(null);
+
+productPackagingId.value = params.get("packagingId");
 
 const toast = useToast();
 const page = usePage<PageProps>();
@@ -273,6 +277,7 @@ const addToCart = () => {
         route("retail-cashier.cart.add"),
         {
             product_id: props.product?.data?.id,
+            product_packaging_id: productPackagingId.value,
             selected_options: selectedOptions.value,
             quantity: 1,
             total_price: calculateTotal(),

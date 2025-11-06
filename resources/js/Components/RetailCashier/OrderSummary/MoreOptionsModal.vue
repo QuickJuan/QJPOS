@@ -42,13 +42,35 @@
                     </div>
                 </div>
             </button>
+
+            <button
+                @click="handleAddModifier"
+                :disabled="selectedItemsForDiscount.length === 0"
+                class="w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center gap-3 bg-gray-100 text-secondary-700 hover:bg-gray-200 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
+            >
+                <PlusIcon class="w-5 h-5" />
+                <div class="text-left flex-1">
+                    <div class="font-semibold flex items-center gap-2">
+                        Add Modifier
+                        <span
+                            v-if="selectedItemsForDiscount.length > 0"
+                            class="bg-blue-600 text-white text-xs px-1.5 py-0.5 rounded-full"
+                        >
+                            {{ selectedItemsForDiscount.length }}
+                        </span>
+                    </div>
+                    <div class="text-xs opacity-75">
+                        Add modifier to selected items
+                    </div>
+                </div>
+            </button>
         </div>
     </Dialog>
 </template>
 
 <script setup lang="ts">
 import { Dialog } from "primevue";
-import { BookmarkIcon, TagIcon } from "@heroicons/vue/24/outline";
+import { BookmarkIcon, TagIcon, PlusIcon } from "@heroicons/vue/24/outline";
 
 const props = defineProps<{
     visible: boolean;
@@ -59,6 +81,7 @@ const props = defineProps<{
 const emit = defineEmits<{
     saveOrder: [];
     openDiscountModal: [];
+    addModifier: [];
     "update:visible": [value: boolean];
 }>();
 
@@ -69,6 +92,11 @@ const handleSaveOrder = () => {
 
 const handleApplyDiscount = () => {
     emit("openDiscountModal");
+    emit("update:visible", false);
+};
+
+const handleAddModifier = () => {
+    emit("addModifier");
     emit("update:visible", false);
 };
 

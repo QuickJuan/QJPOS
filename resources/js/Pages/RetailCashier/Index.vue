@@ -50,6 +50,13 @@
                 />
             </section>
         </div>
+
+        <PackagingSelectionModal
+            v-model="showPackagingModal"
+            :product="selectedProductForPackaging"
+            @confirm="handlePackagingConfirm"
+            @cancel="handlePackagingCancel"
+        />
     </CashieringLayout>
 </template>
 
@@ -64,6 +71,7 @@ import ProductThumbnails from "@/Components/RetailCashier/ProductThumbnails.vue"
 import PageProps from "@/Types/PageProps";
 import OrderSummary from "@/Components/RetailCashier/OrderSummary.vue";
 import CashieringLayout from "@/Layouts/CashieringLayout.vue";
+import PackagingSelectionModal from "@/Components/RetailCashier/PackagingSelectionModal.vue";
 import { useCashierCache } from "@/composables/useCashierCache";
 
 const props = defineProps<{
@@ -81,6 +89,8 @@ const tableId = ref(null);
 const selectedOrderItem = ref<any>(null);
 const selectedCategoryId = ref<number | null>(null);
 const selectedOrderType = ref<any>("dine-in");
+const showPackagingModal = ref(false);
+const selectedProductForPackaging = ref<any>(null);
 const receiptData = ref({
     receiptNumber: "",
     date: "",
@@ -250,48 +260,152 @@ onMounted(() => {
 });
 
 const addToCart = (product: any, packaging?: any) => {
-    // Check if product has options
-    if (product.options && product.options.length > 0) {
-        // Navigate to options page with order type
-        router.visit(
-            route("retail-cashier.product.options", {
-                product: product.id,
-                orderType: selectedOrderType.value,
-                tableId: tableId.value,
-            })
-        );
+    if (packaging) {
+        // Packaging already selected, proceed
+        if (product.options && product.options.length > 0) {
+            // Has options, redirect to options page with packaging
+            router.visit(
+                route("retail-cashier.product.options", {
+                    product: product.id,
+                    orderType: selectedOrderType.value,
+                    tableId: tableId.value,
+                    packagingId: packaging.id,
+                })
+            );
+        } else {
+            // No options, add to cart with packaging
+            router.post(
+                route("retail-cashier.cart.add"),
+                {
+                    quantity: 1,
+                    product_id: product.id,
+                    product_packaging_id: packaging.id,
+                    table_id: tableId.value,
+                    total_price: parseFloat(packaging.price || 0),
+                    order_type: selectedOrderType.value,
+                    selected_options: [],
+                },
+                {
+                    preserveScroll: false,
+                    onSuccess: () => {
+                        toast.add({
+                            severity: "success",
+                            summary: "Success",
+                            detail: page.props.flash.success,
+                            life: 3000,
+                        });
+                    },
+                    onError: (errors) => {
+                        console.error("Failed to add item to cart:", errors);
+                    },
+                }
+            );
+        }
     } else {
-        // Add directly to cart
-        const price = packaging
-            ? parseFloat(packaging.price || 0)
-            : parseFloat(product.average_cost || "0");
-
-        router.post(
-            route("retail-cashier.cart.add"),
-            {
-                quantity: 1,
-                product_id: product.id,
-                product_packaging_id: packaging?.id || null,
-                table_id: tableId.value,
-                total_price: price,
-                order_type: selectedOrderType.value,
-                selected_options: [],
-            },
-            {
-                preserveScroll: false,
-                onSuccess: () => {
-                    toast.add({
-                        severity: "success",
-                        summary: "Success",
-                        detail: page.props.flash.success,
-                        life: 3000,
-                    });
-                },
-                onError: (errors) => {
-                    console.error("Failed to add item to cart:", errors);
-                },
+        // No packaging provided, check if product has packagings
+        if (product.product_packagings && product.product_packagings.length > 0) {
+            if (product.product_packagings.length === 1) {
+                // Auto-select the single packaging
+                const packaging = product.product_packagings[0];
+                if (product.options && product.options.length > 0) {
+                    // Has options, redirect to options page with packaging
+                    router.visit(
+                        route("retail-cashier.product.options", {
+                            product: product.id,
+                            orderType: selectedOrderType.value,
+                            tableId: tableId.value,
+                            packagingId: packaging.id,
+                        })
+                    );
+                } else {
+                    // No options, add to cart with packaging
+                    router.post(
+                        route("retail-cashier.cart.add"),
+                        {
+                            quantity: 1,
+                            product_id: product.id,
+                            product_packaging_id: packaging.id,
+                            table_id: tableId.value,
+                            total_price: parseFloat(packaging.price || 0),
+                            order_type: selectedOrderType.value,
+                            selected_options: [],
+                        },
+                        {
+                            preserveScroll: false,
+                            onSuccess: () => {
+                                toast.add({
+                                    severity: "success",
+                                    summary: "Success",
+                                    detail: page.props.flash.success,
+                                    life: 3000,
+                                });
+                            },
+                            onError: (errors) => {
+                                console.error("Failed to add item to cart:", errors);
+                            },
+                        }
+                    );
+                }
+            } else {
+                // Multiple packagings, show modal
+                selectedProductForPackaging.value = product;
+                showPackagingModal.value = true;
             }
-        );
+        } else {
+            // No packaging, check options
+            if (product.options && product.options.length > 0) {
+                // Redirect to options page
+                router.visit(
+                    route("retail-cashier.product.options", {
+                        product: product.id,
+                        orderType: selectedOrderType.value,
+                        tableId: tableId.value,
+                    })
+                );
+            } else {
+                // No options, add to cart without packaging
+                router.post(
+                    route("retail-cashier.cart.add"),
+                    {
+                        quantity: 1,
+                        product_id: product.id,
+                        product_packaging_id: null,
+                        table_id: tableId.value,
+                        total_price: parseFloat(product.average_cost || "0"),
+                        order_type: selectedOrderType.value,
+                        selected_options: [],
+                    },
+                    {
+                        preserveScroll: false,
+                        onSuccess: () => {
+                            toast.add({
+                                severity: "success",
+                                summary: "Success",
+                                detail: page.props.flash.success,
+                                life: 3000,
+                            });
+                        },
+                        onError: (errors) => {
+                            console.error("Failed to add item to cart:", errors);
+                        },
+                    }
+                );
+            }
+        }
     }
+};
+
+const handlePackagingConfirm = (packaging: any) => {
+    const product = selectedProductForPackaging.value;
+    if (product) {
+        addToCart(product, packaging);
+    }
+    showPackagingModal.value = false;
+    selectedProductForPackaging.value = null;
+};
+
+const handlePackagingCancel = () => {
+    showPackagingModal.value = false;
+    selectedProductForPackaging.value = null;
 };
 </script>

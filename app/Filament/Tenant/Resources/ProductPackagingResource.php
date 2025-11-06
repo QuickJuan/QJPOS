@@ -1,24 +1,23 @@
 <?php
 namespace App\Filament\Tenant\Resources;
 
-use Filament\Tables;
-use Filament\Forms\Form;
-use Filament\Tables\Table;
-use App\Models\ProductPackaging;
-use Filament\Resources\Resource;
-use Filament\Forms\Components\Select;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Forms\Components\TextInput;
 use App\Filament\Tenant\Resources\ProductPackagingResource\Pages;
-use App\Filament\Tenant\Resources\ProductPackagingResource\RelationManagers\ProductOptionsRelationManager;
+use App\Models\ProductPackaging;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Form;
+use Filament\Resources\Resource;
+use Filament\Tables;
 use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
 
 class ProductPackagingResource extends Resource
 {
-    protected static ?string $model = ProductPackaging::class;
-
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $model           = ProductPackaging::class;
+    protected static ?string $navigationLabel = "Product Pricing";
+    protected static ?string $navigationIcon  = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form
     {
@@ -54,7 +53,7 @@ class ProductPackagingResource extends Resource
                 SpatieMediaLibraryFileUpload::make('featured_image')
                     ->collection('featured_image')
                     ->image()
-                    ->imageEditor()
+                    ->imageEditor(),
             ]);
     }
 

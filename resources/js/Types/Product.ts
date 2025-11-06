@@ -15,6 +15,19 @@ export default interface Product {
     category: Category;
     brand: Brand;
     options?: Option[];
+    product_packagings?: ProductPackaging[];
     featured_image_url?: string;
     product_images_urls?: string[];
+}
+
+export interface ProductPackaging {
+    id: number;
+    product_id: number;
+    barcode: string;
+    cost: string;
+    price: string;
+    unit_measure: string;
+    qty: number;
+    featured_image?: string;
+    featured_image_url?: string;
 }

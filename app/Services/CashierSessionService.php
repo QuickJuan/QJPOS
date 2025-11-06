@@ -103,29 +103,16 @@ class CashierSessionService
             'cashier_session_id' => $cashierSession->id,
         ]);
 
-        // Check if item already exists in cart
-        $existingItem = $cart->cartItems()
-            ->where('product_id', $request['product_id'])
-            ->first();
-
-        if ($existingItem) {
-            // If yes, Update quantity if item exists
-            $addToCart = $existingItem->update([
-                'quantity'  => $existingItem->quantity + ($request['quantity'] ?? 1),
-                'sub_total' => ($existingItem->quantity + ($request['quantity'] ?? 1)) * $existingItem->price,
-            ]);
-        } else {
-            // If no, create new cart item
-            $addToCart = $cart->cartItems()->create([
-                'product_id'       => $request['product_id'],
-                'quantity'         => $request['quantity'] ?? 1,
-                'price'            => $request['total_price'] / ($request['quantity'] ?? 1),
-                'amount'           => $request['total_price'],
-                'sub_total'        => $request['total_price'],
-                'selected_options' => $request['selected_options'] ?? [],
-                'order_type'       => $request['order_type'],
-            ]);
-        }
+        $addToCart = $cart->cartItems()->create([
+            'product_id'           => $request['product_id'],
+            'product_packaging_id' => $request['product_packaging_id'],
+            'quantity'             => $request['quantity'] ?? 1,
+            'price'                => $request['total_price'] / ($request['quantity'] ?? 1),
+            'amount'               => $request['total_price'],
+            'sub_total'            => $request['total_price'],
+            'selected_options'     => $request['selected_options'] ?? [],
+            'order_type'           => $request['order_type'],
+        ]);
 
         return $addToCart;
     }
