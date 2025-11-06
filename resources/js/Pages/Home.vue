@@ -93,12 +93,12 @@ const user = computed(() => props.user);
 const activeBranch = computed(() => props.activeBranch);
 
 const actions = [
-    {
-        route: "dashboard",
-        name: "Dashboard",
-        description: "View reports, analytics, and business insights",
-        icon: AnalyticsIcon,
-    },
+    // {
+    //     route: "dashboard",
+    //     name: "Dashboard",
+    //     description: "View reports, analytics, and business insights",
+    //     icon: AnalyticsIcon,
+    // },
     {
         route: "retail-cashier.preview",
         name: "Start Cashiering",
