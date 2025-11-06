@@ -99,7 +99,11 @@
                     </li>
                     <li>
                         <Link
-                            href="login"
+                            :href="
+                                $page.props.auth.user
+                                    ? route('home')
+                                    : route('login')
+                            "
                             :class="
                                 isSticky
                                     ? 'text-white hover:text-primary'
@@ -107,7 +111,11 @@
                             "
                             class="transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                         >
-                            Sign in
+                            {{
+                                $page.props.auth.user
+                                    ? `Hi, ${$page.props.auth.user.name}`
+                                    : "Sign in"
+                            }}
                         </Link>
                     </li>
                 </ul>
@@ -334,6 +342,7 @@ import ProductsSection from "./Home/ProductsSection.vue";
 
 import ProductPage from "./Products/Index.vue";
 import { Link } from "@inertiajs/vue3";
+import { route } from "ziggy-js";
 
 // Animated client numbers for products
 const fnbClients = ref(0);
