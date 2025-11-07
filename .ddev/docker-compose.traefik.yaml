@@ -1,0 +1,12 @@
+version: "3.6"
+services:
+  web:
+    labels:
+      # Central domain routing
+      - "traefik.http.routers.quickjuan-central.rule=Host(`quickjuan.site`)"
+      - "traefik.http.routers.quickjuan-central.entrypoints=https"
+      - "traefik.http.routers.quickjuan-central.tls=true"
+      # Wildcard subdomain routing for tenants
+      - "traefik.http.routers.quickjuan-wild.rule=HostRegexp(`{sub:[a-z0-9-]+}.quickjuan.site`)"
+      - "traefik.http.routers.quickjuan-wild.entrypoints=https"
+      - "traefik.http.routers.quickjuan-wild.tls=true"
