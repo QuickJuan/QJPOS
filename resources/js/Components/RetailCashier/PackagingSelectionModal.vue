@@ -34,7 +34,7 @@
                         </div>
                         <div class="text-right">
                             <p class="text-lg font-bold text-primary">
-                                {{ formatMoney(packaging.price) }}
+                                {{ formatMoney(packaging.price) }} {{ packaging.unit_measure }}
                             </p>
                         </div>
                     </div>
@@ -55,10 +55,10 @@
         </div>
 
         <template #footer>
-            <div class="flex justify-end space-x-3">
+            <div class="flex justify-end space-x-3 mt-5">
                 <Button
                     label="Cancel"
-                    class="p-button-text"
+                    class="p-button-secondary"
                     @click="handleCancel"
                 />
                 <Button

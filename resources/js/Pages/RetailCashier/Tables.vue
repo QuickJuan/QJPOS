@@ -52,14 +52,6 @@
                         class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all cursor-pointer hover:scale-105 relative"
                         :class="getTableStatusClasses(table.status)"
                     >
-                        <!-- Merged indicator -->
-                        <div
-                            v-if="table.merge_to"
-                            class="absolute top-2 left-2 bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full font-medium flex items-center gap-1"
-                        >
-                            <i class="pi pi-link text-xs"></i>
-                            Merged
-                        </div>
                         <!-- Status Badge -->
                         <div class="flex items-center justify-between mb-3">
                             <div class="flex items-center gap-2">
@@ -82,13 +74,18 @@
                                     {{ table.status }}
                                 </span>
                             </div>
-                            <div class="text-xs text-gray-500">
-                                #{{ table.sort_number || table.id }}
-                            </div>
                         </div>
 
                         <!-- Table Name -->
-                        <div class="text-center mb-3">
+                        <div class="flex flex-col items-center text-center mb-3">
+                            <!-- Merged indicator -->
+                            <div
+                                v-if="table.merge_to"
+                                class="w-fit bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full font-medium flex items-center gap-1"
+                            >
+                                <i class="pi pi-link text-xs"></i>
+                                Merged to {{ table.merged_to.name }}
+                            </div>
                             <h3 class="font-semibold text-gray-900 text-lg">
                                 {{ table.name }}
                             </h3>
@@ -460,7 +457,7 @@ const handleTakeOrder = (data: any) => {
                 guest_name: data.guest_name,
             },
             {
-                    onSuccess: () => {
+                onSuccess: () => {
                     toast.add({
                         severity: "success",
                         summary: "Order Started",

@@ -132,6 +132,7 @@ Route::middleware([
                             Route::post('/cart/settle-bill/{cartId}', 'settleBill')->name('cart.settle-bill');
                             Route::put('/cart/item/{cartItemId}', 'updateCartItem')->name('cart.update');
                             Route::put('/cart/item/discount/{cartItemId}', 'applyDiscountToCartItem')->name('cart.apply-discount');
+                            Route::put('/cart/item/modifier/{cartItemIds}', 'applyModifierToCartItem')->name('cart.apply-modifier');
                             Route::put('/cart/item/void/{cartItemId}', 'voidCartItem')->name('cart.void-cart');
                             Route::delete('/cart/item/{cartItemId}', 'deleteCartItem')->name('cart.delete');
                         });

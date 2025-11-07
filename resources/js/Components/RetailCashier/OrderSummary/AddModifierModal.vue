@@ -3,87 +3,109 @@
         :visible="props.visible"
         modal
         header="Add Modifier"
-        :style="{ width: '30rem' }"
+        :style="{ width: '35rem' }"
         @update:visible="handleClose"
     >
         <div class="space-y-4">
-            <div>
+            <div class="max-h-96 overflow-y-auto">
+                <div class="space-y-3">
+                    <div
+                        v-for="modifier in modifiers"
+                        :key="modifier.id"
+                        class="border border-gray-200 rounded-lg p-3"
+                    >
+                        <div class="flex items-start gap-3">
+                            <Checkbox
+                                v-model="selectedModifiers"
+                                :value="modifier.id"
+                                class="mt-0.5"
+                            />
+                            <div class="flex-1">
+                                <div
+                                    class="flex items-center justify-between mb-2"
+                                >
+                                    <h4 class="font-medium text-gray-900">
+                                        {{ modifier.name }}
+                                    </h4>
+                                </div>
+
+                                <!-- Modifier Options as PrimeVue Radio Buttons -->
+                                <div
+                                    v-if="
+                                        modifier.list &&
+                                        parseModifierList(modifier.list)
+                                            .length > 0
+                                    "
+                                    class="flex items-center gap-3"
+                                >
+                                    <div
+                                        v-for="option in parseModifierList(
+                                            modifier.list
+                                        )"
+                                        :key="option.name"
+                                        class="flex items-center"
+                                    >
+                                        <RadioButton
+                                            :name="`modifier-${modifier.id}`"
+                                            :value="option.name"
+                                            v-model="
+                                                selectedModifierValues[
+                                                    modifier.id
+                                                ]
+                                            "
+                                            @change="
+                                                selectModifierOption(
+                                                    modifier.name,
+                                                    option
+                                                )
+                                            "
+                                            :disabled="
+                                                !selectedModifiers.includes(
+                                                    modifier.id
+                                                )
+                                            "
+                                            class="mr-2"
+                                        />
+                                        <label
+                                            class="text-sm text-gray-700 cursor-pointer"
+                                        >
+                                            {{ option.name }}
+                                            <span
+                                                v-if="option.price"
+                                                class="text-green-600 font-medium ml-1"
+                                            >
+                                                (+{{
+                                                    formatMoney(option.price)
+                                                }})
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Custom Notes Section -->
+            <div class="border-t pt-4">
                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                    Select Modifier
+                    Special Instructions
                 </label>
-                <div class="flex gap-2">
-                    <select
-                        v-model="selectedModifier"
-                        class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                        <option value="">Choose a modifier...</option>
-                        <option
-                            v-for="modifier in modifiers"
-                            :key="modifier.id"
-                            :value="modifier.id"
-                        >
-                            {{ modifier.name }} (+{{ formatMoney(modifier.price || 0) }})
-                        </option>
-                    </select>
-                    <button
-                        @click="showCustomModifier = true"
-                        class="px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-center"
-                        title="Add custom modifier"
-                    >
-                        <PlusIcon class="w-4 h-4" />
-                    </button>
-                </div>
+                <textarea
+                    v-model="specialInstructions"
+                    rows="3"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    placeholder="Add any special instructions or notes for this order..."
+                ></textarea>
             </div>
 
-            <!-- Custom Modifier Input -->
-            <div v-if="showCustomModifier" class="space-y-3 p-3 bg-gray-50 rounded-md">
-                <h4 class="text-sm font-medium text-gray-700">Add Custom Modifier</h4>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">
-                            Name
-                        </label>
-                        <input
-                            v-model="customModifierName"
-                            type="text"
-                            class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            placeholder="e.g., Extra spicy"
-                        />
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-600 mb-1">
-                            Price
-                        </label>
-                        <input
-                            v-model="customModifierPrice"
-                            type="number"
-                            step="0.01"
-                            class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            placeholder="0.00"
-                        />
-                    </div>
-                </div>
-                <div class="flex justify-end gap-2">
-                    <button
-                        @click="showCustomModifier = false"
-                        class="px-3 py-1 text-xs bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        @click="addCustomModifier"
-                        :disabled="!customModifierName.trim() || !customModifierPrice"
-                        class="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                    >
-                        Add
-                    </button>
-                </div>
-            </div>
-
-            <div v-if="selectedModifierData">
-                <p class="text-sm text-gray-600">
-                    <strong>{{ selectedModifierData.name }}</strong> will be added to {{ selectedItems.length }} selected item(s).
-                </p>
+            <div
+                v-if="selectedModifiers.length > 0"
+                class="text-sm text-gray-600 bg-blue-50 p-3 rounded"
+            >
+                <strong>{{ selectedModifiers.length }} modifier(s)</strong>
+                selected to be added to {{ selectedItems.length }} item(s).
             </div>
         </div>
 
@@ -97,7 +119,6 @@
                 <Button
                     label="Add Modifier"
                     class="p-button-primary"
-                    :disabled="!selectedModifier"
                     @click="handleAdd"
                 />
             </div>
@@ -109,7 +130,8 @@
 import { ref, computed, watch } from "vue";
 import Dialog from "primevue/dialog";
 import Button from "primevue/button";
-import { PlusIcon } from "@heroicons/vue/24/outline";
+import Checkbox from "primevue/checkbox";
+import RadioButton from "primevue/radiobutton";
 import { formatMoney } from "@/Utils/FormatMoney";
 
 const props = defineProps<{
@@ -119,47 +141,66 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-    add: [modifier: string | any];
+    add: [modifierData: any];
     "update:visible": [value: boolean];
 }>();
 
-const selectedModifier = ref("");
-const showCustomModifier = ref(false);
-const customModifierName = ref("");
-const customModifierPrice = ref("");
+const selectedModifiers = ref<string[]>([]);
+const selectedModifierOptions = ref<Record<string, any[]>>({});
+const selectedModifierValues = ref<Record<string, string>>({});
+const specialInstructions = ref("");
 
 const selectedModifierData = computed(() => {
-    return props.modifiers.find(m => m.id == selectedModifier);
+    return props.modifiers.find((m) => selectedModifiers.value.includes(m.id));
 });
 
-watch(() => props.visible, (newValue) => {
-    if (newValue) {
-        selectedModifier.value = "";
+watch(
+    () => props.visible,
+    (newValue) => {
+        if (newValue) {
+            selectedModifiers.value = [];
+            selectedModifierOptions.value = {};
+            selectedModifierValues.value = {};
+        }
     }
-});
+);
 
-const addCustomModifier = () => {
-    if (customModifierName.value.trim() && customModifierPrice.value) {
-        // Create a custom modifier object
-        const customModifier = {
-            id: `custom-${Date.now()}`,
-            name: customModifierName.value.trim(),
-            price: parseFloat(customModifierPrice.value),
-            isCustom: true,
-        };
-        emit("add", customModifier);
-        // Reset form
-        customModifierName.value = "";
-        customModifierPrice.value = "";
-        showCustomModifier.value = false;
+const selectModifierOption = (modifierId: string, option: any) => {
+    // For radio buttons, only one option can be selected per modifier
+    // Also ensure the modifier checkbox is checked when selecting an option
+    if (!selectedModifiers.value.includes(modifierId)) {
+        selectedModifiers.value.push(modifierId);
     }
+    selectedModifierOptions.value[modifierId] = [option];
 };
 
 const handleAdd = () => {
-    if (selectedModifier.value) {
-        emit("add", selectedModifier.value);
-        emit("update:visible", false);
+    const selectedData = {
+        selectedCartItems: props.selectedItems,
+        modifiers: selectedModifiers.value,
+        modifierOptions: selectedModifierOptions.value,
+        specialInstructions: specialInstructions.value.trim(),
+    };
+    emit("add", selectedData);
+    emit("update:visible", false);
+};
+
+const parseModifierList = (list: any) => {
+    if (typeof list === "string") {
+        return list.split(",").map((item) => ({
+            name: item.trim(),
+            price: 0,
+        }));
+    } else if (Array.isArray(list)) {
+        // Handle array format
+        return list.map((item) => {
+            if (typeof item === "string") {
+                return { name: item, price: 0 };
+            }
+            return item;
+        });
     }
+    return [];
 };
 
 const handleClose = () => {

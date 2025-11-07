@@ -23,9 +23,11 @@ class ModifierResource extends Resource
         return $form
             ->schema([
                 Select::make('product_id')
-                    ->relationship('product', 'name')
-                    ->required()
-                    ->unique(ignoreRecord: true), // Only enforce uniqueness for new records, not when updating the same record
+                    ->relationship('products', 'name')
+                    ->multiple()
+                    ->preload()
+                    ->searchable()
+                    ->required(),
 
                 TextInput::make('name')
                     ->required()
@@ -42,10 +44,6 @@ class ModifierResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('product.name')
-                    ->searchable()
-                    ->sortable(),
-
                 TextColumn::make('name')
                     ->searchable()
                     ->sortable(),

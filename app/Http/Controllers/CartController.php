@@ -59,6 +59,17 @@ class CartController extends Controller
         }
     }
 
+    public function applyModifierToCartItem(Request $request, $cartItemId): RedirectResponse
+    {
+        try {
+            $this->cartService->applyModifierToCartItem($request, $cartItemId);
+
+            return redirect()->back()->with('success', 'Discount applied to cart item successfully.');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'There was an error applying discount to cart item.');
+        }
+    }
+
     public function deleteCartItem(int $cartItemId): RedirectResponse
     {
         try {

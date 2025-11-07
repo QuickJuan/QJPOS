@@ -42,6 +42,7 @@
                     :orderItems="orderItems"
                     :selected-order-item="selectedOrderItem"
                     :available-discounts="props.availableDiscounts"
+                    :available-modifiers="props.availableModifiers"
                     :table-id="tableId"
                     :cart="cart"
                     :current-table="props.currentTable"
@@ -80,6 +81,7 @@ const props = defineProps<{
     cart: any;
     cartItems: any[];
     availableDiscounts: any[];
+    availableModifiers: any[];
     currentTable: any;
 }>();
 

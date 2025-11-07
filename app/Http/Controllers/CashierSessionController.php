@@ -9,6 +9,7 @@ use App\Http\Resources\ProductResource;
 use App\Models\Cart;
 use App\Models\Category;
 use App\Models\Discount;
+use App\Models\Modifier;
 use App\Models\Product;
 use App\Models\TableRoom;
 use App\Models\TableRoomLocation;
@@ -45,6 +46,15 @@ class CashierSessionController extends Controller
         $discounts = DiscountResource::collection(
             Discount::all()
         );
+
+        // Get available modifiers
+        $modifiers = Modifier::all()->map(function ($modifier) {
+            return [
+                'id'   => $modifier->id,
+                'name' => $modifier->name,
+                'list' => $modifier->list ?? [],
+            ];
+        });
 
         // Get cart items for current session
         $cartItems = [];
@@ -87,6 +97,7 @@ class CashierSessionController extends Controller
             'cart'               => $cart,
             'cartItems'          => $cartItems,
             'availableDiscounts' => $discounts,
+            'availableModifiers' => $modifiers,
             'currentTable'       => $currentTable ?? [],
         ]);
     }
@@ -139,7 +150,7 @@ class CashierSessionController extends Controller
 
     public function tables(): Response
     {
-        $tables = TableRoom::with(['tableRoomLocation'])
+        $tables = TableRoom::with(['tableRoomLocation', 'mergeTo'])
             ->activeBranch()
             ->get()
             ->map(fn($table) => [
@@ -155,6 +166,7 @@ class CashierSessionController extends Controller
                 'number_of_pax'          => $table->number_of_pax,
                 'time_in'                => $table->time_in,
                 'customer_name'          => $table->customer_name,
+                'merged_to'              => $table->mergeTo,
             ]);
 
         // Get locations
