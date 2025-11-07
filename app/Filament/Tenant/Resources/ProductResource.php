@@ -93,12 +93,6 @@ class ProductResource extends Resource
                     ->numeric()
                     ->label('Total Onhand'),
 
-                TextInput::make('average_cost')
-                    ->required()
-                    ->default(0)
-                    ->numeric()
-                    ->label('Price'),
-
                 RichEditor::make('description')
                     ->maxLength(500)
                     ->ColumnSpan(2)

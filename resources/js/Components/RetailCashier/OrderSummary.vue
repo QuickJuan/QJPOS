@@ -38,6 +38,7 @@
             @save-order="handleSaveOrder"
             @checkout="handleCheckout"
             @open-discount-modal="openDiscountModal"
+            @add-modifier="handleAddModifier"
             @settle-bill="handleSettleBill"
         />
 
@@ -63,6 +64,14 @@
             @submit="handleRequiredReason"
         />
 
+        <!-- Add Modifier Modal -->
+        <AddModifierModal
+            v-model:visible="showAddModifierModal"
+            :selected-items="selectedItemsForModal"
+            :modifiers="[]"
+            @add="handleModifierAdded"
+        />
+
         <Toast />
         <ConfirmPopup />
     </aside>
@@ -83,6 +92,7 @@ import ActionButtons from "./OrderSummary/ActionButtons.vue";
 import EditItemModal from "./OrderSummary/EditItemModal.vue";
 import DiscountModal from "./OrderSummary/DiscountModal.vue";
 import RequiredReasonModal from "./OrderSummary/RequiredReasonModal.vue";
+import AddModifierModal from "./OrderSummary/AddModifierModal.vue";
 
 const props = defineProps<{
     cart: any;
@@ -108,6 +118,7 @@ const tableInfo = ref(props.currentTable);
 const showEditModal = ref(false);
 const showDiscountModal = ref(false);
 const showRequiredReasonModal = ref(false);
+const showAddModifierModal = ref(false);
 const selectedOrderItem = ref(props.selectedOrderItem);
 const selectedItemsForDiscount = ref<number[]>([]);
 
@@ -122,14 +133,24 @@ const appliedDiscount = ref<{
 } | null>(null);
 
 // Computed values
-const subtotal = computed(() =>
-    props.orderItems.reduce(
-        (sum, item) =>
-            sum +
-            parseFloat(item.price || item.average_cost || "0") * item.quantity,
-        0
-    )
-);
+const subtotal = computed(() => {
+    const total = props.orderItems.reduce((sum, item) => {
+        const hasOptions = item.selected_options?.length > 0;
+
+        if (hasOptions) {
+            const total = item.selected_options.reduce(
+                (optSum: number, option: any) =>
+                    optSum + parseFloat(option.price || 0),
+                0
+            );
+            return sum + total;
+        }
+
+        return sum + parseFloat(item.price || "0") * item.quantity;
+    }, 0);
+
+    return parseFloat(total.toFixed(2));
+});
 
 const vatableSubtotal = computed(() => {
     return props.orderItems.reduce((sum, item) => {
@@ -157,6 +178,8 @@ const discountAmount = computed(() => {
 
     return discount.discountAmount;
 });
+
+console.log();
 
 const discountedVatableSubtotal = computed(() => {
     if (!appliedDiscount.value) return vatableSubtotal.value;
@@ -409,6 +432,16 @@ const handleSettleBill = (data: any) => {
             },
         }
     );
+};
+
+const handleAddModifier = () => {
+    showAddModifierModal.value = true;
+};
+
+const handleModifierAdded = (modifier: string | any) => {
+    // TODO: Implement adding modifier to selected items
+    console.log("Add modifier:", modifier, "to items:", selectedItemsForModal.value);
+    showAddModifierModal.value = false;
 };
 
 const handleRequiredReason = (data: any) => {

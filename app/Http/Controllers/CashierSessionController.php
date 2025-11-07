@@ -31,9 +31,7 @@ class CashierSessionController extends Controller
     public function index(Request $request): Response
     {
         // Check if the current auth user has pending cashiering.
-        $pendingCashiering = $this->cashierSessionService->model
-            ->openSession()
-            ->first();
+        $pendingCashiering = $this->cashierSessionService->model->openSession()->first();
 
         // Get categories with products directly (will be cached in browser)
         $categoriesQuery = Category::with(['products' => function ($query) {
@@ -60,23 +58,24 @@ class CashierSessionController extends Controller
 
             $cart = $cartQuery->where('cashier_id', Auth::id())
                 ->where('cashier_session_id', $pendingCashiering->id)
-                ->with(['cartItems.product'])
+                ->with(['cartItems.product.productPackagings'])
                 ->first();
 
             if ($cart) {
                 $cartItems = $cart->cartItems
                     ->map(fn($item) => [
-                        'id'               => $item->id,
-                        'product_id'       => $item->product_id,
-                        'name'             => $item->product->name ?? 'Unknown Product',
-                        'quantity'         => $item->quantity,
-                        'price'            => $item->price,
-                        'amount'           => $item->amount,
-                        'sub_total'        => $item->sub_total,
-                        'is_served'        => (bool) $item->is_served,
-                        'order_type'       => $item->order_type,
-                        'selected_options' => $item->selected_options ?? [],
-                        'checked'          => false,
+                        'id'                => $item->id,
+                        'product_id'        => $item->product_id,
+                        'name'              => $item->product->name ?? 'Unknown Product',
+                        'quantity'          => $item->quantity,
+                        'price'             => $item->price,
+                        'amount'            => $item->amount,
+                        'sub_total'         => $item->sub_total,
+                        'is_served'         => (bool) $item->is_served,
+                        'order_type'        => $item->order_type,
+                        'selected_options'  => $item->selected_options ?? [],
+                        'product_packaging' => $item->product_packaging_id ? $item->product->productPackagings->firstWhere('id', $item->product_packaging_id) : null,
+                        'checked'           => false,
                     ])->toArray();
             }
         }

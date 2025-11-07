@@ -51,44 +51,46 @@ class CartService
         $totalPrice         = $request['total_price'];
         $orderType          = $request['order_type'];
 
-        if ($existingItem) {
-            // Product exists in cart
-            $currentSelectedOptions = $existingItem->selected_options ?? [];
+        // if ($existingItem) {
+        //     // Product exists in cart
+        //     $currentSelectedOptions = $existingItem->selected_options ?? [];
 
-            // Check if selected options are the same
-            if (collect($currentSelectedOptions)->pluck('id')->sort()->values()->all() ===
-                collect($newSelectedOptions)->pluck('id')->sort()->values()->all()) {
-                // Same options - update quantity and subtotal
-                $existingItem->update([
-                    'quantity'  => $existingItem->quantity + $quantity,
-                    'sub_total' => ($existingItem->quantity + $quantity) * $existingItem->price,
-                ]);
-            } else {
-                $mergedOptions = array_merge($currentSelectedOptions, $newSelectedOptions); // Recalculate total price based on merged options
-                $basePrice     = $existingItem->price;                                      // This should be the base product price
-                $optionsTotal  = collect($mergedOptions)->sum('price');
-                $newTotalPrice = ($basePrice + $optionsTotal) * ($existingItem->quantity + $quantity);
+        //     // Check if selected options are the same
+        //     if (collect($currentSelectedOptions)->pluck('id')->sort()->values()->all() ===
+        //         collect($newSelectedOptions)->pluck('id')->sort()->values()->all()) {
+        //         // Same options - update quantity and subtotal
+        //         $existingItem->update([
+        //             'quantity'  => $existingItem->quantity + $quantity,
+        //             'sub_total' => ($existingItem->quantity + $quantity) * $existingItem->price,
+        //         ]);
+        //     } else {
+        //         $mergedOptions = array_merge($currentSelectedOptions, $newSelectedOptions); // Recalculate total price based on merged options
+        //         $basePrice     = $existingItem->price;                                      // This should be the base product price
+        //         $optionsTotal  = collect($mergedOptions)->sum('price');
+        //         $newTotalPrice = ($basePrice + $optionsTotal) * ($existingItem->quantity + $quantity);
 
-                $existingItem->update([
-                    'selected_options' => $mergedOptions,
-                    'quantity'         => $existingItem->quantity + $quantity,
-                    'amount'           => $newTotalPrice / ($existingItem->quantity + $quantity),
-                    'sub_total'        => $newTotalPrice,
-                    'order_type'       => $orderType,
-                ]);
-            }
-        } else {
-            // Product does not exist - create new cart item
-            $cart->cartItems()->create([
-                'product_id'       => $request['product_id'],
-                'quantity'         => $quantity,
-                'price'            => $totalPrice / $quantity,
-                'amount'           => $totalPrice,
-                'sub_total'        => $totalPrice,
-                'selected_options' => $newSelectedOptions,
-                'order_type'       => $orderType,
-            ]);
-        }
+        //         $existingItem->update([
+        //             'selected_options' => $mergedOptions,
+        //             'quantity'         => $existingItem->quantity + $quantity,
+        //             'amount'           => $newTotalPrice / ($existingItem->quantity + $quantity),
+        //             'sub_total'        => $newTotalPrice,
+        //             'order_type'       => $orderType,
+        //         ]);
+        //     }
+        // } else {
+        // Product does not exist - create new cart item
+        $cart->cartItems()->create([
+            'product_id'           => $request['product_id'],
+            'parent_id'            => $request['parent_id'],
+            'product_packaging_id' => $request['product_packaging_id'],
+            'quantity'             => $quantity,
+            'price'                => $totalPrice / $quantity,
+            'amount'               => $totalPrice,
+            'sub_total'            => $totalPrice,
+            'selected_options'     => $newSelectedOptions,
+            'order_type'           => $orderType,
+        ]);
+        // }
     }
 
     public function updateCartItem(Request $request, int $cartItemId): mixed

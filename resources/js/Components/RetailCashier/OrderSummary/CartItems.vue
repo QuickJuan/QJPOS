@@ -42,7 +42,7 @@
                                     <h4
                                         class="font-medium text-secondary-900 text-sm leading-tight flex-1"
                                     >
-                                        {{ item.name }}
+                                        {{ item.name }}{{ item.selected_options && Object.keys(item.selected_options).length > 0 ? ' - ' + Object.values(item.selected_options).map((opt: any) => opt.product?.name || opt.name).join(', ') : '' }}
                                     </h4>
                                     <!-- Order Type Badge -->
                                     <span
@@ -56,6 +56,14 @@
                                     >
                                         {{ getOrderTypeLabel(item.order_type) }}
                                     </span>
+                                    <span
+                                        v-if="item.product_packaging"
+                                        class="text-xs px-2 py-0.5 rounded-full font-medium ml-2 flex-shrink-0 bg-green-100 text-green-800"
+                                    >
+                                        {{
+                                            item.product_packaging.unit_measure
+                                        }}
+                                    </span>
                                 </div>
                                 <div class="flex items-center justify-between">
                                     <div class="flex flex-col">
@@ -65,10 +73,18 @@
                                                 v-if="hasDiscount(item.id)"
                                                 class="line-through text-red-500"
                                             >
-                                                {{ formatMoney(getBasePrice(item)) }}
+                                                {{
+                                                    formatMoney(
+                                                        getBasePrice(item)
+                                                    )
+                                                }}
                                             </span>
                                             <span v-else>
-                                                {{ formatMoney(getBasePrice(item)) }}
+                                                {{
+                                                    formatMoney(
+                                                        getBasePrice(item)
+                                                    )
+                                                }}
                                             </span>
                                         </p>
                                         <p
@@ -96,42 +112,13 @@
                                         <p
                                             class="text-xs text-secondary-500 font-medium"
                                         >
-                                            {{
-                                                hasDiscount(item.id)
-                                                    ? getDiscountedTotal(item)
-                                                    : formatMoney(item.sub_total)
-                                            }}
+                                            {{ totalOfItems(item) }}
                                         </p>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Selected Options as Sub-items -->
-                        <div
-                            v-if="item.selected_options && item.selected_options.length > 0"
-                            class="mt-2 ml-4 space-y-1"
-                        >
-                            <div
-                                v-for="option in item.selected_options"
-                                :key="option.id"
-                                class="flex items-center justify-between py-1"
-                            >
-                                <div class="flex items-center gap-2">
-                                    <div
-                                        class="w-1 h-1 bg-secondary-400 rounded-full flex-shrink-0"
-                                    ></div>
-                                    <span class="text-xs text-secondary-600">
-                                        {{
-                                            option.product?.name || option.name
-                                        }}
-                                    </span>
-                                </div>
-                                <span class="text-xs text-secondary-600">
-                                    +{{ formatMoney(option.price || 0) }}
-                                </span>
-                            </div>
-                        </div>
                     </div>
 
                     <!-- Delete Button -->
@@ -181,10 +168,13 @@ const getBasePrice = (item: any) => {
     // The item.price is already the total price including options
     // We need to calculate the base price by subtracting options
     let optionsTotal = 0;
-    if (item.selected_options && Array.isArray(item.selected_options)) {
-        optionsTotal = item.selected_options.reduce((sum: number, option: any) => {
-            return sum + parseFloat(String(option.price || 0));
-        }, 0);
+    if (item.selected_options && typeof item.selected_options === 'object') {
+        optionsTotal = Object.values(item.selected_options as Record<string, any>).reduce(
+            (sum: number, option: any) => {
+                return sum + parseFloat(String(option.price || 0));
+            },
+            0
+        );
     }
     const basePrice = parseFloat(String(item.price)) - optionsTotal;
     return basePrice;
@@ -311,6 +301,29 @@ const getOrderTypeLabel = (orderType: string) => {
         default:
             return orderType;
     }
+};
+
+const totalOfItems = (item: any) => {
+    const hasOptions = item.selected_options && Object.keys(item.selected_options).length > 0;
+    const discounted = hasDiscount(item.id);
+
+    if (discounted && hasOptions) {
+        return getDiscountedTotal(item);
+    }
+
+    if (discounted) {
+        return getDiscountedTotal(item);
+    }
+
+    if (hasOptions) {
+        const total = Object.values(item.selected_options as Record<string, any>).reduce(
+            (sum: number, option: any) => sum + parseFloat(option.price || 0),
+            0
+        );
+        return formatMoney(total);
+    }
+
+    return formatMoney(item.sub_total);
 };
 
 // Watch for changes in order items and auto-scroll to bottom when new items are added

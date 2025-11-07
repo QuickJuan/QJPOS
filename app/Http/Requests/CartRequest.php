@@ -21,12 +21,14 @@ class CartRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'product_id'       => 'required|exists:products,id',
-            'selected_options' => 'nullable|array',
-            'quantity'         => 'nullable|integer|min:1',
-            'total_price'      => 'required|numeric|min:0',
-            'table_id'         => 'nullable|exists:table_rooms,id',
-            'order_type'       => 'nullable|string|in:dine-in,takeout,delivery',
+            'parent_id'            => 'nullable|exists:cart_items,id',
+            'product_id'           => 'required|exists:products,id',
+            'product_packaging_id' => 'nullable|exists:product_packagings,id',
+            'selected_options'     => 'nullable|array',
+            'quantity'             => 'nullable|integer|min:1',
+            'total_price'          => 'required|numeric|min:0',
+            'table_id'             => 'nullable|exists:table_rooms,id',
+            'order_type'           => 'nullable|string|in:dine-in,takeout,delivery',
         ];
     }
 }

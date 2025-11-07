@@ -59,6 +59,7 @@
             :selected-items-for-discount="selectedItemsForDiscount"
             @save-order="handleSaveOrder"
             @open-discount-modal="handleApplyDiscount"
+            @add-modifier="handleAddModifier"
         />
 
         <!-- Settle Bill Modal -->
@@ -111,6 +112,7 @@ const emit = defineEmits<{
     saveOrder: [];
     checkout: [data: any];
     openDiscountModal: [];
+    addModifier: [];
     settleBill: [data: any];
 }>();
 
@@ -192,6 +194,12 @@ const handleSaveOrder = () => {
 // Handle apply discount from more options modal
 const handleApplyDiscount = () => {
     emit("openDiscountModal");
+    showMoreOptionsModal.value = false;
+};
+
+// Handle add modifier from more options modal
+const handleAddModifier = () => {
+    emit("addModifier");
     showMoreOptionsModal.value = false;
 };
 
