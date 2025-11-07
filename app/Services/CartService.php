@@ -198,6 +198,45 @@ class CartService
         ]);
     }
 
+    public function applyModifierToCartItem(Request $request, $cartItemIds)
+    {
+        $cashierSession = $this->cashierSession->openSession()->first();
+
+        if (! $cashierSession) {
+            throw new Exception('No active cashier session found.');
+        }
+
+        $cart = Cart::authCashier()->cashierSession($cashierSession->id)->first();
+
+        if (! $cart) {
+            throw new Exception('Cart not found.');
+        }
+
+        $cartItems = $cart->cartItems()->findMany($cartItemIds);
+
+        if ($cartItems->isEmpty()) {
+            throw new Exception('Cart items is empty.');
+        }
+
+        return $cartItems->map(function ($cartItem) use ($request) {
+            $modifier = [];
+
+            foreach ($request['modifierOptions'] as $key => $modifierOption) {
+                $modifier[$key] = $modifierOption;
+            }
+
+            $modifier['specialInstructions'] = $request['specialInstructions'];
+
+            $cartItem->update([
+                'meta_data' => [
+                    [
+                        'modifier' => $modifier,
+                    ],
+                ],
+            ]);
+        });
+    }
+
     public function deleteCartItem(int $cartItemId): mixed
     {
         $cashierSession = $this->cashierSession->openSession()->first();

@@ -244,13 +244,15 @@ const props = defineProps<{
 const selectedOptions = ref<Record<string, any>>({});
 const params = new URLSearchParams(window.location.search);
 const productPackagingId = ref(null);
+const tableId = ref(null);
 
 productPackagingId.value = params.get("packagingId");
+tableId.value = params.get("tableId");
 
 const toast = useToast();
 const page = usePage<PageProps>();
 const goBack = () => {
-    router.visit(route("retail-cashier.index"));
+    router.visit(route("retail-cashier.index", { tableId: tableId.value }));
 };
 
 const calculateTotal = () => {

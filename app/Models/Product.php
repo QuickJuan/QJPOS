@@ -98,4 +98,9 @@ class Product extends Model implements HasMedia
     {
         return $this->hasMany(OptionItem::class);
     }
+
+    public function modifiers(): BelongsToMany
+    {
+        return $this->belongsToMany(Modifier::class, 'modifier_product', 'product_id', 'modifier_id')->withTimestamps();
+    }
 }

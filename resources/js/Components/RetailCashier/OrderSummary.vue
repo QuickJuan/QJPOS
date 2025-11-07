@@ -47,6 +47,9 @@
             v-model:visible="showEditModal"
             :selected-order-item="selectedOrderItem"
             @save="saveEdit"
+            @add-discount="handleAddDiscountToItem"
+            @clear-discount="handleClearDiscountFromItem"
+            @add-modifier="handleAddModifierToItem"
         />
 
         <!-- Discount Modal -->
@@ -68,7 +71,7 @@
         <AddModifierModal
             v-model:visible="showAddModifierModal"
             :selected-items="selectedItemsForModal"
-            :modifiers="[]"
+            :modifiers="props.availableModifiers"
             @add="handleModifierAdded"
         />
 
@@ -100,6 +103,7 @@ const props = defineProps<{
     orderItems: any[];
     selectedOrderItem: any;
     availableDiscounts: any[];
+    availableModifiers: any[];
     currentTable: any;
 }>();
 
@@ -166,20 +170,44 @@ const discountAmount = computed(() => {
     if (!appliedDiscount.value) return 0;
 
     const discount = appliedDiscount.value;
-    const isSeniorDiscount =
-        discount.discountType === "senior" ||
-        discount.discountName?.toLowerCase().includes("senior");
 
-    if (discount.removeTax && isSeniorDiscount) {
-        // Special calculation for Senior Citizen Discount (20% on VAT-exempt amount)
-        const vatableAmount = subtotal.value / 1.12;
-        return vatableAmount * 0.2; // 20% discount on VAT-exempt amount
+    if (discount.discountType.toLowerCase() == "fixed") {
+        return getFixedAmountDiscount();
+    } else if (discount.discountType.toLowerCase() == "percentage") {
+        return getPercentageAmountDiscount();
     }
-
-    return discount.discountAmount;
 });
 
-console.log();
+// TODO: Transfer this into backend
+const getPercentageAmountDiscount = () => {
+    const discount = appliedDiscount.value;
+    let vatableAmount = 0;
+    let vatAmount = 0;
+
+    if (discount.removeTax && subtotal.value > 0) {
+        vatableAmount = subtotal.value / 1.12;
+        vatAmount = subtotal.value - vatableAmount;
+    }
+
+    const discountValue =
+        vatableAmount *
+        (discount.discountAmount > 0 ? discount.discountAmount / 100 : 0);
+
+    return discountValue + vatAmount;
+};
+
+const getFixedAmountDiscount = () => {
+    const discount = appliedDiscount.value;
+    let vatableAmount = 0;
+    let vatAmount = 0;
+
+    if (discount.removeTax && subtotal.value > 0) {
+        vatableAmount = subtotal.value / 1.12;
+        vatAmount = subtotal.value - vatableAmount;
+    }
+
+    return discount.discountAmount + vatAmount;
+};
 
 const discountedVatableSubtotal = computed(() => {
     if (!appliedDiscount.value) return vatableSubtotal.value;
@@ -438,10 +466,38 @@ const handleAddModifier = () => {
     showAddModifierModal.value = true;
 };
 
-const handleModifierAdded = (modifier: string | any) => {
-    // TODO: Implement adding modifier to selected items
-    console.log("Add modifier:", modifier, "to items:", selectedItemsForModal.value);
-    showAddModifierModal.value = false;
+const handleModifierAdded = (modifierData: any) => {
+    const selectedItemIds = modifierData.selectedCartItems.map((item: any) => item.id);
+
+    router.put(
+        route("retail-cashier.cart.apply-modifier", {
+            cartItemIds: selectedItemIds,
+        }),
+        {
+            modifierOptions: modifierData.modifierOptions,
+            specialInstructions: modifierData.specialInstructions,
+        },
+        {
+            onSuccess: () => {
+                toast.add({
+                    severity: "success",
+                    summary: "Success",
+                    detail: "Added successfully",
+                    life: 3000,
+                });
+
+                showAddModifierModal.value = false;
+            },
+            onError: (errors) => {
+                toast.add({
+                    severity: "error",
+                    summary: "Error",
+                    detail: page.props.flash.error || "Failed to add modifier",
+                    life: 3000,
+                });
+            },
+        }
+    );
 };
 
 const handleRequiredReason = (data: any) => {
@@ -471,5 +527,45 @@ const handleRequiredReason = (data: any) => {
             },
         }
     );
+};
+
+const handleAddDiscountToItem = (item: any) => {
+    // Select the item for discount
+    selectedItemsForDiscount.value = [item.id];
+    showDiscountModal.value = true;
+    showEditModal.value = false;
+};
+
+const handleClearDiscountFromItem = (item: any) => {
+    // Clear discount from the item
+    router.delete(
+        route("retail-cashier.cart.clear-discount", { cartItemId: item.id }),
+        {
+            onSuccess: () => {
+                toast.add({
+                    severity: "success",
+                    summary: "Success",
+                    detail: "Discount cleared successfully",
+                    life: 3000,
+                });
+                showEditModal.value = false;
+            },
+            onError: (errors) => {
+                toast.add({
+                    severity: "error",
+                    summary: "Error",
+                    detail: page.props.flash.error || "Failed to clear discount",
+                    life: 3000,
+                });
+            },
+        }
+    );
+};
+
+const handleAddModifierToItem = (item: any) => {
+    // Select the item for modifier
+    selectedItemsForDiscount.value = [item.id];
+    showAddModifierModal.value = true;
+    showEditModal.value = false;
 };
 </script>

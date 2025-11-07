@@ -53,7 +53,7 @@ const getDiscountLabel = (discount: any) => {
                            discount.discountName?.toLowerCase().includes('senior');
 
     if (isSeniorDiscount && discount.removeTax) {
-        return 'Senior Citizen Discount (20%)';
+        return 'Senior Citizen Discount (20%)'; // TODO: Discount label will be based on backend
     }
 
     return `Discount (${discount.discountName})`;

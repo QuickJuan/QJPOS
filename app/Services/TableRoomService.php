@@ -1,6 +1,7 @@
 <?php
 namespace App\Services;
 
+use App\Enums\TableRoomStatusType;
 use App\Models\TableRoom;
 use Exception;
 use Illuminate\Http\Request;
@@ -86,6 +87,7 @@ class TableRoomService
 
         $tableRoom->update([
             'merge_to' => $mergeToId,
+            'status'   => TableRoomStatusType::OCCUPIED->value,
         ]);
 
         return true;

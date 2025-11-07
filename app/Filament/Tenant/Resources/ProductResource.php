@@ -98,6 +98,13 @@ class ProductResource extends Resource
                     ->ColumnSpan(2)
                     ->label('Description'),
 
+                Select::make('modifiers')
+                    ->relationship('modifiers', 'name')
+                    ->nullable()
+                    ->searchable()
+                    ->multiple()
+                    ->preload(),
+
                 SpatieMediaLibraryFileUpload::make('featured_image')
                     ->label('Featured Image')
                     ->collection('featured_image')

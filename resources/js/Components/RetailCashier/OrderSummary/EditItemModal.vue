@@ -26,20 +26,49 @@
                 </template>
             </InputNumber>
         </div>
-        <div class="flex justify-end gap-2">
-            <Button
-                type="button"
-                label="Cancel"
-                severity="secondary"
-                @click="$emit('update:visible', false)"
-            />
-            <Button
-                type="button"
-                label="Save"
-                @click="saveEdit"
-                class="bg-primary hover:bg-primary-600"
-            />
-        </div>
+        <template #footer>
+            <div class="flex flex-col gap-2 justify-between w-full">
+                <div class="flex gap-2">
+                    <Button
+                        type="button"
+                        label="Add Discount"
+                        severity="info"
+                        size="small"
+                        @click="$emit('addDiscount', selectedOrderItem)"
+                    />
+                    <Button
+                        type="button"
+                        label="Clear Discount"
+                        severity="warn"
+                        size="small"
+                        @click="$emit('clearDiscount', selectedOrderItem)"
+                    />
+                    <Button
+                        type="button"
+                        label="Add Modifier"
+                        severity="success"
+                        size="small"
+                        @click="$emit('addModifier', selectedOrderItem)"
+                    />
+                </div>
+                <div class="flex flex-end justify-end gap-2 mt-5">
+                    <Button
+                        type="button"
+                        label="Cancel"
+                        severity="secondary"
+                        size="small"
+                        @click="$emit('update:visible', false)"
+                    />
+                    <Button
+                        type="button"
+                        label="Save"
+                        size="small"
+                        @click="saveEdit"
+                        class="bg-primary hover:bg-primary-600"
+                    />
+                </div>
+            </div>
+        </template>
     </Dialog>
 </template>
 
@@ -55,6 +84,9 @@ const props = defineProps<{
 const emit = defineEmits<{
     save: [item: any];
     "update:visible": [value: boolean];
+    addDiscount: [item: any];
+    clearDiscount: [item: any];
+    addModifier: [item: any];
 }>();
 
 const editableItem = ref({
@@ -79,3 +111,4 @@ const saveEdit = () => {
     emit("update:visible", false);
 };
 </script>
+
