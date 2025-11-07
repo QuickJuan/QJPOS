@@ -21,6 +21,8 @@ return [
         'storepos.online',
         'www.storepos.online',
         'localhost',
+        'quickjuan.site',
+        '127.0.0.1:33007'
     ],
 
     /**

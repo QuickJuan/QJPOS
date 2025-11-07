@@ -24,3 +24,20 @@ yarn-error.log
 /.vscode
 /.zed
 .DS_Store
+
+# DDEV local environment
+.ddev/.downloads
+.ddev/.importdb
+.ddev/.logs
+.ddev/.ssh
+.ddev/.tmp
+.ddev/db_snapshots
+.ddev/homeadditions
+.ddev/commands/host
+.ddev/commands/web
+
+# User-specific and override configs
+.ddev/config.local.yaml
+.ddev/providers/local.yaml
+.ddev/docker-compose.override.yaml
+.ddev/.env
