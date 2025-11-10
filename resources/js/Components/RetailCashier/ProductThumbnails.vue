@@ -81,9 +81,12 @@
                     >
                         {{
                             formatMoney(
-                                parseFloat(product.average_cost || "0").toFixed(2)
+                                parseFloat(product.average_cost || "0").toFixed(
+                                    2
+                                )
                             )
                         }}
+                        {{ product.options.length ? "+" : "" }}
                     </p>
                     <!-- Responsive Pick Button -->
                     <button
@@ -96,14 +99,12 @@
             </div>
         </div>
     </div>
-
 </template>
 
 <script setup lang="ts">
 import Product from "@/Types/Product";
 import ImageIcon from "../icons/ImageIcon.vue";
 import { formatMoney } from "@/Utils/FormatMoney";
-
 
 const props = defineProps<{
     products: Product[];
@@ -114,5 +115,4 @@ const emit = defineEmits<{
     backToCategories: [];
     addToCart: [product: Product];
 }>();
-
 </script>

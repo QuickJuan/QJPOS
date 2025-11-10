@@ -132,9 +132,11 @@ Route::middleware([
                             Route::post('/cart/settle-bill/{cartId}', 'settleBill')->name('cart.settle-bill');
                             Route::put('/cart/item/{cartItemId}', 'updateCartItem')->name('cart.update');
                             Route::put('/cart/item/discount/{cartItemId}', 'applyDiscountToCartItem')->name('cart.apply-discount');
+                            Route::put('/cart/item/clear-discount/{cartItemId}', 'clearDiscountToCartItem')->name('cart.clear-discount');
                             Route::put('/cart/item/modifier/{cartItemIds}', 'applyModifierToCartItem')->name('cart.apply-modifier');
                             Route::put('/cart/item/void/{cartItemId}', 'voidCartItem')->name('cart.void-cart');
                             Route::delete('/cart/item/{cartItemId}', 'deleteCartItem')->name('cart.delete');
+                            Route::post('/cart/calculate-discount', 'calculateDiscount')->name('cart.calculate-discount');
                         });
                 });
 
@@ -155,6 +157,7 @@ Route::middleware([
                     Route::get('/list', 'list')->name('list');
                     Route::post('/tables', 'store')->name('store');
                     Route::put('/tables/{tableId}', 'update')->name('update');
+                    Route::put('/tables/{tableId}/unmerge', 'unmergeTable')->name('unmerge');
                     Route::put('/tables/{tableId}/merge', 'mergeTable')->name('merge');
                     Route::delete('/tables/{tableId}', 'destroy')->name('destroy');
                     Route::post('/tables/bulk-update-positions', 'bulkUpdatePositions')->name('bulk-update-positions');

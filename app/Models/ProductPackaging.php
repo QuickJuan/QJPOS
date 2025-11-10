@@ -16,6 +16,7 @@ class ProductPackaging extends Model implements HasMedia
         'barcode',
         'cost',
         'price',
+        'name',
         'unit_measure',
         'qty',
         'featured_image',

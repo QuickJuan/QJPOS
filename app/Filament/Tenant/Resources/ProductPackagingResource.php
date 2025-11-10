@@ -41,6 +41,10 @@ class ProductPackagingResource extends Resource
                     ->numeric()
                     ->required(),
 
+                TextInput::make('name')
+                    ->label('Name')
+                    ->required(),
+
                 TextInput::make('unit_measure')
                     ->label('Unit Measure')
                     ->required(),
@@ -66,6 +70,10 @@ class ProductPackagingResource extends Resource
                     ->circular(),
 
                 TextColumn::make('product.name')
+                    ->sortable()
+                    ->searchable(),
+
+                TextColumn::make('name')
                     ->sortable()
                     ->searchable(),
 

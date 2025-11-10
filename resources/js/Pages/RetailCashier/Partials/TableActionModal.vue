@@ -71,6 +71,16 @@
                     @click="$emit('mergeTable')"
                 />
 
+                <!-- Unmerge Table (only for merged tables) -->
+                <Button
+                    v-if="table.merge_to"
+                    label="Unmerge Table"
+                    icon="pi pi-unlink"
+                    class="w-full"
+                    severity="warning"
+                    @click="$emit('unmergeTable')"
+                />
+
                 <!-- Reserve/Unreserve -->
                 <Button
                     :label="
@@ -144,7 +154,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { ref, watch } from "vue";
 import Dialog from "primevue/dialog";
 import Button from "primevue/button";
 import TextField from "@/Components/Form/TextField.vue";
@@ -160,6 +170,7 @@ const emit = defineEmits<{
     viewOrder: [];
     mergeTable: [];
     reserveTable: [];
+    unmergeTable: [];
 }>();
 
 const pax = ref(1);

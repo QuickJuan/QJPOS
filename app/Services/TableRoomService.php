@@ -85,11 +85,22 @@ class TableRoomService
             throw new Exception('Can only merge vacant tables.');
         }
 
-        $tableRoom->update([
+        return $tableRoom->update([
             'merge_to' => $mergeToId,
             'status'   => TableRoomStatusType::OCCUPIED->value,
         ]);
+    }
+    public function unmergeTable(int $tableId): bool
+    {
+        $tableRoom = $this->model->findOrFail($tableId);
 
-        return true;
+        if (! $tableRoom) {
+            throw new Exception('Table/Room not found.');
+        }
+
+        return $tableRoom->update([
+            'merge_to' => null,
+            'status'   => TableRoomStatusType::VACANT->value,
+        ]);
     }
 }
