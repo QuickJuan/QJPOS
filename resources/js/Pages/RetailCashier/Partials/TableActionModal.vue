@@ -43,6 +43,7 @@
             <div class="space-y-3">
                 <!-- Take Order -->
                 <Button
+                    v-if="table && table.status === 'vacant'"
                     label="Take Order"
                     icon="pi pi-plus"
                     class="w-full"
@@ -75,7 +76,7 @@
                 <Button
                     v-if="table.merge_to"
                     label="Unmerge Table"
-                    icon="pi pi-unlink"
+                    icon="pi pi-arrow-up-right-and-arrow-down-left-from-center"
                     class="w-full"
                     severity="warning"
                     @click="$emit('unmergeTable')"
