@@ -12,14 +12,14 @@
             </button>
 
             <!-- Action Buttons -->
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-2 gap-2">
                 <button
                     @click="showMoreOptionsModal = true"
                     :disabled="orderItems.length === 0"
-                    class="py-3 px-4 bg-secondary-600 text-white rounded-lg font-semibold hover:bg-secondary-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                    class="py-2 px-3 bg-secondary-600 text-white rounded-lg font-semibold hover:bg-secondary-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 text-sm"
                 >
                     <span>More Options</span>
-                    <ChevronDownIcon class="w-4 h-4" />
+                    <ChevronDownIcon class="w-3 h-3" />
                 </button>
                 <button
                     v-if="tableId"
@@ -30,14 +30,14 @@
                         })
                     "
                     :disabled="orderItems.every((item) => item.is_served)"
-                    class="py-3 px-4 bg-success-600 text-white rounded-lg font-semibold hover:bg-success-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                    class="py-2 px-3 bg-success-600 text-white rounded-lg font-semibold hover:bg-success-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
                 >
                     Place Order
                 </button>
                 <button
                     @click="showSettleBillModal = true"
                     :disabled="orderItems.length <= 0 || !orderItems.every((item) => item.is_served)"
-                    class="py-3 px-4 bg-success-600 text-white rounded-lg font-semibold hover:bg-success-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                    class="py-2 px-3 bg-success-600 text-white rounded-lg font-semibold hover:bg-success-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
                 >
                     Settle Bill
                 </button>

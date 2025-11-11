@@ -1,14 +1,16 @@
 <?php
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CartItem extends Model
 {
     protected $fillable = [
         'cart_id',
+        'parent_id',
         'product_id',
         'product_packaging_id',
         'quantity',
@@ -53,9 +55,14 @@ class CartItem extends Model
         return $this->belongsTo(ProductPackaging::class);
     }
 
-    public function discount(): BelongsTo
+    public function itemDiscount(): BelongsTo
     {
         return $this->belongsTo(Discount::class);
+    }
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_id');
     }
 
     public function selectedOptions()

@@ -14,13 +14,15 @@
                 @toggle-item-for-discount="toggleItemForDiscount"
                 @edit-item="handleEdit"
                 @delete-item="handleDelete"
+                @show-item-modifiers="handleShowItemModifiers"
             />
 
             <!-- Order Totals -->
             <OrderTotals
                 :order-subtotal="orderSubtotal"
                 :tax-amount="taxAmount"
-                :final-total="finalTotal"
+                :final-total="props.total"
+                :sub-total="props.subTotal"
                 :applied-discount="appliedDiscount"
             />
         </div>
@@ -75,6 +77,13 @@
             @add="handleModifierAdded"
         />
 
+        <!-- Item Modifiers Modal -->
+        <ItemModifiersModal
+            v-model:visible="showItemModifiersModal"
+            :item="selectedItemForModifiers"
+            :modifiers="selectedItemModifiers"
+        />
+
         <Toast />
         <ConfirmPopup />
     </aside>
@@ -96,6 +105,7 @@ import EditItemModal from "./OrderSummary/EditItemModal.vue";
 import DiscountModal from "./OrderSummary/DiscountModal.vue";
 import RequiredReasonModal from "./OrderSummary/RequiredReasonModal.vue";
 import AddModifierModal from "./OrderSummary/AddModifierModal.vue";
+import ItemModifiersModal from "./OrderSummary/ItemModifiersModal.vue";
 
 const props = defineProps<{
     cart: any;
@@ -105,6 +115,8 @@ const props = defineProps<{
     availableDiscounts: any[];
     availableModifiers: any[];
     currentTable: any;
+    subTotal: number;
+    total: number;
 }>();
 
 const toast = useToast();
@@ -123,8 +135,11 @@ const showEditModal = ref(false);
 const showDiscountModal = ref(false);
 const showRequiredReasonModal = ref(false);
 const showAddModifierModal = ref(false);
+const showItemModifiersModal = ref(false);
 const selectedOrderItem = ref(props.selectedOrderItem);
 const selectedItemsForDiscount = ref<number[]>([]);
+const selectedItemForModifiers = ref<any>(null);
+const selectedItemModifiers = ref<any[]>([]);
 
 // Discount state
 const appliedDiscount = ref<{
@@ -138,7 +153,8 @@ const appliedDiscount = ref<{
 
 // Computed values
 const subtotal = computed(() => {
-    const total = props.orderItems.reduce((sum, item) => {
+    const items = Array.isArray(props.orderItems) ? props.orderItems : [];
+    const total = items.reduce((sum, item) => {
         const hasOptions = item.selected_options?.length > 0;
 
         if (hasOptions) {
@@ -156,97 +172,22 @@ const subtotal = computed(() => {
     return parseFloat(total.toFixed(2));
 });
 
-const vatableSubtotal = computed(() => {
-    return props.orderItems.reduce((sum, item) => {
-        const itemPrice = parseFloat(item.price || item.average_cost || "0");
-        const quantity = item.quantity;
-        const lineTotal = itemPrice * quantity;
-        const vatableAmount = lineTotal / 1.12;
-        return sum + vatableAmount;
-    }, 0);
-});
-
 const discountAmount = computed(() => {
     if (!appliedDiscount.value) return 0;
-
-    const discount = appliedDiscount.value;
-
-    if (discount.discountType.toLowerCase() == "fixed") {
-        return getFixedAmountDiscount();
-    } else if (discount.discountType.toLowerCase() == "percentage") {
-        return getPercentageAmountDiscount();
-    }
-});
-
-// TODO: Transfer this into backend
-const getPercentageAmountDiscount = () => {
-    const discount = appliedDiscount.value;
-    let vatableAmount = 0;
-    let vatAmount = 0;
-
-    if (discount.removeTax && subtotal.value > 0) {
-        vatableAmount = subtotal.value / 1.12;
-        vatAmount = subtotal.value - vatableAmount;
-    }
-
-    const discountValue =
-        vatableAmount *
-        (discount.discountAmount > 0 ? discount.discountAmount / 100 : 0);
-
-    return discountValue + vatAmount;
-};
-
-const getFixedAmountDiscount = () => {
-    const discount = appliedDiscount.value;
-    let vatableAmount = 0;
-    let vatAmount = 0;
-
-    if (discount.removeTax && subtotal.value > 0) {
-        vatableAmount = subtotal.value / 1.12;
-        vatAmount = subtotal.value - vatableAmount;
-    }
-
-    return discount.discountAmount + vatAmount;
-};
-
-const discountedVatableSubtotal = computed(() => {
-    if (!appliedDiscount.value) return vatableSubtotal.value;
-
-    const discount = appliedDiscount.value;
-    const isSeniorDiscount =
-        discount.discountType === "senior" ||
-        discount.discountName?.toLowerCase().includes("senior");
-
-    if (discount.removeTax && isSeniorDiscount) {
-        // For Senior Citizen: VAT-exempt amount - 20% discount
-        const vatableAmount = subtotal.value / 1.12;
-        return vatableAmount - discountAmount.value;
-    } else if (discount.removeTax) {
-        // Remove tax first, then apply discount
-        const vatableAmount = subtotal.value / 1.12;
-        return vatableAmount - discountAmount.value;
-    } else {
-        // Standard: apply discount after tax calculation
-        return vatableSubtotal.value - discountAmount.value;
-    }
+    return appliedDiscount.value.discountAmount || 0;
 });
 
 const tax = computed(() => {
-    const discount = appliedDiscount.value;
-    const isSeniorDiscount =
-        discount &&
-        (discount.discountType === "senior" ||
-            discount.discountName?.toLowerCase().includes("senior"));
-
-    if (discount?.removeTax && isSeniorDiscount) {
-        // Senior Citizens are VAT-exempt
-        return 0;
-    }
-
-    return discountedVatableSubtotal.value * 0.12;
+    const items = Array.isArray(props.orderItems) ? props.orderItems : [];
+    return items.reduce((sum, item) => {
+        const itemPrice = parseFloat(item.price || item.average_cost || "0");
+        const quantity = item.quantity;
+        const lineTotal = itemPrice * quantity;
+        return sum + (lineTotal - lineTotal / 1.12);
+    }, 0);
 });
 
-const total = computed(() => discountedVatableSubtotal.value + tax.value);
+const total = computed(() => subtotal.value + tax.value - discountAmount.value);
 
 // Aliases for template compatibility
 const orderSubtotal = computed(() => subtotal.value);
@@ -271,8 +212,13 @@ const handleEdit = (orderItem: any) => {
 };
 
 const handleDelete = (orderItem: any) => {
+    // Check if this is a child item (has parent_id)
+    const isChildItem = orderItem.parent_id !== null;
+
     confirm.require({
-        message: "Are you sure you want to remove this?",
+        message: isChildItem
+            ? "Are you sure you want to remove this option?"
+            : "Are you sure you want to remove this item?",
         icon: "pi pi-exclamation-triangle",
         rejectProps: {
             label: "Cancel",
@@ -364,7 +310,7 @@ const openDiscountModal = () => {
     showDiscountModal.value = true;
 };
 
-const handleDiscountApplied = (discountData: {
+const handleDiscountApplied = async (discountData: {
     discountId: string;
     discountName: string;
     selectedItems: number[];
@@ -372,18 +318,53 @@ const handleDiscountApplied = (discountData: {
     discountType: string;
     removeTax?: boolean;
 }) => {
-    appliedDiscount.value = discountData;
-    selectedItemsForDiscount.value = [];
-    showDiscountModal.value = false;
+    try {
+        // Calculate discount on backend
+        const response = await fetch(
+            route("retail-cashier.cart.calculate-discount"),
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-TOKEN":
+                        document
+                            .querySelector('meta[name="csrf-token"]')
+                            ?.getAttribute("content") || "",
+                },
+                body: JSON.stringify({
+                    discount_id: discountData.discountId,
+                    items: props.orderItems,
+                }),
+            }
+        );
 
-    toast.add({
-        severity: "success",
-        summary: "Success",
-        detail: `Discount of ₱${discountData.discountAmount.toFixed(
-            2
-        )} applied successfully`,
-        life: 3000,
-    });
+        const result = await response.json();
+
+        if (response.ok) {
+            appliedDiscount.value = {
+                ...discountData,
+                discountAmount: result.discount_amount,
+            };
+            selectedItemsForDiscount.value = [];
+            showDiscountModal.value = false;
+
+            toast.add({
+                severity: "success",
+                summary: "Success",
+                detail: `Discount applied successfully`,
+                life: 3000,
+            });
+        } else {
+            throw new Error(result.error || "Failed to calculate discount");
+        }
+    } catch (error) {
+        toast.add({
+            severity: "error",
+            summary: "Error",
+            detail: "Failed to apply discount",
+            life: 3000,
+        });
+    }
 };
 
 const handleSaveOrder = () => {
@@ -467,7 +448,9 @@ const handleAddModifier = () => {
 };
 
 const handleModifierAdded = (modifierData: any) => {
-    const selectedItemIds = modifierData.selectedCartItems.map((item: any) => item.id);
+    const selectedItemIds = modifierData.selectedCartItems.map(
+        (item: any) => item.id
+    );
 
     router.put(
         route("retail-cashier.cart.apply-modifier", {
@@ -538,8 +521,9 @@ const handleAddDiscountToItem = (item: any) => {
 
 const handleClearDiscountFromItem = (item: any) => {
     // Clear discount from the item
-    router.delete(
+    router.put(
         route("retail-cashier.cart.clear-discount", { cartItemId: item.id }),
+        {},
         {
             onSuccess: () => {
                 toast.add({
@@ -554,7 +538,8 @@ const handleClearDiscountFromItem = (item: any) => {
                 toast.add({
                     severity: "error",
                     summary: "Error",
-                    detail: page.props.flash.error || "Failed to clear discount",
+                    detail:
+                        page.props.flash.error || "Failed to clear discount",
                     life: 3000,
                 });
             },
@@ -567,5 +552,11 @@ const handleAddModifierToItem = (item: any) => {
     selectedItemsForDiscount.value = [item.id];
     showAddModifierModal.value = true;
     showEditModal.value = false;
+};
+
+const handleShowItemModifiers = (item: any) => {
+    selectedItemForModifiers.value = item;
+    selectedItemModifiers.value = item.meta_data || [];
+    showItemModifiersModal.value = true;
 };
 </script>

@@ -1,6 +1,7 @@
 <?php
 namespace App\Services;
 
+use App\Enums\Discount\DiscountType;
 use App\Enums\TableRoomStatusType;
 use App\Models\Cart;
 use App\Models\CartItem;
@@ -20,7 +21,7 @@ class CartService
         $this->cashierSession = $cashierSession;
     }
 
-    public function addToCart(Request $request): void
+    public function addToCart(Request $request)
     {
         // Get or create cart for current cashier session
         $cashierSession = $this->cashierSession->openSession()->first();
@@ -40,57 +41,43 @@ class CartService
 
         $cart = Cart::firstOrCreate($cartAttributes);
 
-        // Check if item already exists in cart with same product
-        $existingItem = $cart->cartItems()
-            ->where('product_id', $request['product_id'])
-            ->where('order_type', $request['order_type'])
-            ->first();
-
         $newSelectedOptions = $request['selected_options'] ?? [];
-        $quantity           = $request['quantity'] ?? 1;
-        $totalPrice         = $request['total_price'];
-        $orderType          = $request['order_type'];
 
-        // if ($existingItem) {
-        //     // Product exists in cart
-        //     $currentSelectedOptions = $existingItem->selected_options ?? [];
-
-        //     // Check if selected options are the same
-        //     if (collect($currentSelectedOptions)->pluck('id')->sort()->values()->all() ===
-        //         collect($newSelectedOptions)->pluck('id')->sort()->values()->all()) {
-        //         // Same options - update quantity and subtotal
-        //         $existingItem->update([
-        //             'quantity'  => $existingItem->quantity + $quantity,
-        //             'sub_total' => ($existingItem->quantity + $quantity) * $existingItem->price,
-        //         ]);
-        //     } else {
-        //         $mergedOptions = array_merge($currentSelectedOptions, $newSelectedOptions); // Recalculate total price based on merged options
-        //         $basePrice     = $existingItem->price;                                      // This should be the base product price
-        //         $optionsTotal  = collect($mergedOptions)->sum('price');
-        //         $newTotalPrice = ($basePrice + $optionsTotal) * ($existingItem->quantity + $quantity);
-
-        //         $existingItem->update([
-        //             'selected_options' => $mergedOptions,
-        //             'quantity'         => $existingItem->quantity + $quantity,
-        //             'amount'           => $newTotalPrice / ($existingItem->quantity + $quantity),
-        //             'sub_total'        => $newTotalPrice,
-        //             'order_type'       => $orderType,
-        //         ]);
-        //     }
-        // } else {
-        // Product does not exist - create new cart item
-        $cart->cartItems()->create([
+        $quantity   = $request['quantity'] ?? 1;
+        $totalPrice = $request['total_price'];
+        $orderType  = $request['order_type'];
+        $withParent = $request['withParent'];
+        $cartItem   = $cart->cartItems()->create([
             'product_id'           => $request['product_id'],
-            'parent_id'            => $request['parent_id'],
             'product_packaging_id' => $request['product_packaging_id'],
             'quantity'             => $quantity,
             'price'                => $totalPrice / $quantity,
             'amount'               => $totalPrice,
             'sub_total'            => $totalPrice,
-            'selected_options'     => $newSelectedOptions,
             'order_type'           => $orderType,
         ]);
-        // }
+
+        if ($withParent) {
+            foreach ($newSelectedOptions as $option) {
+                try {
+                    $cartItem->children()->create([
+                        'parent_id'            => $cartItem->id,
+                        'cart_id'              => $cartItem->cart_id,
+                        'product_id'           => $option['product_id'],
+                        'product_packaging_id' => $option['product_packaging_id'] ?? null,
+                        'quantity'             => 1,
+                        'price'                => $option['price'],
+                        'amount'               => $option['price'],
+                        'order_type'           => $orderType,
+                        'sub_total'            => $option['price'],
+                    ]);
+                } catch (\Throwable $e) {
+                    dd('Failed on option:', $option, $e->getMessage());
+                }
+            }
+        }
+
+        return $cartItem->load('children');
     }
 
     public function updateCartItem(Request $request, int $cartItemId): mixed
@@ -160,19 +147,7 @@ class CartService
 
     public function applyDiscountToCartItem(Request $request, int $cartItemId): mixed
     {
-        $cashierSession = $this->cashierSession->openSession()->first();
-
-        if (! $cashierSession) {
-            throw new Exception('No active cashier session found.');
-        }
-
-        $cart = Cart::authCashier()->cashierSession($cashierSession->id)->first();
-
-        if (! $cart) {
-            throw new Exception('Cart not found.');
-        }
-
-        $cartItem = $cart->cartItems()->find($cartItemId);
+        $cartItem = CartItem::find($cartItemId);
 
         if (! $cartItem) {
             throw new Exception('Cart item not found.');
@@ -180,22 +155,13 @@ class CartService
 
         $discountId     = $request->input('discount_id');
         $discountAmount = $request->input('discount_amount', 0);
-        $couponCode     = $request->input('coupon_code');
 
-        // Recalculate subtotal with discount
-        $quantity        = $cartItem->quantity;
-        $price           = $cartItem->price;
-        $selectedOptions = $cartItem->selected_options ?? [];
-        $optionsTotal    = collect($selectedOptions)->sum('price');
-        $baseTotal       = ($price + $optionsTotal) * $quantity;
-        $newSubTotal     = $baseTotal - $discountAmount;
-
-        return $cartItem->update([
+        $result = $cartItem->update([
             'discount_id' => $discountId,
             'discount'    => $discountAmount,
-            'coupon_code' => $couponCode,
-            'sub_total'   => max(0, $newSubTotal), // Ensure subtotal doesn't go negative
         ]);
+
+        return $result;
     }
 
     public function applyModifierToCartItem(Request $request, $cartItemIds)
@@ -235,6 +201,32 @@ class CartService
                 ],
             ]);
         });
+    }
+
+    public function clearDiscountToCartItem(int $cartItemId): mixed
+    {
+        $cashierSession = $this->cashierSession->openSession()->first();
+
+        if (! $cashierSession) {
+            throw new Exception('No active cashier session found.');
+        }
+
+        $cart = Cart::authCashier()->cashierSession($cashierSession->id)->first();
+
+        if (! $cart) {
+            throw new Exception('Cart not found.');
+        }
+
+        $cartItem = CartItem::findOrFail($cartItemId);
+
+        if (! $cartItem) {
+            throw new Exception('Cart item is empty.');
+        }
+
+        return $cartItem->update([
+            'discount'    => null,
+            'discount_id' => null,
+        ]);
     }
 
     public function deleteCartItem(int $cartItemId): mixed
@@ -332,5 +324,79 @@ class CartService
         }
 
         return $order;
+    }
+
+    public function calculateDiscount(Request $request)
+    {
+        $discountService = app(DiscountService::class);
+
+        $discountId = $request->input('discount_id');
+        $items      = $request->input('items', []);
+
+        if (! $discountId || empty($items)) {
+            return [
+                'discount_amount' => 0,
+                'subtotal'        => 0,
+                'tax_amount'      => 0,
+                'total'           => 0,
+                'item_discounts'  => [],
+            ];
+        }
+
+        $discountAmount = $discountService->calculateDiscountAmount($discountId, $items);
+        $discount       = $discountService->getDiscountById($discountId);
+
+        // Calculate subtotal
+        $subtotal = collect($items)->sum(function ($item) {
+            $price    = (float) ($item['price'] ?? $item['average_cost'] ?? 0);
+            $quantity = (int) ($item['quantity'] ?? 1);
+            return $price * $quantity;
+        });
+
+        // Calculate vatable amount if tax should be removed
+        $baseAmount = $discount['remove_tax'] ? $subtotal / 1.12 : $subtotal;
+
+        // Calculate discounted subtotal
+        $discountedSubtotal = $baseAmount - $discountAmount;
+
+        // Calculate tax
+        $isSeniorDiscount = ($discount['discount_type'] ?? $discount['type']) === DiscountType::SENIOR->value || str_contains(strtolower($discount['discount_name'] ?? ''), DiscountType::SENIOR->value);
+        $taxAmount        = $discount['remove_tax'] && $isSeniorDiscount ? 0 : $discountedSubtotal * 0.12;
+
+        // Calculate final total
+        $total = $discountedSubtotal + $taxAmount;
+
+        // Calculate per-item discount amounts for preview
+        $itemDiscounts        = [];
+        $totalDiscountPerItem = $discountAmount / count($items);
+
+        foreach ($items as $item) {
+            $itemPrice = (float) ($item['price'] ?? $item['average_cost'] ?? 0);
+            $quantity  = (int) ($item['quantity'] ?? 1);
+            $lineTotal = $itemPrice * $quantity;
+
+            // For preview, distribute discount evenly across items
+            $itemDiscountAmount = $totalDiscountPerItem;
+
+            // Calculate discounted price for this item
+            $discountedPrice = max(0, $lineTotal - $itemDiscountAmount);
+
+            $itemDiscounts[] = [
+                'id'               => $item['id'],
+                'original_price'   => round($lineTotal, 2),
+                'discounted_price' => round($discountedPrice, 2),
+                'discount_amount'  => round($itemDiscountAmount, 2),
+            ];
+        }
+
+        return [
+            'discount_amount'     => round($discountAmount, 2),
+            'subtotal'            => round($subtotal, 2),
+            'discounted_subtotal' => round($discountedSubtotal, 2),
+            'tax_amount'          => round($taxAmount, 2),
+            'total'               => round($total, 2),
+            'discount_details'    => $discount,
+            'item_discounts'      => $itemDiscounts,
+        ];
     }
 }

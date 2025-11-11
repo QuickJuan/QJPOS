@@ -5,6 +5,7 @@ use App\Http\Requests\CartRequest;
 use App\Services\CartService;
 use App\Services\CashierSessionService;
 use Exception;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -48,10 +49,30 @@ class CartController extends Controller
         }
     }
 
-    public function applyDiscountToCartItem(Request $request, int $cartItemId): RedirectResponse
+    public function applyDiscountToCartItem(Request $request, int $cartItemId): JsonResponse
     {
         try {
-            $this->cartService->applyDiscountToCartItem($request, $cartItemId);
+            $result = $this->cartService->applyDiscountToCartItem($request, $cartItemId);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Discount applied to cart item successfully.',
+                'data'    => $result,
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'There was an error applying discount to cart item.',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+
+    public function clearDiscountToCartItem(int $cartItemId): RedirectResponse
+    {
+        try {
+            $this->cartService->clearDiscountToCartItem($cartItemId);
 
             return redirect()->back()->with('success', 'Discount applied to cart item successfully.');
         } catch (Exception $e) {
@@ -59,10 +80,10 @@ class CartController extends Controller
         }
     }
 
-    public function applyModifierToCartItem(Request $request, $cartItemId): RedirectResponse
+    public function applyModifierToCartItem(Request $request, int $cartItemIds): RedirectResponse
     {
         try {
-            $this->cartService->applyModifierToCartItem($request, $cartItemId);
+            $this->cartService->applyModifierToCartItem($request, $cartItemIds);
 
             return redirect()->back()->with('success', 'Discount applied to cart item successfully.');
         } catch (Exception $e) {
@@ -100,6 +121,17 @@ class CartController extends Controller
             return redirect()->back()->with('success', 'Bill settled successfully.');
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'There was an error settling the bill.');
+        }
+    }
+
+    public function calculateDiscount(Request $request): JsonResponse
+    {
+        try {
+            $result = $this->cartService->calculateDiscount($request);
+
+            return response()->json($result);
+        } catch (Exception $e) {
+            return response()->json(['error' => 'There was an error calculating discount.' . $e->getMessage()], 500);
         }
     }
 }

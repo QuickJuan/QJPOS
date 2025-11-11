@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
@@ -15,11 +14,11 @@ class CategoryResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
-            'name' => $this->name,
+            'id'                 => $this->id,
+            'name'               => $this->name,
             'featured_image_url' => $this->getFirstMediaUrl('featured_image'),
-            'products' => ProductResource::collection($this->whenLoaded('products')),
-            'products_count' => $this->when(
+            'products'           => ProductResource::collection($this->whenLoaded('products')),
+            'products_count'     => $this->when(
                 $this->relationLoaded('products'),
                 $this->products->count()
             ),

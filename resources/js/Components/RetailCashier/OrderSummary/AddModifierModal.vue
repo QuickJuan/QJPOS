@@ -99,14 +99,6 @@
                     placeholder="Add any special instructions or notes for this order..."
                 ></textarea>
             </div>
-
-            <div
-                v-if="selectedModifiers.length > 0"
-                class="text-sm text-gray-600 bg-blue-50 p-3 rounded"
-            >
-                <strong>{{ selectedModifiers.length }} modifier(s)</strong>
-                selected to be added to {{ selectedItems.length }} item(s).
-            </div>
         </div>
 
         <template #footer>
@@ -189,13 +181,12 @@ const parseModifierList = (list: any) => {
     if (typeof list === "string") {
         return list.split(",").map((item) => ({
             name: item.trim(),
-            price: 0,
         }));
     } else if (Array.isArray(list)) {
         // Handle array format
         return list.map((item) => {
             if (typeof item === "string") {
-                return { name: item, price: 0 };
+                return { name: item };
             }
             return item;
         });

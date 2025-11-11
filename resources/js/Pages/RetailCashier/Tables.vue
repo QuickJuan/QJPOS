@@ -77,7 +77,9 @@
                         </div>
 
                         <!-- Table Name -->
-                        <div class="flex flex-col items-center text-center mb-3">
+                        <div
+                            class="flex flex-col items-center text-center mb-3"
+                        >
                             <!-- Merged indicator -->
                             <div
                                 v-if="table.merge_to"
@@ -147,177 +149,27 @@
                 @viewOrder="handleViewOrder"
                 @mergeTable="handleMergeTable"
                 @reserveTable="handleReserveTable"
+                @unmergeTable="handleUnmergeTable"
+            />
+
+            <!-- View Orders Modal -->
+            <ViewOrdersModal
+                :visible="showOrdersModal"
+                :orders="tableOrders"
+                @update:visible="closeOrdersModal"
+                @viewOrderDetails="viewOrderDetails"
             />
 
             <!-- Merge Table Selection Modal -->
-            <Dialog
+            <MergeTableModal
                 :visible="showMergeModal"
-                modal
-                :header="`Merge Table: ${tableToMerge?.name}`"
-                :style="{ width: '600px' }"
-                :closable="true"
-                @hide="closeMergeModal"
+                :table-to-merge="tableToMerge"
+                :available-targets="availableMergeTargets"
+                :selected-target="selectedMergeTarget"
                 @update:visible="closeMergeModal"
-            >
-                <div class="space-y-4">
-                    <!-- Current table info -->
-                    <div
-                        class="bg-blue-50 border border-blue-200 rounded-lg p-3"
-                    >
-                        <div class="flex items-center gap-2 mb-1">
-                            <div
-                                class="w-3 h-3 rounded-full bg-green-500"
-                            ></div>
-                            <span class="text-sm font-medium text-blue-900"
-                                >Vacant Table to Merge</span
-                            >
-                        </div>
-                        <p class="text-sm text-blue-800 font-semibold">
-                            {{ tableToMerge?.name }}
-                        </p>
-                        <p class="text-xs text-blue-600">
-                            {{ tableToMerge?.chairs }} chairs
-                        </p>
-                        <p
-                            v-if="tableToMerge?.merge_to"
-                            class="text-xs text-orange-600 mt-1"
-                        >
-                            ⚠️ This table is already merged into another table
-                        </p>
-                    </div>
-
-                    <p class="text-sm text-gray-600">
-                        Select an occupied table to merge this vacant table
-                        into:
-                    </p>
-
-                    <div
-                        class="grid grid-cols-1 gap-3 max-h-80 overflow-y-auto"
-                    >
-                        <div
-                            v-for="table in availableMergeTargets"
-                            :key="table.id"
-                            @click="selectMergeTarget(table)"
-                            class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all cursor-pointer hover:scale-102 relative"
-                            :class="[
-                                getTableStatusClasses(table.status),
-                                selectedMergeTarget?.id === table.id
-                                    ? 'ring-2 ring-blue-500 border-blue-500 bg-blue-50'
-                                    : '',
-                            ]"
-                        >
-                            <!-- Selection indicator -->
-                            <div class="absolute top-3 right-3">
-                                <div
-                                    :class="[
-                                        'w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors',
-                                        selectedMergeTarget?.id === table.id
-                                            ? 'border-blue-500 bg-blue-500'
-                                            : 'border-gray-300 hover:border-gray-400',
-                                    ]"
-                                >
-                                    <div
-                                        v-if="
-                                            selectedMergeTarget?.id === table.id
-                                        "
-                                        class="w-2.5 h-2.5 rounded-full bg-white"
-                                    ></div>
-                                </div>
-                            </div>
-
-                            <div class="flex items-start justify-between pr-8">
-                                <div class="flex-1">
-                                    <div class="flex items-center gap-2 mb-2">
-                                        <div
-                                            :class="[
-                                                'w-3 h-3 rounded-full',
-                                                table.status === 'occupied' &&
-                                                    'bg-red-500',
-                                                table.status === 'reserved' &&
-                                                    'bg-yellow-500',
-                                                table.status === 'vacant' &&
-                                                    'bg-green-500',
-                                                table.status === 'merged' &&
-                                                    'bg-purple-500',
-                                            ]"
-                                        ></div>
-                                        <span
-                                            class="text-sm font-medium text-gray-700 capitalize"
-                                        >
-                                            {{ table.status }}
-                                        </span>
-                                        <span
-                                            class="text-xs text-gray-500 ml-auto"
-                                        >
-                                            #{{ table.sort_number || table.id }}
-                                        </span>
-                                    </div>
-
-                                    <h4
-                                        class="font-semibold text-gray-900 text-base mb-1"
-                                    >
-                                        {{ table.name }}
-                                    </h4>
-
-                                    <div
-                                        class="flex items-center gap-4 text-sm text-gray-600"
-                                    >
-                                        <span>{{ table.chairs }} chairs</span>
-                                        <span
-                                            v-if="table.current_order"
-                                            class="text-blue-600 font-medium"
-                                        >
-                                            Order #{{ table.current_order.id }}
-                                        </span>
-                                    </div>
-
-                                    <!-- Show merged tables info -->
-                                    <div
-                                        v-if="getMergedTables(table).length > 0"
-                                        class="mt-2"
-                                    >
-                                        <p
-                                            class="text-xs text-purple-600 font-medium"
-                                        >
-                                            Merged tables:
-                                            {{
-                                                getMergedTables(table)
-                                                    .map((t) => t.name)
-                                                    .join(", ")
-                                            }}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div
-                        v-if="availableMergeTargets.length === 0"
-                        class="text-center py-8"
-                    >
-                        <i
-                            class="pi pi-info-circle text-2xl text-gray-300 mb-2"
-                        ></i>
-                        <p class="text-sm text-gray-600">
-                            No occupied tables available for merging.
-                        </p>
-                    </div>
-                </div>
-                <template #footer>
-                    <Button
-                        label="Cancel"
-                        severity="secondary"
-                        @click="closeMergeModal"
-                    />
-                    <Button
-                        label="Merge Tables"
-                        severity="success"
-                        :disabled="!selectedMergeTarget"
-                        @click="confirmMerge"
-                    />
-                </template>
-            </Dialog>
+                @selectTarget="selectMergeTarget"
+                @confirmMerge="confirmMerge"
+            />
         </div>
     </CashieringLayout>
 </template>
@@ -327,29 +179,12 @@ import { ref, computed, onMounted } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { route } from "ziggy-js";
 import { useToast } from "primevue";
-import Dialog from "primevue/dialog";
-import Button from "primevue/button";
 import CashieringLayout from "@/Layouts/CashieringLayout.vue";
 import TableActionModal from "./Partials/TableActionModal.vue";
+import ViewOrdersModal from "./Partials/ViewOrdersModal.vue";
+import MergeTableModal from "./Partials/MergeTableModal.vue";
 import PageProps from "@/Types/PageProps";
-
-// Helper function to format time occupied
-const formatTimeOccupied = (timeIn: string) => {
-    const start = new Date(timeIn);
-    // Format as date and time
-    const dateStr = start.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-    });
-    const timeStr = start.toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-    });
-
-    return `${dateStr} ${timeStr}`;
-};
+import { formatTimeOccupied } from "@/Utils/FormatTime";
 
 // Props
 const props = defineProps<{
@@ -368,6 +203,8 @@ const selectedTable = ref<any>(null);
 const showMergeModal = ref(false);
 const selectedMergeTarget = ref<any>(null);
 const tableToMerge = ref<any>(null);
+const showOrdersModal = ref(false);
+const tableOrders = ref<any[]>([]);
 
 // Toast
 const toast = useToast();
@@ -398,11 +235,6 @@ const availableMergeTargets = computed(() =>
     filteredTables.value.filter((t) => t.status === "occupied")
 );
 
-const getMergedTables = (targetTable: any) => {
-    return filteredTables.value.filter((t) => t.merge_to === targetTable.id);
-};
-
-// Methods
 const getTableStatusClasses = (status: string) => {
     const baseClasses = "hover:border-gray-300";
     switch (status) {
@@ -417,20 +249,6 @@ const getTableStatusClasses = (status: string) => {
         default:
             return baseClasses;
     }
-};
-
-const getTableImage = (table: any) => {
-    if (table.featured_image_url) {
-        return table.featured_image_url;
-    }
-    // Default images based on chair count
-    const images: { [key: number]: string } = {
-        2: "/images/round-4.png",
-        4: "/images/square-4.png",
-        6: "/images/rec-6.png",
-        8: "/images/rec-8.png",
-    };
-    return images[table.chairs] || "/images/round-4.png";
 };
 
 const openTableModal = (table: any) => {
@@ -486,17 +304,6 @@ const handleTakeOrder = (data: any) => {
     }
 };
 
-const handleViewOrder = () => {
-    if (selectedTable.value.current_order) {
-        router.visit(
-            route("retail-cashier.index", {
-                order_id: selectedTable.value.current_order.id,
-            })
-        );
-        closeTableModal();
-    }
-};
-
 const handleMergeTable = () => {
     tableToMerge.value = selectedTable.value;
     showMergeModal.value = true;
@@ -526,12 +333,14 @@ const confirmMerge = () => {
                 toast.add({
                     severity: "success",
                     summary: "Table Merged",
-                    detail: `Table ${tableToMerge.value.name} has been merged into ${selectedMergeTarget.value.name}`,
+                    detail: `${tableToMerge.value.name} has been merged into ${selectedMergeTarget.value.name}`,
                     life: 3000,
                 });
                 closeMergeModal();
-                // Refresh tables
-                router.reload({ only: ["tables"] });
+                // Refresh tables to show real-time changes
+                setTimeout(() => {
+                    router.reload({ only: ["tables"] });
+                }, 100);
             },
             onError: (error) => {
                 console.log(error);
@@ -579,7 +388,73 @@ const handleReserveTable = () => {
     );
 };
 
-// Lifecycle
+const handleViewOrder = () => {
+    if (selectedTable.value) {
+        tableOrders.value = [
+            {
+                id:
+                    selectedTable.value.current_order?.id ||
+                    `temp-${Date.now()}`,
+                status:
+                    selectedTable.value.status === "occupied"
+                        ? "pending"
+                        : "completed",
+                total_amount:
+                    selectedTable.value.current_order?.total_amount || 0,
+                created_at:
+                    selectedTable.value.time_in || new Date().toISOString(),
+                cashier: { name: "Current Cashier" },
+                table_room: selectedTable.value,
+                cart_items: selectedTable.value.cart_items || [],
+            },
+        ];
+    }
+    showOrdersModal.value = true;
+    closeTableModal();
+};
+
+const handleUnmergeTable = () => {
+    if (!selectedTable.value) return;
+
+    router.put(
+        route("table-rooms.unmerge", selectedTable.value.id),
+        {},
+        {
+            onSuccess: () => {
+                toast.add({
+                    severity: "success",
+                    summary: "Table Unmerged",
+                    detail: `Table ${selectedTable.value.name} has been unmerged`,
+                    life: 3000,
+                });
+                closeTableModal();
+
+                setTimeout(() => {
+                    router.reload({ only: ["tables"] });
+                }, 100);
+            },
+            onError: (error) => {
+                console.log(error);
+                toast.add({
+                    severity: "error",
+                    summary: "Unmerge Failed",
+                    detail: "Failed to unmerge table. Please try again.",
+                    life: 3000,
+                });
+            },
+        }
+    );
+};
+
+const closeOrdersModal = () => {
+    showOrdersModal.value = false;
+    tableOrders.value = [];
+};
+
+const viewOrderDetails = (order: any) => {
+    router.visit(`/retail-cashier?tableId=${order.table_room.id}`);
+};
+
 onMounted(() => {
     // Auto-select first location if none selected
     if (!selectedLocation.value && locations.value.length > 0) {

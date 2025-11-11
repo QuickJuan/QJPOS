@@ -285,6 +285,7 @@ const addToCart = () => {
             total_price: calculateTotal(),
             table_id: tableId,
             order_type: orderType,
+            withParent: true,
         },
         {
             onSuccess: () => {

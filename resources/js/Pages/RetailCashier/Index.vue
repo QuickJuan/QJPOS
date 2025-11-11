@@ -46,6 +46,8 @@
                     :table-id="tableId"
                     :cart="cart"
                     :current-table="props.currentTable"
+                    :sub-total="subTotal"
+                    :total="total"
                     @selected-order-type="updateOrderType"
                     @show-receipt="handleShowReceipt"
                 />
@@ -83,6 +85,9 @@ const props = defineProps<{
     availableDiscounts: any[];
     availableModifiers: any[];
     currentTable: any;
+    pendingCashiering: any;
+    subTotal: number;
+    total: number;
 }>();
 
 const page = usePage<PageProps>();
@@ -258,7 +263,15 @@ onMounted(() => {
 
     // Get the tableId in URL if available
     const params = new URLSearchParams(window.location.search);
-    tableId.value = params.get("tableId");
+    const urlTableId = params.get("tableId");
+    tableId.value = urlTableId;
+
+    // If no tableId in URL and we have a pending cashiering session, redirect to tables page
+    if (!urlTableId && props.pendingCashiering) {
+        nextTick(() => {
+            router.visit(route("retail-cashier.tables"));
+        });
+    }
 });
 
 const addToCart = (product: any, packaging?: any) => {
@@ -305,7 +318,10 @@ const addToCart = (product: any, packaging?: any) => {
         }
     } else {
         // No packaging provided, check if product has packagings
-        if (product.product_packagings && product.product_packagings.length > 0) {
+        if (
+            product.product_packagings &&
+            product.product_packagings.length > 0
+        ) {
             if (product.product_packagings.length === 1) {
                 // Auto-select the single packaging
                 const packaging = product.product_packagings[0];
@@ -343,7 +359,10 @@ const addToCart = (product: any, packaging?: any) => {
                                 });
                             },
                             onError: (errors) => {
-                                console.error("Failed to add item to cart:", errors);
+                                console.error(
+                                    "Failed to add item to cart:",
+                                    errors
+                                );
                             },
                         }
                     );
@@ -388,7 +407,10 @@ const addToCart = (product: any, packaging?: any) => {
                             });
                         },
                         onError: (errors) => {
-                            console.error("Failed to add item to cart:", errors);
+                            console.error(
+                                "Failed to add item to cart:",
+                                errors
+                            );
                         },
                     }
                 );

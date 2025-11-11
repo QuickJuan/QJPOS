@@ -87,7 +87,18 @@ class TableRoomController extends Controller
         try {
             $this->tableRoomService->mergeTable($tableId, $validated['merge_to']);
 
-            return redirect()->back()->with('success', 'Table merged successfully.');
+            return redirect()->route('retail-cashier.tables')->with('success', 'Table merged successfully.');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+    }
+
+    public function unmergeTable(Request $request, int $tableId): RedirectResponse
+    {
+        try {
+            $this->tableRoomService->unmergeTable($tableId);
+
+            return redirect()->route('retail-cashier.tables')->with('success', 'Table unmerged successfully.');
         } catch (Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
         }

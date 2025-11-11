@@ -6,18 +6,21 @@
             <p class="text-sm text-secondary-400">Add items to get started</p>
         </div>
 
-        <div v-else ref="cartItemsList" class="divide-y divide-gray-200">
+        <div v-else ref="cartItemsList">
             <div
-                v-for="(item, index) in orderItems"
+                v-for="item in orderItems"
                 :key="item.id"
-                class="py-3 hover:bg-gray-50 transition-colors"
+                class="hover:bg-gray-50 transition-colors"
             >
-                <div class="flex items-start gap-3">
-                    <!-- Checkbox -->
-                    <input
-                        type="checkbox"
-                        :checked="selectedItemsForDiscount.includes(item.id)"
-                        @change="
+                <template v-if="item.parent_id == null" class="py-2">
+                    <div class="flex items-start gap-3 mb-10">
+                        <!-- Checkbox -->
+                        <input
+                            type="checkbox"
+                            :checked="
+                                selectedItemsForDiscount.includes(item.id)
+                            "
+                            @change="
                             (e) =>
                                 $emit(
                                     'toggleItemForDiscount',
@@ -25,111 +28,220 @@
                                     (e.target as HTMLInputElement).checked
                                 )
                         "
-                        @click.stop
-                        class="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary-500 focus:ring-2 mt-1 flex-shrink-0"
-                    />
+                            @click.stop
+                            class="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary-500 focus:ring-2 mt-1 flex-shrink-0"
+                        />
 
-                    <!-- Clickable Main Item Content -->
-                    <div
-                        @click="$emit('editItem', item)"
-                        class="flex-1 cursor-pointer"
-                    >
-                        <div class="flex items-start justify-between">
-                            <div class="flex-1 min-w-0">
-                                <div
-                                    class="flex items-start justify-between mb-1"
-                                >
-                                    <h4
-                                        class="font-medium text-secondary-900 text-sm leading-tight flex-1"
+                        <!-- Clickable Main Item Content -->
+                        <div
+                            @click="$emit('editItem', item)"
+                            class="flex-1 cursor-pointer"
+                        >
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1 min-w-0">
+                                    <div
+                                        class="flex items-start justify-between mb-1"
                                     >
-                                        {{ item.name }}{{ item.selected_options && Object.keys(item.selected_options).length > 0 ? ' - ' + Object.values(item.selected_options).map((opt: any) => opt.product?.name || opt.name).join(', ') : '' }}
-                                    </h4>
-                                    <!-- Order Type Badge -->
-                                    <span
-                                        v-if="item.order_type"
-                                        :class="
-                                            getOrderTypeBadgeClass(
-                                                item.order_type
-                                            )
-                                        "
-                                        class="text-xs px-2 py-0.5 rounded-full font-medium ml-2 flex-shrink-0"
+                                        <h4
+                                            class="font-medium text-secondary-900 text-sm leading-tight flex-1"
+                                        >
+                                            {{ item.name }}
+                                            {{
+                                                item.selected_options &&
+                                                Object.keys(
+                                                    item.selected_options
+                                                ).length > 0
+                                                    ? " - " +
+                                                      Object.values(
+                                                          item.selected_options
+                                                      )
+                                                          .map(
+                                                              (opt: any) =>
+                                                                  opt.product
+                                                                      ?.name ||
+                                                                  opt.name
+                                                          )
+                                                          .join(", ")
+                                                    : ""
+                                            }}
+                                            <button
+                                                v-if="hasModifiers(item)"
+                                                @click.stop="
+                                                    showItemModifiers(item)
+                                                "
+                                                class="text-xs text-blue-600 font-medium ml-1 hover:text-blue-800 underline cursor-pointer"
+                                            >
+                                                (Modified)
+                                            </button>
+                                        </h4>
+                                        <!-- Order Type Badge -->
+                                        <span
+                                            v-if="item.order_type"
+                                            :class="
+                                                getOrderTypeBadgeClass(
+                                                    item.order_type
+                                                )
+                                            "
+                                            class="text-xs px-2 py-0.5 rounded-full font-medium ml-2 flex-shrink-0"
+                                        >
+                                            {{
+                                                getOrderTypeLabel(
+                                                    item.order_type
+                                                )
+                                            }}
+                                        </span>
+                                        <span
+                                            v-if="item.product_packaging"
+                                            class="text-xs px-2 py-0.5 rounded-full font-medium ml-2 flex-shrink-0 bg-green-100 text-green-800"
+                                        >
+                                            {{ item.product_packaging.name }}
+                                            ({{
+                                                item.product_packaging.qty +
+                                                item.product_packaging
+                                                    .unit_measure
+                                            }})
+                                        </span>
+                                    </div>
+                                    <div
+                                        class="flex items-center justify-between"
                                     >
-                                        {{ getOrderTypeLabel(item.order_type) }}
-                                    </span>
-                                    <span
-                                        v-if="item.product_packaging"
-                                        class="text-xs px-2 py-0.5 rounded-full font-medium ml-2 flex-shrink-0 bg-green-100 text-green-800"
-                                    >
-                                        {{
-                                            item.product_packaging.unit_measure
-                                        }}
-                                    </span>
-                                </div>
-                                <div class="flex items-center justify-between">
-                                    <div class="flex flex-col">
-                                        <p class="text-xs text-secondary-600">
-                                            {{ item.quantity }} ×
-                                            <span
+                                        <div class="flex flex-col">
+                                            <p
+                                                class="text-xs text-secondary-600"
+                                            >
+                                                {{ item.quantity }} ×
+                                                <span
+                                                    v-if="hasDiscount(item.id)"
+                                                    class="line-through text-red-500"
+                                                >
+                                                    {{
+                                                        formatMoney(
+                                                            getBasePrice(item)
+                                                        )
+                                                    }}
+                                                </span>
+                                                <span v-else>
+                                                    {{
+                                                        formatMoney(
+                                                            getBasePrice(item)
+                                                        )
+                                                    }}
+                                                </span>
+                                            </p>
+                                            <p
                                                 v-if="hasDiscount(item.id)"
-                                                class="line-through text-red-500"
+                                                class="text-xs text-green-600 font-medium"
+                                            >
+                                                Discounted:
+                                                {{ getDiscountedPrice(item) }}
+                                            </p>
+                                            <!-- Show explicit discount amount if saved on the cart item -->
+                                            <p
+                                                v-if="
+                                                    item &&
+                                                    (item.discount ||
+                                                        item.discount === 0) &&
+                                                    parseFloat(
+                                                        item.discount
+                                                    ) !== 0
+                                                "
+                                                class="text-xs text-success-600"
+                                            >
+                                                Discount: -{{
+                                                    formatMoney(
+                                                        getItemDiscountAmount(
+                                                            item
+                                                        )
+                                                    )
+                                                }}
+                                            </p>
+                                        </div>
+                                        <div class="flex flex-col items-end">
+                                            <p
+                                                v-if="hasDiscount(item.id)"
+                                                class="text-xs text-secondary-500 line-through"
                                             >
                                                 {{
                                                     formatMoney(
-                                                        getBasePrice(item)
+                                                        (
+                                                            item.quantity *
+                                                            item.price
+                                                        ).toFixed(2)
                                                     )
                                                 }}
-                                            </span>
-                                            <span v-else>
-                                                {{
-                                                    formatMoney(
-                                                        getBasePrice(item)
-                                                    )
-                                                }}
-                                            </span>
-                                        </p>
-                                        <p
-                                            v-if="hasDiscount(item.id)"
-                                            class="text-xs text-green-600 font-medium"
-                                        >
-                                            Discounted:
-                                            {{ getDiscountedPrice(item) }}
-                                        </p>
+                                            </p>
+                                            <p
+                                                class="text-xs text-secondary-500 font-medium"
+                                            >
+                                                {{ totalOfItems(item) }}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div class="flex flex-col items-end">
-                                        <p
-                                            v-if="hasDiscount(item.id)"
-                                            class="text-xs text-secondary-500 line-through"
+                                </div>
+                            </div>
+
+                            <!-- Selected Options as Sub-items -->
+                            <div
+                                v-if="item.children && item.children.length > 0"
+                                class="mt-2 ml-4 space-y-1"
+                            >
+                                <div
+                                    v-for="option in item.children"
+                                    :key="option.id"
+                                    class="flex items-center justify-between py-1"
+                                >
+                                    <div class="flex items-center gap-2">
+                                        <div
+                                            class="w-1 h-1 bg-secondary-400 rounded-full flex-shrink-0"
+                                        ></div>
+                                        <span
+                                            class="text-xs text-secondary-600"
                                         >
-                                            {{
-                                                formatMoney(
-                                                    (
-                                                        item.quantity *
-                                                        item.price
-                                                    ).toFixed(2)
-                                                )
-                                            }}
-                                        </p>
-                                        <p
-                                            class="text-xs text-secondary-500 font-medium"
+                                            {{ option.product.name }}
+                                        </span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span
+                                            class="text-xs text-secondary-600"
                                         >
-                                            {{ totalOfItems(item) }}
-                                        </p>
+                                            +{{ formatMoney(option.price) }}
+                                        </span>
+                                        <button
+                                            @click.stop="
+                                                $emit('deleteItem', option)
+                                            "
+                                            class="p-0.5 text-secondary-400 hover:text-error-600 transition-colors"
+                                            title="Remove option"
+                                        >
+                                            <svg
+                                                class="w-3 h-3"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    stroke-width="2"
+                                                    d="M6 18L18 6M6 6l12 12"
+                                                ></path>
+                                            </svg>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
+                        <!-- Delete Button -->
+                        <button
+                            @click="$emit('deleteItem', item)"
+                            class="p-1 text-secondary-400 hover:text-error-600 transition-colors flex-shrink-0 mt-0.5"
+                            title="Remove item"
+                        >
+                            <TrashIcon class="w-4 h-4" />
+                        </button>
                     </div>
-
-                    <!-- Delete Button -->
-                    <button
-                        @click="$emit('deleteItem', item)"
-                        class="p-1 text-secondary-400 hover:text-error-600 transition-colors flex-shrink-0 mt-0.5"
-                        title="Remove item"
-                    >
-                        <TrashIcon class="w-4 h-4" />
-                    </button>
-                </div>
+                </template>
             </div>
         </div>
     </div>
@@ -153,10 +265,11 @@ const props = defineProps<{
     } | null;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
     toggleItemForDiscount: [itemId: number, checked: boolean];
     editItem: [item: any];
     deleteItem: [item: any];
+    showItemModifiers: [item: any];
 }>();
 
 // Helper functions for discount display
@@ -164,17 +277,28 @@ const hasDiscount = (itemId: number) => {
     return props.appliedDiscount?.selectedItems?.includes(itemId) || false;
 };
 
+const hasModifiers = (item: any) => {
+    return (
+        item.meta_data &&
+        Array.isArray(item.meta_data) &&
+        item.meta_data.length > 0
+    );
+};
+
+const showItemModifiers = (item: any) => {
+    emit("showItemModifiers", item);
+};
+
 const getBasePrice = (item: any) => {
     // The item.price is already the total price including options
     // We need to calculate the base price by subtracting options
     let optionsTotal = 0;
-    if (item.selected_options && typeof item.selected_options === 'object') {
-        optionsTotal = Object.values(item.selected_options as Record<string, any>).reduce(
-            (sum: number, option: any) => {
-                return sum + parseFloat(String(option.price || 0));
-            },
-            0
-        );
+    if (item.selected_options && typeof item.selected_options === "object") {
+        optionsTotal = Object.values(
+            item.selected_options as Record<string, any>
+        ).reduce((sum: number, option: any) => {
+            return sum + parseFloat(String(option.price || 0));
+        }, 0);
     }
     const basePrice = parseFloat(String(item.price)) - optionsTotal;
     return basePrice;
@@ -272,6 +396,14 @@ const getDiscountedTotal = (item: any) => {
     return formatMoney(discountedLineTotal.toFixed(2));
 };
 
+// Returns the per-line discount amount saved on the cart item (assumed stored in cart_items.discount)
+const getItemDiscountAmount = (item: any) => {
+    if (!item) return 0;
+    const d = item.discount || 0;
+    const parsed = parseFloat(d as any) || 0;
+    return parsed;
+};
+
 // Refs for the scrollable container
 const cartContainer = ref<HTMLDivElement>();
 const cartItemsList = ref<HTMLDivElement>();
@@ -304,7 +436,8 @@ const getOrderTypeLabel = (orderType: string) => {
 };
 
 const totalOfItems = (item: any) => {
-    const hasOptions = item.selected_options && Object.keys(item.selected_options).length > 0;
+    const hasOptions =
+        item.selected_options && Object.keys(item.selected_options).length > 0;
     const discounted = hasDiscount(item.id);
 
     if (discounted && hasOptions) {
@@ -316,7 +449,9 @@ const totalOfItems = (item: any) => {
     }
 
     if (hasOptions) {
-        const total = Object.values(item.selected_options as Record<string, any>).reduce(
+        const total = Object.values(
+            item.selected_options as Record<string, any>
+        ).reduce(
             (sum: number, option: any) => sum + parseFloat(option.price || 0),
             0
         );

@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Services;
 
 use App\Http\Resources\DiscountResource;
@@ -45,16 +44,50 @@ class DiscountService
                             'remove_tax',
                             'require_customer_info',
                             'created_at',
-                            'updated_at'
+                            'updated_at',
                         ])
                         ->get();
 
-                    return DiscountResource::collection($discounts);
+                    return collect(DiscountResource::collection($discounts)->resolve());
                 }
             );
         } catch (\Exception $e) {
             Log::error('Failed to fetch active discounts: ' . $e->getMessage());
-            return collect();
+            // Fallback to direct database query without cache
+            try {
+                $discounts = Discount::query()
+                    ->select([
+                        'id',
+                        'discount_name',
+                        'amount',
+                        'type',
+                        'discount_type',
+                        'remove_tax',
+                        'require_customer_info',
+                        'created_at',
+                        'updated_at',
+                    ])
+                    ->get();
+
+                $mapped = $discounts->map(function ($discount) {
+                        return [
+                            'id' => $discount->id,
+                            'discount_name' => $discount->discount_name,
+                            'description' => '',
+                            'amount' => $discount->amount,
+                            'type' => $discount->type,
+                            'discount_type' => $discount->discount_type,
+                            'remove_tax' => $discount->remove_tax,
+                            'require_customer_info' => $discount->require_customer_info,
+                            'created_at' => $discount->created_at,
+                            'updated_at' => $discount->updated_at,
+                        ];
+                    });
+                return $mapped;
+            } catch (\Exception $fallbackError) {
+                Log::error('Fallback discount fetch also failed: ' . $fallbackError->getMessage());
+                return collect();
+            }
         }
     }
 
@@ -69,8 +102,8 @@ class DiscountService
 
         return [
             'percentage' => $discounts->filter(fn($discount) => $discount['type'] === 'percentage'),
-            'fixed' => $discounts->filter(fn($discount) => in_array($discount['type'], ['fixed', 'amount'])),
-            'other' => $discounts->filter(fn($discount) => !in_array($discount['type'], ['percentage', 'fixed', 'amount']))
+            'fixed'      => $discounts->filter(fn($discount) => in_array($discount['type'], ['fixed', 'amount'])),
+            'other'      => $discounts->filter(fn($discount) => ! in_array($discount['type'], ['percentage', 'fixed', 'amount'])),
         ];
     }
 
@@ -98,13 +131,13 @@ class DiscountService
     {
         $discount = $this->getDiscountById($discountId);
 
-        if (!$discount) {
+        if (! $discount) {
             return 0;
         }
 
         // Calculate subtotal of items
         $subtotal = collect($items)->sum(function ($item) {
-            $price = (float) ($item['price'] ?? $item['average_cost'] ?? 0);
+            $price    = (float) ($item['price'] ?? $item['average_cost'] ?? 0);
             $quantity = (int) ($item['quantity'] ?? 1);
             return $price * $quantity;
         });
@@ -114,8 +147,8 @@ class DiscountService
 
         return match ($discount['type']) {
             'percentage' => $baseAmount * ($discount['amount'] / 100),
-            'fixed', 'amount' => min($discount['amount'], $baseAmount),
-            default => 0
+            'fixed'      => min($discount['amount'], $baseAmount),
+            default      => 0
         };
     }
 
@@ -165,7 +198,7 @@ class DiscountService
     {
         $discount = $this->getDiscountById($discountId);
 
-        if (!$discount) {
+        if (! $discount) {
             return false;
         }
 
@@ -185,9 +218,9 @@ class DiscountService
         $discounts = $this->getActiveDiscounts();
 
         return [
-            'total_discounts' => $discounts->count(),
-            'percentage_discounts' => $discounts->where('type', 'percentage')->count(),
-            'fixed_discounts' => $discounts->whereIn('type', ['fixed', 'amount'])->count(),
+            'total_discounts'        => $discounts->count(),
+            'percentage_discounts'   => $discounts->where('type', 'percentage')->count(),
+            'fixed_discounts'        => $discounts->whereIn('type', ['fixed', 'amount'])->count(),
             'customer_info_required' => $discounts->where('requires_customer_info', true)->count(),
         ];
     }

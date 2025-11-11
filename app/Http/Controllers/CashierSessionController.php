@@ -35,10 +35,7 @@ class CashierSessionController extends Controller
         $pendingCashiering = $this->cashierSessionService->model->openSession()->first();
 
         // Get categories with products directly (will be cached in browser)
-        $categoriesQuery = Category::with(['products' => function ($query) {
-            $query->where('is_active', true)
-                ->with('productPackagings', 'options');
-        }])->get();
+        $categoriesQuery = Category::with(['products' => fn($query) => $query->where('is_active', true)->with('productPackagings', 'options')])->get();
 
         $categories = CategoryResource::collection($categoriesQuery);
 
@@ -48,13 +45,12 @@ class CashierSessionController extends Controller
         );
 
         // Get available modifiers
-        $modifiers = Modifier::all()->map(function ($modifier) {
-            return [
+        $modifiers = Modifier::all()
+            ->map(fn($modifier) => [
                 'id'   => $modifier->id,
                 'name' => $modifier->name,
                 'list' => $modifier->list ?? [],
-            ];
-        });
+            ]);
 
         // Get cart items for current session
         $cartItems = [];
@@ -68,13 +64,14 @@ class CashierSessionController extends Controller
 
             $cart = $cartQuery->where('cashier_id', Auth::id())
                 ->where('cashier_session_id', $pendingCashiering->id)
-                ->with(['cartItems.product.productPackagings'])
+                ->with(['cartItems.product.productPackagings', 'cartItems.children.product'])
                 ->first();
 
             if ($cart) {
                 $cartItems = $cart->cartItems
                     ->map(fn($item) => [
                         'id'                => $item->id,
+                        'parent_id'         => $item->parent_id,
                         'product_id'        => $item->product_id,
                         'name'              => $item->product->name ?? 'Unknown Product',
                         'quantity'          => $item->quantity,
@@ -84,11 +81,21 @@ class CashierSessionController extends Controller
                         'is_served'         => (bool) $item->is_served,
                         'order_type'        => $item->order_type,
                         'selected_options'  => $item->selected_options ?? [],
+                        'meta_data'         => $item->meta_data ?? [],
+                        'discount'          => $item->discount,
                         'product_packaging' => $item->product_packaging_id ? $item->product->productPackagings->firstWhere('id', $item->product_packaging_id) : null,
                         'checked'           => false,
+                        'children'          => $item->children,
                     ])->toArray();
             }
         }
+
+        $subtotal = collect($cartItems)->sum('sub_total');
+        $total    = $cart->cartItems->sum(function ($item) {
+            $itemTotal = ($item->sub_total ?? 0) - ($item->discount ?? 0);
+
+            return $itemTotal;
+        });
 
         return Inertia::render('RetailCashier/Index', [
             'categories'         => $categories,
@@ -99,6 +106,8 @@ class CashierSessionController extends Controller
             'availableDiscounts' => $discounts,
             'availableModifiers' => $modifiers,
             'currentTable'       => $currentTable ?? [],
+            'subTotal'           => $subtotal,
+            'total'              => $total,
         ]);
     }
 
@@ -150,24 +159,53 @@ class CashierSessionController extends Controller
 
     public function tables(): Response
     {
-        $tables = TableRoom::with(['tableRoomLocation', 'mergeTo'])
+        $tables = TableRoom::with(['tableRoomLocation', 'mergeTo', 'carts.cartItems.product.productPackagings', 'carts.cartItems.children.product'])
             ->activeBranch()
             ->get()
-            ->map(fn($table) => [
-                'id'                     => $table->id,
-                'name'                   => $table->name,
-                'chairs'                 => $table->chairs,
-                'status'                 => $table->status,
-                'merge_to'               => $table->merge_to,
-                'sort_number'            => $table->sort_number,
-                'table_room_location_id' => $table->table_room_location_id,
-                'featured_image_url'     => $table->getFeaturedImageUrl() ?: null,
-                'current_order'          => null,
-                'number_of_pax'          => $table->number_of_pax,
-                'time_in'                => $table->time_in,
-                'customer_name'          => $table->customer_name,
-                'merged_to'              => $table->mergeTo,
-            ]);
+            ->map(function ($table) {
+                $cartItems = [];
+                if ($table->merge_to) {
+                    $targetTable = TableRoom::with(['carts.cartItems.product.productPackagings', 'carts.cartItems.children.product'])->find($table->merge_to);
+                    if ($targetTable && $targetTable->carts) {
+                        foreach ($targetTable->carts as $cart) {
+                            $cartItems = array_merge($cartItems, $cart->cartItems->map(function ($item) {
+                                $itemArray                      = $item->toArray();
+                                $itemArray['product_packaging'] = $item->product_packaging_id ?
+                                $item->product->productPackagings->firstWhere('id', $item->product_packaging_id) : null;
+                                return $itemArray;
+                            })->toArray());
+                        }
+                    }
+                } else {
+                    if ($table->carts) {
+                        foreach ($table->carts as $cart) {
+                            $cartItems = array_merge($cartItems, $cart->cartItems->map(function ($item) {
+                                $itemArray                      = $item->toArray();
+                                $itemArray['product_packaging'] = $item->product_packaging_id ?
+                                $item->product->productPackagings->firstWhere('id', $item->product_packaging_id) : null;
+                                return $itemArray;
+                            })->toArray());
+                        }
+                    }
+                }
+
+                return [
+                    'id'                     => $table->id,
+                    'name'                   => $table->name,
+                    'chairs'                 => $table->chairs,
+                    'status'                 => $table->status,
+                    'merge_to'               => $table->merge_to,
+                    'sort_number'            => $table->sort_number,
+                    'table_room_location_id' => $table->table_room_location_id,
+                    'featured_image_url'     => $table->getFeaturedImageUrl() ?: null,
+                    'current_order'          => null,
+                    'number_of_pax'          => $table->number_of_pax,
+                    'time_in'                => $table->time_in,
+                    'customer_name'          => $table->customer_name,
+                    'merged_to'              => $table->mergeTo,
+                    'cart_items'             => $cartItems,
+                ];
+            });
 
         // Get locations
         $locations = TableRoomLocation::all()

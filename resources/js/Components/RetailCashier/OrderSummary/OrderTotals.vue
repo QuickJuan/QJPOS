@@ -4,25 +4,15 @@
             <div class="flex justify-between text-sm">
                 <span class="text-secondary-600">Subtotal</span>
                 <span class="font-medium">
-                    {{ formatMoney(orderSubtotal.toFixed(2)) }}
+                    {{ formatMoney(subTotal) }}
                 </span>
             </div>
-            <div
-                v-if="appliedDiscount"
-                class="flex justify-between text-sm text-success-600"
-            >
-                <span>{{ getDiscountLabel(appliedDiscount) }}</span>
-                <span
-                    >-
-                    {{ formatMoney(appliedDiscount.discountAmount.toFixed(2)) }}
-                </span>
-            </div>
-            <div class="flex justify-between text-sm">
+            <!-- <div class="flex justify-between text-sm">
                 <span class="text-secondary-600">Tax (12%)</span>
                 <span class="font-medium">
                     {{ formatMoney(taxAmount.toFixed(2)) }}
                 </span>
-            </div>
+            </div> -->
             <hr class="border-gray-300" />
             <div class="flex justify-between text-lg font-bold">
                 <span>Total</span>
@@ -38,6 +28,7 @@ import { formatMoney } from "@/Utils/FormatMoney";
 const props = defineProps<{
     orderSubtotal: number;
     taxAmount: number;
+    subTotal: number;
     finalTotal: number;
     appliedDiscount: {
         discountName: string;
@@ -49,11 +40,12 @@ const props = defineProps<{
 
 // Get discount label based on type
 const getDiscountLabel = (discount: any) => {
-    const isSeniorDiscount = discount.discountType === 'senior' ||
-                           discount.discountName?.toLowerCase().includes('senior');
+    const isSeniorDiscount =
+        discount.discountType === "senior" ||
+        discount.discountName?.toLowerCase().includes("senior");
 
     if (isSeniorDiscount && discount.removeTax) {
-        return 'Senior Citizen Discount (20%)'; // TODO: Discount label will be based on backend
+        return "Senior Citizen Discount (20%)"; // TODO: Discount label will be based on backend
     }
 
     return `Discount (${discount.discountName})`;

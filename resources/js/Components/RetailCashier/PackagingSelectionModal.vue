@@ -26,15 +26,15 @@
                     <div class="flex items-center justify-between">
                         <div class="flex-1">
                             <h4 class="font-semibold text-gray-900">
-                                {{ packaging.unit_measure }}
+                                {{ packaging.name }}
                             </h4>
                             <p class="text-sm text-gray-600">
-                                Quantity: {{ packaging.qty }}
+                                Quantity: {{ packaging.qty }} {{ packaging.unit_measure }}
                             </p>
                         </div>
                         <div class="text-right">
                             <p class="text-lg font-bold text-primary">
-                                {{ formatMoney(packaging.price) }} {{ packaging.unit_measure }}
+                                {{ formatMoney(packaging.price) }}
                             </p>
                         </div>
                     </div>
@@ -81,6 +81,7 @@ import { formatMoney } from "@/Utils/FormatMoney";
 
 interface ProductPackaging {
     id: number;
+    name: string;
     unit_measure: string;
     price: number;
     qty: number;
