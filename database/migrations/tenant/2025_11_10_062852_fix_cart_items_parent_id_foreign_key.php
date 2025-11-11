@@ -13,7 +13,7 @@ return new class extends Migration
     {
         // This migration should be run on tenant databases
         // Use Schema::connection('tenant') or run via tenant migration
-        Schema::connection('tenant')->table('cart_items', function (Blueprint $table) {
+        Schema::table('cart_items', function (Blueprint $table) {
             // Drop the wrong foreign key constraint
             $table->dropForeign(['parent_id']);
 
@@ -30,7 +30,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::connection('tenant')->table('cart_items', function (Blueprint $table) {
+        Schema::table('cart_items', function (Blueprint $table) {
             // Drop the correct foreign key constraint
             $table->dropForeign(['parent_id']);
 
