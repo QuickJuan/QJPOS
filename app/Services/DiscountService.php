@@ -1,26 +1,114 @@
 <?php
-
 namespace App\Services;
 
-use App\Http\Resources\DiscountResource;
 use App\Models\Discount;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
+use App\Http\Resources\DiscountResource;
 
 class DiscountService
 {
+
+    const CACHE_KEY = 'active_discounts';
+    const CACHE_DURATION = 3600;
     /**
      * Get all active discounts
      */
+    // public function getActiveDiscounts(): Collection
+    // {
+    //     try {
+    //         $discounts = Discount::active()->get();
+
+    //         return collect(DiscountResource::collection($discounts)->resolve());
+    //     } catch (\Exception $e) {
+    //         Log::error('Failed to fetch active discounts', ['error' => $e->getMessage()]);
+    //         try {
+    //             $discounts = Discount::query()->active()->get();
+
+    //             $mapped = $discounts->map(fn($discount) => [
+    //                 'id'                    => $discount->id,
+    //                 'discount_name'         => $discount->discount_name,
+    //                 'description'           => '',
+    //                 'amount'                => $discount->amount,
+    //                 'type'                  => $discount->type,
+    //                 'discount_type'         => $discount->discount_type,
+    //                 'remove_tax'            => $discount->remove_tax,
+    //                 'require_customer_info' => $discount->require_customer_info,
+    //                 'created_at'            => $discount->created_at,
+    //                 'updated_at'            => $discount->updated_at,
+    //             ]);
+    //             return $mapped;
+    //         } catch (\Exception $fallbackError) {
+    //             Log::error('Fallback discount fetch also failed: ' . $fallbackError->getMessage());
+    //             return collect();
+    //         }
+    //     }
+    // }
     public function getActiveDiscounts(): Collection
     {
         try {
-            $discounts = Discount::active()->get();
+            return Cache::remember(
+                self::CACHE_KEY,
+                self::CACHE_DURATION,
+                function () {
+                    Log::info('Fetching active discounts from database');
 
-            return collect(DiscountResource::collection($discounts)->resolve());
+                    $discounts = Discount::query()
+                        ->select([
+                            'id',
+                            'discount_name',
+                            'description',
+                            'amount',
+                            'type',
+                            'discount_type',
+                            'remove_tax',
+                            'require_customer_info',
+                            'created_at',
+                            'updated_at',
+                        ])
+                        ->get();
+
+                    return collect(DiscountResource::collection($discounts)->resolve());
+                }
+            );
         } catch (\Exception $e) {
-            Log::error('Failed to fetch active discounts', ['error' => $e->getMessage()]);
-            return collect();
+            Log::error('Failed to fetch active discounts: ' . $e->getMessage());
+            // Fallback to direct database query without cache
+            try {
+                $discounts = Discount::query()
+                    ->select([
+                        'id',
+                        'discount_name',
+                        'amount',
+                        'type',
+                        'discount_type',
+                        'remove_tax',
+                        'require_customer_info',
+                        'created_at',
+                        'updated_at',
+                    ])
+                    ->get();
+
+                $mapped = $discounts->map(function ($discount) {
+                        return [
+                            'id' => $discount->id,
+                            'discount_name' => $discount->discount_name,
+                            'description' => '',
+                            'amount' => $discount->amount,
+                            'type' => $discount->type,
+                            'discount_type' => $discount->discount_type,
+                            'remove_tax' => $discount->remove_tax,
+                            'require_customer_info' => $discount->require_customer_info,
+                            'created_at' => $discount->created_at,
+                            'updated_at' => $discount->updated_at,
+                        ];
+                    });
+                return $mapped;
+            } catch (\Exception $fallbackError) {
+                Log::error('Fallback discount fetch also failed: ' . $fallbackError->getMessage());
+                return collect();
+            }
         }
     }
 
@@ -41,7 +129,7 @@ class DiscountService
     /**
      * Get discount by ID
      */
-    public function getDiscountById(string|int $discountId): ?array
+    public function getDiscountById(string | int $discountId): ?array
     {
         return $this->getActiveDiscounts()->firstWhere('id', $discountId);
     }
@@ -51,11 +139,11 @@ class DiscountService
      * discountId: ID of the discount to apply
      * items: array of ids from cart items or order items
      */
-    public function calculateDiscountAmount(int $discountId, string $table = 'cart_items', array $items): float
+    public function calculateDiscountAmount(int $discountId, array $items): float
     {
         $discount = $this->getDiscountById($discountId);
 
-        if (!$discount) {
+        if (! $discount) {
             return 0.0;
         }
 
@@ -73,7 +161,7 @@ class DiscountService
         return match ($discount['type']) {
             'percentage' => $this->calculatePercentageDiscount($discount['amount'], $subtotal),
             'fixed', 'amount' => $this->calculateFixedDiscount($discount['amount'], $subtotal),
-            default => 0.0
+            default      => 0.0
         };
     }
 
@@ -93,7 +181,7 @@ class DiscountService
         $discountOnNet = match ($discount['type']) {
             'percentage' => $this->calculatePercentageDiscount($discount['amount'], $netAmount),
             'fixed', 'amount' => $this->calculateFixedDiscount($discount['amount'], $netAmount),
-            default => 0.0
+            default      => 0.0
         };
 
         // Total discount = discount on net amount + tax amount
@@ -123,7 +211,7 @@ class DiscountService
     private function calculateSubtotal(array $items): float
     {
         return collect($items)->sum(function ($item) {
-            $price = (float) ($item['price'] ?? $item['average_cost'] ?? 0);
+            $price    = (float) ($item['price'] ?? $item['average_cost'] ?? 0);
             $quantity = (int) ($item['quantity'] ?? 1);
             return $price * $quantity;
         });
@@ -132,11 +220,11 @@ class DiscountService
     /**
      * Validate if discount can be applied to given items
      */
-    public function canApplyDiscount(string|int $discountId, array $items): bool
+    public function canApplyDiscount(string | int $discountId, array $items): bool
     {
         $discount = $this->getDiscountById($discountId);
 
-        if (!$discount) {
+        if (! $discount) {
             return false;
         }
 
@@ -161,4 +249,3 @@ class DiscountService
         ];
     }
 }
-

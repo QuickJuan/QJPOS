@@ -8,7 +8,6 @@ class Discount extends Model
 {
     protected $fillable = [
         'discount_name',
-        'description',
         'amount',
         'type',
         'remove_tax',

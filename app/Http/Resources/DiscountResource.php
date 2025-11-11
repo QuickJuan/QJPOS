@@ -17,7 +17,6 @@ class DiscountResource extends JsonResource
         return [
             'id' => $this->id,
             'discount_name' => $this->discount_name,
-            'description' => $this->description ?? null,
             'amount' => $this->amount,
             'type' => $this->type,
             'discount_type' => $this->discount_type,

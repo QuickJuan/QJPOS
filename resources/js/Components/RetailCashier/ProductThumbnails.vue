@@ -81,12 +81,16 @@
                     >
                         {{
                             formatMoney(
-                                parseFloat(product.average_cost || "0").toFixed(
-                                    2
-                                )
+                                product.product_packagings.length
+                                    ? getLowestPriceForProductPackagings(
+                                          product.product_packagings
+                                      )
+                                    : parseFloat(
+                                          product.average_cost || "0"
+                                      ).toFixed(2)
                             )
                         }}
-                        {{ product.options.length ? "+" : "" }}
+                        {{ product.product_packagings.length > 1 ? "+" : "" }}
                     </p>
                     <!-- Responsive Pick Button -->
                     <button
@@ -115,4 +119,14 @@ const emit = defineEmits<{
     backToCategories: [];
     addToCart: [product: Product];
 }>();
+
+const getLowestPriceForProductPackagings = (data: any) => {
+    const prices = data
+        .filter((item: any) => item.price !== undefined)
+        .map((item: any) => item.price);
+
+    const lowestPrice = prices.length ? Math.min(...prices) : null;
+
+    return lowestPrice;
+};
 </script>

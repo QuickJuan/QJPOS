@@ -10,16 +10,12 @@
     >
         <div class="space-y-4">
             <!-- Current table info -->
-            <div
-                class="bg-blue-50 border border-blue-200 rounded-lg p-3"
-            >
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <div class="flex items-center gap-2 mb-1">
-                    <div
-                        class="w-3 h-3 rounded-full bg-green-500"
-                    ></div>
-                    <span class="text-sm font-medium text-blue-900"
-                        >Vacant Table to Merge</span
-                    >
+                    <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                    <span class="text-sm font-medium text-blue-900">
+                        Vacant Table to Merge
+                    </span>
                 </div>
                 <p class="text-sm text-blue-800 font-semibold">
                     {{ tableToMerge?.name }}
@@ -31,18 +27,15 @@
                     v-if="tableToMerge?.merge_to"
                     class="text-xs text-orange-600 mt-1"
                 >
-                    ⚠️ This table is already merged into another table
+                    This table is already merged into another table
                 </p>
             </div>
 
             <p class="text-sm text-gray-600">
-                Select an occupied table to merge this vacant table
-                into:
+                Select an occupied table to merge this vacant table into:
             </p>
 
-            <div
-                class="grid grid-cols-1 gap-3 max-h-80 overflow-y-auto"
-            >
+            <div class="grid grid-cols-1 gap-3 max-h-80 overflow-y-auto">
                 <div
                     v-for="table in availableTargets"
                     :key="table.id"
@@ -66,9 +59,7 @@
                             ]"
                         >
                             <div
-                                v-if="
-                                    selectedTarget?.id === table.id
-                                "
+                                v-if="selectedTarget?.id === table.id"
                                 class="w-2.5 h-2.5 rounded-full bg-white"
                             ></div>
                         </div>
@@ -95,11 +86,6 @@
                                 >
                                     {{ table.status }}
                                 </span>
-                                <span
-                                    class="text-xs text-gray-500 ml-auto"
-                                >
-                                    #{{ table.sort_number || table.id }}
-                                </span>
                             </div>
 
                             <h4
@@ -125,9 +111,7 @@
                                 v-if="getMergedTables(table).length > 0"
                                 class="mt-2"
                             >
-                                <p
-                                    class="text-xs text-purple-600 font-medium"
-                                >
+                                <p class="text-xs text-purple-600 font-medium">
                                     Merged tables:
                                     {{
                                         getMergedTables(table)
@@ -141,13 +125,8 @@
                 </div>
             </div>
 
-            <div
-                v-if="availableTargets.length === 0"
-                class="text-center py-8"
-            >
-                <i
-                    class="pi pi-info-circle text-2xl text-gray-300 mb-2"
-                ></i>
+            <div v-if="availableTargets.length === 0" class="text-center py-8">
+                <i class="pi pi-info-circle text-2xl text-gray-300 mb-2"></i>
                 <p class="text-sm text-gray-600">
                     No occupied tables available for merging.
                 </p>

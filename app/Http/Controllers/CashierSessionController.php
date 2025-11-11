@@ -91,11 +91,13 @@ class CashierSessionController extends Controller
         }
 
         $subtotal = collect($cartItems)->sum('sub_total');
-        $total    = $cart->cartItems->sum(function ($item) {
+        $total    = $cart && $cart->cartItems->isNotEmpty()
+            ? $cart->cartItems->sum(function ($item) {
             $itemTotal = ($item->sub_total ?? 0) - ($item->discount ?? 0);
 
             return $itemTotal;
-        });
+        })
+            : null;
 
         return Inertia::render('RetailCashier/Index', [
             'categories'         => $categories,

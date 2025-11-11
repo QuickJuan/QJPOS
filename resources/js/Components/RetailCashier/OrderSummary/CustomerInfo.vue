@@ -42,5 +42,5 @@ const props = defineProps<{
     tableInfo: any;
 }>();
 
-const currentShift = ref(props.cart.id);
+const currentShift = ref(props.cart?.id);
 </script>

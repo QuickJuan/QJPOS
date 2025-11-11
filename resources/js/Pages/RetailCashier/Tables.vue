@@ -83,12 +83,15 @@
                             <!-- Merged indicator -->
                             <div
                                 v-if="table.merge_to"
-                                class="w-fit bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full font-medium flex items-center gap-1"
+                                class="w-fit bg-purple-100 text-purple-800 text-sm px-2 py-1 rounded-full font-medium flex items-center gap-1"
                             >
                                 <i class="pi pi-link text-xs"></i>
                                 Merged to {{ table.merged_to.name }}
                             </div>
-                            <h3 class="font-semibold text-gray-900 text-lg">
+                            <h3
+                                v-else
+                                class="font-semibold text-gray-900 text-lg"
+                            >
                                 {{ table.name }}
                             </h3>
                         </div>
@@ -195,7 +198,7 @@ const props = defineProps<{
 
 // Reactive State
 const page = usePage<PageProps>();
-const tables = ref(props.tables || []);
+const tables = computed(() => props.tables || []);
 const locations = ref(props.locations || []);
 const selectedLocation = ref<number | null>(null);
 const showTableModal = ref(false);
@@ -297,7 +300,12 @@ const handleTakeOrder = (data: any) => {
     } else {
         router.visit(
             route("retail-cashier.index", {
-                tableId: selectedTable.value.id,
+                // Check if the selected table is merged to the other table.
+                // If yes, use the merge_to column as tableId.
+                // If no, use the id of the selected table
+                tableId: selectedTable.value.merged_to
+                    ? selectedTable.value.merge_to
+                    : selectedTable.value.id,
             })
         );
         closeTableModal();
@@ -388,28 +396,42 @@ const handleReserveTable = () => {
     );
 };
 
+// const handleViewOrder = () => {
+//     if (selectedTable.value) {
+//         tableOrders.value = [
+//             {
+//                 id:
+//                     selectedTable.value.current_order?.id ||
+//                     `temp-${Date.now()}`,
+//                 status:
+//                     selectedTable.value.status === "occupied"
+//                         ? "pending"
+//                         : "completed",
+//                 total_amount:
+//                     selectedTable.value.current_order?.total_amount || 0,
+//                 created_at:
+//                     selectedTable.value.time_in || new Date().toISOString(),
+//                 cashier: { name: "Current Cashier" },
+//                 table_room: selectedTable.value,
+//                 cart_items: selectedTable.value.cart_items || [],
+//             },
+//         ];
+//     }
+//     showOrdersModal.value = true;
+//     closeTableModal();
+// };
+
 const handleViewOrder = () => {
-    if (selectedTable.value) {
-        tableOrders.value = [
-            {
-                id:
-                    selectedTable.value.current_order?.id ||
-                    `temp-${Date.now()}`,
-                status:
-                    selectedTable.value.status === "occupied"
-                        ? "pending"
-                        : "completed",
-                total_amount:
-                    selectedTable.value.current_order?.total_amount || 0,
-                created_at:
-                    selectedTable.value.time_in || new Date().toISOString(),
-                cashier: { name: "Current Cashier" },
-                table_room: selectedTable.value,
-                cart_items: selectedTable.value.cart_items || [],
-            },
-        ];
-    }
-    showOrdersModal.value = true;
+    router.visit(
+        route("retail-cashier.index", {
+            // Check if the selected table is merged to the other table.
+            // If yes, use the merge_to column as tableId.
+            // If no, use the id of the selected table
+            tableId: selectedTable.value.merged_to
+                ? selectedTable.value.merge_to
+                : selectedTable.value.id,
+        })
+    );
     closeTableModal();
 };
 
