@@ -16,7 +16,7 @@
             <hr class="border-gray-300" />
             <div class="flex justify-between text-lg font-bold">
                 <span>Total</span>
-                <span>{{ formatMoney(finalTotal.toFixed(2)) }}</span>
+                <span>{{ finalTotal ? formatMoney(finalTotal.toFixed(2)) : null }}</span>
             </div>
         </div>
     </div>

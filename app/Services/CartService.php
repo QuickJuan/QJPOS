@@ -82,40 +82,33 @@ class CartService
 
     public function updateCartItem(Request $request, int $cartItemId): mixed
     {
-        $cashierSession = $this->cashierSession
-            ->openSession()
-            ->first();
+        $cashierSession = $this->cashierSession->openSession()->first();
 
         if (! $cashierSession) {
             throw new Exception('No active cashier session found.');
         }
 
-        $cart = Cart::authCashier()
-            ->cashierSession($cashierSession->id)
-            ->first();
+        $cart = Cart::authCashier()->cashierSession($cashierSession->id)->first();
 
         if (! $cart) {
             throw new Exception('Cart not found.');
         }
 
-        $cartItem = $cart->cartItems()->find($cartItemId);
+        $cartItem = CartItem::find($cartItemId);
 
         if (! $cartItem) {
             throw new Exception('Cart item not found.');
         }
 
-        $quantity        = $request['quantity'] ?? $cartItem->quantity;
-        $selectedOptions = $request['selected_options'] ?? $cartItem->selected_options ?? [];
+        $quantity = $request['quantity'] ?? $cartItem->quantity;
 
-        $basePrice    = $cartItem->price; // This should be the base product price
-        $optionsTotal = collect($selectedOptions)->sum('price');
-        $totalPrice   = ($basePrice + $optionsTotal) * $quantity;
+        $basePrice  = $cartItem->price;
+        $totalPrice = $basePrice * $quantity;
 
         return $cartItem->update([
-            'quantity'         => $quantity,
-            'selected_options' => $selectedOptions,
-            'amount'           => $totalPrice / $quantity,
-            'sub_total'        => $totalPrice,
+            'quantity'  => $quantity,
+            'amount'    => $totalPrice / $quantity,
+            'sub_total' => $totalPrice,
         ]);
     }
 
