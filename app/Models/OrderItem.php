@@ -40,7 +40,7 @@ class OrderItem extends Model
     // SCOPES
     public function scopeIsVoid(Builder $query, bool $condition = false)
     {
-        $query->where('is_void', $condition);
+        return $query->where('is_void', $condition);
     }
 
     public function order(): BelongsTo

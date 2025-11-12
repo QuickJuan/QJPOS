@@ -25,14 +25,16 @@ class Cart extends Model
     // SCOPES
     public function scopeAuthCashier(Builder $query)
     {
-        $query->where('cashier_id', Auth::id());
+        return $query->where('cashier_id', Auth::id());
     }
 
     public function scopeCashierSession(Builder $query, $cashierSessionId)
     {
         if ($cashierSessionId) {
-            $query->where('cashier_session_id', $cashierSessionId);
+            return $query->where('cashier_session_id', $cashierSessionId);
         }
+
+        return $query;
     }
 
     public function cashier(): BelongsTo

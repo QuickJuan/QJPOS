@@ -31,15 +31,17 @@ class CashierSession extends Model
         'meta_data'         => 'array',
     ];
 
-    public function scopeOpenSession(Builder $query): void
+    public function scopeOpenSession(Builder $query): Builder
     {
         $activeBranch = session('active_branch');
 
         if ($activeBranch) {
-            $query->where('branch_id', $activeBranch->id)
+            return $query->where('branch_id', $activeBranch->id)
                 ->where('cashier_id', Auth::id())
                 ->whereNull('closing_time');
         }
+
+        return $query;
     }
 
     public function cashier(): BelongsTo
