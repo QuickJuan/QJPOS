@@ -118,9 +118,7 @@ class CashierSessionController extends Controller
         $activeBranch = session('active_branch');
 
         // Check if the current auth user has an open cashier session (closing_time is null)
-        $openSession = $this->cashierSessionService->model
-            ->openSession()
-            ->first();
+        $openSession = $this->cashierSessionService->model->openSession()->first();
 
         return Inertia::render('RetailCashier/Preview', [
             'activeBranch' => $activeBranch,

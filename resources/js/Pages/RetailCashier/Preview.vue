@@ -142,7 +142,7 @@ const confirmCloseSessionModal = (event: any) => {
 };
 
 const confirmCloseSession = (data: any) => {
-    console.log(data)
+    console.log(data);
     router.post(
         route("retail-cashier.session.close"),
         {
@@ -173,7 +173,12 @@ const confirmCloseSession = (data: any) => {
 
 const startSession = () => {
     if (!beginningCash.value || parseFloat(beginningCash.value) < 0) {
-        alert("Please enter a valid beginning cash amount");
+        toast.add({
+            severity: "error",
+            summary: "Error",
+            detail: "Please enter a valid beginning cash amount",
+            life: 3000,
+        });
         return;
     }
 
@@ -188,10 +193,14 @@ const startSession = () => {
                 window.location.reload();
             },
             onError: (errors) => {
-                alert(
-                    "Failed to start session: " +
-                        (errors.beginning_cash || "Unknown error")
-                );
+                toast.add({
+                    severity: "error",
+                    summary: "Error",
+                    detail:
+                        "Failed to start session: " +
+                        (errors.beginning_cash || "Unknown error"),
+                    life: 3000,
+                });
             },
         }
     );

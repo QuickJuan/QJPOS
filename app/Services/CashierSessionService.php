@@ -2,6 +2,7 @@
 namespace App\Services;
 
 use App\Enums\TableRoomStatusType;
+use App\Models\Branch;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\CashierSession;
@@ -13,17 +14,16 @@ use Illuminate\Support\Facades\Auth;
 
 class CashierSessionService
 {
-    public function __construct(public CashierSession $model)
+    public function __construct(public CashierSession $model, public Branch $activeBranch)
     {
-        $this->model = $model;
+        $this->model        = $model;
+        $this->activeBranch = session('active_branch');
     }
 
     public function startSession(Request $request): CashierSession
     {
         // Check if user already has an open session
-        $existingSession = $this->model
-            ->openSession()
-            ->first();
+        $existingSession = $this->model->openSession()->first();
 
         if ($existingSession) {
             throw new Exception('You already have an open session. Please continue or close it first before starting new one.');
@@ -32,6 +32,7 @@ class CashierSessionService
         $session = $this->model->create([
             'business_date'  => now()->toDateString(),
             'cashier_id'     => Auth::id(),
+            'branch_id'      => $this->activeBranch->id,
             'started_time'   => now(),
             'beginning_cash' => $request['beginning_cash'],
             'total_sales'    => 0,
@@ -43,9 +44,7 @@ class CashierSessionService
 
     public function closeSession(Request $request)
     {
-        $session = $this->model
-            ->openSession()
-            ->first();
+        $session = $this->model->openSession()->first();
 
         if (! $session) {
             throw new Exception('No open session found');
@@ -103,16 +102,17 @@ class CashierSessionService
             'cashier_session_id' => $cashierSession->id,
         ]);
 
-        $addToCart = $cart->cartItems()->create([
-            'product_id'           => $request['product_id'],
-            'product_packaging_id' => $request['product_packaging_id'],
-            'quantity'             => $request['quantity'] ?? 1,
-            'price'                => $request['total_price'] / ($request['quantity'] ?? 1),
-            'amount'               => $request['total_price'],
-            'sub_total'            => $request['total_price'],
-            'selected_options'     => $request['selected_options'] ?? [],
-            'order_type'           => $request['order_type'],
-        ]);
+        $addToCart = $cart->cartItems()
+            ->create([
+                'product_id'           => $request['product_id'],
+                'product_packaging_id' => $request['product_packaging_id'],
+                'quantity'             => $request['quantity'] ?? 1,
+                'price'                => $request['total_price'] / ($request['quantity'] ?? 1),
+                'amount'               => $request['total_price'],
+                'sub_total'            => $request['total_price'],
+                'selected_options'     => $request['selected_options'] ?? [],
+                'order_type'           => $request['order_type'],
+            ]);
 
         return $addToCart;
     }

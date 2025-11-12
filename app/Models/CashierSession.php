@@ -11,6 +11,7 @@ class CashierSession extends Model
     protected $fillable = [
         'business_date',
         'cashier_id',
+        'branch_id',
         'started_time',
         'closing_time',
         'beginning_cash',
@@ -32,8 +33,13 @@ class CashierSession extends Model
 
     public function scopeOpenSession(Builder $query): void
     {
-        $query->where('cashier_id', Auth::id())
-            ->whereNull('closing_time');
+        $activeBranch = session('active_branch');
+
+        if ($activeBranch) {
+            $query->where('branch_id', $activeBranch->id)
+                ->where('cashier_id', Auth::id())
+                ->whereNull('closing_time');
+        }
     }
 
     public function cashier(): BelongsTo
@@ -44,5 +50,10 @@ class CashierSession extends Model
     public function checkBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'check_by');
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
     }
 }
