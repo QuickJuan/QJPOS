@@ -5,6 +5,8 @@
         header="Close Cashier Session"
         :style="{ width: '50rem' }"
         class="bg-white"
+        @hide="handleClose"
+        @update:visible="handleClose"
     >
         <div class="space-y-6">
             <!-- Sales Summary -->
@@ -16,25 +18,31 @@
                     <div>
                         <p class="text-sm text-gray-600">Beginning Cash</p>
                         <p class="text-xl font-bold text-gray-900">
-                            ${{
-                                (
-                                    props.openSession?.beginning_cash || 0
-                                ).toFixed(2)
+                            {{
+                                formatMoney(
+                                    (
+                                        props.openSession?.beginning_cash || 0
+                                    ).toFixed(2)
+                                )
                             }}
                         </p>
                     </div>
                     <div>
                         <p class="text-sm text-gray-600">Total Sales</p>
                         <p class="text-xl font-bold text-green-600">
-                            ${{
-                                (props.openSession?.total_sales || 0).toFixed(2)
+                            {{
+                                formatMoney(
+                                    (
+                                        props.openSession?.total_sales || 0
+                                    ).toFixed(2)
+                                )
                             }}
                         </p>
                     </div>
                     <div class="col-span-2 border-t pt-4">
                         <p class="text-sm text-gray-600">Expected Cash</p>
                         <p class="text-2xl font-bold text-blue-600">
-                            ${{ expectedCash.toFixed(2) }}
+                            {{ formatMoney(expectedCash.toFixed(2)) }}
                         </p>
                     </div>
                 </div>
@@ -116,6 +124,7 @@
 <script setup lang="ts">
 import TextField from "@/Components/Form/TextField.vue";
 import CashieringSession from "@/Types/CashieringSession";
+import { formatMoney } from "@/Utils/FormatMoney";
 import { Button, Dialog } from "primevue";
 import { computed, ref } from "vue";
 
@@ -169,10 +178,14 @@ const handleConfirmCloseSession = () => {
         },
         {} as Record<string, number>
     );
-    
+
     emit("confirmCloseSession", {
         denominationData: denominationData,
         totalCashCounted: totalCashCounted.value,
     });
+};
+
+const handleClose = () => {
+    emit("closeModal");
 };
 </script>

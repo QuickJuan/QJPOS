@@ -173,6 +173,13 @@
                 @selectTarget="selectMergeTarget"
                 @confirmMerge="confirmMerge"
             />
+
+            <!-- Reserve Table Modal -->
+            <ReserveTableModal
+                :visible="showReserveModal"
+                :table="selectedTable"
+                @update:visible="showReserveModal = $event"
+            />
         </div>
     </CashieringLayout>
 </template>
@@ -186,6 +193,7 @@ import CashieringLayout from "@/Layouts/CashieringLayout.vue";
 import TableActionModal from "./Partials/TableActionModal.vue";
 import ViewOrdersModal from "./Partials/ViewOrdersModal.vue";
 import MergeTableModal from "./Partials/MergeTableModal.vue";
+import ReserveTableModal from "./Partials/ReserveTableModal.vue";
 import PageProps from "@/Types/PageProps";
 import { formatTimeOccupied } from "@/Utils/FormatTime";
 
@@ -208,6 +216,7 @@ const selectedMergeTarget = ref<any>(null);
 const tableToMerge = ref<any>(null);
 const showOrdersModal = ref(false);
 const tableOrders = ref<any[]>([]);
+const showReserveModal = ref(false);
 
 // Toast
 const toast = useToast();
@@ -221,44 +230,15 @@ const filteredTables = computed(() =>
           )
 );
 
-// const sortedTables = computed(() =>
-//     [...filteredTables.value].sort((a, b) => {
-//         // Sort by sort_number first, then by name
-//         const aSort = a.sort_number || 0;
-//         const bSort = b.sort_number || 0;
-//         if (aSort !== bSort) return aSort - bSort;
-//         return a.name.localeCompare(b.name);
-//     })
-// );
-
-const sortedTables = computed(() => {
-    const tables = [...filteredTables.value];
-
-    // Group tables by merge relationship (target ID)
-    const groups = new Map();
-    tables.forEach(table => {
-        const key = table.merge_to || table.id;
-        if (!groups.has(key)) groups.set(key, []);
-        groups.get(key).push(table);
-    });
-
-    // Sort groups by the target's sort_number
-    const sortedGroups = Array.from(groups.entries()).sort(([aKey, aGroup], [bKey, bGroup]) => {
-        const aTarget = aGroup.find(t => !t.merge_to) || aGroup[0];
-        const bTarget = bGroup.find(t => !t.merge_to) || bGroup[0];
-        const aSort = aTarget.sort_number || 0;
-        const bSort = bTarget.sort_number || 0;
+const sortedTables = computed(() =>
+    [...filteredTables.value].sort((a, b) => {
+        // Sort by sort_number first, then by name
+        const aSort = a.sort_number || 0;
+        const bSort = b.sort_number || 0;
         if (aSort !== bSort) return aSort - bSort;
-        return aTarget.name.localeCompare(bTarget.name);
-    });
-
-    // Flatten groups with merged tables after their target
-    return sortedGroups.flatMap(([key, group]) => {
-        const target = group.find(t => !t.merge_to);
-        const merged = group.filter(t => t.merge_to);
-        return target ? [target, ...merged] : merged;
-    });
-});
+        return a.name.localeCompare(b.name);
+    })
+);
 
 const getTableCount = (locationId: number) =>
     tables.value.filter((t) => t.table_room_location_id === locationId).length;
@@ -393,62 +373,8 @@ const confirmMerge = () => {
 };
 
 const handleReserveTable = () => {
-    // Toggle reservation status
-    const newStatus =
-        selectedTable.value.status === "reserved" ? "vacant" : "reserved";
-    router.put(
-        route("table-rooms.update", selectedTable.value.id),
-        {
-            status: newStatus,
-        },
-        {
-            onSuccess: () => {
-                toast.add({
-                    severity: "success",
-                    summary: "Table Updated",
-                    detail: `Table ${selectedTable.value.name} is now ${newStatus}`,
-                    life: 3000,
-                });
-                closeTableModal();
-                // Refresh tables
-                router.reload({ only: ["tables"] });
-            },
-            onError: () => {
-                toast.add({
-                    severity: "error",
-                    summary: "Error",
-                    detail: "Failed to update table status",
-                    life: 3000,
-                });
-            },
-        }
-    );
+    showReserveModal.value = true;
 };
-
-// const handleViewOrder = () => {
-//     if (selectedTable.value) {
-//         tableOrders.value = [
-//             {
-//                 id:
-//                     selectedTable.value.current_order?.id ||
-//                     `temp-${Date.now()}`,
-//                 status:
-//                     selectedTable.value.status === "occupied"
-//                         ? "pending"
-//                         : "completed",
-//                 total_amount:
-//                     selectedTable.value.current_order?.total_amount || 0,
-//                 created_at:
-//                     selectedTable.value.time_in || new Date().toISOString(),
-//                 cashier: { name: "Current Cashier" },
-//                 table_room: selectedTable.value,
-//                 cart_items: selectedTable.value.cart_items || [],
-//             },
-//         ];
-//     }
-//     showOrdersModal.value = true;
-//     closeTableModal();
-// };
 
 const handleViewOrder = () => {
     router.visit(

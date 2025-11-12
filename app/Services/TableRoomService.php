@@ -3,8 +3,10 @@ namespace App\Services;
 
 use App\Enums\TableRoomStatusType;
 use App\Models\TableRoom;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class TableRoomService
 {
@@ -90,6 +92,45 @@ class TableRoomService
             'status'   => TableRoomStatusType::OCCUPIED->value,
         ]);
     }
+
+    public function reserveTable(Request $request)
+    {
+        $tableRoom = TableRoom::findOrFail($request->table_room_id);
+
+        if (! $tableRoom) {
+            throw new Exception('Table/Room not found.');
+        }
+
+        $reservationFrom = Carbon::parse($request->reservation_from);
+        $now             = Carbon::now();
+
+        // If the reservation time is same to the current time, update the status
+        if ($now->format('Y-m-d H:i') == $reservationFrom->format('Y-m-d H:i')) {
+            $tableRoom->update([
+                'status' => TableRoomStatusType::RESERVED->value,
+            ]);
+        }
+
+        $tableReservation = $tableRoom->tableReservations()
+            ->create([
+                'table_room_id'    => $tableRoom->id,
+                'user_id'          => Auth::id(),
+                'name'             => $request->name,
+                'reservation_from' => $request->reservation_from,
+                'reservation_to'   => $request->reservation_to,
+                'pax'              => $request->pax,
+                'contact_phone'    => $request->contact_number,
+                'contact_email'    => $request->contact_email,
+                'notes'            => $request->notes,
+            ]);
+
+        if (! $tableReservation) {
+            throw new Exception('Error in creating reservation.');
+        }
+
+        return $tableReservation;
+    }
+
     public function unmergeTable(int $tableId): bool
     {
         $tableRoom = $this->model->findOrFail($tableId);

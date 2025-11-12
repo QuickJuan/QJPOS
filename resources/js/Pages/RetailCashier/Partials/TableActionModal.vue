@@ -2,11 +2,7 @@
     <Dialog
         :visible="show"
         modal
-        :header="`${
-            table?.merge_to
-                ? `Merged to ${table.merged_to.name}`
-                : table?.name || ''
-        }`"
+        :header="`Table ${table?.name || ''}`"
         :style="{ width: '400px' }"
         :closable="true"
         @hide="handleClose"
