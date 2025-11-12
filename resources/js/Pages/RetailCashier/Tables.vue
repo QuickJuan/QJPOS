@@ -221,15 +221,44 @@ const filteredTables = computed(() =>
           )
 );
 
-const sortedTables = computed(() =>
-    [...filteredTables.value].sort((a, b) => {
-        // Sort by sort_number first, then by name
-        const aSort = a.sort_number || 0;
-        const bSort = b.sort_number || 0;
+// const sortedTables = computed(() =>
+//     [...filteredTables.value].sort((a, b) => {
+//         // Sort by sort_number first, then by name
+//         const aSort = a.sort_number || 0;
+//         const bSort = b.sort_number || 0;
+//         if (aSort !== bSort) return aSort - bSort;
+//         return a.name.localeCompare(b.name);
+//     })
+// );
+
+const sortedTables = computed(() => {
+    const tables = [...filteredTables.value];
+
+    // Group tables by merge relationship (target ID)
+    const groups = new Map();
+    tables.forEach(table => {
+        const key = table.merge_to || table.id;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(table);
+    });
+
+    // Sort groups by the target's sort_number
+    const sortedGroups = Array.from(groups.entries()).sort(([aKey, aGroup], [bKey, bGroup]) => {
+        const aTarget = aGroup.find(t => !t.merge_to) || aGroup[0];
+        const bTarget = bGroup.find(t => !t.merge_to) || bGroup[0];
+        const aSort = aTarget.sort_number || 0;
+        const bSort = bTarget.sort_number || 0;
         if (aSort !== bSort) return aSort - bSort;
-        return a.name.localeCompare(b.name);
-    })
-);
+        return aTarget.name.localeCompare(bTarget.name);
+    });
+
+    // Flatten groups with merged tables after their target
+    return sortedGroups.flatMap(([key, group]) => {
+        const target = group.find(t => !t.merge_to);
+        const merged = group.filter(t => t.merge_to);
+        return target ? [target, ...merged] : merged;
+    });
+});
 
 const getTableCount = (locationId: number) =>
     tables.value.filter((t) => t.table_room_location_id === locationId).length;
