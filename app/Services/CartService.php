@@ -60,19 +60,22 @@ class CartService
         if ($withParent) {
             foreach ($newSelectedOptions as $option) {
                 try {
-                    $cartItem->children()->create([
-                        'parent_id'            => $cartItem->id,
-                        'cart_id'              => $cartItem->cart_id,
-                        'product_id'           => $option['product_id'],
-                        'product_packaging_id' => $option['product_packaging_id'] ?? null,
-                        'quantity'             => 1,
-                        'price'                => $option['price'],
-                        'amount'               => $option['price'],
-                        'order_type'           => $orderType,
-                        'sub_total'            => $option['price'],
-                    ]);
+                    $cartItem->children()
+                        ->create([
+                            'parent_id'            => $cartItem->id,
+                            'cart_id'              => $cartItem->cart_id,
+                            'product_id'           => $option['product_id'],
+                            'product_packaging_id' => $option['product_packaging_id'] ?? null,
+                            'quantity'             => 1,
+                            'price'                => $option['price'],
+                            'amount'               => $option['price'],
+                            'order_type'           => $orderType,
+                            'sub_total'            => $option['price'],
+                        ]);
                 } catch (\Throwable $e) {
-                    dd('Failed on option:', $option, $e->getMessage());
+                    info('Failed on option:', [
+                        'message' => $e->getMessage(),
+                    ]);
                 }
             }
         }

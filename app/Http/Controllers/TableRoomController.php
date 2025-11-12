@@ -1,14 +1,16 @@
 <?php
 namespace App\Http\Controllers;
 
-use App\Http\Requests\TableRoomRequest;
-use App\Models\TableRoomLocation;
-use App\Services\TableRoomService;
 use Exception;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Http\Request;
+use App\Models\TableRoomLocation;
+use App\Services\TableRoomService;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\RedirectResponse;
+use App\Http\Requests\TableRoomRequest;
+use App\Http\Requests\TableReservationRequest;
 
 class TableRoomController extends Controller
 {
@@ -88,6 +90,17 @@ class TableRoomController extends Controller
             $this->tableRoomService->mergeTable($tableId, $validated['merge_to']);
 
             return redirect()->route('retail-cashier.tables')->with('success', 'Table merged successfully.');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+    }
+
+    public function reserveTable(TableReservationRequest $request): RedirectResponse
+    {
+        try {
+            $this->tableRoomService->reserveTable($request);
+
+            return redirect()->route('retail-cashier.tables')->with('success', 'Table reservation created successfully.');
         } catch (Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
         }

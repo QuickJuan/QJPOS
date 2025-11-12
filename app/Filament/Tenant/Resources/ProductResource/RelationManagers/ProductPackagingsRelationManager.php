@@ -1,36 +1,47 @@
 <?php
-
 namespace App\Filament\Tenant\Resources\ProductResource\RelationManagers;
 
-use Filament\Forms;
-use Filament\Tables;
-use Filament\Forms\Form;
-use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Form;
+use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Tables;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 
 class ProductPackagingsRelationManager extends RelationManager
 {
-    protected static string $relationship = 'productPackagings';
+    protected static string $relationship      = 'productPackagings';
+    protected static ?string $label            = "Product Pricing";
+    protected static ?string $modelLabel       = 'Product Pricing';
+    protected static ?string $pluralModelLabel = 'Product Pricings';
+
+    public static function getTitle(Model $ownerRecord, string $pageClass): string
+    {
+        return 'Product Pricing';
+    }
 
     public function form(Form $form): Form
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('unit_measure')
+                TextInput::make('name')
+                    ->label('Name')
+                    ->required(),
+
+                TextInput::make('unit_measure')
                     ->required()
                     ->maxLength(50),
-                Forms\Components\TextInput::make('cost')
+                TextInput::make('cost')
                     ->required()
                     ->numeric()
                     ->label('Unit Cost'),
-                Forms\Components\TextInput::make('price')
+                TextInput::make('price')
                     ->required()
                     ->numeric()
                     ->label('Unit Price'),
-                Forms\Components\TextInput::make('qty')
+                TextInput::make('qty')
                     ->required()
                     ->numeric()
                     ->label('Quantity'),
@@ -38,7 +49,7 @@ class ProductPackagingsRelationManager extends RelationManager
                     ->collection('featured_image')
                     ->image()
                     ->label('Featured Image'),
-                
+
             ]);
     }
 
@@ -47,16 +58,22 @@ class ProductPackagingsRelationManager extends RelationManager
         return $table
             ->recordTitleAttribute('unit_measure')
             ->columns([
-                Tables\Columns\TextColumn::make('unit_measure'),
-                Tables\Columns\TextColumn::make('cost')
+                TextColumn::make('name')
+                    ->sortable()
+                    ->searchable(),
+
+                TextColumn::make('unit_measure'),
+
+                TextColumn::make('cost')
                     ->money('php', true)
                     ->label('Unit Cost'),
-                Tables\Columns\TextColumn::make('price')
+
+                TextColumn::make('price')
                     ->money('php', true)
                     ->label('Unit Price'),
-                Tables\Columns\TextColumn::make('qty')
+
+                TextColumn::make('qty')
                     ->label('Quantity'),
-                
             ])
             ->filters([
                 //

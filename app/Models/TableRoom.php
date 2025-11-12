@@ -62,7 +62,6 @@ class TableRoom extends Model implements HasMedia
         return $query;
     }
 
-
     public function tableReservations(): HasMany
     {
         return $this->hasMany(TableReservation::class);

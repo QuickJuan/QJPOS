@@ -156,11 +156,12 @@ Route::middleware([
                 ->group(function () {
                     Route::get('/list', 'list')->name('list');
                     Route::post('/tables', 'store')->name('store');
+                    Route::post('/tables/bulk-update-positions', 'bulkUpdatePositions')->name('bulk-update-positions');
+                    Route::post('/tables/reserve', 'reserveTable')->name('reserve');
                     Route::put('/tables/{tableId}', 'update')->name('update');
                     Route::put('/tables/{tableId}/unmerge', 'unmergeTable')->name('unmerge');
                     Route::put('/tables/{tableId}/merge', 'mergeTable')->name('merge');
                     Route::delete('/tables/{tableId}', 'destroy')->name('destroy');
-                    Route::post('/tables/bulk-update-positions', 'bulkUpdatePositions')->name('bulk-update-positions');
                 });
         });
 });
