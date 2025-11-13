@@ -16,11 +16,14 @@ use Illuminate\Support\Facades\Auth;
 
 class CartService
 {
+    protected float $taxRate;
+
     public function __construct(public Cart $model, public CashierSession $cashierSession, public DiscountService $discountService)
     {
         $this->model           = $model;
         $this->cashierSession  = $cashierSession;
         $this->discountService = $discountService;
+        $this->taxRate         = config('sales.tax_rate');
     }
 
     public function addToCart(Request $request)
@@ -45,10 +48,6 @@ class CartService
 
         $productPackaging = ProductPackaging::findOrFail($request['product_packaging_id']);
 
-        if (! $productPackaging) {
-            throw new Exception('No product packaging found.');
-        }
-
         $newSelectedOptions = $request['selected_options'] ?? [];
         $orderType          = $request['order_type'];
         $withParent         = $request['withParent'];
@@ -56,6 +55,8 @@ class CartService
         $price    = $productPackaging->price;
         $quantity = $request['quantity'] ?? 1;
         $amount   = $productPackaging->price * $quantity;
+        $discount = 0;
+        $subtotal = $amount - $discount;
 
         $cartItem = $cart->cartItems()
             ->create([
@@ -64,7 +65,7 @@ class CartService
                 'quantity'             => $quantity,
                 'price'                => $price,
                 'amount'               => $amount,
-                'sub_total'            => $amount,
+                'sub_total'            => $subtotal,
                 'order_type'           => $orderType,
             ]);
 
@@ -102,7 +103,7 @@ class CartService
             throw new Exception('No active cashier session found.');
         }
 
-        $cart = Cart::authCashier()->cashierSession($cashierSession->id)->first();
+        $cart = Cart::authCashier()->cashierOpenSession($cashierSession->id)->first();
 
         if (! $cart) {
             throw new Exception('Cart not found.');
@@ -114,15 +115,22 @@ class CartService
             throw new Exception('Cart item not found.');
         }
 
-        $quantity = $request['quantity'] ?? $cartItem->quantity;
-
-        $basePrice  = $cartItem->price;
-        $totalPrice = $basePrice * $quantity;
+        $price               = $cartItem->price;
+        $quantity            = $request['quantity'] ?? $cartItem->quantity;
+        $amount              = $price * $quantity;
+        $discountComputation = ($this->discountService->calculateDiscountAmount($cartItem->discount_id, [$cartItem->id], $quantity))[0];
+        $subtotal            = $amount - ($discountComputation['discountAmount'] + $discountComputation['lessTax']);
 
         return $cartItem->update([
-            'quantity'  => $quantity,
-            'amount'    => $totalPrice / $quantity,
-            'sub_total' => $totalPrice,
+            'quantity'         => $quantity,
+            'amount'           => $amount,
+            'sub_total'        => $subtotal,
+            'discount_id'      => $cartItem->discount_id,
+            'discount_amount'  => $discountComputation['discountAmount'],
+            'vatable_sales'    => $discountComputation['vatableSales'],
+            'vat_exempt_sales' => $discountComputation['vatExempt'],
+            'vat_amount'       => $discountComputation['taxAmount'],
+            'less_tax'         => $discountComputation['lessTax'],
         ]);
     }
 
@@ -134,17 +142,13 @@ class CartService
             throw new Exception('No active cashier session found.');
         }
 
-        $cart = Cart::authCashier()->cashierSession($cashierSession->id)->first();
+        $cart = Cart::authCashier()->cashierOpenSession($cashierSession->id)->first();
 
         if (! $cart) {
             throw new Exception('Cart not found.');
         }
 
         $cartItem = CartItem::find($cartItemId);
-
-        if (! $cartItem) {
-            throw new Exception('Cart item not found.');
-        }
 
         return $cartItem->update([
             'is_void' => true,
@@ -156,35 +160,25 @@ class CartService
     {
         $cartItems = CartItem::findMany($request->cartItemIds);
 
-        if ($cartItems->isEmpty()) {
-            throw new Exception('Cart items not found.');
-        }
-
         $calculatedDiscountAmounts = $this->discountService->calculateDiscountAmount($request->discount_id, $request->cartItemIds);
 
         $results = [];
 
         $discount = Discount::findOrFail($request->discount_id);
 
-        if (! $discount) {
-            throw new Exception('Discount not found.');
-        }
-
         foreach ($cartItems as $index => $cartItem) {
             $calculatedDiscountAmount = $calculatedDiscountAmounts[$index];
-
-            $subTotal = $discount->remove_tax
-                ? $cartItem->amount - $calculatedDiscountAmount['lessTax'] - $calculatedDiscountAmount['discountAmount']
-                : $cartItem->amount - $calculatedDiscountAmount['discountAmount'];
+            $amount                   = $cartItem->price * $cartItem->quantity;
+            $subTotal                 = $amount - ($calculatedDiscountAmount['lessTax'] + $calculatedDiscountAmount['discountAmount']);
 
             $cartItem->update([
+                'amount'           => $amount,
                 'discount_id'      => $discount->id,
                 'discount_amount'  => $calculatedDiscountAmount['discountAmount'],
                 'vatable_sales'    => $calculatedDiscountAmount['vatableSales'],
                 'vat_exempt_sales' => $calculatedDiscountAmount['vatExempt'],
                 'vat_amount'       => $calculatedDiscountAmount['taxAmount'],
                 'less_tax'         => $calculatedDiscountAmount['lessTax'],
-                'amount'           => $cartItem->price * $cartItem->quantity,
                 'sub_total'        => $subTotal,
             ]);
 
@@ -202,7 +196,7 @@ class CartService
             throw new Exception('No active cashier session found.');
         }
 
-        $cart = Cart::authCashier()->cashierSession($cashierSession->id)->first();
+        $cart = Cart::authCashier()->cashierOpenSession($cashierSession->id)->first();
 
         if (! $cart) {
             throw new Exception('Cart not found.');
@@ -241,7 +235,7 @@ class CartService
             throw new Exception('No active cashier session found.');
         }
 
-        $cart = Cart::authCashier()->cashierSession($cashierSession->id)->first();
+        $cart = Cart::authCashier()->cashierOpenSession($cashierSession->id)->first();
 
         if (! $cart) {
             throw new Exception('Cart not found.');
@@ -253,9 +247,22 @@ class CartService
             throw new Exception('Cart item is empty.');
         }
 
+        $price    = $cartItem->price;
+        $quantity = $cartItem->quantity;
+        $amount   = $price * $quantity;
+        $discount = 0;
+        $subtotal = $amount - $discount;
+
         return $cartItem->update([
-            'discount'    => null,
-            'discount_id' => null,
+            'discount_amount'  => 0.00,
+            'discount_id'      => 0.00,
+            'vatable_sales'    => 0.00,
+            'vat_exempt_sales' => 0.00,
+            'vat_amount'       => 0.00,
+            'non_vat_sales'    => 0.00,
+            'less_tax'         => 0.00,
+            'amount'           => $amount,
+            'sub_total'        => $subtotal,
         ]);
     }
 
@@ -267,9 +274,7 @@ class CartService
             throw new Exception('No active cashier session found.');
         }
 
-        $cart = Cart::where('cashier_id', Auth::id())
-            ->where('cashier_session_id', $cashierSession->id)
-            ->first();
+        $cart = Cart::authCashier()->cashierOpenSession($cashierSession->id)->first();
 
         if (! $cart) {
             throw new Exception('Cart not found.');
@@ -290,8 +295,8 @@ class CartService
         $cart = Cart::findOrFail($cartId);
 
         return $cart->cartItems()->update([
-            'is_served'   => true,
-            'discount_id' => $request->filled('discountId') ?? null,
+            'placed_order' => true,
+            'discount_id'  => $request->filled('discountId') ?? null,
         ]);
     }
 
@@ -354,81 +359,5 @@ class CartService
         }
 
         return $order;
-    }
-
-    public function calculateDiscount(Request $request)
-    {
-        $discountService = app(DiscountService::class);
-        $taxRate         = config('sales.tax_rate');
-
-        $discountId = $request->input('discount_id');
-        $items      = $request->input('items', []);
-
-        if (! $discountId || empty($items)) {
-            return [
-                'discount_amount' => 0,
-                'subtotal'        => 0,
-                'tax_amount'      => 0,
-                'total'           => 0,
-                'item_discounts'  => [],
-            ];
-        }
-
-        $discountAmount = $discountService->calculateDiscountAmount($discountId, $items);
-        $discount       = $discountService->getDiscountById($discountId);
-
-        // Calculate subtotal
-        $subtotal = collect($items)->sum(function ($item) {
-            $price    = (float) ($item['price'] ?? 0);
-            $quantity = (int) ($item['quantity'] ?? 1);
-            return $price * $quantity;
-        });
-
-        // Calculate vatable amount if tax should be removed
-        $baseAmount = $discount['remove_tax'] ? $subtotal / $taxRate : $subtotal;
-
-        // Calculate discounted subtotal
-        $discountedSubtotal = $baseAmount - $discountAmount;
-
-        // Calculate tax
-        $taxAmount = $discount['remove_tax'] ? 0 : $discountedSubtotal * 0.12;
-
-        // Calculate final total
-        $total = $discountedSubtotal + $taxAmount;
-        info($total);
-
-        // Calculate per-item discount amounts for preview
-        $itemDiscounts        = [];
-        $totalDiscountPerItem = $discountAmount / count($items);
-
-        foreach ($items as $item) {
-            $itemPrice = (float) ($item['price'] ?? 0);
-            $quantity  = (int) ($item['quantity'] ?? 1);
-            $lineTotal = $itemPrice * $quantity;
-
-            // For preview, distribute discount evenly across items
-            $itemDiscountAmount = $totalDiscountPerItem;
-
-            // Calculate discounted price for this item
-            $discountedPrice = max(0, $lineTotal - $itemDiscountAmount);
-
-            $itemDiscounts[] = [
-                'id'               => $item['id'],
-                'original_price'   => round($lineTotal, 2),
-                'discounted_price' => round($discountedPrice, 2),
-                'discount_amount'  => round($itemDiscountAmount, 2),
-                // 'vat_amount'       => ,
-            ];
-        }
-
-        return [
-            'discount_amount'     => round($discountAmount, 2),
-            'subtotal'            => round($subtotal, 2),
-            'discounted_subtotal' => round($discountedSubtotal, 2),
-            'tax_amount'          => round($taxAmount, 2),
-            'total'               => round($total, 2),
-            'discount_details'    => $discount,
-            'item_discounts'      => $itemDiscounts,
-        ];
     }
 }

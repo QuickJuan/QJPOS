@@ -1,7 +1,6 @@
 <?php
 namespace App\Http\Controllers;
 
-use App\Http\Requests\CartRequest;
 use App\Http\Requests\CashierSessionRequest;
 use App\Http\Resources\CategoryResource;
 use App\Http\Resources\DiscountResource;
@@ -41,11 +40,13 @@ class CashierSessionController extends Controller
         $taxRate    = config('sales.tax_rate');
 
         // Get available discounts
+        // Transfer this into Discount Service
         $discounts = DiscountResource::collection(
             Discount::all()
         );
 
         // Get available modifiers
+        // Transfer this into Modifier Service
         $modifiers = Modifier::all()
             ->map(fn($modifier) => [
                 'id'   => $modifier->id,
@@ -79,11 +80,12 @@ class CashierSessionController extends Controller
                         'price'             => $item->price,
                         'amount'            => $item->amount,
                         'sub_total'         => $item->sub_total,
-                        'is_served'         => (bool) $item->is_served,
+                        'placed_order'      => (bool) $item->placed_order,
                         'order_type'        => $item->order_type,
                         'selected_options'  => $item->selected_options ?? [],
                         'meta_data'         => $item->meta_data ?? [],
                         'discount'          => $item->discount_amount,
+                        'less_tax'          => $item->less_tax,
                         'product_packaging' => $item->product_packaging_id ? $item->product->productPackagings->firstWhere('id', $item->product_packaging_id) : null,
                         'checked'           => false,
                         'children'          => $item->children,
@@ -91,8 +93,10 @@ class CashierSessionController extends Controller
             }
         }
 
-        $subtotal = collect($cartItems)->sum('sub_total');
-        $total    = $cart && $cart->cartItems->isNotEmpty()
+        $subtotal          = collect($cartItems)->sum('sub_total');
+        $lessTaxTotal      = collect($cartItems)->sum('less_tax');
+        $lessDiscountTotal = collect($cartItems)->sum('discount');
+        $total             = $cart && $cart->cartItems->isNotEmpty()
             ? $cart->cartItems->sum(function ($item) {
             $itemTotal = ($item->sub_total ?? 0) - ($item->discount ?? 0);
 
@@ -111,6 +115,8 @@ class CashierSessionController extends Controller
             'currentTable'       => $currentTable ?? [],
             'subTotal'           => $subtotal,
             'total'              => $total,
+            'lessTaxTotal'       => $lessTaxTotal,
+            'lessDiscountTotal'  => $lessDiscountTotal,
             'taxRate'            => $taxRate,
         ]);
     }

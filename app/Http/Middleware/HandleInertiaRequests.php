@@ -41,7 +41,6 @@ class HandleInertiaRequests extends Middleware
                 'error'   => fn()   => $request->session()->get('error'),
             ],
             'active_branch' => $request->session()->get('active_branch'),
-            'available_discounts' => fn() => app(DiscountService::class)->getActiveDiscounts(),
         ]);
     }
 }

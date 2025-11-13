@@ -28,6 +28,7 @@ class CartItem extends Model
         'coupon_code',
         'sub_total',
         'selected_options',
+        'placed_order',
         'is_served',
         'is_void',
         'reason',

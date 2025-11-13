@@ -28,7 +28,7 @@ class Cart extends Model
         $query->where('cashier_id', Auth::id());
     }
 
-    public function scopeCashierSession(Builder $query, $cashierSessionId)
+    public function scopeCashierOpenSession(Builder $query, $cashierSessionId)
     {
         if ($cashierSessionId) {
             $query->where('cashier_session_id', $cashierSessionId);

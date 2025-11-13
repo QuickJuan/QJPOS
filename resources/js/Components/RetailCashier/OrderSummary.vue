@@ -23,6 +23,8 @@
                 :tax-amount="taxAmount"
                 :final-total="props.total"
                 :sub-total="props.subTotal"
+                :less-tax-total="lessTaxTotal"
+                :less-discount-total="lessDiscountTotal"
                 :applied-discount="appliedDiscount"
             />
         </div>
@@ -117,6 +119,8 @@ const props = defineProps<{
     currentTable: any;
     subTotal: number;
     total: number;
+    lessTaxTotal: number;
+    lessDiscountTotal: number;
     taxRate: number;
 }>();
 
@@ -230,7 +234,7 @@ const handleDelete = (orderItem: any) => {
             label: "Remove",
         },
         accept: () => {
-            if (orderItem.is_served) {
+            if (orderItem.placed_order) {
                 showRequiredReasonModal.value = true;
                 selectedOrderItem.value = orderItem;
             } else {

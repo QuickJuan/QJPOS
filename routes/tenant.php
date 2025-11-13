@@ -130,13 +130,12 @@ Route::middleware([
                             Route::post('/cart/add', 'addToCart')->name('cart.add');
                             Route::put('/cart/item/place-order/{cartId}', 'placeOrder')->name('cart.place-order');
                             Route::post('/cart/settle-bill/{cartId}', 'settleBill')->name('cart.settle-bill');
-                             Route::put('/cart/item/discount/', 'applyDiscountToCartItem')->name('cart.apply-discount');
+                            Route::put('/cart/item/discount/', 'applyDiscountToCartItem')->name('cart.apply-discount');
                             Route::put('/cart/item/modifier/', 'applyModifierToCartItem')->name('cart.apply-modifier');
                             Route::put('/cart/item/{cartItemId}', 'updateCartItem')->name('cart.update');
                             Route::put('/cart/item/clear-discount/{cartItemId}', 'clearDiscountToCartItem')->name('cart.clear-discount');
                             Route::put('/cart/item/void/{cartItemId}', 'voidCartItem')->name('cart.void-cart');
                             Route::delete('/cart/item/{cartItemId}', 'deleteCartItem')->name('cart.delete');
-                            Route::post('/cart/calculate-discount', 'calculateDiscount')->name('cart.calculate-discount');
                         });
                 });
 

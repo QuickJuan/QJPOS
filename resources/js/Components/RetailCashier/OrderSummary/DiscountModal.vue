@@ -343,7 +343,7 @@
                 />
                 <Button
                     type="button"
-                    label="Recompute Discount"
+                    label="Apply Discount"
                     @click="applyDiscount"
                     :disabled="!selectedDiscountId"
                     class="bg-success-600 hover:bg-success-700"
@@ -412,7 +412,7 @@ const selectedDiscount = computed(() => {
 
 const selectedItemsSubtotal = computed(() => {
     return props.selectedItems.reduce((sum, item) => {
-        const itemPrice = parseFloat(item.price || item.average_cost || "0");
+        const itemPrice = parseFloat(item.price || "0");
         return sum + itemPrice * item.quantity;
     }, 0);
 });
@@ -460,18 +460,12 @@ const selectDiscount = (discount: any) => {
         (d) => d?.discountAmount || 0
     );
 
-    // Discount Amount
-    discountTotal.value = discount.remove_tax
-        ? formatMoney(
-              (
-                  selectedItemsSubtotal.value -
-                  totalLessTax.value -
-                  totalLessDiscount.value
-              ).toFixed(2)
-          )
-        : formatMoney(
-              (selectedItemsSubtotal.value - totalLessDiscount.value).toFixed(2)
-          );
+    discountTotal.value = formatMoney(
+        (
+            selectedItemsSubtotal.value -
+            (totalLessTax.value + totalLessDiscount.value)
+        ).toFixed(2)
+    );
 
     // Set previewData with calculated values
     previewData.value = {

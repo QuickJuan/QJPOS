@@ -1,11 +1,11 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ApplyDiscountToCartItemRequest;
 use App\Http\Requests\CartRequest;
 use App\Services\CartService;
 use App\Services\CashierSessionService;
 use Exception;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -30,6 +30,10 @@ class CartController extends Controller
     public function updateCartItem(Request $request, int $cartItemId): RedirectResponse
     {
         try {
+            if (! $cartItemId) {
+                return redirect()->back()->with('error', 'Cart item ID is empty.');
+            }
+
             $this->cartService->updateCartItem($request, $cartItemId);
 
             return redirect()->back()->with('success', 'Cart item updated successfully.');
@@ -41,6 +45,10 @@ class CartController extends Controller
     public function voidCartItem(Request $request, int $cartItemId): RedirectResponse
     {
         try {
+            if (! $cartItemId) {
+                return redirect()->back()->with('error', 'Cart item ID is empty.');
+            }
+
             $this->cartService->voidCartItem($request, $cartItemId);
 
             return redirect()->back()->with('success', 'Cart item removed successfully.');
@@ -49,7 +57,7 @@ class CartController extends Controller
         }
     }
 
-    public function applyDiscountToCartItem(Request $request): RedirectResponse
+    public function applyDiscountToCartItem(ApplyDiscountToCartItemRequest $request): RedirectResponse
     {
         try {
             $this->cartService->applyDiscountToCartItem($request);
@@ -63,6 +71,10 @@ class CartController extends Controller
     public function clearDiscountToCartItem(int $cartItemId): RedirectResponse
     {
         try {
+            if (! $cartItemId) {
+                return redirect()->back()->with('error', 'Cart item ID is empty.');
+            }
+
             $this->cartService->clearDiscountToCartItem($cartItemId);
 
             return redirect()->back()->with('success', 'Discount applied to cart item successfully.');
@@ -85,6 +97,10 @@ class CartController extends Controller
     public function deleteCartItem(int $cartItemId): RedirectResponse
     {
         try {
+            if (! $cartItemId) {
+                return redirect()->back()->with('error', 'Cart item ID is empty.');
+            }
+
             $this->cartService->deleteCartItem($cartItemId);
 
             return redirect()->back()->with('success', 'Cart item deleted successfully.');
@@ -96,6 +112,10 @@ class CartController extends Controller
     public function placeOrder(Request $request, int $cartId): RedirectResponse
     {
         try {
+            if (! $cartId) {
+                return redirect()->back()->with('error', 'Cart ID is empty.');
+            }
+
             $this->cartService->placeOrder($request, $cartId);
 
             return redirect()->route('retail-cashier.tables')->with('success', 'Successfully Placed Order.');
@@ -107,22 +127,15 @@ class CartController extends Controller
     public function settleBill(Request $request, int $cartId): RedirectResponse
     {
         try {
+            if (! $cartId) {
+                return redirect()->back()->with('error', 'Cart ID is empty.');
+            }
+
             $this->cartService->settleBill($request, $cartId);
 
             return redirect()->back()->with('success', 'Bill settled successfully.');
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'There was an error settling the bill.');
-        }
-    }
-
-    public function calculateDiscount(Request $request): JsonResponse
-    {
-        try {
-            $result = $this->cartService->calculateDiscount($request);
-
-            return response()->json($result);
-        } catch (Exception $e) {
-            return response()->json(['error' => 'There was an error calculating discount.' . $e->getMessage()], 500);
         }
     }
 }
