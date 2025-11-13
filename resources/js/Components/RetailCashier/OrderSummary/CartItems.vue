@@ -129,51 +129,39 @@
                                                 </span>
                                             </p>
                                             <p
-                                                v-if="hasDiscount(item.id)"
-                                                class="text-xs text-green-600 font-medium"
+                                                v-if="item.less_tax > 0"
+                                                class="text-xs text-gray-600 font-medium"
                                             >
-                                                Discounted:
-                                                {{ getDiscountedPrice(item) }}
+                                                Less Tax:
                                             </p>
-                                            <!-- Show explicit discount amount if saved on the cart item -->
                                             <p
-                                                v-if="
-                                                    item &&
-                                                    (item.discount ||
-                                                        item.discount === 0) &&
-                                                    parseFloat(
-                                                        item.discount
-                                                    ) !== 0
-                                                "
-                                                class="text-xs text-success-600"
+                                                v-if="item.discount > 0"
+                                                class="text-xs text-gray-600 font-medium"
                                             >
-                                                Discount: -{{
-                                                    formatMoney(
-                                                        getItemDiscountAmount(
-                                                            item
-                                                        )
-                                                    )
-                                                }}
+                                                Less Discount:
                                             </p>
                                         </div>
+
                                         <div class="flex flex-col items-end">
-                                            <p
-                                                v-if="hasDiscount(item.id)"
-                                                class="text-xs text-secondary-500 line-through"
-                                            >
-                                                {{
-                                                    formatMoney(
-                                                        (
-                                                            item.quantity *
-                                                            item.price
-                                                        ).toFixed(2)
-                                                    )
-                                                }}
-                                            </p>
                                             <p
                                                 class="text-xs text-secondary-500 font-medium"
                                             >
-                                                {{ totalOfItems(item) }}
+                                                {{ formatMoney(item.amount) }}
+                                            </p>
+                                            <!-- Less Tax -->
+                                            <p
+                                                v-if="item.less_tax > 0"
+                                                class="text-xs text-gray-600 font-medium"
+                                            >
+                                                {{ formatMoney(item.less_tax) }}
+                                            </p>
+
+                                            <!-- Discount -->
+                                            <p
+                                                v-if="item.discount > 0"
+                                                class="text-xs text-gray-600 font-medium"
+                                            >
+                                                {{ formatMoney(item.discount) }}
                                             </p>
                                         </div>
                                     </div>
@@ -310,15 +298,11 @@ const getDiscountedPrice = (item: any) => {
     }
 
     const discount = props.appliedDiscount;
-    const itemPrice = parseFloat(item.price || item.average_cost || "0");
+    const itemPrice = parseFloat(item.price || "0");
     const quantity = item.quantity;
     const lineTotal = itemPrice * quantity;
 
-    const isSeniorDiscount =
-        discount.discountName?.toLowerCase().includes("senior") ||
-        discount.discountType === "senior";
-
-    if (discount.removeTax && isSeniorDiscount) {
+    if (discount.removeTax) {
         // Special calculation for Senior Citizen Discount (20% on VAT-exempt amount)
         const vatableAmount = lineTotal / 1.12;
         const discountedPrice =

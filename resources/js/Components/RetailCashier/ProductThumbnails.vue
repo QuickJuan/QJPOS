@@ -94,7 +94,7 @@
                     </p>
                     <!-- Responsive Pick Button -->
                     <button
-                        class="text-xs sm:text-sm rounded-lg sm:rounded-xl bg-primary text-white px-2 sm:px-3 py-1 sm:py-1.5 hover:bg-primary-600 transition-colors flex-shrink-0 min-h-[32px] sm:min-h-[36px] touch-manipulation"
+                        class="text-xs sm:text-sm rounded-lg sm:rounded-xl bg-primary text-white px-2 sm:px-3 py-1 sm:py-1.5 hover:bg-primary-600 disabled:bg-primary-200 transition-colors flex-shrink-0 min-h-[32px] sm:min-h-[36px] touch-manipulation"
                     >
                         <span class="hidden sm:inline">Pick</span>
                         <span class="sm:hidden">+</span>

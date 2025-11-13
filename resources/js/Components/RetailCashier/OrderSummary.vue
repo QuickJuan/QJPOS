@@ -23,6 +23,8 @@
                 :tax-amount="taxAmount"
                 :final-total="props.total"
                 :sub-total="props.subTotal"
+                :less-tax-total="lessTaxTotal"
+                :less-discount-total="lessDiscountTotal"
                 :applied-discount="appliedDiscount"
             />
         </div>
@@ -58,8 +60,8 @@
         <DiscountModal
             v-model:visible="showDiscountModal"
             :selected-items="selectedItemsForModal"
+            :tax-rate="taxRate"
             :available-discounts="props.availableDiscounts"
-            @apply="handleDiscountApplied"
         />
 
         <!-- Required Reason Modal -->
@@ -117,6 +119,9 @@ const props = defineProps<{
     currentTable: any;
     subTotal: number;
     total: number;
+    lessTaxTotal: number;
+    lessDiscountTotal: number;
+    taxRate: number;
 }>();
 
 const toast = useToast();
@@ -229,7 +234,7 @@ const handleDelete = (orderItem: any) => {
             label: "Remove",
         },
         accept: () => {
-            if (orderItem.is_served) {
+            if (orderItem.placed_order) {
                 showRequiredReasonModal.value = true;
                 selectedOrderItem.value = orderItem;
             } else {
@@ -308,63 +313,6 @@ const toggleItemForDiscount = (itemId: number, checked: boolean) => {
 
 const openDiscountModal = () => {
     showDiscountModal.value = true;
-};
-
-const handleDiscountApplied = async (discountData: {
-    discountId: string;
-    discountName: string;
-    selectedItems: number[];
-    discountAmount: number;
-    discountType: string;
-    removeTax?: boolean;
-}) => {
-    try {
-        // Calculate discount on backend
-        const response = await fetch(
-            route("retail-cashier.cart.calculate-discount"),
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRF-TOKEN":
-                        document
-                            .querySelector('meta[name="csrf-token"]')
-                            ?.getAttribute("content") || "",
-                },
-                body: JSON.stringify({
-                    discount_id: discountData.discountId,
-                    items: props.orderItems,
-                }),
-            }
-        );
-
-        const result = await response.json();
-
-        if (response.ok) {
-            appliedDiscount.value = {
-                ...discountData,
-                discountAmount: result.discount_amount,
-            };
-            selectedItemsForDiscount.value = [];
-            showDiscountModal.value = false;
-
-            toast.add({
-                severity: "success",
-                summary: "Success",
-                detail: `Discount applied successfully`,
-                life: 3000,
-            });
-        } else {
-            throw new Error(result.error || "Failed to calculate discount");
-        }
-    } catch (error) {
-        toast.add({
-            severity: "error",
-            summary: "Error",
-            detail: "Failed to apply discount",
-            life: 3000,
-        });
-    }
 };
 
 const handleSaveOrder = () => {

@@ -34,9 +34,10 @@
                 >
                     Place Order
                 </button>
+                    <!-- :disabled="orderItems.length <= 0 || !orderItems.every((item) => item.is_served)" -->
+
                 <button
                     @click="showSettleBillModal = true"
-                    :disabled="orderItems.length <= 0 || !orderItems.every((item) => item.is_served)"
                     class="py-2 px-3 bg-success-600 text-white rounded-lg font-semibold hover:bg-success-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
                 >
                     Settle Bill

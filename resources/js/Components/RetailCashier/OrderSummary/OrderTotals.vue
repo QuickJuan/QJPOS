@@ -7,16 +7,27 @@
                     {{ formatMoney(subTotal) }}
                 </span>
             </div>
-            <!-- <div class="flex justify-between text-sm">
-                <span class="text-secondary-600">Tax (12%)</span>
+            <div v-if="props.lessTaxTotal" class="flex justify-between text-sm">
+                <span class="text-secondary-600">Less Tax:</span>
                 <span class="font-medium">
-                    {{ formatMoney(taxAmount.toFixed(2)) }}
+                    {{ formatMoney(lessTaxTotal.toFixed(2)) }}
                 </span>
-            </div> -->
+            </div>
+            <div
+                v-if="props.lessDiscountTotal"
+                class="flex justify-between text-sm"
+            >
+                <span class="text-secondary-600">Less Discount: </span>
+                <span class="font-medium">
+                    {{ formatMoney(lessDiscountTotal.toFixed(2)) }}
+                </span>
+            </div>
             <hr class="border-gray-300" />
             <div class="flex justify-between text-lg font-bold">
                 <span>Total</span>
-                <span>{{ finalTotal ? formatMoney(finalTotal.toFixed(2)) : null }}</span>
+                <span>{{
+                    finalTotal ? formatMoney(finalTotal.toFixed(2)) : null
+                }}</span>
             </div>
         </div>
     </div>
@@ -30,6 +41,8 @@ const props = defineProps<{
     taxAmount: number;
     subTotal: number;
     finalTotal: number;
+    lessTaxTotal: number;
+    lessDiscountTotal: number;
     appliedDiscount: {
         discountName: string;
         discountAmount: number;
@@ -37,17 +50,4 @@ const props = defineProps<{
         removeTax?: boolean;
     } | null;
 }>();
-
-// Get discount label based on type
-const getDiscountLabel = (discount: any) => {
-    const isSeniorDiscount =
-        discount.discountType === "senior" ||
-        discount.discountName?.toLowerCase().includes("senior");
-
-    if (isSeniorDiscount && discount.removeTax) {
-        return "Senior Citizen Discount (20%)"; // TODO: Discount label will be based on backend
-    }
-
-    return `Discount (${discount.discountName})`;
-};
 </script>
