@@ -19,7 +19,11 @@
             v-for="product in products"
             :key="product.id"
             class="bg-white rounded-lg cursor-pointer hover:shadow-lg transition-all duration-200 border border-gray-200 hover:border-primary-300 group flex flex-col h-full"
-            @click="$emit('addToCart', product)"
+            @click="
+                parseFloat(product.total_onhand || '0') > 0
+                    ? $emit('addToCart', product)
+                    : null
+            "
         >
             <!-- Product Image -->
             <div class="relative">
@@ -95,7 +99,6 @@
                     <!-- Responsive Pick Button -->
                     <button
                         class="text-xs sm:text-sm rounded-lg sm:rounded-xl bg-primary text-white px-2 sm:px-3 py-1 sm:py-1.5 hover:bg-primary-600 disabled:bg-primary-200 transition-colors flex-shrink-0 min-h-[32px] sm:min-h-[36px] touch-manipulation"
-                        @click="$emit('addToCart', product)"
                         :disabled="parseFloat(product.total_onhand || '0') <= 0"
                     >
                         <span class="hidden sm:inline">Pick</span>

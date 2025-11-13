@@ -1,13 +1,14 @@
 <?php
 namespace App\Services;
 
-use App\Enums\Discount\DiscountType;
 use App\Enums\TableRoomStatusType;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\CashierSession;
+use App\Models\Discount;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\ProductPackaging;
 use Exception;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,10 +16,11 @@ use Illuminate\Support\Facades\Auth;
 
 class CartService
 {
-    public function __construct(public Cart $model, public CashierSession $cashierSession)
+    public function __construct(public Cart $model, public CashierSession $cashierSession, public DiscountService $discountService)
     {
-        $this->model          = $model;
-        $this->cashierSession = $cashierSession;
+        $this->model           = $model;
+        $this->cashierSession  = $cashierSession;
+        $this->discountService = $discountService;
     }
 
     public function addToCart(Request $request)
@@ -41,21 +43,30 @@ class CartService
 
         $cart = Cart::firstOrCreate($cartAttributes);
 
-        $newSelectedOptions = $request['selected_options'] ?? [];
+        $productPackaging = ProductPackaging::findOrFail($request['product_packaging_id']);
 
-        $quantity   = $request['quantity'] ?? 1;
-        $totalPrice = $request['total_price'];
-        $orderType  = $request['order_type'];
-        $withParent = $request['withParent'];
-        $cartItem   = $cart->cartItems()->create([
-            'product_id'           => $request['product_id'],
-            'product_packaging_id' => $request['product_packaging_id'],
-            'quantity'             => $quantity,
-            'price'                => $totalPrice / $quantity,
-            'amount'               => $totalPrice,
-            'sub_total'            => $totalPrice,
-            'order_type'           => $orderType,
-        ]);
+        if (! $productPackaging) {
+            throw new Exception('No product packaging found.');
+        }
+
+        $newSelectedOptions = $request['selected_options'] ?? [];
+        $orderType          = $request['order_type'];
+        $withParent         = $request['withParent'];
+
+        $price    = $productPackaging->price;
+        $quantity = $request['quantity'] ?? 1;
+        $amount   = $productPackaging->price * $quantity;
+
+        $cartItem = $cart->cartItems()
+            ->create([
+                'product_id'           => $request['product_id'],
+                'product_packaging_id' => $request['product_packaging_id'],
+                'quantity'             => $quantity,
+                'price'                => $price,
+                'amount'               => $amount,
+                'sub_total'            => $amount,
+                'order_type'           => $orderType,
+            ]);
 
         if ($withParent) {
             foreach ($newSelectedOptions as $option) {
@@ -141,26 +152,49 @@ class CartService
         ]);
     }
 
-    public function applyDiscountToCartItem(Request $request, int $cartItemId): mixed
+    public function applyDiscountToCartItem(Request $request): mixed
     {
-        $cartItem = CartItem::find($cartItemId);
+        $cartItems = CartItem::findMany($request->cartItemIds);
 
-        if (! $cartItem) {
-            throw new Exception('Cart item not found.');
+        if ($cartItems->isEmpty()) {
+            throw new Exception('Cart items not found.');
         }
 
-        $discountId     = $request->input('discount_id');
-        $discountAmount = $request->input('discount_amount', 0);
+        $calculatedDiscountAmounts = $this->discountService->calculateDiscountAmount($request->discount_id, $request->cartItemIds);
 
-        $result = $cartItem->update([
-            'discount_id' => $discountId,
-            'discount'    => $discountAmount,
-        ]);
+        $results = [];
 
-        return $result;
+        $discount = Discount::findOrFail($request->discount_id);
+
+        if (! $discount) {
+            throw new Exception('Discount not found.');
+        }
+
+        foreach ($cartItems as $index => $cartItem) {
+            $calculatedDiscountAmount = $calculatedDiscountAmounts[$index];
+
+            $subTotal = $discount->remove_tax
+                ? $cartItem->amount - $calculatedDiscountAmount['lessTax'] - $calculatedDiscountAmount['discountAmount']
+                : $cartItem->amount - $calculatedDiscountAmount['discountAmount'];
+
+            $cartItem->update([
+                'discount_id'      => $discount->id,
+                'discount_amount'  => $calculatedDiscountAmount['discountAmount'],
+                'vatable_sales'    => $calculatedDiscountAmount['vatableSales'],
+                'vat_exempt_sales' => $calculatedDiscountAmount['vatExempt'],
+                'vat_amount'       => $calculatedDiscountAmount['taxAmount'],
+                'less_tax'         => $calculatedDiscountAmount['lessTax'],
+                'amount'           => $cartItem->price * $cartItem->quantity,
+                'sub_total'        => $subTotal,
+            ]);
+
+            $results[] = $cartItem;
+        }
+
+        return $results;
     }
 
-    public function applyModifierToCartItem(Request $request, $cartItemIds)
+    public function applyModifierToCartItem(Request $request)
     {
         $cashierSession = $this->cashierSession->openSession()->first();
 
@@ -174,7 +208,7 @@ class CartService
             throw new Exception('Cart not found.');
         }
 
-        $cartItems = $cart->cartItems()->findMany($cartItemIds);
+        $cartItems = $cart->cartItems()->findMany($request->cartItemIds);
 
         if ($cartItems->isEmpty()) {
             throw new Exception('Cart items is empty.');
@@ -325,6 +359,7 @@ class CartService
     public function calculateDiscount(Request $request)
     {
         $discountService = app(DiscountService::class);
+        $taxRate         = config('sales.tax_rate');
 
         $discountId = $request->input('discount_id');
         $items      = $request->input('items', []);
@@ -344,30 +379,30 @@ class CartService
 
         // Calculate subtotal
         $subtotal = collect($items)->sum(function ($item) {
-            $price    = (float) ($item['price'] ?? $item['average_cost'] ?? 0);
+            $price    = (float) ($item['price'] ?? 0);
             $quantity = (int) ($item['quantity'] ?? 1);
             return $price * $quantity;
         });
 
         // Calculate vatable amount if tax should be removed
-        $baseAmount = $discount['remove_tax'] ? $subtotal / 1.12 : $subtotal;
+        $baseAmount = $discount['remove_tax'] ? $subtotal / $taxRate : $subtotal;
 
         // Calculate discounted subtotal
         $discountedSubtotal = $baseAmount - $discountAmount;
 
         // Calculate tax
-        $isSeniorDiscount = ($discount['discount_type'] ?? $discount['type']) === DiscountType::SENIOR->value || str_contains(strtolower($discount['discount_name'] ?? ''), DiscountType::SENIOR->value);
-        $taxAmount        = $discount['remove_tax'] && $isSeniorDiscount ? 0 : $discountedSubtotal * 0.12;
+        $taxAmount = $discount['remove_tax'] ? 0 : $discountedSubtotal * 0.12;
 
         // Calculate final total
         $total = $discountedSubtotal + $taxAmount;
+        info($total);
 
         // Calculate per-item discount amounts for preview
         $itemDiscounts        = [];
         $totalDiscountPerItem = $discountAmount / count($items);
 
         foreach ($items as $item) {
-            $itemPrice = (float) ($item['price'] ?? $item['average_cost'] ?? 0);
+            $itemPrice = (float) ($item['price'] ?? 0);
             $quantity  = (int) ($item['quantity'] ?? 1);
             $lineTotal = $itemPrice * $quantity;
 
@@ -382,6 +417,7 @@ class CartService
                 'original_price'   => round($lineTotal, 2),
                 'discounted_price' => round($discountedPrice, 2),
                 'discount_amount'  => round($itemDiscountAmount, 2),
+                // 'vat_amount'       => ,
             ];
         }
 

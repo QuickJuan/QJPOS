@@ -20,7 +20,7 @@
                 <div class="overflow-y-auto pr-2 mb-4" style="height: 320px">
                     <div class="space-y-3">
                         <div
-                            v-for="item in selectedItems"
+                            v-for="(item, index) in selectedItems"
                             :key="item.id"
                             class="flex justify-between items-center p-3 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors"
                         >
@@ -33,50 +33,26 @@
                                         Qty: {{ item.quantity }} ×
                                         {{ formatMoney(item.price) }}
                                     </p>
-                                    <div
-                                        v-if="
-                                            selectedDiscountId &&
-                                            selectedDiscount &&
-                                            previewData &&
-                                            previewData.item_discounts
-                                        "
-                                        class="mt-1"
-                                    >
-                                        <span class="line-through text-red-500">
-                                            {{
-                                                formatMoney(
-                                                    (
-                                                        item.quantity *
-                                                        item.price
-                                                    ).toFixed(2)
-                                                )
-                                            }}
-                                        </span>
-                                        <span
-                                            class="ml-2 text-green-600 font-medium"
-                                        >
-                                            {{
-                                                formatMoney(
-                                                    previewData.item_discounts
-                                                        .find(
-                                                            (d) =>
-                                                                d.id === item.id
-                                                        )
-                                                        ?.discounted_price?.toFixed(
-                                                            2
-                                                        ) ||
-                                                        (
-                                                            item.quantity *
-                                                            item.price
-                                                        ).toFixed(2)
-                                                )
-                                            }}
-                                        </span>
-                                    </div>
+                                    <p v-if="lessTaxValue[index]">
+                                        Less Tax:
+                                        {{
+                                            formatMoney(
+                                                lessTaxValue[index] || 0
+                                            )
+                                        }}
+                                    </p>
+                                    <p v-if="lessDiscountValue[index]">
+                                        Less Discount:
+                                        {{
+                                            formatMoney(
+                                                lessDiscountValue[index] || 0
+                                            )
+                                        }}
+                                    </p>
                                 </div>
                             </div>
                             <div class="text-right ml-4">
-                                <p
+                                <!-- <p
                                     v-if="
                                         selectedDiscountId && selectedDiscount
                                     "
@@ -89,8 +65,9 @@
                                             ).toFixed(2)
                                         )
                                     }}
-                                </p>
-                                <p class="font-semibold text-secondary-900">
+                                </p> -->
+
+                                <!-- <p class="font-semibold text-secondary-900">
                                     {{
                                         selectedDiscountId &&
                                         selectedDiscount &&
@@ -116,6 +93,15 @@
                                                   ).toFixed(2)
                                               )
                                     }}
+                                </p> -->
+                                <p class="font-semibold text-secondary-900">
+                                    {{
+                                        formatMoney(
+                                            (
+                                                item.quantity * item.price
+                                            ).toFixed(2)
+                                        )
+                                    }}
                                 </p>
                             </div>
                         </div>
@@ -134,18 +120,29 @@
                         </span>
                     </div>
 
-                    <!-- Discount Amount -->
+                    <!-- Total Less Tax -->
                     <div
-                        v-if="selectedDiscountId && selectedDiscount"
                         class="flex justify-between text-md"
+                        v-if="totalLessTax"
+                    >
+                        <span class="text-success-700"> Less Tax: </span>
+                        <span class="font-medium text-success-600">
+                            -{{ formatMoney(totalLessTax.toFixed(2)) }}
+                        </span>
+                    </div>
+
+                    <!-- Total Less Discount -->
+                    <div
+                        class="flex justify-between text-md"
+                        v-if="selectedDiscountId && selectedDiscount"
                     >
                         <span class="text-success-700">
-                            {{ getDiscountLabel(selectedDiscount) }}:
+                            Less Discount ({{
+                                selectedDiscount.discount_name
+                            }}):
                         </span>
                         <span class="font-medium text-success-600">
-                            -{{
-                                formatMoney(calculatedDiscountAmount.toFixed(2))
-                            }}
+                            -{{ formatMoney(totalLessDiscount.toFixed(2)) }}
                         </span>
                     </div>
 
@@ -346,7 +343,7 @@
                 />
                 <Button
                     type="button"
-                    label="Apply Discount"
+                    label="Recompute Discount"
                     @click="applyDiscount"
                     :disabled="!selectedDiscountId"
                     class="bg-success-600 hover:bg-success-700"
@@ -358,14 +355,17 @@
 
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { Button, Dialog } from "primevue";
+import { Button, Dialog, useToast } from "primevue";
 import { formatMoney } from "@/Utils/FormatMoney";
 import { route } from "ziggy-js";
-import { router } from "@inertiajs/vue3";
+import { router, usePage } from "@inertiajs/vue3";
+import axios from "axios";
+import PageProps from "@/Types/PageProps";
 
 const props = defineProps<{
     visible: boolean;
     selectedItems: any[];
+    taxRate: number;
     availableDiscounts: any[] | { data: any[] };
 }>();
 
@@ -384,6 +384,8 @@ const emit = defineEmits<{
 }>();
 
 const selectedDiscountId = ref("");
+const toast = useToast();
+const page = usePage<PageProps>();
 
 // Helper function to extract discounts array from props
 const getDiscountsArray = () => {
@@ -418,6 +420,9 @@ const selectedItemsSubtotal = computed(() => {
 const calculatedDiscountAmount = ref(0);
 const discountTotal = ref(null);
 const previewData = ref(null);
+const taxRate = ref(props.taxRate);
+const lessTaxValue = ref<number[]>([]);
+const lessDiscountValue = ref<number[]>([]);
 
 // Group discounts by type (using props data)
 const percentageDiscounts = computed(() => {
@@ -444,62 +449,50 @@ const otherDiscounts = computed(() => {
     return other;
 });
 
-// Get discount label based on type
-const getDiscountLabel = (discount: any) => {
-    const isSeniorDiscount =
-        discount.discount_name?.toLowerCase().includes("senior") ||
-        discount.type === "senior";
-
-    if (isSeniorDiscount && discount.remove_tax) {
-        return "Senior Citizen Discount (20%)";
-    }
-
-    return `Discount (${discount.discount_name})`;
-};
-
 // Select discount method
-const selectDiscount = async (discount: any) => {
+const selectDiscount = (discount: any) => {
     selectedDiscountId.value = String(discount.id);
+    const calculatedDiscountAmount = calculateDiscountAmount(discount);
+    console.log(calculatedDiscountAmount, selectedItemsSubtotal.value);
 
-    // Calculate discount preview on backend
-    try {
-        const response = await fetch(
-            route("retail-cashier.cart.calculate-discount"),
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRF-TOKEN":
-                        document
-                            .querySelector('meta[name="csrf-token"]')
-                            ?.getAttribute("content") || "",
-                },
-                body: JSON.stringify({
-                    discount_id: discount.id,
-                    items: props.selectedItems,
-                }),
-            }
-        );
+    lessTaxValue.value = calculatedDiscountAmount.map((d) => d?.lessTax || 0);
+    lessDiscountValue.value = calculatedDiscountAmount.map(
+        (d) => d?.discountAmount || 0
+    );
 
-        const result = await response.json();
+    // Discount Amount
+    discountTotal.value = discount.remove_tax
+        ? formatMoney(
+              (
+                  selectedItemsSubtotal.value -
+                  totalLessTax.value -
+                  totalLessDiscount.value
+              ).toFixed(2)
+          )
+        : formatMoney(
+              (selectedItemsSubtotal.value - totalLessDiscount.value).toFixed(2)
+          );
 
-        if (response.ok) {
-            calculatedDiscountAmount.value = result.discount_amount;
-            discountTotal.value =
-                discount.discount_type == "senior" && discount.remove_tax
-                    ? result.total
-                    : formatMoney(
-                          (
-                              selectedItemsSubtotal.value -
-                              result.discount_amount
-                          ).toFixed(2)
-                      );
-            previewData.value = result;
-        }
-    } catch (error) {
-        console.error("Failed to calculate discount preview:", error);
-    }
+    // Set previewData with calculated values
+    previewData.value = {
+        discount_amount: lessDiscountValue.value.reduce(
+            (sum, val) => sum + val,
+            0
+        ),
+        item_discounts: calculatedDiscountAmount.map((d, index) => ({
+            id: props.selectedItems[index].id,
+            discount_amount: d.discountAmount,
+        })),
+    };
 };
+
+const totalLessTax = computed(() =>
+    lessTaxValue.value.reduce((sum, val) => sum + (val || 0), 0)
+);
+
+const totalLessDiscount = computed(() =>
+    lessDiscountValue.value.reduce((sum, val) => sum + (val || 0), 0)
+);
 
 const applyDiscount = () => {
     if (!selectedDiscount.value || !previewData.value) return;
@@ -513,38 +506,117 @@ const applyDiscount = () => {
         removeTax: selectedDiscount.value.remove_tax,
     };
 
-    // Apply discount to each selected cart item
-    const promises = props.selectedItems.map((item) =>
-        fetch(route("retail-cashier.cart.apply-discount", { cartItemId: item.id }), {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "",
+    const selectedItemIds = props.selectedItems.map((item: any) => item.id);
+
+    // Send single request with cartItemIds to backend
+    router.put(
+        route("retail-cashier.cart.apply-discount"),
+        {
+            cartItemIds: selectedItemIds,
+            discount_id: selectedDiscountId.value,
+            discount_amount: previewData.value.discount_amount,
+        },
+        {
+            onSuccess: () => {
+                toast.add({
+                    severity: "success",
+                    summary: "Success",
+                    detail: page.props.flash.success,
+                    life: 3000,
+                });
             },
-            body: JSON.stringify({
-                discount_id: selectedDiscountId.value,
-                discount_amount: previewData.value.item_discounts.find((d: any) => d.id === item.id)?.discount_amount || 0,
-            }),
-        })
+            onError: () => {
+                toast.add({
+                    severity: "error",
+                    summary: "Error",
+                    detail: "Failed to apply discount",
+                    life: 3000,
+                });
+            },
+        }
     );
 
-    Promise.all(promises)
-        .then(() => {
-            emit("apply", discountData);
-            emit("update:visible", false);
-            selectedDiscountId.value = "";
-            previewData.value = null;
-            // Reload the page to reflect the updated cart totals
-            router.reload();
-        })
-        .catch((error) => {
-            console.error("Failed to apply discount:", error);
-            emit("apply", discountData);
-            emit("update:visible", false);
-            selectedDiscountId.value = "";
-            previewData.value = null;
-            // Reload even on error to show any partial changes
-            router.reload();
-        });
+    emit("update:visible", false);
+};
+
+const calculateDiscountAmount = (discount: any) => {
+    if (!discount) return;
+
+    return props.selectedItems.map((item: any) => {
+        const amount = item.quantity * item.price;
+
+        if (discount.remove_tax) {
+            return calculateDiscountWithTaxRemoval(discount, amount);
+        }
+
+        switch (discount.type) {
+            case "percentage":
+                return calculatePercentageDiscount(discount, amount);
+
+            case "fixed":
+            case "amount":
+                return calculateFixedDiscount(discount, amount);
+
+            default:
+                return {
+                    vatExempt: 0,
+                    taxAmount: 0,
+                    vatableSales: 0,
+                    lessTax: 0,
+                    discountAmount: 0,
+                };
+        }
+    });
+};
+
+const calculateDiscountWithTaxRemoval = (discount: any, amount: number) => {
+    const vatExempt = amount / taxRate.value;
+    const taxAmount = 0;
+    const vatableSales = 0;
+    const lessTax = amount - vatExempt;
+    const discountAmount =
+        discount.type == "percentage"
+            ? vatExempt * (discount.amount / 100)
+            : discount.amount;
+
+    return {
+        vatExempt: vatExempt,
+        taxAmount: taxAmount,
+        vatableSales: vatableSales,
+        lessTax: lessTax,
+        discountAmount: discountAmount,
+    };
+};
+
+const calculatePercentageDiscount = (discount: any, amount: number) => {
+    const vatExempt = 0;
+    const vatableSales = amount / taxRate.value;
+    const taxAmount = amount - vatableSales;
+    const lessTax = 0;
+
+    const discountAmount = amount * (discount.amount / 100);
+
+    return {
+        vatExempt: vatExempt,
+        taxAmount: taxAmount,
+        vatableSales: vatableSales,
+        lessTax: lessTax,
+        discountAmount: discountAmount,
+    };
+};
+
+const calculateFixedDiscount = (discount: any, amount: number) => {
+    const vatExempt = 0;
+    const vatableSales = amount / taxRate.value;
+    const taxAmount = amount - vatableSales;
+    const lessTax = 0;
+
+    return {
+        vatExempt: vatExempt,
+        taxAmount: taxAmount,
+        vatableSales: vatableSales,
+        lessTax: lessTax,
+        discountAmount: discount.amount,
+    };
 };
 </script>

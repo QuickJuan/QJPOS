@@ -129,11 +129,11 @@
                                                 </span>
                                             </p>
                                             <p
-                                                v-if="hasDiscount(item.id)"
+                                                v-if="item.discount_amount"
                                                 class="text-xs text-green-600 font-medium"
                                             >
                                                 Discounted:
-                                                {{ getDiscountedPrice(item) }}
+                                                {{ item.discount_amount }}
                                             </p>
                                             <!-- Show explicit discount amount if saved on the cart item -->
                                             <p
@@ -310,15 +310,11 @@ const getDiscountedPrice = (item: any) => {
     }
 
     const discount = props.appliedDiscount;
-    const itemPrice = parseFloat(item.price || item.average_cost || "0");
+    const itemPrice = parseFloat(item.price || "0");
     const quantity = item.quantity;
     const lineTotal = itemPrice * quantity;
 
-    const isSeniorDiscount =
-        discount.discountName?.toLowerCase().includes("senior") ||
-        discount.discountType === "senior";
-
-    if (discount.removeTax && isSeniorDiscount) {
+    if (discount.removeTax) {
         // Special calculation for Senior Citizen Discount (20% on VAT-exempt amount)
         const vatableAmount = lineTotal / 1.12;
         const discountedPrice =

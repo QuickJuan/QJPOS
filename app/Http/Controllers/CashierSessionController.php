@@ -38,6 +38,7 @@ class CashierSessionController extends Controller
         $categoriesQuery = Category::with(['products' => fn($query) => $query->where('is_active', true)->with('productPackagings', 'options')])->get();
 
         $categories = CategoryResource::collection($categoriesQuery);
+        $taxRate    = config('sales.tax_rate');
 
         // Get available discounts
         $discounts = DiscountResource::collection(
@@ -82,7 +83,7 @@ class CashierSessionController extends Controller
                         'order_type'        => $item->order_type,
                         'selected_options'  => $item->selected_options ?? [],
                         'meta_data'         => $item->meta_data ?? [],
-                        'discount'          => $item->discount,
+                        'discount'          => $item->discount_amount,
                         'product_packaging' => $item->product_packaging_id ? $item->product->productPackagings->firstWhere('id', $item->product_packaging_id) : null,
                         'checked'           => false,
                         'children'          => $item->children,
@@ -110,6 +111,7 @@ class CashierSessionController extends Controller
             'currentTable'       => $currentTable ?? [],
             'subTotal'           => $subtotal,
             'total'              => $total,
+            'taxRate'            => $taxRate,
         ]);
     }
 
@@ -231,17 +233,6 @@ class CashierSessionController extends Controller
             return redirect()->route('retail-cashier.index', ['tableId' => $request->table_id])->with('success', 'Order started successfully');
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'Failed to start order: ' . $e->getMessage());
-        }
-    }
-
-    public function addToCart(CartRequest $request): RedirectResponse
-    {
-        try {
-            $this->cashierSessionService->addToCart($request);
-
-            return redirect()->back()->with('success', 'Item added to cart successfully.');
-        } catch (Exception $e) {
-            return redirect()->back()->with('success', 'There was an error in adding item to cart.');
         }
     }
 }

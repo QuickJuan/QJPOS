@@ -49,25 +49,16 @@ class CartController extends Controller
         }
     }
 
-    public function applyDiscountToCartItem(Request $request, int $cartItemId): JsonResponse
+    public function applyDiscountToCartItem(Request $request): RedirectResponse
     {
         try {
-            $result = $this->cartService->applyDiscountToCartItem($request, $cartItemId);
+            $this->cartService->applyDiscountToCartItem($request);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Discount applied to cart item successfully.',
-                'data'    => $result,
-            ]);
+            return redirect()->back()->with('success', 'Discount applied to cart item successfully.');
         } catch (Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'There was an error applying discount to cart item.',
-                'error'   => $e->getMessage(),
-            ], 500);
+            return redirect()->back()->with('error', 'There was an error applying discount to cart item.');
         }
     }
-
 
     public function clearDiscountToCartItem(int $cartItemId): RedirectResponse
     {
@@ -80,10 +71,10 @@ class CartController extends Controller
         }
     }
 
-    public function applyModifierToCartItem(Request $request, int $cartItemIds): RedirectResponse
+    public function applyModifierToCartItem(Request $request): RedirectResponse
     {
         try {
-            $this->cartService->applyModifierToCartItem($request, $cartItemIds);
+            $this->cartService->applyModifierToCartItem($request);
 
             return redirect()->back()->with('success', 'Discount applied to cart item successfully.');
         } catch (Exception $e) {

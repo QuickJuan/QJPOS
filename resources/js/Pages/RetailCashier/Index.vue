@@ -48,6 +48,7 @@
                     :current-table="props.currentTable"
                     :sub-total="subTotal"
                     :total="total"
+                    :tax-rate="taxRate"
                     @selected-order-type="updateOrderType"
                     @show-receipt="handleShowReceipt"
                 />
@@ -88,6 +89,7 @@ const props = defineProps<{
     pendingCashiering: any;
     subTotal: number;
     total: number;
+    taxRate: number;
 }>();
 
 const page = usePage<PageProps>();
