@@ -169,7 +169,7 @@ const receiptData = ref({
 const billData = ref({
     billNumber: getNextBillNumber().toString().padStart(6, "0"),
     date: new Date().toISOString(),
-    tableNumber: "",
+    tableInfo: "",
     cashierName: "",
     orderType: "",
     orderItems: [] as any[],
@@ -254,7 +254,7 @@ const handlePrintBill = () => {
     billData.value = {
         billNumber: getNextBillNumber().toString().padStart(6, "0"),
         date: new Date().toISOString(),
-        tableNumber: props.tableInfo.name || "",
+        tableInfo: props.tableInfo || "",
         cashierName: page.props.auth?.user?.name || "",
         orderType: props.selectedOrderType,
         orderItems: props.orderItems,

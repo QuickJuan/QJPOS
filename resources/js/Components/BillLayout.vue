@@ -9,7 +9,7 @@
             <p class="text-sm">{{ businessPhone }}</p>
             <div class="border-b border-dashed mt-2"></div>
             <h2 class="text-lg font-semibold mt-2">
-                Bill #: {{ billNumber.padStart(6, "0") }}
+                Table #: {{ tableInfo.name }}
             </h2>
         </div>
 
@@ -23,9 +23,11 @@
                 <span>Time:</span>
                 <span>{{ formatTime(billDate) }}</span>
             </div>
-            <div class="flex justify-between" v-if="tableNumber">
-                <span>Table:</span>
-                <span>{{ tableNumber }}</span>
+            <div class="flex justify-between" v-if="tableInfo.name">
+                <span>Bill #:</span>
+                <span>
+                    {{ billNumber.padStart(6, "0") }}
+                </span>
             </div>
             <div class="flex justify-between" v-if="cashierName">
                 <span>Cashier:</span>
@@ -44,9 +46,7 @@
                 class="mb-4"
             >
                 <!-- Order Type Header -->
-                <div
-                    class="text-center font-semibold text-sm mb-2 pb-1"
-                >
+                <div class="text-center font-semibold text-sm mb-2 pb-1">
                     {{ getOrderTypeLabel(String(orderType)) }}
                 </div>
 
@@ -165,7 +165,7 @@ const props = defineProps<{
     businessPhone?: string;
     billNumber?: string;
     billDate?: string;
-    tableNumber?: string;
+    tableInfo?: any;
     cashierName?: string;
     orderType?: string;
     orderItems?: any[];

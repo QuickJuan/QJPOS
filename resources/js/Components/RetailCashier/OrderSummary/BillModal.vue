@@ -18,7 +18,7 @@
                     :business-phone="'(02) 123-4567'"
                     :bill-number="billData.billNumber"
                     :bill-date="billData.date"
-                    :table-number="billData.tableNumber"
+                    :table-info="billData.tableInfo"
                     :cashier-name="billData.cashierName"
                     :order-type="billData.orderType"
                     :order-items="billData.orderItems"
