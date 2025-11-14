@@ -2,6 +2,7 @@
 namespace App\Services;
 
 use App\Enums\Discount\TypeEnum;
+use App\Http\Resources\DiscountResource;
 use App\Models\CartItem;
 use App\Models\Discount;
 
@@ -112,5 +113,12 @@ class DiscountService
             'lessTax'        => $lessTax,
             'discountAmount' => $discount->amount,
         ];
+    }
+
+    public function getDiscounts()
+    {
+        return DiscountResource::collection(
+            Discount::all()
+        );
     }
 }

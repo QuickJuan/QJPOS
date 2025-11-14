@@ -2,17 +2,16 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\CashierSessionRequest;
+use App\Http\Resources\CartItemResource;
 use App\Http\Resources\CategoryResource;
-use App\Http\Resources\DiscountResource;
 use App\Http\Resources\ProductResource;
-use App\Models\Cart;
 use App\Models\Category;
-use App\Models\Discount;
 use App\Models\Modifier;
 use App\Models\Product;
 use App\Models\TableRoom;
 use App\Models\TableRoomLocation;
 use App\Services\CashierSessionService;
+use App\Services\DiscountService;
 use Exception;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,9 +22,11 @@ use Inertia\Response;
 class CashierSessionController extends Controller
 {
     public function __construct(
-        protected CashierSessionService $cashierSessionService
+        protected CashierSessionService $cashierSessionService,
+        protected DiscountService $discountService
     ) {
         $this->cashierSessionService = $cashierSessionService;
+        $this->discountService       = $discountService;
     }
 
     public function index(Request $request): Response
@@ -35,90 +36,38 @@ class CashierSessionController extends Controller
 
         // Get categories with products directly (will be cached in browser)
         $categoriesQuery = Category::with(['products' => fn($query) => $query->where('is_active', true)->with('productPackagings', 'options')])->get();
-
-        $categories = CategoryResource::collection($categoriesQuery);
-        $taxRate    = config('sales.tax_rate');
+        $categories      = CategoryResource::collection($categoriesQuery);
+        $taxRate         = config('sales.tax_rate');
 
         // Get available discounts
-        // Transfer this into Discount Service
-        $discounts = DiscountResource::collection(
-            Discount::all()
-        );
+        $discounts = $this->discountService->getDiscounts();
 
         // Get available modifiers
-        // Transfer this into Modifier Service
-        $modifiers = Modifier::all()
-            ->map(fn($modifier) => [
-                'id'   => $modifier->id,
-                'name' => $modifier->name,
-                'list' => $modifier->list ?? [],
-            ]);
+        $modifiers = Modifier::withMappedData();
 
-        // Get cart items for current session
-        $cartItems = [];
-        if ($pendingCashiering) {
-            $cartQuery = Cart::query();
+        // Get cart and cart items for current session
+        $cartData     = $this->cashierSessionService->getCartData($request, $pendingCashiering);
+        $cart         = $cartData['cart'];
+        $cartItems    = $cartData['cartItems'];
+        $currentTable = $cartData['currentTable'];
 
-            if ($request->has('tableId')) {
-                $cartQuery->where('table_room_id', $request->input('tableId'));
-                $currentTable = TableRoom::find($request->input('tableId'));
-            }
+        // Calculate totals
+        $totals = $this->cashierSessionService->calculateTotals($cart, $cartItems);
 
-            $cart = $cartQuery->where('cashier_id', Auth::id())
-                ->where('cashier_session_id', $pendingCashiering->id)
-                ->with(['cartItems.product.productPackagings', 'cartItems.children.product'])
-                ->first();
+        // Prepare view data
+        $viewData = $this->cashierSessionService->prepareViewData(
+            $categories,
+            $pendingCashiering,
+            $cart,
+            $cartItems,
+            $discounts,
+            $modifiers,
+            $currentTable,
+            $taxRate,
+            $totals
+        );
 
-            if ($cart) {
-                $cartItems = $cart->cartItems
-                    ->map(fn($item) => [
-                        'id'                => $item->id,
-                        'parent_id'         => $item->parent_id,
-                        'product_id'        => $item->product_id,
-                        'name'              => $item->product->name ?? 'Unknown Product',
-                        'quantity'          => $item->quantity,
-                        'price'             => $item->price,
-                        'amount'            => $item->amount,
-                        'sub_total'         => $item->sub_total,
-                        'placed_order'      => (bool) $item->placed_order,
-                        'order_type'        => $item->order_type,
-                        'selected_options'  => $item->selected_options ?? [],
-                        'meta_data'         => $item->meta_data ?? [],
-                        'discount'          => $item->discount_amount,
-                        'less_tax'          => $item->less_tax,
-                        'product_packaging' => $item->product_packaging_id ? $item->product->productPackagings->firstWhere('id', $item->product_packaging_id) : null,
-                        'checked'           => false,
-                        'children'          => $item->children,
-                    ])->toArray();
-            }
-        }
-
-        $subtotal          = collect($cartItems)->sum('sub_total');
-        $lessTaxTotal      = collect($cartItems)->sum('less_tax');
-        $lessDiscountTotal = collect($cartItems)->sum('discount');
-        $total             = $cart && $cart->cartItems->isNotEmpty()
-            ? $cart->cartItems->sum(function ($item) {
-            $itemTotal = ($item->sub_total ?? 0) - ($item->discount ?? 0);
-
-            return $itemTotal;
-        })
-            : null;
-
-        return Inertia::render('RetailCashier/Index', [
-            'categories'         => $categories,
-            'pendingCashiering'  => $pendingCashiering,
-            'currentUser'        => Auth::user(),
-            'cart'               => $cart,
-            'cartItems'          => $cartItems,
-            'availableDiscounts' => $discounts,
-            'availableModifiers' => $modifiers,
-            'currentTable'       => $currentTable ?? [],
-            'subTotal'           => $subtotal,
-            'total'              => $total,
-            'lessTaxTotal'       => $lessTaxTotal,
-            'lessDiscountTotal'  => $lessDiscountTotal,
-            'taxRate'            => $taxRate,
-        ]);
+        return Inertia::render('RetailCashier/Index', $viewData);
     }
 
     public function preview(): Response

@@ -12,6 +12,9 @@ export default interface Product {
     brand_id: number;
     average_cost: string;
     total_onhand: string;
+    price: number;
+    multiple_packaging: boolean;
+    unit_type: string;
     category: Category;
     brand: Brand;
     options?: Option[];

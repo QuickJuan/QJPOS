@@ -8,6 +8,7 @@ use App\Models\CashierSession;
 use App\Models\Discount;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Product;
 use App\Models\ProductPackaging;
 use Exception;
 use Illuminate\Http\RedirectResponse;
@@ -46,22 +47,25 @@ class CartService
 
         $cart = Cart::firstOrCreate($cartAttributes);
 
-        $productPackaging = ProductPackaging::findOrFail($request['product_packaging_id']);
+        $product          = Product::findOrFail($request['product_id']);
+        $productPackaging = ProductPackaging::find($request['product_packaging_id']);
 
         $newSelectedOptions = $request['selected_options'] ?? [];
         $orderType          = $request['order_type'];
         $withParent         = $request['withParent'];
 
-        $price    = $productPackaging->price;
+        $price = $product->multiple_packaging && $productPackaging
+            ? $productPackaging->price
+            : $product->price;
         $quantity = $request['quantity'] ?? 1;
-        $amount   = $productPackaging->price * $quantity;
+        $amount   = $price * $quantity;
         $discount = 0;
         $subtotal = $amount - $discount;
 
         $cartItem = $cart->cartItems()
             ->create([
                 'product_id'           => $request['product_id'],
-                'product_packaging_id' => $request['product_packaging_id'],
+                'product_packaging_id' => $request['product_packaging_id'] ?? null,
                 'quantity'             => $quantity,
                 'price'                => $price,
                 'amount'               => $amount,
@@ -115,22 +119,37 @@ class CartService
             throw new Exception('Cart item not found.');
         }
 
-        $price               = $cartItem->price;
-        $quantity            = $request['quantity'] ?? $cartItem->quantity;
-        $amount              = $price * $quantity;
-        $discountComputation = ($this->discountService->calculateDiscountAmount($cartItem->discount_id, [$cartItem->id], $quantity))[0];
-        $subtotal            = $amount - ($discountComputation['discountAmount'] + $discountComputation['lessTax']);
+        $price    = $cartItem->price;
+        $quantity = $request['quantity'] ?? $cartItem->quantity;
+        $amount   = $price * $quantity;
+
+        $discountComputation = null;
+
+        if (! empty($cartItem->discount_id)) {
+            $results = $this->discountService->calculateDiscountAmount(
+                $cartItem->discount_id,
+                [$cartItem->id],
+                $quantity
+            );
+
+            $discountComputation = $results[0] ?? null;
+        }
+
+        $discount = $discountComputation
+            ? ($discountComputation['discountAmount'] ?? 0) + ($discountComputation['lessTax'] ?? 0)
+            : 0;
+        $subtotal = $amount - $discount;
 
         return $cartItem->update([
             'quantity'         => $quantity,
             'amount'           => $amount,
             'sub_total'        => $subtotal,
-            'discount_id'      => $cartItem->discount_id,
-            'discount_amount'  => $discountComputation['discountAmount'],
-            'vatable_sales'    => $discountComputation['vatableSales'],
-            'vat_exempt_sales' => $discountComputation['vatExempt'],
-            'vat_amount'       => $discountComputation['taxAmount'],
-            'less_tax'         => $discountComputation['lessTax'],
+            'discount_id'      => $cartItem->discount_id ?? null,
+            'discount_amount'  => $discountComputation['discountAmount'] ?? 0.00,
+            'vatable_sales'    => $discountComputation['vatableSales'] ?? 0.00,
+            'vat_exempt_sales' => $discountComputation['vatExempt'] ?? 0.00,
+            'vat_amount'       => $discountComputation['taxAmount'] ?? 0.00,
+            'less_tax'         => $discountComputation['lessTax'] ?? 0.00,
         ]);
     }
 
