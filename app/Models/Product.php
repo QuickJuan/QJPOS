@@ -31,6 +31,9 @@ class Product extends Model implements HasMedia
         'total_onhand',
         'minimum_stock_level',
         'maximum_stock_level',
+        'multiple_packaging',
+        'price',
+        'unit_measure',
     ];
 
     protected $casts = [
@@ -40,6 +43,7 @@ class Product extends Model implements HasMedia
         'sellable'           => 'boolean',
         'vat_inclusive'      => 'boolean',
         'track_inventory'    => 'boolean',
+        'multiple_packaging' => 'boolean',
     ];
 
     public function registerMediaCollections(): void

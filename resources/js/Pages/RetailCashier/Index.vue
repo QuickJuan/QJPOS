@@ -281,6 +281,7 @@ onMounted(() => {
 });
 
 const addToCart = (product: any, packaging?: any) => {
+    console.log(packaging);
     if (packaging) {
         // Packaging already selected, proceed
         if (product.options && product.options.length > 0) {
@@ -326,6 +327,7 @@ const addToCart = (product: any, packaging?: any) => {
         // No packaging provided, check if product has packagings
         if (
             product.product_packagings &&
+            product.multiple_packaging && // Check if the multiple packaging is true
             product.product_packagings.length > 0
         ) {
             if (product.product_packagings.length === 1) {

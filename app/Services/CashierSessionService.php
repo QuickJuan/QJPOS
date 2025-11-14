@@ -3,7 +3,6 @@ namespace App\Services;
 
 use App\Enums\TableRoomStatusType;
 use App\Models\Cart;
-use App\Models\CartItem;
 use App\Models\CashierSession;
 use App\Models\TableRoom;
 use Carbon\Carbon;
@@ -89,31 +88,100 @@ class CashierSessionService
         return $cart;
     }
 
-    // public function addToCart(Request $request): bool | CartItem
-    // {
-    //     // Get or create cart for current cashier session
-    //     $cashierSession = $this->model->openSession()->first();
+    public function prepareViewData(
+        $categories,
+        $pendingCashiering,
+        $cart,
+        array $cartItems,
+        $discounts,
+        $modifiers,
+        $currentTable,
+        $taxRate,
+        array $totals
+    ): array {
+        return [
+            'categories'         => $categories,
+            'pendingCashiering'  => $pendingCashiering,
+            'currentUser'        => Auth::user(),
+            'cart'               => $cart,
+            'cartItems'          => $cartItems,
+            'availableDiscounts' => $discounts,
+            'availableModifiers' => $modifiers,
+            'currentTable'       => $currentTable ?? [],
+            'subTotal'           => $totals['subtotal'],
+            'total'              => $totals['total'],
+            'lessTaxTotal'       => $totals['lessTaxTotal'],
+            'lessDiscountTotal'  => $totals['lessDiscountTotal'],
+            'taxRate'            => $taxRate,
+        ];
+    }
 
-    //     if (! $cashierSession) {
-    //         throw new Exception('No active cashier session found.');
-    //     }
+    public function getCartData(Request $request, $pendingCashiering): array
+    {
+        $cartItems    = [];
+        $cart         = null;
+        $currentTable = null;
 
-    //     $cart = Cart::firstOrCreate([
-    //         'cashier_id'         => Auth::id(),
-    //         'cashier_session_id' => $cashierSession->id,
-    //     ]);
+        if (! $pendingCashiering) {
+            return compact('cart', 'cartItems', 'currentTable');
+        }
 
-    //     $addToCart = $cart->cartItems()->create([
-    //         'product_id'           => $request['product_id'],
-    //         'product_packaging_id' => $request['product_packaging_id'],
-    //         'quantity'             => $request['quantity'] ?? 1,
-    //         'price'                => $request['total_price'] / ($request['quantity'] ?? 1),
-    //         'amount'               => $request['total_price'],
-    //         'sub_total'            => $request['total_price'],
-    //         'selected_options'     => $request['selected_options'] ?? [],
-    //         'order_type'           => $request['order_type'],
-    //     ]);
+        $cartQuery = Cart::query();
 
-    //     return $addToCart;
-    // }
+        if ($request->has('tableId')) {
+            $cartQuery->where('table_room_id', $request->input('tableId'));
+            $currentTable = TableRoom::find($request->input('tableId'));
+        }
+
+        $cart = $cartQuery->where('cashier_id', Auth::id())
+            ->where('cashier_session_id', $pendingCashiering->id)
+            ->with(['cartItems.product.productPackagings', 'cartItems.children.product'])
+            ->first();
+
+        if ($cart) {
+            $cartItems = $this->processCartItems($cart->cartItems);
+        }
+
+        return compact('cart', 'cartItems', 'currentTable');
+    }
+
+    private function processCartItems($cartItems): array
+    {
+        return $cartItems->map(fn($item) => [
+            'id'                => $item->id,
+            'parent_id'         => $item->parent_id,
+            'product_id'        => $item->product_id,
+            'name'              => $item->product->name ?? 'Unknown Product',
+            'quantity'          => $item->quantity,
+            'price'             => $item->price,
+            'amount'            => $item->amount,
+            'sub_total'         => $item->sub_total,
+            'placed_order'      => (bool) $item->placed_order,
+            'order_type'        => $item->order_type,
+            'selected_options'  => $item->selected_options ?? [],
+            'meta_data'         => $item->meta_data ?? [],
+            'discount'          => $item->discount_amount,
+            'less_tax'          => $item->less_tax,
+            'product_packaging' => $item->product_packaging_id ? $item->product->productPackagings->firstWhere('id', $item->product_packaging_id) : null,
+            'product'           => $item->product,
+            'checked'           => false,
+            'children'          => $item->children,
+        ])->toArray();
+    }
+
+    public function calculateTotals($cart, array $cartItems): array
+    {
+        $subtotal          = collect($cartItems)->sum('sub_total');
+        $lessTaxTotal      = collect($cartItems)->sum('less_tax');
+        $lessDiscountTotal = collect($cartItems)->sum('discount');
+
+        $total = null;
+        if ($cart && $cart->cartItems->isNotEmpty()) {
+            $total = $cart->cartItems->sum(function ($item) {
+                return ($item->sub_total ?? 0) - ($item->discount ?? 0);
+            });
+        }
+
+        return compact('subtotal', 'lessTaxTotal', 'lessDiscountTotal', 'total');
+    }
 }

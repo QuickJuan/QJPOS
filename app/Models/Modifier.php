@@ -1,8 +1,8 @@
 <?php
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Modifier extends Model
@@ -16,6 +16,16 @@ class Modifier extends Model
     protected $casts = [
         'list' => 'array',
     ];
+
+    public function scopeWithMappedData(Builder $query)
+    {
+        return $query->get()
+            ->map(fn($modifier) => [
+                'id'   => $modifier->id,
+                'name' => $modifier->name,
+                'list' => $modifier->list ?? [],
+            ]);
+    }
 
     public function products(): BelongsToMany
     {

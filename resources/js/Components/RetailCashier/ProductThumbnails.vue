@@ -79,18 +79,8 @@
                     <p
                         class="text-sm sm:text-base lg:text-lg font-bold text-secondary-800 truncate"
                     >
-                        {{
-                            formatMoney(
-                                product.product_packagings.length
-                                    ? getLowestPriceForProductPackagings(
-                                          product.product_packagings
-                                      )
-                                    : parseFloat(
-                                          product.average_cost || "0"
-                                      ).toFixed(2)
-                            )
-                        }}
-                        {{ product.product_packagings.length > 1 ? "+" : "" }}
+                        {{ getPrice(product) }}
+                        {{ product.multiple_packaging && product.product_packagings.length > 1 ? "+" : "" }}
                     </p>
                     <!-- Responsive Pick Button -->
                     <button
@@ -128,5 +118,22 @@ const getLowestPriceForProductPackagings = (data: any) => {
     const lowestPrice = prices.length ? Math.min(...prices) : null;
 
     return lowestPrice;
+};
+
+const getPrice = (product: any) => {
+    let price = 0;
+    if (product.multiple_packaging) {
+        if (product.product_packagings.length > 0) {
+            price = formatMoney(
+                getLowestPriceForProductPackagings(product.product_packagings)
+            );
+        } else {
+            formatMoney(parseFloat(product.price || "0").toFixed(2));
+        }
+    } else {
+        price = formatMoney(product.price);
+    }
+
+    return price;
 };
 </script>

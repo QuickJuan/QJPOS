@@ -9,6 +9,7 @@ use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -80,6 +81,19 @@ class ProductResource extends Resource
                     ->required()
                     ->maxLength(150)
                     ->label('Receipt Name'),
+
+                TextInput::make('price')
+                    ->required()
+                    ->default(0)
+                    ->numeric()
+                    ->label('Price'),
+
+                TextInput::make('unit_measure')
+                    ->label('Unit of Measure'),
+
+                Toggle::make('multiple_packaging')
+                    ->label('Multiple Packaging')
+                    ->default(false),
 
                 Select::make('options')
                     ->relationship('options', 'option_name')
