@@ -1,25 +1,26 @@
 <?php
 namespace App\Filament\Tenant\Resources;
 
-use App\Filament\Imports\ProductImporter;
-use App\Filament\Tenant\Resources\ProductResource\Pages;
-use App\Filament\Tenant\Resources\ProductResource\RelationManagers;
-use App\Models\Product;
-use Filament\Forms\Components\RichEditor;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Toggle;
-use Filament\Forms\Form;
-use Filament\Notifications\Notification;
-use Filament\Resources\Resource;
 use Filament\Tables;
-use Filament\Tables\Actions\Action;
-use Filament\Tables\Actions\ActionGroup;
-use Filament\Tables\Actions\ImportAction;
-use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
-use Filament\Tables\Columns\TextColumn;
+use App\Models\Product;
+use Filament\Forms\Get;
+use Filament\Forms\Form;
 use Filament\Tables\Table;
+use Filament\Resources\Resource;
+use Filament\Tables\Actions\Action;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Toggle;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
+use Filament\Tables\Actions\ActionGroup;
+use App\Filament\Imports\ProductImporter;
+use Filament\Forms\Components\RichEditor;
+use Filament\Tables\Actions\ImportAction;
+use App\Filament\Tenant\Resources\ProductResource\Pages;
+use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
+use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
+use App\Filament\Tenant\Resources\ProductResource\RelationManagers;
 
 class ProductResource extends Resource
 {
@@ -82,18 +83,21 @@ class ProductResource extends Resource
                     ->maxLength(150)
                     ->label('Receipt Name'),
 
+                Toggle::make('multiple_packaging')
+                    ->label('Multiple Packaging')
+                    ->live(onBlur: true)
+                    ->default(false),
+
                 TextInput::make('price')
                     ->required()
                     ->default(0)
                     ->numeric()
-                    ->label('Price'),
+                    ->label('Price')
+                    ->hidden(fn(Get $get) => $get('multiple_packaging') === true),
 
                 TextInput::make('unit_measure')
-                    ->label('Unit of Measure'),
-
-                Toggle::make('multiple_packaging')
-                    ->label('Multiple Packaging')
-                    ->default(false),
+                    ->label('Unit of Measure')
+                    ->hidden(fn(Get $get) => $get('multiple_packaging') === true),
 
                 Select::make('options')
                     ->relationship('options', 'option_name')
