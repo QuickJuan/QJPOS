@@ -64,13 +64,27 @@
                     </div>
                 </div>
             </button>
+
+            <button
+                @click="handlePrintBill"
+                :disabled="orderItems.length === 0"
+                class="w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center gap-3 bg-gray-100 text-secondary-700 hover:bg-gray-200 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
+            >
+                <PrinterIcon class="w-5 h-5" />
+                <div class="text-left">
+                    <div class="font-semibold">Print Bill</div>
+                    <div class="text-xs opacity-75">
+                        Print bill for customer
+                    </div>
+                </div>
+            </button>
         </div>
     </Dialog>
 </template>
 
 <script setup lang="ts">
 import { Dialog } from "primevue";
-import { BookmarkIcon, TagIcon, PlusIcon } from "@heroicons/vue/24/outline";
+import { BookmarkIcon, TagIcon, PlusIcon, PrinterIcon } from "@heroicons/vue/24/outline";
 
 const props = defineProps<{
     visible: boolean;
@@ -82,6 +96,7 @@ const emit = defineEmits<{
     saveOrder: [];
     openDiscountModal: [];
     addModifier: [];
+    printBill: [];
     "update:visible": [value: boolean];
 }>();
 
@@ -97,6 +112,11 @@ const handleApplyDiscount = () => {
 
 const handleAddModifier = () => {
     emit("addModifier");
+    emit("update:visible", false);
+};
+
+const handlePrintBill = () => {
+    emit("printBill");
     emit("update:visible", false);
 };
 

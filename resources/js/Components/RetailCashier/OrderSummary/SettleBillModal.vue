@@ -63,6 +63,7 @@ import { ref, computed } from "vue";
 import { Dialog } from "primevue";
 import { formatMoney } from "@/Utils/FormatMoney";
 import TextField from "@/Components/Form/TextField.vue";
+import { usePage } from "@inertiajs/vue3";
 
 const props = defineProps<{
     visible: boolean;
@@ -83,6 +84,8 @@ const appliedDiscount = computed(() => props.appliedDiscount);
 
 // Settle bill form data
 const amountPaid = ref(0);
+
+const page = usePage();
 
 // Receipt data
 const receiptData = ref({
@@ -153,7 +156,7 @@ const handleSettleBill = () => {
         tableNumber: props.cart.table_id
             ? `Table ${props.cart.table_id}`
             : undefined,
-        cashierName: "John Doe", // In real app, get from auth
+        cashierName: page.props.auth?.user?.name ?? "",
         orderType: props.selectedOrderType,
         orderItems: orderItemsWithUnitPrice,
         subtotal: subtotal,

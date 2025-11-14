@@ -108,7 +108,7 @@ class CashierSessionService
             'availableDiscounts' => $discounts,
             'availableModifiers' => $modifiers,
             'currentTable'       => $currentTable ?? [],
-            'subTotal'           => $totals['subtotal'],
+            'subTotal'           => $totals['subAmount'],
             'total'              => $totals['total'],
             'lessTaxTotal'       => $totals['lessTaxTotal'],
             'lessDiscountTotal'  => $totals['lessDiscountTotal'],
@@ -171,7 +171,7 @@ class CashierSessionService
 
     public function calculateTotals($cart, array $cartItems): array
     {
-        $subtotal          = collect($cartItems)->sum('sub_total');
+        $subAmount         = collect($cartItems)->sum('amount');
         $lessTaxTotal      = collect($cartItems)->sum('less_tax');
         $lessDiscountTotal = collect($cartItems)->sum('discount');
 
@@ -182,6 +182,6 @@ class CashierSessionService
             });
         }
 
-        return compact('subtotal', 'lessTaxTotal', 'lessDiscountTotal', 'total');
+        return compact('subAmount', 'lessTaxTotal', 'lessDiscountTotal', 'total');
     }
 }

@@ -38,12 +38,17 @@
             :cart="cart"
             :total-amount="finalTotal"
             :applied-discount="appliedDiscount"
+            :sub-total="props.subTotal"
+            :total="props.total"
+            :less-tax-total="props.lessTaxTotal"
+            :less-discount-total="props.lessDiscountTotal"
             @update-order-type="updateOrderType"
             @save-order="handleSaveOrder"
             @checkout="handleCheckout"
             @open-discount-modal="openDiscountModal"
             @add-modifier="handleAddModifier"
             @settle-bill="handleSettleBill"
+            @print-bill="handlePrintBill"
         />
 
         <!-- Edit Item Modal -->
@@ -130,6 +135,7 @@ const confirm = useConfirm();
 const emit = defineEmits<{
     selectedOrderType: [value: string];
     showReceipt: [data: any];
+    printBill: [];
 }>();
 
 // State
@@ -506,5 +512,9 @@ const handleShowItemModifiers = (item: any) => {
     selectedItemForModifiers.value = item;
     selectedItemModifiers.value = item.meta_data || [];
     showItemModifiersModal.value = true;
+};
+
+const handlePrintBill = () => {
+    emit("printBill");
 };
 </script>
