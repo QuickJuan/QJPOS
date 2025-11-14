@@ -38,60 +38,74 @@
         <!-- Order Items -->
         <div class="my-3">
             <div class="text-center font-bold mb-2">ORDER ITEMS</div>
-            <div v-for="item in orderItems" :key="item.id" class="mb-3">
-                <div class="flex justify-between">
-                    <span class="flex-1">{{ item.name }}</span>
-                </div>
+            <div
+                v-for="(items, orderType) in groupedOrderItems"
+                :key="orderType"
+                class="mb-4"
+            >
+                <!-- Order Type Header -->
                 <div
-                    v-if="item.quantity > 1"
-                    class="ml-2 text-xs text-gray-600"
+                    class="text-center font-semibold text-sm mb-2 pb-1"
                 >
-                    <div class="flex justify-between">
-                        <span>
-                            {{ item.quantity }} x
-                            {{ formatMoney(item.price) }}
-                        </span>
-                        <span>{{ formatMoney(item.amount) }}</span>
-                    </div>
+                    {{ getOrderTypeLabel(String(orderType)) }}
                 </div>
 
-                <!-- Selected Options -->
-                <div
-                    v-if="
-                        item.selected_options &&
-                        item.selected_options.length > 0
-                    "
-                    class="ml-2 text-xs"
-                >
+                <!-- Items in this group -->
+                <div v-for="item in items" :key="item.id" class="mb-3">
+                    <div class="flex justify-between">
+                        <span class="flex-1">{{ item.name }}</span>
+                    </div>
                     <div
-                        v-for="option in item.selected_options"
-                        :key="option.id"
-                        class="flex justify-between"
+                        v-if="item.quantity >= 1"
+                        class="ml-2 text-xs text-gray-600"
                     >
-                        <span>+ {{ option.name }}</span>
-                        <span>{{ formatMoney(option.price) }}</span>
+                        <div class="flex justify-between">
+                            <span>
+                                {{ item.quantity }} x
+                                {{ formatMoney(item.price) }}
+                            </span>
+                            <span>{{ formatMoney(item.amount) }}</span>
+                        </div>
                     </div>
-                </div>
 
-                <!-- Less Tax -->
-                <div
-                    v-if="item.less_tax > 0"
-                    class="ml-2 text-xs text-gray-600"
-                >
-                    <div class="flex justify-between">
-                        <span>Less Tax: </span>
-                        <span>-{{ formatMoney(item.less_tax) }}</span>
+                    <!-- Selected Options -->
+                    <div
+                        v-if="
+                            item.selected_options &&
+                            item.selected_options.length > 0
+                        "
+                        class="ml-2 text-xs"
+                    >
+                        <div
+                            v-for="option in item.selected_options"
+                            :key="option.id"
+                            class="flex justify-between"
+                        >
+                            <span>+ {{ option.name }}</span>
+                            <span>{{ formatMoney(option.price) }}</span>
+                        </div>
                     </div>
-                </div>
 
-                <!-- Less Discount -->
-                <div
-                    v-if="item.discount > 0"
-                    class="ml-2 text-xs text-gray-600"
-                >
-                    <div class="flex justify-between">
-                        <span>Less Discount: </span>
-                        <span>-{{ formatMoney(item.discount) }}</span>
+                    <!-- Less Tax -->
+                    <div
+                        v-if="item.less_tax > 0"
+                        class="ml-2 text-xs text-gray-600"
+                    >
+                        <div class="flex justify-between">
+                            <span>Less Tax: </span>
+                            <span>-{{ formatMoney(item.less_tax) }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Less Discount -->
+                    <div
+                        v-if="item.discount > 0"
+                        class="ml-2 text-xs text-gray-600"
+                    >
+                        <div class="flex justify-between">
+                            <span>Less Discount: </span>
+                            <span>-{{ formatMoney(item.discount) }}</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -120,7 +134,9 @@
             </div>
 
             <!-- Total -->
-            <div class="border-none pt-2 flex justify-between font-bold text-base">
+            <div
+                class="border-none pt-2 flex justify-between font-bold text-base"
+            >
                 <span>TOTAL:</span>
                 <span>{{ formatMoney(totalAmount) }}</span>
             </div>
@@ -128,8 +144,12 @@
 
         <!-- Footer -->
         <div class="text-center text-xs">
-            <p class="mb-1">Thank you for dining with us!</p>
-            <p class="mb-1">Please settle your bill at the counter.</p>
+            <p class="mb-1">
+                {{
+                    billFooter?.footer_notes ??
+                    "Thank you for dining with us! Please settle your bill at the counter."
+                }}
+            </p>
             <p class="text-xs text-gray-500 mt-2">{{ footerMessage }}</p>
         </div>
     </div>
@@ -159,6 +179,7 @@ const props = defineProps<{
     isSeniorDiscount?: boolean;
     totalAmount?: number;
     footerMessage?: string;
+    billFooter: any;
 }>();
 
 // Default values
@@ -171,12 +192,34 @@ const billNumber = computed(() => props.billNumber || "001234");
 const billDate = computed(() => props.billDate || new Date().toISOString());
 const orderItems = computed(() => props.orderItems || []);
 const subtotal = computed(() => props.subtotal || 0);
-const taxAmount = computed(() => props.taxAmount || 0);
 const discountAmount = computed(() => props.discountAmount || 0);
 const totalAmount = computed(() => props.totalAmount || 0);
 const footerMessage = computed(
     () => props.footerMessage || "Generated by Quick Juan POS System"
 );
+
+// Group items by order type
+const groupedOrderItems = computed(() => {
+    const groups: { [key: string]: any[] } = {};
+    orderItems.value.forEach((item) => {
+        const orderType = item.order_type || "dine-in";
+        if (!groups[orderType]) {
+            groups[orderType] = [];
+        }
+        groups[orderType].push(item);
+    });
+    return groups;
+});
+
+// Get order type label
+const getOrderTypeLabel = (orderType: string) => {
+    const labels: { [key: string]: string } = {
+        "dine-in": "Dine-in",
+        takeout: "Takeout",
+        delivery: "Delivery",
+    };
+    return labels[orderType] || orderType;
+};
 
 // Helper functions
 const formatMoney = (amount: number) => {

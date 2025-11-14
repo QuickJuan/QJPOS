@@ -42,6 +42,8 @@
             :total="props.total"
             :less-tax-total="props.lessTaxTotal"
             :less-discount-total="props.lessDiscountTotal"
+            :table-info="tableInfo"
+            :bill-footer="billFooter"
             @update-order-type="updateOrderType"
             @save-order="handleSaveOrder"
             @checkout="handleCheckout"
@@ -127,6 +129,7 @@ const props = defineProps<{
     lessTaxTotal: number;
     lessDiscountTotal: number;
     taxRate: number;
+    billFooter: any;
 }>();
 
 const toast = useToast();

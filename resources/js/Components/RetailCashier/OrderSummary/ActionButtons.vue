@@ -85,14 +85,14 @@
             v-model:visible="showBillModal"
             :bill-data="billData"
             :order-items="orderItems"
+            :table-info="tableInfo"
+            :billFooter="billFooter"
         />
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from "vue";
-import { router, usePage } from "@inertiajs/vue3";
-import { route } from "ziggy-js";
+import { ref, computed } from "vue";
 import { ChevronDownIcon } from "@heroicons/vue/24/outline";
 import {
     HomeIcon,
@@ -105,6 +105,7 @@ import SettleBillModal from "./SettleBillModal.vue";
 import ReceiptModal from "./ReceiptModal.vue";
 import BillModal from "./BillModal.vue";
 import { useBillNumber } from "@/composables/useBillNumber";
+import { usePage } from "@inertiajs/vue3";
 
 const props = defineProps<{
     cart: any;
@@ -118,6 +119,8 @@ const props = defineProps<{
     total: number;
     lessTaxTotal: number;
     lessDiscountTotal: number;
+    tableInfo: any;
+    billFooter: any;
 }>();
 
 const emit = defineEmits<{
@@ -176,7 +179,7 @@ const billData = ref({
     discountName: null as string | null,
     discountType: null as string | null,
     removeTax: false,
-    totalAmount: 0
+    totalAmount: 0,
 });
 
 const orderTypes = [
@@ -251,7 +254,7 @@ const handlePrintBill = () => {
     billData.value = {
         billNumber: getNextBillNumber().toString().padStart(6, "0"),
         date: new Date().toISOString(),
-        tableNumber: props.cart?.table?.table_number || "",
+        tableNumber: props.tableInfo.name || "",
         cashierName: page.props.auth?.user?.name || "",
         orderType: props.selectedOrderType,
         orderItems: props.orderItems,

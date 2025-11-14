@@ -1,9 +1,11 @@
 <?php
 namespace App\Services;
 
+use App\Enums\Receipt\Type;
 use App\Enums\TableRoomStatusType;
 use App\Models\Cart;
 use App\Models\CashierSession;
+use App\Models\ReceiptFooter;
 use App\Models\TableRoom;
 use Carbon\Carbon;
 use Exception;
@@ -97,7 +99,8 @@ class CashierSessionService
         $modifiers,
         $currentTable,
         $taxRate,
-        array $totals
+        array $totals,
+        $billFooter
     ): array {
         return [
             'categories'         => $categories,
@@ -113,6 +116,7 @@ class CashierSessionService
             'lessTaxTotal'       => $totals['lessTaxTotal'],
             'lessDiscountTotal'  => $totals['lessDiscountTotal'],
             'taxRate'            => $taxRate,
+            'billFooter'         => $billFooter,
         ];
     }
 
@@ -183,5 +187,10 @@ class CashierSessionService
         }
 
         return compact('subAmount', 'lessTaxTotal', 'lessDiscountTotal', 'total');
+    }
+
+    public function getReceiptFooter(string $type = Type::RECEIPT->value)
+    {
+        return ReceiptFooter::where('type', $type)->first();
     }
 }
