@@ -34,7 +34,6 @@
                 >
                     Place Order
                 </button>
-                    <!-- :disabled="orderItems.length <= 0 || !orderItems.every((item) => item.is_served)" -->
 
                 <button
                     @click="showSettleBillModal = true"
@@ -61,6 +60,7 @@
             @save-order="handleSaveOrder"
             @open-discount-modal="handleApplyDiscount"
             @add-modifier="handleAddModifier"
+            @print-bill="handlePrintBill"
         />
 
         <!-- Settle Bill Modal -->
@@ -80,13 +80,19 @@
             :receipt-data="receiptData"
             :order-items="orderItems"
         />
+
+        <BillModal
+            v-model:visible="showBillModal"
+            :bill-data="billData"
+            :order-items="orderItems"
+            :table-info="tableInfo"
+            :billFooter="billFooter"
+        />
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from "vue";
-import { router, usePage } from "@inertiajs/vue3";
-import { route } from "ziggy-js";
+import { ref, computed } from "vue";
 import { ChevronDownIcon } from "@heroicons/vue/24/outline";
 import {
     HomeIcon,
@@ -97,6 +103,9 @@ import OrderTypeSelectionModal from "./OrderTypeSelectionModal.vue";
 import MoreOptionsModal from "./MoreOptionsModal.vue";
 import SettleBillModal from "./SettleBillModal.vue";
 import ReceiptModal from "./ReceiptModal.vue";
+import BillModal from "./BillModal.vue";
+import { useBillNumber } from "@/composables/useBillNumber";
+import { usePage } from "@inertiajs/vue3";
 
 const props = defineProps<{
     cart: any;
@@ -106,6 +115,12 @@ const props = defineProps<{
     selectedItemsForDiscount: number[];
     totalAmount: number;
     appliedDiscount: any;
+    subTotal: number;
+    total: number;
+    lessTaxTotal: number;
+    lessDiscountTotal: number;
+    tableInfo: any;
+    billFooter: any;
 }>();
 
 const emit = defineEmits<{
@@ -115,6 +130,7 @@ const emit = defineEmits<{
     openDiscountModal: [];
     addModifier: [];
     settleBill: [data: any];
+    printBill: [];
 }>();
 
 // Use applied discount from props
@@ -128,6 +144,8 @@ const showOrderTypeModal = ref(false);
 const showMoreOptionsModal = ref(false);
 const showSettleBillModal = ref(false);
 const showReceiptModal = ref(false);
+const showBillModal = ref(false);
+const { getNextBillNumber } = useBillNumber();
 
 // Receipt data
 const receiptData = ref({
@@ -146,6 +164,22 @@ const receiptData = ref({
     isSeniorDiscount: false,
     totalAmount: 0,
     paymentInfo: null as any,
+});
+
+const billData = ref({
+    billNumber: getNextBillNumber().toString().padStart(6, "0"),
+    date: new Date().toISOString(),
+    tableInfo: "",
+    cashierName: "",
+    orderType: "",
+    orderItems: [] as any[],
+    subtotal: 0,
+    lessTax: 0,
+    lessDiscount: 0,
+    discountName: null as string | null,
+    discountType: null as string | null,
+    removeTax: false,
+    totalAmount: 0,
 });
 
 const orderTypes = [
@@ -212,5 +246,27 @@ const handleSettleBill = (data: any) => {
     }
     emit("settleBill", data);
     showReceiptModal.value = true;
+};
+
+// Handle print bill
+const handlePrintBill = () => {
+    // Populate bill data
+    billData.value = {
+        billNumber: getNextBillNumber().toString().padStart(6, "0"),
+        date: new Date().toISOString(),
+        tableInfo: props.tableInfo || "",
+        cashierName: page.props.auth?.user?.name || "",
+        orderType: props.selectedOrderType,
+        orderItems: props.orderItems,
+        subtotal: parseFloat(props.subTotal.toFixed(2)),
+        lessTax: parseFloat(props.lessTaxTotal.toFixed(2)),
+        lessDiscount: parseFloat(props.lessDiscountTotal.toFixed(2)),
+        discountName: props.appliedDiscount?.discountName || null,
+        discountType: props.appliedDiscount?.discountType || null,
+        removeTax: props.appliedDiscount?.removeTax || false,
+        totalAmount: parseFloat(props.total.toFixed(2)),
+    };
+
+    showBillModal.value = true;
 };
 </script>

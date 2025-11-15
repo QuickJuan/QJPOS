@@ -1,23 +1,23 @@
 <?php
 namespace App\Http\Controllers;
 
-use App\Http\Requests\CashierSessionRequest;
-use App\Http\Resources\CartItemResource;
-use App\Http\Resources\CategoryResource;
-use App\Http\Resources\ProductResource;
-use App\Models\Category;
-use App\Models\Modifier;
-use App\Models\Product;
-use App\Models\TableRoom;
-use App\Models\TableRoomLocation;
-use App\Services\CashierSessionService;
-use App\Services\DiscountService;
 use Exception;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Models\Product;
+use App\Models\Category;
+use App\Models\Modifier;
+use App\Models\TableRoom;
+use App\Enums\Receipt\Type;
+use Illuminate\Http\Request;
+use App\Models\TableRoomLocation;
+use App\Services\DiscountService;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\RedirectResponse;
+use App\Http\Resources\ProductResource;
+use App\Services\CashierSessionService;
+use App\Http\Resources\CategoryResource;
+use App\Http\Requests\CashierSessionRequest;
 
 class CashierSessionController extends Controller
 {
@@ -52,7 +52,8 @@ class CashierSessionController extends Controller
         $currentTable = $cartData['currentTable'];
 
         // Calculate totals
-        $totals = $this->cashierSessionService->calculateTotals($cart, $cartItems);
+        $totals     = $this->cashierSessionService->calculateTotals($cart, $cartItems);
+        $billFooter = $this->cashierSessionService->getReceiptFooter(Type::BILL->value);
 
         // Prepare view data
         $viewData = $this->cashierSessionService->prepareViewData(
@@ -64,7 +65,8 @@ class CashierSessionController extends Controller
             $modifiers,
             $currentTable,
             $taxRate,
-            $totals
+            $totals,
+            $billFooter
         );
 
         return Inertia::render('RetailCashier/Index', $viewData);

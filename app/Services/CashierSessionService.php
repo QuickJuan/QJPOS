@@ -1,9 +1,11 @@
 <?php
 namespace App\Services;
 
+use App\Enums\Receipt\Type;
 use App\Enums\TableRoomStatusType;
 use App\Models\Cart;
 use App\Models\CashierSession;
+use App\Models\ReceiptFooter;
 use App\Models\TableRoom;
 use Carbon\Carbon;
 use Exception;
@@ -97,7 +99,8 @@ class CashierSessionService
         $modifiers,
         $currentTable,
         $taxRate,
-        array $totals
+        array $totals,
+        $billFooter
     ): array {
         return [
             'categories'         => $categories,
@@ -108,11 +111,12 @@ class CashierSessionService
             'availableDiscounts' => $discounts,
             'availableModifiers' => $modifiers,
             'currentTable'       => $currentTable ?? [],
-            'subTotal'           => $totals['subtotal'],
+            'subTotal'           => $totals['subAmount'],
             'total'              => $totals['total'],
             'lessTaxTotal'       => $totals['lessTaxTotal'],
             'lessDiscountTotal'  => $totals['lessDiscountTotal'],
             'taxRate'            => $taxRate,
+            'billFooter'         => $billFooter,
         ];
     }
 
@@ -171,7 +175,7 @@ class CashierSessionService
 
     public function calculateTotals($cart, array $cartItems): array
     {
-        $subtotal          = collect($cartItems)->sum('sub_total');
+        $subAmount         = collect($cartItems)->sum('amount');
         $lessTaxTotal      = collect($cartItems)->sum('less_tax');
         $lessDiscountTotal = collect($cartItems)->sum('discount');
 
@@ -182,6 +186,11 @@ class CashierSessionService
             });
         }
 
-        return compact('subtotal', 'lessTaxTotal', 'lessDiscountTotal', 'total');
+        return compact('subAmount', 'lessTaxTotal', 'lessDiscountTotal', 'total');
+    }
+
+    public function getReceiptFooter(string $type = Type::RECEIPT->value)
+    {
+        return ReceiptFooter::where('type', $type)->first();
     }
 }

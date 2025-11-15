@@ -51,6 +51,7 @@
                     :less-tax-total="lessTaxTotal"
                     :less-discount-total="lessDiscountTotal"
                     :tax-rate="taxRate"
+                    :bill-footer="billFooter"
                     @selected-order-type="updateOrderType"
                     @show-receipt="handleShowReceipt"
                 />
@@ -94,6 +95,7 @@ const props = defineProps<{
     lessTaxTotal: number;
     lessDiscountTotal: number;
     taxRate: number;
+    billFooter: any;
 }>();
 
 const page = usePage<PageProps>();
