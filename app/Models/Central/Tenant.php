@@ -6,8 +6,9 @@ use Stancl\Tenancy\Database\Models\Tenant as BaseTenant;
 use Stancl\Tenancy\Contracts\TenantWithDatabase;
 use Stancl\Tenancy\Database\Concerns\HasDatabase;
 use Stancl\Tenancy\Database\Concerns\HasDomains;
+use JsonSerializable;
 
-class Tenant extends BaseTenant implements TenantWithDatabase
+class Tenant extends BaseTenant implements TenantWithDatabase, JsonSerializable
 {
     use HasDatabase, HasDomains;
 
@@ -27,9 +28,13 @@ class Tenant extends BaseTenant implements TenantWithDatabase
     ];
 
      protected $casts = [
-        'subcription_ends_at' => 'datetime',
+        'subscription_ends_at' => 'datetime',
     ];
 
+    public function jsonSerialize(): mixed
+    {
+        return $this->toArray();
+    }
 
     public static function getCustomColumns(): array
     {

@@ -17,12 +17,7 @@ return [
      * Only relevant if you're using the domain or subdomain identification middleware.
      */
     'central_domains' => [
-        config('app.central_domain'),
-        'storepos.online',
-        'www.storepos.online',
-        'localhost',
-        'quickjuan.site',
-        '127.0.0.1:33007'
+        'quickjuan.test',
     ],
 
     /**
