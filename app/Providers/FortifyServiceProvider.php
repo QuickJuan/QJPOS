@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Inertia\Inertia;
 use Laravel\Fortify\Fortify;
 
 class FortifyServiceProvider extends ServiceProvider
@@ -33,6 +34,19 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::updateUserPasswordsUsing(UpdateUserPassword::class);
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
 
+        // Fortify Views for Inertia
+        Fortify::requestPasswordResetLinkView(function () {
+            return Inertia::render('Auth/ForgotPassword', [
+                'status' => session('status'),
+            ]);
+        });
+
+        Fortify::resetPasswordView(function (Request $request) {
+            return Inertia::render('Auth/ResetPassword', [
+                'email' => $request->email,
+                'token' => $request->route('token'),
+            ]);
+        });
 
         RateLimiter::for('login', function (Request $request) {
             $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());

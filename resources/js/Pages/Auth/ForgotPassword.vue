@@ -9,10 +9,7 @@
             />
 
             <div class="flex items-start justify-between mt-4">
-                <Link
-                    :href="route('tenant.login')"
-                    class="underline flex gap-2"
-                >
+                <Link :href="route('login')" class="underline flex gap-2">
                     <BackIcon />
                     <span>Return to Login</span>
                 </Link>
