@@ -20,7 +20,7 @@ foreach (config('tenancy.central_domains') as $domain) {
             return Inertia::render('Landing', [
                 'table' => 'Welcome to the Central Domain',
             ]);
-        })->name('home');
+        })->name('central.home');
 
         // Tenant Registration Routes
         Route::get('/tenant/register', [TenantRegistrationController::class, 'show'])
