@@ -87,7 +87,7 @@ class CashierSessionService
             throw new Exception('There was an error in creating cart.');
         }
 
-        return $cart;
+        return [$table, $cart];
     }
 
     public function prepareViewData(
@@ -100,7 +100,8 @@ class CashierSessionService
         $currentTable,
         $taxRate,
         array $totals,
-        $billFooter
+        $billFooter,
+        $receiptFooter
     ): array {
         return [
             'categories'         => $categories,
@@ -117,6 +118,7 @@ class CashierSessionService
             'lessDiscountTotal'  => $totals['lessDiscountTotal'],
             'taxRate'            => $taxRate,
             'billFooter'         => $billFooter,
+            'receiptFooter'      => $receiptFooter,
         ];
     }
 

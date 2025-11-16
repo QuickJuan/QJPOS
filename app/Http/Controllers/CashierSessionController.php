@@ -1,23 +1,23 @@
 <?php
 namespace App\Http\Controllers;
 
-use Exception;
-use Inertia\Inertia;
-use Inertia\Response;
-use App\Models\Product;
+use App\Enums\Receipt\Type;
+use App\Http\Requests\CashierSessionRequest;
+use App\Http\Resources\CategoryResource;
+use App\Http\Resources\ProductResource;
 use App\Models\Category;
 use App\Models\Modifier;
+use App\Models\Product;
 use App\Models\TableRoom;
-use App\Enums\Receipt\Type;
-use Illuminate\Http\Request;
 use App\Models\TableRoomLocation;
-use App\Services\DiscountService;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\RedirectResponse;
-use App\Http\Resources\ProductResource;
 use App\Services\CashierSessionService;
-use App\Http\Resources\CategoryResource;
-use App\Http\Requests\CashierSessionRequest;
+use App\Services\DiscountService;
+use Exception;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class CashierSessionController extends Controller
 {
@@ -54,6 +54,7 @@ class CashierSessionController extends Controller
         // Calculate totals
         $totals     = $this->cashierSessionService->calculateTotals($cart, $cartItems);
         $billFooter = $this->cashierSessionService->getReceiptFooter(Type::BILL->value);
+        $receiptFooter = $this->cashierSessionService->getReceiptFooter(Type::RECEIPT->value);
 
         // Prepare view data
         $viewData = $this->cashierSessionService->prepareViewData(
@@ -66,7 +67,8 @@ class CashierSessionController extends Controller
             $currentTable,
             $taxRate,
             $totals,
-            $billFooter
+            $billFooter,
+            $receiptFooter
         );
 
         return Inertia::render('RetailCashier/Index', $viewData);
@@ -158,6 +160,7 @@ class CashierSessionController extends Controller
                     'merge_to'               => $table->merge_to,
                     'sort_number'            => $table->sort_number,
                     'table_room_location_id' => $table->table_room_location_id,
+                    'tableRoomLocation'      => $table->tableRoomLocation,
                     'featured_image_url'     => $table->getFeaturedImageUrl() ?: null,
                     'current_order'          => null,
                     'number_of_pax'          => $table->number_of_pax,
@@ -171,8 +174,9 @@ class CashierSessionController extends Controller
         // Get locations
         $locations = TableRoomLocation::all()
             ->map(fn($location) => [
-                'id'   => $location->id,
-                'name' => $location->name,
+                'id'            => $location->id,
+                'name'          => $location->name,
+                'location_type' => $location->location_type,
             ]);
 
         return Inertia::render('RetailCashier/Tables', [
@@ -185,9 +189,9 @@ class CashierSessionController extends Controller
     public function createOrder(Request $request): RedirectResponse
     {
         try {
-            $this->cashierSessionService->createOrder($request);
+            [$table, $cart] = $this->cashierSessionService->createOrder($request);
 
-            return redirect()->route('retail-cashier.index', ['tableId' => $request->table_id])->with('success', 'Order started successfully');
+            return redirect()->route('retail-cashier.index', ['tableId' => $request->table_id, 'locationType' => $table->tableRoomLocation->location_type])->with('success', 'Order started successfully');
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'Failed to start order: ' . $e->getMessage());
         }

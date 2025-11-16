@@ -138,4 +138,38 @@ class CartController extends Controller
             return redirect()->back()->with('error', 'There was an error settling the bill.');
         }
     }
+
+    public function claimOrder(Request $request, int $tableId): RedirectResponse
+    {
+        try {
+            if (! $tableId) {
+                return redirect()->back()->with('error', 'Table ID is empty.');
+            }
+
+            $this->cartService->claimOrder($tableId);
+
+            return redirect()->back()->with('success', 'Order claimed successfully.');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'There was an error claiming the order: ' . $e->getMessage());
+        }
+    }
+
+    public function transferOrder(Request $request, int $tableId): RedirectResponse
+    {
+        try {
+            if (! $tableId) {
+                return redirect()->back()->with('error', 'Source table ID is empty.');
+            }
+
+            if (! $request->filled('target_table_id')) {
+                return redirect()->back()->with('error', 'Target table ID is required.');
+            }
+
+            $this->cartService->transferOrder($tableId, $request->input('target_table_id'));
+
+            return redirect()->back()->with('success', 'Order transferred successfully.');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'There was an error transferring the order: ' . $e->getMessage());
+        }
+    }
 }

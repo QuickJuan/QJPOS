@@ -72,6 +72,12 @@ const props = defineProps<{
     selectedOrderType: string;
     totalAmount: number;
     appliedDiscount: any;
+    subTotal: number;
+    total: number;
+    lessTaxTotal: number;
+    lessDiscountTotal: number;
+    tableInfo: any;
+    billFooter: any;
 }>();
 
 const emit = defineEmits<{
@@ -96,77 +102,29 @@ const receiptData = ref({
     orderType: "",
     orderItems: [] as any[],
     subtotal: 0,
-    taxAmount: 0,
-    discountAmount: 0,
+    lessTax: 0,
+    lessDiscount: 0,
     discountName: null as string | null,
     discountType: null as string | null,
-    removeTax: false,
-    isSeniorDiscount: false,
     totalAmount: 0,
     paymentInfo: null as any,
 });
 
 // Handle settle bill form submission
 const handleSettleBill = () => {
-    // Prepare receipt data with corrected calculations
-    const orderItemsWithUnitPrice = props.orderItems.map((item) => ({
-        ...item,
-        unit_price: (item.price || 0) / (item.quantity || 1),
-    }));
-
-    const subtotal = orderItemsWithUnitPrice.reduce(
-        (sum, item) => sum + item.unit_price * item.quantity,
-        0
-    );
-
-    // Calculate discount and tax based on remove_tax flag and discount type
-    const discountAmount = appliedDiscount.value
-        ? appliedDiscount.value.discountAmount
-        : 0;
-    const removeTax = appliedDiscount.value?.removeTax || false;
-    const isSeniorDiscount = appliedDiscount.value?.discountName
-        ?.toLowerCase()
-        .includes("senior");
-
-    let discountedSubtotal: number;
-    let taxAmount: number;
-    console.log("Sample here", removeTax, isSeniorDiscount);
-
-    if (removeTax && isSeniorDiscount) {
-        // Special calculation for Senior Citizen Discount (20% on VAT-exempt amount)
-        // Senior Citizens are VAT-exempt, so tax = 0
-        const vatableAmount = subtotal / 1.12; // Remove VAT first
-        const seniorDiscountAmount = vatableAmount * 0.2; // 20% discount on VAT-exempt amount
-        discountedSubtotal = vatableAmount - seniorDiscountAmount;
-        taxAmount = 0; // Senior Citizens are VAT-exempt
-    } else if (removeTax) {
-        // Remove tax first, then apply discount (general case)
-        const vatableAmount = subtotal / 1.12;
-        discountedSubtotal = vatableAmount - discountAmount;
-        taxAmount = discountedSubtotal * 0.12;
-    } else {
-        // Apply discount after tax calculation (standard case)
-        discountedSubtotal = subtotal - discountAmount;
-        taxAmount = discountedSubtotal * 0.12;
-    }
-
     receiptData.value = {
         receiptNumber: `RCP-${Date.now()}`,
         date: new Date().toISOString(),
-        tableNumber: props.cart.table_id
-            ? `Table ${props.cart.table_id}`
-            : undefined,
+        tableNumber: props.tableInfo,
         cashierName: page.props.auth?.user?.name ?? "",
         orderType: props.selectedOrderType,
-        orderItems: orderItemsWithUnitPrice,
-        subtotal: subtotal,
-        taxAmount: taxAmount,
-        discountAmount: discountAmount,
+        orderItems: props.orderItems,
+        subtotal: parseFloat(props.subTotal.toFixed(2)),
+        lessTax: parseFloat(props.lessTaxTotal.toFixed(2)),
+        lessDiscount: parseFloat(props.lessDiscountTotal.toFixed(2)),
         discountName: appliedDiscount.value?.discountName || null,
         discountType: appliedDiscount.value?.discountType || null,
-        removeTax: removeTax,
-        isSeniorDiscount: isSeniorDiscount,
-        totalAmount: props.totalAmount,
+        totalAmount: parseFloat(props.total.toFixed(2)),
         paymentInfo: {
             amount_paid: parseFloat(amountPaid.value.toString()) || 0,
             change:

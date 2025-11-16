@@ -34,6 +34,7 @@
             :selected-order-type="selectedOrderType"
             :order-items="orderItems"
             :table-id="tableId"
+            :location-type="locationType"
             :selected-items-for-discount="selectedItemsForDiscount"
             :cart="cart"
             :total-amount="finalTotal"
@@ -44,6 +45,7 @@
             :less-discount-total="props.lessDiscountTotal"
             :table-info="tableInfo"
             :bill-footer="billFooter"
+            :receipt-footer="receiptFooter"
             @update-order-type="updateOrderType"
             @save-order="handleSaveOrder"
             @checkout="handleCheckout"
@@ -99,7 +101,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { route } from "ziggy-js";
 import { useConfirm, useToast } from "primevue";
@@ -119,6 +121,7 @@ import ItemModifiersModal from "./OrderSummary/ItemModifiersModal.vue";
 const props = defineProps<{
     cart: any;
     tableId: number;
+    locationType: string;
     orderItems: any[];
     selectedOrderItem: any;
     availableDiscounts: any[];
@@ -130,6 +133,7 @@ const props = defineProps<{
     lessDiscountTotal: number;
     taxRate: number;
     billFooter: any;
+    receiptFooter: any;
 }>();
 
 const toast = useToast();
@@ -141,8 +145,9 @@ const emit = defineEmits<{
     printBill: [];
 }>();
 
+console.log(props.locationType);
 // State
-const selectedOrderType = ref<string>("dine-in");
+const selectedOrderType = ref("dine-in");
 const tableInfo = ref(props.currentTable);
 
 const showEditModal = ref(false);
@@ -376,6 +381,7 @@ const handleSettleBill = (data: any) => {
         {
             amount_paid: data.amount_paid,
             total_amount: data.total_amount,
+            location_type: selectedOrderType.value,
         },
         {
             onSuccess: () => {
@@ -516,6 +522,14 @@ const handleShowItemModifiers = (item: any) => {
     selectedItemModifiers.value = item.meta_data || [];
     showItemModifiersModal.value = true;
 };
+
+watch(
+    () => props.locationType,
+    (val) => {
+        if (val) selectedOrderType.value = val;
+    },
+    { immediate: true }
+);
 
 const handlePrintBill = () => {
     emit("printBill");

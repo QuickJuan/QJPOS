@@ -1,0 +1,29 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('order_items', function (Blueprint $table) {
+            $table->decimal('less_tax', 15, 2)->default(0)->after('non_vat_sales');
+            $table->boolean('placed_order')->after('is_served')->default(false)->nullable();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('order_items', function (Blueprint $table) {
+            $table->dropColumn(['less_tax', 'placed_order']);
+        });
+    }
+};

@@ -44,6 +44,7 @@
                     :available-discounts="props.availableDiscounts"
                     :available-modifiers="props.availableModifiers"
                     :table-id="tableId"
+                    :location-type="locationType"
                     :cart="cart"
                     :current-table="props.currentTable"
                     :sub-total="subTotal"
@@ -52,6 +53,7 @@
                     :less-discount-total="lessDiscountTotal"
                     :tax-rate="taxRate"
                     :bill-footer="billFooter"
+                    :receipt-footer="receiptFooter"
                     @selected-order-type="updateOrderType"
                     @show-receipt="handleShowReceipt"
                 />
@@ -96,11 +98,13 @@ const props = defineProps<{
     lessDiscountTotal: number;
     taxRate: number;
     billFooter: any;
+    receiptFooter: any;
 }>();
 
 const page = usePage<PageProps>();
 const toast = useToast();
 const tableId = ref(null);
+const locationType = ref(null);
 const selectedOrderItem = ref<any>(null);
 const selectedCategoryId = ref<number | null>(null);
 const selectedOrderType = ref<any>("dine-in");
@@ -272,18 +276,20 @@ onMounted(() => {
     // Get the tableId in URL if available
     const params = new URLSearchParams(window.location.search);
     const urlTableId = params.get("tableId");
+    const urlLocationType = params.get("locationType");
     tableId.value = urlTableId;
+    locationType.value = urlLocationType;
+    selectedOrderType.value = urlLocationType;
 
     // If no tableId in URL and we have a pending cashiering session, redirect to tables page
-    if (!urlTableId && props.pendingCashiering) {
-        nextTick(() => {
-            router.visit(route("retail-cashier.tables"));
-        });
-    }
+    // if (!urlTableId && props.pendingCashiering) {
+    //     nextTick(() => {
+    //         router.visit(route("retail-cashier.tables"));
+    //     });
+    // }
 });
 
 const addToCart = (product: any, packaging?: any) => {
-    console.log(packaging);
     if (packaging) {
         // Packaging already selected, proceed
         if (product.options && product.options.length > 0) {

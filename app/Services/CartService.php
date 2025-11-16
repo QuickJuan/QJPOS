@@ -1,6 +1,7 @@
 <?php
 namespace App\Services;
 
+use App\Enums\TableRoomLocation\LocationType;
 use App\Enums\TableRoomStatusType;
 use App\Models\Cart;
 use App\Models\CartItem;
@@ -10,6 +11,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductPackaging;
+use App\Models\TableRoom;
 use Exception;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -345,16 +347,24 @@ class CartService
                 'product_packaging_id' => $cartItem->product_packaging_id,
                 'quantity'             => $cartItem->quantity,
                 'price'                => $cartItem->price,
+                'discount_amount'      => $cartItem->discount_amount,
+                'vatable_sales'        => $cartItem->vatable_sales,
+                'vat_exempt_sales'     => $cartItem->vat_exempt_sales,
+                'vat_amount'           => $cartItem->vat_amount,
+                'non_vat_sales'        => $cartItem->non_vat_sales,
+                'less_tax'             => $cartItem->less_tax,
                 'amount'               => $cartItem->amount,
                 'order_type'           => $cartItem->order_type,
                 'discount'             => $cartItem->discount,
                 'discount_id'          => $cartItem->discount_id,
                 'coupon_code'          => $cartItem->coupon_code,
                 'sub_total'            => $cartItem->sub_total,
-                'is_served'            => true,
+                'is_served'            => false,
+                'placed_order'         => true,
                 'is_void'              => $cartItem->is_void,
                 'reason'               => $cartItem->reason,
-                'selected_options'     => $cartItem->selected_options,
+                'notes'                => $cartItem->notes,
+                'meta_data'            => $cartItem->meta_data,
             ]);
         }
 
@@ -365,7 +375,7 @@ class CartService
         $cart->delete();
 
         // If there's a table, mark it as vacant
-        if ($cart->table_room_id) {
+        if ($cart->table_room_id && $cart->tableRoom->tableRoomLocation->location_type != LocationType::TAKEOUT->value) {
             $tableRoom = $cart->tableRoom;
             if ($tableRoom) {
                 $tableRoom->update([
@@ -376,6 +386,92 @@ class CartService
                 ]);
             }
         }
+
+        return $order;
+    }
+
+    public function claimOrder(int $tableId): mixed
+    {
+        $cashierSession = $this->cashierSession->openSession()->first();
+
+        if (! $cashierSession) {
+            throw new Exception('No active cashier session found.');
+        }
+
+        // Find the cart for this table in the current session
+        $order = Order::where('table_room_id', $tableId)
+            ->where('cashier_id', Auth::id())
+            ->where('cashier_session_id', $cashierSession->id)
+            ->first();
+
+        if (! $order) {
+            throw new Exception('No active order found for this table.');
+        }
+
+        if ($order->table_room_id) {
+            $tableRoom = $order->tableRoom;
+            if ($tableRoom) {
+                $tableRoom->update([
+                    'status'        => TableRoomStatusType::VACANT->value,
+                    'time_in'       => null,
+                    'customer_name' => null,
+                    'number_of_pax' => null,
+                ]);
+            }
+        }
+
+        return $order->orderItems()
+            ->update([
+                'is_served' => true,
+            ]);
+    }
+
+    public function transferOrder(int $sourceTableId, int $targetTableId): mixed
+    {
+        $cashierSession = $this->cashierSession->openSession()->first();
+
+        if (! $cashierSession) {
+            throw new Exception('No active cashier session found.');
+        }
+
+        // Find the order for the source table
+        $order = Order::where('table_room_id', $sourceTableId)
+            ->where('cashier_id', Auth::id())
+            ->where('cashier_session_id', $cashierSession->id)
+            ->first();
+
+        if (! $order) {
+            throw new Exception('No active order found for the source table.');
+        }
+
+        // Verify target table exists and is vacant
+        $targetTable = TableRoom::findOrFail($targetTableId);
+
+        if ($targetTable->status !== TableRoomStatusType::VACANT->value) {
+            throw new Exception('Target table must be vacant to transfer the order.');
+        }
+
+        // Update the order's table_room_id
+        $order->update([
+            'table_room_id' => $targetTableId,
+        ]);
+
+        // Update source table to vacant
+        $sourceTable = TableRoom::findOrFail($sourceTableId);
+        $sourceTable->update([
+            'status'        => TableRoomStatusType::VACANT->value,
+            'time_in'       => null,
+            'customer_name' => null,
+            'number_of_pax' => null,
+        ]);
+
+        // Update target table to occupied
+        $targetTable->update([
+            'status'        => TableRoomStatusType::OCCUPIED->value,
+            'time_in'       => now(),
+            'customer_name' => $sourceTable->customer_name,
+            'number_of_pax' => $sourceTable->number_of_pax,
+        ]);
 
         return $order;
     }
