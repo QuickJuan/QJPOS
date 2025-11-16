@@ -36,14 +36,14 @@ class CreateDefaultTenantUser
             tenancy()->initialize($tenant);
 
             // Create the default admin user
-            User::create([
+            $user = User::create([
                 'name' => $adminName,
                 'email' => $adminEmail,
                 'password' => Hash::make('password'), // Default password or randomized
             ]);
 
             // Create default Main Branch
-            Branch::create([
+            $branch = Branch::create([
                 'branch_code' => 'MAIN',
                 'name' => 'Main Branch',
                 'address' => $tenant->address ?? '',
@@ -51,6 +51,9 @@ class CreateDefaultTenantUser
                 'email' => $tenant->email ?? '',
                 'is_active' => true,
             ]);
+
+            // Associate user with the branch
+            $user->branches()->attach($branch->id);
 
             $tenantId = $tenant->id;
 
