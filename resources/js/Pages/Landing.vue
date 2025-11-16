@@ -62,15 +62,15 @@
             <nav class="hidden md:block">
                 <ul class="flex gap-6 text-lg font-semibold">
                     <li>
-                        <a
-                            href="#get-started"
+                        <Link
+                            href="/tenant/register"
                             :class="
                                 isSticky
                                     ? 'text-white hover:text-primary'
                                     : 'text-primary hover:text-third'
                             "
                             class="transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                            >Try for FREE</a
+                            >Try for FREE</Link
                         >
                     </li>
                     <li>
@@ -130,11 +130,11 @@
                         class="flex flex-col gap-4 text-lg font-semibold w-full text-center"
                     >
                         <li>
-                            <a
-                                href="#get-started"
+                            <Link
+                                :href="route('tenant-registration')"
                                 class="block py-2 text-secondary hover:text-primary transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                                 @click="mobileNavOpen = false"
-                                >Try for FREE</a
+                                >Try for FREE</Link
                             >
                         </li>
                         <li>
@@ -239,13 +239,12 @@
                             ease.
                         </span>
                     </p>
-                    <button
-                        @click="scrollToGetStarted"
-                        class="px-8 py-4 rounded-lg bg-primary text-white font-bold text-xl shadow-lg hover:bg-third hover:text-secondary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 mb-4"
-                        aria-label="Get Started Free"
+                    <Link
+                        :href="route('tenant-registration')"
+                        class="px-8 py-4 rounded-lg bg-primary text-white font-bold text-xl shadow-lg hover:bg-third hover:text-secondary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 mb-4 inline-block"
                     >
                         Get Started Free
-                    </button>
+                    </Link>
                     <!-- Products Section (inline, inside hero/landing area) -->
                     <ProductsSection />
                 </div>
