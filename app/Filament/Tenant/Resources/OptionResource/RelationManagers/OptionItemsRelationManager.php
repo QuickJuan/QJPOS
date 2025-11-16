@@ -3,7 +3,9 @@ namespace App\Filament\Tenant\Resources\OptionResource\RelationManagers;
 
 use Filament\Tables;
 use App\Models\Option;
+use App\Models\Product;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Tables\Table;
 use App\Models\ProductPackaging;
 use Filament\Forms\Components\Select;
@@ -20,38 +22,73 @@ class OptionItemsRelationManager extends RelationManager
         return $form
             ->schema([
                 Select::make('product_id')
-                    ->label('Product')
+                    ->label('Option Item ')
                     ->relationship('product', 'name')
                     ->required()
                     ->searchable()
-                    ->preload(),
+                    ->preload()
+                    ->live()
+                    ->afterStateUpdated(function ($state, callable $set) {
+                        // Reset product_packaging_id when product changes
+                        $set('product_packaging_id', null);
+                    }),
 
                 Select::make('product_packaging_id')
-                    ->label('Product Option Item')
-                    ->relationship('productPackaging', 'unit_measure')
-                    ->getOptionLabelFromRecordUsing(fn($record) => $record->unit_measure . ' - ' . $record->product->name)
-                    ->options(function ($get) {
-                        $optionId = $this->getOwnerRecord()->id;
+                    ->label('Product Packaging')
+                    ->searchable()
+                    ->preload()
+                    ->options(function (Get $get) {
+                        $productId = $get('product_id');
 
-                        if (! $optionId) {
+                        if (!$productId) {
                             return [];
                         }
 
-                        $option    = Option::find($optionId);
-                        $productId = $option?->productPackaging?->product_id;
-
-                        return ProductPackaging::where('product_id', '!=', $productId)
-                            ->with('product')
+                        return ProductPackaging::where('product_id', $productId)
                             ->get()
-                            ->mapWithKeys(fn($packaging) => [$packaging->id => $packaging->product->name . ' - ' . $packaging->unit_measure]);
+                            ->mapWithKeys(fn($packaging) => [
+                                $packaging->id => $packaging->name . ' - ' . $packaging->qty . ' ' . $packaging->unit_measure,
+                            ]);
+                    })
+                    ->visible(function (Get $get) {
+                        $productId = $get('product_id');
+
+                        if (!$productId) {
+                            return false;
+                        }
+
+                        $product = Product::find($productId);
+                        return $product?->multiple_packaging === true;
+                    })
+                    ->required(function (Get $get) {
+                        $productId = $get('product_id');
+
+                        if (!$productId) {
+                            return false;
+                        }
+
+                        $product = Product::find($productId);
+                        return $product?->multiple_packaging === true;
+                    })
+                    ->dehydrated(function (Get $get) {
+                        $productId = $get('product_id');
+
+                        if (!$productId) {
+                            return false;
+                        }
+
+                        $product = Product::find($productId);
+                        return $product?->multiple_packaging === true;
                     }),
 
                 TextInput::make('price')
-                    ->label('Price')
+                    ->label('Additional Price')
                     ->numeric()
                     ->required()
                     ->minValue(0)
-                    ->default(0),
+                    ->default(0)
+                    ->prefix('₱')
+                    ->helperText('Additional price for this option item'),
             ]);
     }
 
@@ -61,21 +98,20 @@ class OptionItemsRelationManager extends RelationManager
             ->recordTitleAttribute('price')
             ->columns([
                 TextColumn::make('product.name')
-                    ->label('Main Product')
+                    ->label('Option Item')
                     ->sortable()
-                    ->searchable(),
-
-                TextColumn::make('productPackaging.product.name')
-                    ->label('Item Option')
-                    ->sortable()
-                    ->searchable(),
+                    ->searchable()
+                    ->description(fn($record) => $record->product?->multiple_packaging ? $record->productPackaging->name : $record->product?->unit_measure),
 
                 TextColumn::make('productPackaging.unit_measure')
-                    ->label('Product Packaging')
+                    ->label('Packaging')
                     ->sortable()
-                    ->searchable(),
+                    ->searchable()
+                    ->formatStateUsing(fn($record) => $record->productPackaging ? $record->productPackaging->qty . ' ' . $record->productPackaging->unit_measure : 'N/A'),
 
                 TextColumn::make('price')
+                    ->label('Additional Price')
+                    ->money('PHP')
                     ->sortable()
                     ->searchable(),
             ])

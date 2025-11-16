@@ -14,4 +14,20 @@ class CreateProduct extends CreateRecord
     {
         return $this->getResource()::getUrl('index');
     }
+
+    protected function afterCreate(): void
+    {
+        $optionsPivot = $this->data['optionsPivot'] ?? [];
+
+        if (!empty($optionsPivot)) {
+            $syncData = [];
+            foreach ($optionsPivot as $pivot) {
+                $syncData[$pivot['option_id']] = [
+                    'max_quantity' => $pivot['max_quantity'] ?? 1,
+                    'is_default' => $pivot['is_default'] ?? false,
+                ];
+            }
+            $this->record->options()->sync($syncData);
+        }
+    }
 }
