@@ -95,7 +95,9 @@ class Product extends Model implements HasMedia
 
     public function options(): BelongsToMany
     {
-        return $this->belongsToMany(Option::class, 'option_product')->withTimestamps();
+        return $this->belongsToMany(Option::class, 'option_product')
+            ->withPivot(['max_quantity', 'is_default'])
+            ->withTimestamps();
     }
 
     public function optionItems(): HasMany

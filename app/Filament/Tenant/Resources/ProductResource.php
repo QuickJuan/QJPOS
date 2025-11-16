@@ -6,10 +6,13 @@ use App\Models\Product;
 use Filament\Forms\Get;
 use Filament\Forms\Form;
 use Filament\Tables\Table;
+use Illuminate\Support\HtmlString;
 use Filament\Resources\Resource;
 use Filament\Tables\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\Repeater;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -99,11 +102,69 @@ class ProductResource extends Resource
                     ->label('Unit of Measure')
                     ->hidden(fn(Get $get) => $get('multiple_packaging') === true),
 
-                Select::make('options')
-                    ->relationship('options', 'option_name')
-                    ->multiple()
-                    ->searchable()
-                    ->preload(),
+                Repeater::make('optionsPivot')
+                    ->label('Product Options')
+                    ->schema([
+                        Select::make('option_id')
+                            ->label('Option')
+                            ->options(\App\Models\Option::pluck('option_name', 'id'))
+                            ->required()
+                            ->searchable()
+                            ->preload()
+                            ->live()
+                            ->disableOptionsWhenSelectedInSiblingRepeaterItems()
+                            ->helperText(function (Get $get): ?HtmlString {
+                                $optionId = $get('option_id');
+
+                                if (!$optionId) {
+                                    return null;
+                                }
+
+                                $option = \App\Models\Option::with(['optionItems.product', 'optionItems.productPackaging'])->find($optionId);
+
+                                if (!$option || $option->optionItems->isEmpty()) {
+                                    return new HtmlString('<span class="text-sm text-gray-500">No option items available</span>');
+                                }
+
+                                $items = $option->optionItems->map(function ($item) {
+                                    $productName = $item->product?->name ?? 'Unknown';
+                                    $packaging = $item->productPackaging?->unit_measure ?? '';
+                                    $price = '₱' . number_format($item->price, 2);
+
+                                    $itemText = $packaging
+                                        ? "{$productName} ({$packaging}) - {$price}"
+                                        : "{$productName} - {$price}";
+
+                                    return "<li class='text-sm'>{$itemText}</li>";
+                                })->join('');
+
+                                return new HtmlString(
+                                    "<div class='mt-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg'>
+                                        <p class='text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>Available Option Items:</p>
+                                        <ul class='list-disc list-inside text-gray-600 dark:text-gray-400 space-y-1'>{$items}</ul>
+                                    </div>"
+                                );
+                            }),
+
+                        TextInput::make('max_quantity')
+                            ->label('Max Quantity')
+                            ->numeric()
+                            ->minValue(1)
+                            ->default(1)
+                            ->required()
+                            ->helperText('Maximum quantity that can be selected'),
+
+                        Toggle::make('is_default')
+                            ->label('Is Default')
+                            ->default(false)
+                            ->helperText('Set as default option'),
+                    ])
+                    ->columns(3)
+                    ->reorderable(false)
+                    ->collapsible()
+                    ->itemLabel(fn (array $state): ?string => \App\Models\Option::find($state['option_id'])?->option_name ?? null)
+                    ->addActionLabel('Add Option')
+                    ->columnSpanFull(),
 
                 TextInput::make('total_onhand')
                     ->required()
@@ -172,8 +233,26 @@ class ProductResource extends Resource
                     ->sortable(),
 
             ])
+            ->defaultSort('name', 'asc')
             ->filters([
-                //
+                SelectFilter::make('category')
+                    ->relationship('category', 'name')
+                    ->searchable()
+                    ->preload()
+                    ->label('Category'),
+
+                SelectFilter::make('brand')
+                    ->relationship('brand', 'name')
+                    ->searchable()
+                    ->preload()
+                    ->label('Brand'),
+
+                SelectFilter::make('groups')
+                    ->relationship('groups', 'name')
+                    ->searchable()
+                    ->preload()
+                    ->multiple()
+                    ->label('Group'),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
