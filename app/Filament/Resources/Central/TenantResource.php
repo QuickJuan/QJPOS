@@ -42,12 +42,12 @@ class TenantResource extends Resource
                     ->dehydrated(),
                 Forms\Components\Select::make('billing_type')
                     ->required()
-                    ->options(BillingType::options())
+                    ->options(BillingType::filamentOptions())
                     ->default(BillingType::FREE->value),
                 Forms\Components\Select::make('subscription')
                     ->required()
                     ->label('Subscription Plan')
-                    ->options(PlanType::options())
+                    ->options(PlanType::filamentOptions())
                     ->default(PlanType::STARTER->value),
                 Forms\Components\Select::make('subscription_status')
                     ->required()

@@ -30,6 +30,10 @@ class TenantApplicationApproved extends Mailable
 
     public function content(): Content
     {
+        $centralDomain = config('app.url');
+        // Extract domain from APP_URL (e.g., https://quickjuan.test -> quickjuan.test)
+        $domain = parse_url($centralDomain, PHP_URL_HOST) ?: config('tenancy.central_domains')[0];
+
         return new Content(
             view: 'emails.tenant-application-approved',
             with: [
@@ -39,7 +43,7 @@ class TenantApplicationApproved extends Mailable
                 'subdomain' => $this->subdomain,
                 'email' => $this->email,
                 'temporaryPassword' => $this->temporaryPassword,
-                'loginUrl' => "https://{$this->subdomain}.storepos.online/login",
+                'loginUrl' => "https://{$this->subdomain}.{$domain}/login",
             ],
         );
     }

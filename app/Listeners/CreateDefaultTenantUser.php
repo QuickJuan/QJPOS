@@ -3,6 +3,7 @@
 namespace App\Listeners;
 
 use App\Models\User;
+use App\Models\Branch;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Queue\InteractsWithQueue;
@@ -33,11 +34,22 @@ class CreateDefaultTenantUser
 
             // Switch into tenant context
             tenancy()->initialize($tenant);
+
             // Create the default admin user
             User::create([
                 'name' => $adminName,
                 'email' => $adminEmail,
                 'password' => Hash::make('password'), // Default password or randomized
+            ]);
+
+            // Create default Main Branch
+            Branch::create([
+                'branch_code' => 'MAIN',
+                'name' => 'Main Branch',
+                'address' => $tenant->address ?? '',
+                'phone' => $tenant->phone ?? '',
+                'email' => $tenant->email ?? '',
+                'is_active' => true,
             ]);
 
             $tenantId = $tenant->id;

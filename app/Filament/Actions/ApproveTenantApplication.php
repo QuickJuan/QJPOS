@@ -43,6 +43,11 @@ class ApproveTenantApplication extends Action
                     ]),
             ])
             ->action(static function (TenantApplication $record, array $data): void {
+                // Clean any stray output before processing
+                if (ob_get_level()) {
+                    ob_clean();
+                }
+
                 $success = false;
                 $message = '';
 
@@ -88,6 +93,11 @@ class ApproveTenantApplication extends Action
                 } catch (\Exception $e) {
                     $success = false;
                     $message = 'Failed: Contact administrator';
+                }
+
+                // Clean any output from tenant creation before sending response
+                if (ob_get_level()) {
+                    ob_clean();
                 }
 
                 if ($success) {

@@ -105,7 +105,7 @@
             </div>
             <div class="info-row">
                 <span class="info-label">Login URL:</span>
-                <span class="info-value">{{ $loginUrl }}</span>
+                <span class="info-value"><a href="{{ $loginUrl }}" style="color: #22c55e; text-decoration: none;">{{ $loginUrl }}</a></span>
             </div>
             <div class="info-row">
                 <span class="info-label">Email:</span>
