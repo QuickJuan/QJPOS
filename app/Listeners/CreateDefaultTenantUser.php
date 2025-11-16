@@ -26,66 +26,48 @@ class CreateDefaultTenantUser
      */
     public function handle(TenantCreated $event): void
     {
-        $tenant = $event->tenant;
+        try {
+            $tenant = $event->tenant;            // Get admin info from tenant's data payload
+            $adminName = $tenant->name ?? 'Admin';
+            $adminEmail = $tenant->email ?? 'admin@tenant.test';
 
-        // Get admin info from tenant's data payload
-        $adminName = $tenant->name ?? 'Admin';
-        $adminEmail = $tenant->email ?? 'admin@tenant.test';
+            // Switch into tenant context
+            tenancy()->initialize($tenant);
+            // Create the default admin user
+            User::create([
+                'name' => $adminName,
+                'email' => $adminEmail,
+                'password' => Hash::make('password'), // Default password or randomized
+            ]);
 
-        info('Creating default admin user for tenant: ' . $tenant->name);
+            $tenantId = $tenant->id;
 
-        // Switch into tenant context
-        tenancy()->initialize($tenant);
+            $tenant->run(function ($tenant) {
+                $storagePath = storage_path();
 
-        // Create the default admin user
-        User::create([
-            'name' => $adminName,
-            'email' => $adminEmail,
-            'password' => Hash::make('password'), // Default password or randomized
-        ]);
+                $directories = [
+                    "$storagePath/app",
+                    "$storagePath/app/public",
+                    "$storagePath/framework",
+                    "$storagePath/framework/sessions",
+                    "$storagePath/framework/testing",
+                    "$storagePath/framework/views",
+                    "$storagePath/framework/cache",
+                    "$storagePath/logs",
+                ];
 
-        $tenantId = $tenant->id;
+                foreach ($directories as $directory) {
+                    if (! is_dir($directory)) {
+                        @mkdir($directory, 0777, true);
+                    }
+                }
+            });
 
-        $tenant->run(function ($tenant) {
-            $storage_path = storage_path();
-
-            mkdir("$storage_path/app",0777, true);
-//            file_put_contents("$storage_path/app/.gitignore", "*\n!.gitignore");
-
-            mkdir("$storage_path/app/public",0777, true);
-//            file_put_contents("$storage_path/app/public/.gitignore", "*\n!.gitignore");
-
-            mkdir("$storage_path/framework",0777, true);
-//            file_put_contents("$storage_path/framework/.gitignore", "*\n!.gitignore");
-
-            mkdir("$storage_path/framework/sessions", 0777, true);
-//            file_put_contents("$storage_path/framework/sessions/.gitignore", "*\n!.gitignore");
-
-            mkdir("$storage_path/framework/testing", 0777, true);
-//            file_put_contents("$storage_path/framework/testing/.gitignore", "*\n!.gitignore");
-
-            mkdir("$storage_path/framework/views", 0777, true);
-//            file_put_contents("$storage_path/framework/views/.gitignore", "*\n!.gitignore");
-
-            mkdir("$storage_path/framework/cache", 0777, true);
-//            file_put_contents("$storage_path/framework/cache/.gitignore", "*\n!.gitignore");
-
-            mkdir("$storage_path/logs", 0777, true);
-//            file_put_contents("$storage_path/logs/.gitignore", "*\n!.gitignore");
-        });
-
-
-        // $tenantStoragePath = storage_path("tenant/{$event->tenant->id}");
-
-        // // Ensure the folder exists
-        // File::makeDirectory("{$tenantStoragePath}/app/public", 0777, true, true);
-        // File::makeDirectory("{$tenantStoragePath}/framework/cache/facade", 0777, true, true);
-        // File::makeDirectory("{$tenantStoragePath}/framework/views", 0775, true, true);
-        // File::makeDirectory("{$tenantStoragePath}/framework/sessions", 0775, true, true);
-        // File::makeDirectory("{$tenantStoragePath}/framework/testing", 0775, true, true);
-        // File::makeDirectory("{$tenantStoragePath}/logs", 0775, true, true);
-
-        // Switch back to central context
-        tenancy()->end();
+            // Switch back to central context
+            tenancy()->end();
+        } catch (\Exception $e) {
+            // Log the error but don't throw to prevent breaking Filament responses
+            info('Error in CreateDefaultTenantUser listener: ' . $e->getMessage());
+        }
     }
 }

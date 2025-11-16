@@ -18,6 +18,8 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Grid;
 use App\Filament\Actions\ResendTenantApplicationEmail;
+use App\Filament\Actions\ApproveTenantApplication;
+use App\Filament\Actions\RejectTenantApplication;
 
 class TenantApplicationResource extends Resource
 {
@@ -180,9 +182,13 @@ class TenantApplicationResource extends Resource
                     ]),
             ])
             ->actions([
+                ApproveTenantApplication::make(),
+                RejectTenantApplication::make(),
                 ResendTenantApplicationEmail::make(),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\DeleteAction::make(),
+                ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

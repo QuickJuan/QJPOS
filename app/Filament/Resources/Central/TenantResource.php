@@ -4,16 +4,14 @@ namespace App\Filament\Resources\Central;
 
 use Filament\Forms;
 use Filament\Tables;
-use App\Enums\PlanType;
 use Filament\Forms\Form;
-use App\Enums\BillingType;
 use Filament\Tables\Table;
 use App\Models\Central\Tenant;
 use Filament\Resources\Resource;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Columns\ToggleColumn;
+use App\Enums\BillingType;
+use App\Enums\PlanType;
 use Illuminate\Database\Eloquent\Builder;
-use Filament\Tables\Columns\CheckboxColumn;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use App\Filament\Resources\Central\TenantResource\Pages;
 use App\Filament\Resources\Central\TenantResource\RelationManagers;
@@ -28,44 +26,38 @@ class TenantResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('tenancy_db_name')
-                    ->required()
-                    ->maxLength(255),
                 Forms\Components\TextInput::make('name')
-                    ->required()
-                    ->maxLength(255),
+                    ->required(),
                 Forms\Components\TextInput::make('email')
                     ->required()
-                    ->email()
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('phone')
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('address')
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('city')
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('state')
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('country')
-                    ->maxLength(255),
+                    ->email(),
+                Forms\Components\TextInput::make('tenancy_db_name')
+                    ->required(),
+                Forms\Components\TextInput::make('phone'),
+                Forms\Components\TextInput::make('address'),
+                Forms\Components\TextInput::make('domain')
+                    ->required()
+                    ->label('Domain/Subdomain')
+                    ->helperText('This will be used to create the tenant domain')
+                    ->dehydrated(),
                 Forms\Components\Select::make('billing_type')
-                    ->options(BillingType::valueNamePairs())
-                    ->required(),
+                    ->required()
+                    ->options(BillingType::options())
+                    ->default(BillingType::FREE->value),
                 Forms\Components\Select::make('subscription')
-                    ->options(PlanType::valueNamePairs())
-                    ->required(),
+                    ->required()
+                    ->label('Subscription Plan')
+                    ->options(PlanType::options())
+                    ->default(PlanType::STARTER->value),
                 Forms\Components\Select::make('subscription_status')
+                    ->required()
                     ->options([
                         'active' => 'Active',
                         'inactive' => 'Inactive',
                         'suspended' => 'Suspended',
                     ])
-                    ->required(),
-
-            ])->columns([
-                //
+                    ->default('active'),
             ]);
-               
     }
 
     public static function table(Table $table): Table
@@ -91,7 +83,7 @@ class TenantResource extends Resource
                 TextColumn::make('subscription_status')
                     ->label('Subscription Status')
 
-                
+
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('subscription_status')
@@ -100,14 +92,21 @@ class TenantResource extends Resource
                         'inactive' => 'Inactive',
                         'suspended' => 'Suspended',
                     ]),
-                   
+
                 Tables\Filters\SelectFilter::make('subscription')
-                    ->options(PlanType::valueNamePairs()),
+                    ->options([
+                        'starter' => 'Starter',
+                        'professional' => 'Professional',
+                        'enterprise' => 'Enterprise',
+                    ]),
 
                 Tables\Filters\SelectFilter::make('billing_type')
-                    ->options(BillingType::valueNamePairs()),
-                    
-
+                    ->options([
+                        'free' => 'Free',
+                        'transactional' => 'Transactional',
+                        'monthly' => 'Monthly',
+                        'yearly' => 'Yearly',
+                    ]),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
@@ -122,7 +121,7 @@ class TenantResource extends Resource
     public static function getRelations(): array
     {
         return [
-            RelationManagers\DomainsRelationManager::class,
+            // RelationManagers\DomainsRelationManager::class,
         ];
     }
 
@@ -134,5 +133,5 @@ class TenantResource extends Resource
             'edit' => Pages\EditTenant::route('/{record}/edit'),
         ];
     }
-    
+
 }
