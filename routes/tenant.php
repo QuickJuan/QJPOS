@@ -130,6 +130,8 @@ Route::middleware([
                             Route::post('/cart/add', 'addToCart')->name('cart.add');
                             Route::put('/cart/item/place-order/{cartId}', 'placeOrder')->name('cart.place-order');
                             Route::post('/cart/settle-bill/{cartId}', 'settleBill')->name('cart.settle-bill');
+                            Route::post('/cart/claim-order/{tableId}', 'claimOrder')->name('cart.claim-order');
+                            Route::post('/order/transfer/{tableId}', 'transferOrder')->name('order.transfer');
                             Route::put('/cart/item/discount/', 'applyDiscountToCartItem')->name('cart.apply-discount');
                             Route::put('/cart/item/modifier/', 'applyModifierToCartItem')->name('cart.apply-modifier');
                             Route::put('/cart/item/{cartItemId}', 'updateCartItem')->name('cart.update');

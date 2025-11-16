@@ -6,8 +6,10 @@ use Filament\Forms\Form;
 use Filament\Tables\Table;
 use Filament\Resources\Resource;
 use App\Models\TableRoomLocation;
+use Filament\Forms\Components\Select;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
+use App\Enums\TableRoomLocation\LocationType;
 use App\Filament\Tenant\Resources\TableRoomLocationResource\Pages;
 
 class TableRoomLocationResource extends Resource
@@ -32,6 +34,10 @@ class TableRoomLocationResource extends Resource
                     ->maxValue(100)
                     ->default(0)
                     ->step(0.01),
+
+                    Select::make('location_type')
+                        ->label('Location Type')
+                        ->options(LocationType::filamentOptions()),
             ]);
     }
 

@@ -69,8 +69,14 @@
             :cart="cart"
             :order-items="orderItems"
             :selected-order-type="selectedOrderType"
-            :total-amount="totalAmount"
+            :total-amount="props.total"
             :applied-discount="appliedDiscount"
+            :sub-total="props.subTotal"
+            :total="props.total"
+            :less-tax-total="props.lessTaxTotal"
+            :less-discount-total="props.lessDiscountTotal"
+            :table-info="tableInfo"
+            :bill-footer="billFooter"
             @settle-bill="handleSettleBill"
         />
 
@@ -79,6 +85,7 @@
             v-model:visible="showReceiptModal"
             :receipt-data="receiptData"
             :order-items="orderItems"
+            :receipt-footer="receiptFooter"
         />
 
         <BillModal
@@ -110,6 +117,7 @@ import { usePage } from "@inertiajs/vue3";
 const props = defineProps<{
     cart: any;
     tableId: number;
+    locationType: string;
     orderItems: any[];
     selectedOrderType: string;
     selectedItemsForDiscount: number[];
@@ -121,6 +129,7 @@ const props = defineProps<{
     lessDiscountTotal: number;
     tableInfo: any;
     billFooter: any;
+    receiptFooter: any;
 }>();
 
 const emit = defineEmits<{

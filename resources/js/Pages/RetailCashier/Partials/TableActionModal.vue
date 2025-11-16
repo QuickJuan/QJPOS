@@ -41,9 +41,33 @@
 
             <!-- Action Buttons -->
             <div class="space-y-3">
+                <!-- Order Claim -->
+                <Button
+                    v-if="isTakeoutOccupied"
+                    label="Order Claim"
+                    icon="pi pi-plus"
+                    class="w-full"
+                    severity="success"
+                    @click="$emit('claimOrder')"
+                    :disabled="!table"
+                />
+
+                <!-- Transfer Number -->
+                <Button
+                    v-if="isTakeoutOccupied"
+                    label="Transfer Number"
+                    icon="pi pi-arrow-right"
+                    class="w-full"
+                    severity="success"
+                    @click="$emit('transferNumber')"
+                    :disabled="!table"
+                />
+
                 <!-- Take Order -->
                 <Button
-                    v-if="table && table.status === 'vacant'"
+                    v-if="
+                        !isTakeoutOccupied && table && table.status === 'vacant'
+                    "
                     label="Take Order"
                     icon="pi pi-plus"
                     class="w-full"
@@ -54,7 +78,11 @@
 
                 <!-- View Order (only if occupied) -->
                 <Button
-                    v-if="table && table.status === 'occupied'"
+                    v-if="
+                        !isTakeoutOccupied &&
+                        table &&
+                        table.status === 'occupied'
+                    "
                     label="View Order"
                     icon="pi pi-eye"
                     class="w-full"
@@ -64,7 +92,9 @@
 
                 <!-- Merge Table (only for vacant tables) -->
                 <Button
-                    v-if="table && table.status === 'vacant'"
+                    v-if="
+                        !isTakeoutOccupied && table && table.status === 'vacant'
+                    "
                     label="Merge Table"
                     icon="pi pi-link"
                     class="w-full"
@@ -74,7 +104,7 @@
 
                 <!-- Unmerge Table (only for merged tables) -->
                 <Button
-                    v-if="table.merge_to"
+                    v-if="!isTakeoutOccupied && table.merge_to"
                     label="Unmerge Table"
                     icon="pi pi-arrow-up-right-and-arrow-down-left-from-center"
                     class="w-full"
@@ -84,6 +114,7 @@
 
                 <!-- Reserve/Unreserve -->
                 <Button
+                    v-if="!isTakeoutOccupied"
                     :label="
                         table && table.status === 'reserved'
                             ? 'Unreserve Table'
@@ -155,7 +186,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref, watch, computed } from "vue";
 import Dialog from "primevue/dialog";
 import Button from "primevue/button";
 import TextField from "@/Components/Form/TextField.vue";
@@ -168,11 +199,22 @@ const props = defineProps<{
 const emit = defineEmits<{
     close: [];
     takeOrder: [data: { pax: number; guest_name: string }];
+    claimOrder: [];
+    transferNumber: [];
     viewOrder: [];
     mergeTable: [];
     reserveTable: [];
     unmergeTable: [];
 }>();
+
+const isTakeoutOccupied = computed(() => {
+    return (
+        props.table &&
+        props.table.status === "occupied" &&
+        props.table.tableRoomLocation &&
+        props.table.tableRoomLocation.location_type === "takeout"
+    );
+});
 
 const pax = ref(1);
 const guestName = ref("");

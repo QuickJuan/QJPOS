@@ -9,6 +9,7 @@ class TableRoomLocation extends Model
     protected $fillable = [
         'name',
         'service_charge',
+        'location_type'
     ];
 
     public function tableRooms(): HasMany

@@ -39,6 +39,9 @@ class TableRoomResource extends Resource
                         Select::make('table_room_location_id')
                             ->label('Table Room Location')
                             ->relationship('tableRoomLocation', 'name')
+                            ->getOptionLabelFromRecordUsing(fn($record) =>
+                                "{$record->name} ({$record->location_type})"
+                            )
                             ->required()
                             ->searchable()
                             ->preload(),

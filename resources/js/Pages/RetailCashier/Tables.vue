@@ -22,6 +22,7 @@
                             ]"
                         >
                             <span>{{ loc.name }}</span>
+                            <span>({{ loc.location_type }})</span>
                             <span class="text-[10px] font-normal opacity-80">
                                 ({{ getTableCount(loc.id) }})
                             </span>
@@ -149,6 +150,8 @@
                 :table="selectedTable"
                 @close="closeTableModal"
                 @takeOrder="handleTakeOrder"
+                @claimOrder="handleClaimOrder"
+                @transferNumber="handleTransferNumber"
                 @viewOrder="handleViewOrder"
                 @mergeTable="handleMergeTable"
                 @reserveTable="handleReserveTable"
@@ -180,6 +183,17 @@
                 :table="selectedTable"
                 @update:visible="showReserveModal = $event"
             />
+
+            <!-- Transfer Table Modal -->
+            <TransferTableModal
+                :visible="showTransferModal"
+                :source-table="selectedTable"
+                :available-targets="availableTransferTargets"
+                :selected-target="selectedTransferTarget"
+                @update:visible="closeTransferModal"
+                @selectTarget="selectTransferTarget"
+                @confirmTransfer="confirmTransfer"
+            />
         </div>
     </CashieringLayout>
 </template>
@@ -194,6 +208,7 @@ import TableActionModal from "./Partials/TableActionModal.vue";
 import ViewOrdersModal from "./Partials/ViewOrdersModal.vue";
 import MergeTableModal from "./Partials/MergeTableModal.vue";
 import ReserveTableModal from "./Partials/ReserveTableModal.vue";
+import TransferTableModal from "./Partials/TransferTableModal.vue";
 import PageProps from "@/Types/PageProps";
 import { formatTimeOccupied } from "@/Utils/FormatTime";
 
@@ -217,6 +232,8 @@ const tableToMerge = ref<any>(null);
 const showOrdersModal = ref(false);
 const tableOrders = ref<any[]>([]);
 const showReserveModal = ref(false);
+const showTransferModal = ref(false);
+const selectedTransferTarget = ref<any>(null);
 
 // Toast
 const toast = useToast();
@@ -246,6 +263,19 @@ const getTableCount = (locationId: number) =>
 const availableMergeTargets = computed(() =>
     filteredTables.value.filter((t) => t.status === "occupied")
 );
+
+const availableTransferTargets = computed(() => {
+    if (!selectedTable.value) return [];
+
+    // Show only vacant tables from the same location as the source table
+    // Filter out the source table itself
+    return tables.value.filter(
+        (t) =>
+            t.status === "vacant" &&
+            t.id !== selectedTable.value?.id &&
+            t.table_room_location_id === selectedTable.value?.table_room_location_id
+    );
+});
 
 const getTableStatusClasses = (status: string) => {
     const baseClasses = "hover:border-gray-300";
@@ -285,6 +315,7 @@ const handleTakeOrder = (data: any) => {
                 table_id: selectedTable.value.id,
                 pax: data.pax,
                 guest_name: data.guest_name,
+
             },
             {
                 onSuccess: () => {
@@ -374,6 +405,107 @@ const confirmMerge = () => {
 
 const handleReserveTable = () => {
     showReserveModal.value = true;
+};
+
+const handleClaimOrder = () => {
+    if (!selectedTable.value) {
+        toast.add({
+            severity: "error",
+            summary: "Error",
+            detail: "No table selected",
+            life: 3000,
+        });
+        return;
+    }
+
+    router.post(
+        route("retail-cashier.cart.claim-order", {
+            tableId: selectedTable.value.id,
+        }),
+        {},
+        {
+            onSuccess: () => {
+                toast.add({
+                    severity: "success",
+                    summary: "Success",
+                    detail: "Order claimed successfully",
+                    life: 3000,
+                });
+                closeTableModal();
+                // Refresh tables to show updated status
+                setTimeout(() => {
+                    router.reload({ only: ["tables"] });
+                }, 100);
+            },
+            onError: (errors) => {
+                toast.add({
+                    severity: "error",
+                    summary: "Error",
+                    detail: errors?.message || "Failed to claim order",
+                    life: 3000,
+                });
+            },
+        }
+    );
+};
+
+const handleTransferNumber = () => {
+    selectedTransferTarget.value = null;
+    showTransferModal.value = true;
+};
+
+const closeTransferModal = () => {
+    showTransferModal.value = false;
+    selectedTransferTarget.value = null;
+};
+
+const selectTransferTarget = (table: any) => {
+    selectedTransferTarget.value = table;
+};
+
+const confirmTransfer = () => {
+    if (!selectedTable.value || !selectedTransferTarget.value) {
+        toast.add({
+            severity: "error",
+            summary: "Error",
+            detail: "Please select a table to transfer to",
+            life: 3000,
+        });
+        return;
+    }
+
+    router.post(
+        route("retail-cashier.order.transfer", {
+            tableId: selectedTable.value.id,
+        }),
+        {
+            target_table_id: selectedTransferTarget.value.id,
+        },
+        {
+            onSuccess: () => {
+                toast.add({
+                    severity: "success",
+                    summary: "Success",
+                    detail: `Order transferred from ${selectedTable.value.name} to ${selectedTransferTarget.value.name}`,
+                    life: 3000,
+                });
+                closeTransferModal();
+                closeTableModal();
+                // Refresh tables to show updated status
+                setTimeout(() => {
+                    router.reload({ only: ["tables"] });
+                }, 100);
+            },
+            onError: (errors) => {
+                toast.add({
+                    severity: "error",
+                    summary: "Error",
+                    detail: errors?.message || "Failed to transfer order",
+                    life: 3000,
+                });
+            },
+        }
+    );
 };
 
 const handleViewOrder = () => {

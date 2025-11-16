@@ -48,6 +48,15 @@
                                 Tables
                             </button>
 
+                            <button
+                                v-if="checkCurrentRoute('retail-cashier.tables')"
+                                @click="handleCashieringClick"
+                                class="flex items-center gap-2 px-4 py-2 text-white rounded-lg bg-primary transition-colors"
+                            >
+                                <TableCellsIcon class="w-5 h-5" />
+                                Cashiering
+                            </button>
+
                             <!-- Tables Button -->
                             <button
                                 @click="handleTablesClick"
@@ -165,6 +174,10 @@ const cashierName = computed(() => {
     );
 });
 
+const checkCurrentRoute = (currentRoute: any) => {
+    return route().current() == currentRoute;
+};
+
 // Methods
 const handleBarcodeSearch = () => {
     if (barcodeInput.value.trim()) {
@@ -189,6 +202,10 @@ const handleBarcodeSearch = () => {
 
 const handleTablesClick = () => {
     router.visit(route("retail-cashier.tables"));
+};
+
+const handleCashieringClick = () => {
+    router.visit(route("retail-cashier.index"));
 };
 
 const toggleMoreOptions = () => {
