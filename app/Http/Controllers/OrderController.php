@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Http\Requests\RefundRequest;
 use App\Models\Order;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -10,52 +11,20 @@ class OrderController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Order::with(['cashier', 'tableRoom', 'cashierSession', 'orderItems.product']);
-
-        // Search filters
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('id', 'like', "%{$search}%")
-                    ->orWhereHas('cashier', function ($q) use ($search) {
-                        $q->where('name', 'like', "%{$search}%");
-                    })
-                    ->orWhereHas('tableRoom', function ($q) use ($search) {
-                        $q->where('customer_name', 'like', "%{$search}%");
-                    });
-            });
-        }
-
-        // Date filters
-        if ($request->filled('date_from')) {
-            $query->whereDate('created_at', '>=', $request->date_from);
-        }
-        if ($request->filled('date_to')) {
-            $query->whereDate('created_at', '<=', $request->date_to);
-        }
-
-        // Cashier filter
-        if ($request->filled('cashier_id')) {
-            $query->where('cashier_id', $request->cashier_id);
-        }
-
-        // Status filter
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        $orders = $query->orderBy('created_at', 'desc')->paginate(15);
+        $orders = Order::with(['cashier', 'tableRoom', 'cashierSession', 'orderItems.product'])
+            ->search($request->filled('search'))
+            ->dateFromFilter($request->filled('date_from'))
+            ->dateToFilter($request->filled('date_to'))
+            ->cashier($request->filled('cashier_id'))
+            ->status($request->filled('status'))
+            ->orderBy('created_at', 'desc')
+            ->paginate(15);
 
         return response()->json($orders);
     }
 
-    public function refund(Request $request, Order $order): JsonResponse
+    public function refund(RefundRequest $request, Order $order): JsonResponse
     {
-        $request->validate([
-            'notes'           => 'required|string',
-            'supervisor_name' => 'required|string',
-        ]);
-
         if ($order->status !== 'settled') {
             return response()->json(['message' => 'Only settled orders can be refunded'], 400);
         }
