@@ -1,6 +1,6 @@
 <template>
     <div class="h-screen bg-gray-50 flex flex-col">
-        <div class="flex-1 flex flex-col bg-gray-50 overflow-hidden">
+        <div class="flex-1 flex flex-col bg-gray-50 overflow-y-auto">
             <slot />
         </div>
 
@@ -201,7 +201,7 @@ const handleBarcodeSearch = () => {
 };
 
 const handleTablesClick = () => {
-    router.visit(route("retail-cashier.tables"));
+    router.visit(route("transactions.index"));
 };
 
 const handleCashieringClick = () => {

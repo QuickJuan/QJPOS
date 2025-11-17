@@ -39,6 +39,7 @@ import {
     UsersIcon,
     ChartBarIcon,
     ArrowRightOnRectangleIcon as LogoutIcon,
+    ReceiptRefundIcon,
 } from "@heroicons/vue/24/outline";
 import { ref } from "vue";
 
@@ -51,6 +52,7 @@ const navigation = ref([
     { name: "Sales", href: "#", icon: RectangleGroupIcon, current: false },
     { name: "Inventory", href: "#", icon: RectangleStackIcon, current: false },
     { name: "Attendance", href: "#", icon: TagIcon, current: false },
+    { name: "Transactions", href: "/transactions", icon: ReceiptRefundIcon, current: false },
     { name: "Reports", href: "#", icon: ChartBarIcon, current: false },
 ]);
 </script>

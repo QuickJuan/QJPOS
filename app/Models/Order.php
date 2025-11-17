@@ -16,6 +16,7 @@ class Order extends Model
         'table_room_id',
         'notes',
         'meta_data',
+        'status',
     ];
 
     protected $casts = [
