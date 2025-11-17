@@ -41,11 +41,7 @@
                                         <p class="text-sm text-gray-400">
                                             Receipt #{{ activeOrder.id }}
                                         </p>
-                                        <h2
-                                            class="text-2xl font-bold text-gray-900"
-                                        >
-                                            Design Review
-                                        </h2>
+
                                         <p class="text-sm text-gray-500">
                                             {{
                                                 activeOrder.table_room
@@ -72,15 +68,6 @@
                                             }}
                                         </span>
                                         <div class="flex flex-wrap gap-2">
-                                            <Button
-                                                label="View Invoice"
-                                                icon="pi pi-eye"
-                                                outlined
-                                                :class="subtleActionButtonClass"
-                                                @click="
-                                                    viewReceipt(activeOrder.id)
-                                                "
-                                            />
                                             <Button
                                                 label="Re-print"
                                                 icon="pi pi-print"
@@ -163,22 +150,37 @@
                                     >
                                         Order Items
                                     </p>
-                                    <div
+
+                                    <Receipt
+                                        :receipt-id="activeOrder.id.toString()"
+                                        :embedded="true"
+                                        :order-data="activeOrder"
+                                    />
+                                    <!-- <div
                                         class="rounded-2xl border border-gray-100 divide-y divide-gray-100"
                                     >
                                         <div
-                                            class="grid grid-cols-[1.5fr_0.8fr_0.8fr_1fr] text-xs font-semibold uppercase text-gray-400 px-5 py-3 bg-gray-50"
+                                            class="grid grid-cols-[1.5fr_0.8fr_0.8fr_1fr_1fr_1fr_1fr] text-xs font-semibold uppercase text-gray-400 px-5 py-3 bg-gray-50"
                                         >
                                             <span>Item</span>
-                                            <span class="text-center"
-                                                >Quantity</span
-                                            >
-                                            <span class="text-right"
-                                                >Price</span
-                                            >
-                                            <span class="text-right"
-                                                >Amount</span
-                                            >
+                                            <span class="text-center">
+                                                Quantity
+                                            </span>
+                                            <span class="text-center">
+                                                Price
+                                            </span>
+                                            <span class="text-center">
+                                                Amount
+                                            </span>
+                                            <span class="text-center">
+                                                Less Tax
+                                            </span>
+                                            <span class="text-center">
+                                                Less Discount
+                                            </span>
+                                            <span class="text-center">
+                                                Subtotal
+                                            </span>
                                         </div>
                                         <div
                                             v-if="
@@ -189,7 +191,7 @@
                                             <div
                                                 v-for="item in activeOrder.order_items"
                                                 :key="item.id"
-                                                class="grid grid-cols-[1.5fr_0.8fr_0.8fr_1fr] items-center px-5 py-4 text-sm text-gray-700"
+                                                class="grid grid-cols-[1.5fr_0.8fr_0.8fr_1fr_1fr_1fr_1fr] items-center px-5 py-4 text-sm text-gray-700"
                                             >
                                                 <div class="flex flex-col">
                                                     <span class="font-medium">
@@ -212,6 +214,31 @@
                                                 <span class="text-right">
                                                     {{
                                                         formatMoney(item.price)
+                                                    }}
+                                                </span>
+                                                <span
+                                                    class="text-right font-semibold"
+                                                >
+                                                    {{
+                                                        formatMoney(item.amount)
+                                                    }}
+                                                </span>
+                                                <span
+                                                    class="text-right font-semibold"
+                                                >
+                                                    {{
+                                                        formatMoney(
+                                                            item.less_tax
+                                                        )
+                                                    }}
+                                                </span>
+                                                <span
+                                                    class="text-right font-semibold"
+                                                >
+                                                    {{
+                                                        formatMoney(
+                                                            item.discount_amount
+                                                        )
                                                     }}
                                                 </span>
                                                 <span
@@ -246,7 +273,7 @@
                                                 }}
                                             </span>
                                         </div>
-                                    </div>
+                                    </div> -->
                                 </div>
 
                                 <div
@@ -328,6 +355,7 @@ import SearchAndFIlter from "./Partials/SearchAndFIlter.vue";
 import Transactions from "./Partials/Transactions.vue";
 import RefundDialog from "./Partials/RefundDialog.vue";
 import { formatMoney } from "@/Utils/FormatMoney";
+import Receipt from "../Receipt.vue";
 
 const page = usePage<PageProps>();
 const currentUser = computed(() => page.props?.auth?.user);
@@ -429,10 +457,6 @@ const fetchOrders = async (page = 1) => {
     } catch (error) {
         console.error("Error fetching orders:", error);
     }
-};
-
-const viewReceipt = (orderId: number) => {
-    window.open(route("receipt", { id: orderId }), "_blank");
 };
 
 const reprintReceipt = (orderId: number) => {

@@ -174,6 +174,7 @@ Route::middleware([
                 ->group(function () {
                     Route::get('/', 'index')->name('index');
                     Route::get('/api/orders', [\App\Http\Controllers\OrderController::class, 'index'])->name('api.orders');
+                    Route::get('/api/orders/{order}', [\App\Http\Controllers\OrderController::class, 'show'])->name('api.orders.show');
                     Route::post('/api/orders/{order}/refund', [\App\Http\Controllers\OrderController::class, 'refund'])->name('api.orders.refund');
                 });
         });

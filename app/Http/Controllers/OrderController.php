@@ -23,6 +23,13 @@ class OrderController extends Controller
         return response()->json($orders);
     }
 
+    public function show(Order $order): JsonResponse
+    {
+        $order->load(['cashier', 'tableRoom', 'cashierSession', 'orderItems.product']);
+
+        return response()->json($order);
+    }
+
     public function refund(RefundRequest $request, Order $order): JsonResponse
     {
         if ($order->status !== 'settled') {

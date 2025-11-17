@@ -1,5 +1,6 @@
 <template>
-    <div class="min-h-screen bg-gray-100 py-8">
+    <!-- Full page layout when used as standalone page -->
+    <div v-if="!embedded" class="min-h-screen bg-gray-100 py-8">
         <div class="max-w-4xl mx-auto px-4">
             <div class="bg-white rounded-lg shadow-lg p-6">
                 <div class="flex justify-between items-center mb-6">
@@ -33,6 +34,7 @@
                             :total-amount="receiptData.totalAmount"
                             :payment-info="receiptData.paymentInfo"
                             :footer-message="businessInfo.footerMessage"
+                            :receipt-footer="null"
                         />
                     </div>
                 </div>
@@ -49,17 +51,43 @@
             </div>
         </div>
     </div>
+
+    <!-- Embedded layout when used as component -->
+    <div v-else>
+        <ReceiptLayout
+            :business-name="businessInfo.name"
+            :business-address="businessInfo.address"
+            :business-phone="businessInfo.phone"
+            :receipt-number="receiptData.receiptNumber"
+            :receipt-date="receiptData.date"
+            :table-number="receiptData.tableNumber"
+            :cashier-name="receiptData.cashierName"
+            :order-type="receiptData.orderType"
+            :order-items="receiptData.orderItems"
+            :subtotal="receiptData.subtotal"
+            :tax-amount="receiptData.taxAmount"
+            :discount-amount="receiptData.discountAmount"
+            :total-amount="receiptData.totalAmount"
+            :payment-info="receiptData.paymentInfo"
+            :footer-message="businessInfo.footerMessage"
+            :receipt-footer="null"
+            :embedded="true"
+        />
+    </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { route } from "ziggy-js";
+import axios from "axios";
 import ReceiptLayout from "@/Components/ReceiptLayout.vue";
 import PageProps from "@/Types/PageProps";
 
 const props = defineProps<{
     receiptId: string;
+    embedded?: boolean;
+    orderData?: any;
 }>();
 
 const page = usePage<PageProps>();
@@ -87,12 +115,87 @@ const receiptData = ref({
     paymentInfo: null as any,
 });
 
-// Load sample data (in real app, fetch from API)
-const loadReceiptData = () => {
+// Load data - either from props or fetch from API
+const loadReceiptData = async () => {
+    if (props.embedded && props.orderData) {
+        // Use data from props when embedded
+        const order = props.orderData;
+        const orderItems = order.order_items || [];
+
+        // Map orderItems to include name from product and discount
+        const mappedOrderItems = orderItems.map((item: any) => ({
+            ...item,
+            name: item.product?.name || "Unnamed item",
+            discount: item.discount_amount || 0,
+        }));
+
+        // Calculate totals
+        const subtotal = mappedOrderItems.reduce((sum: number, item: any) => sum + Number(item.sub_total || 0), 0);
+        const taxAmount = mappedOrderItems.reduce((sum: number, item: any) => sum + Number(item.less_tax || 0), 0);
+        const discountAmount = mappedOrderItems.reduce((sum: number, item: any) => sum + Number(item.discount_amount || 0), 0);
+        const totalAmount = subtotal + taxAmount - discountAmount;
+
+        receiptData.value.receiptNumber = `RCP-${order.id}`;
+        receiptData.value.date = order.created_at;
+        receiptData.value.tableNumber = order.table_room?.name || "N/A";
+        receiptData.value.cashierName = order.cashier?.name || "Unknown";
+        receiptData.value.orderType = (order as any).order_type || "dine-in";
+        receiptData.value.orderItems = mappedOrderItems;
+        receiptData.value.subtotal = subtotal;
+        receiptData.value.taxAmount = taxAmount;
+        receiptData.value.discountAmount = discountAmount;
+        receiptData.value.totalAmount = totalAmount;
+        receiptData.value.paymentInfo = (order as any).payment_info || null;
+    } else {
+        // Fetch order data for standalone page
+        try {
+            const response = await axios.get(route('transactions.api.orders.show', props.receiptId));
+            const order = response.data;
+            if (order) {
+                const orderItems = order.order_items || [];
+
+                // Map orderItems to include name from product and discount
+                const mappedOrderItems = orderItems.map((item: any) => ({
+                    ...item,
+                    name: item.product?.name || "Unnamed item",
+                    discount: item.discount_amount || 0,
+                }));
+
+                // Calculate totals
+                const subtotal = mappedOrderItems.reduce((sum: number, item: any) => sum + Number(item.sub_total || 0), 0);
+                const taxAmount = mappedOrderItems.reduce((sum: number, item: any) => sum + Number(item.less_tax || 0), 0);
+                const discountAmount = mappedOrderItems.reduce((sum: number, item: any) => sum + Number(item.discount_amount || 0), 0);
+                const totalAmount = subtotal + taxAmount - discountAmount;
+
+                receiptData.value.receiptNumber = `RCP-${order.id}`;
+                receiptData.value.date = order.created_at;
+                receiptData.value.tableNumber = order.table_room?.name || "N/A";
+                receiptData.value.cashierName = order.cashier?.name || "Unknown";
+                receiptData.value.orderType = (order as any).order_type || "dine-in";
+                receiptData.value.orderItems = mappedOrderItems;
+                receiptData.value.subtotal = subtotal;
+                receiptData.value.taxAmount = taxAmount;
+                receiptData.value.discountAmount = discountAmount;
+                receiptData.value.totalAmount = totalAmount;
+                receiptData.value.paymentInfo = (order as any).payment_info || null;
+            } else {
+                // Fallback to sample data if order not found
+                loadSampleData();
+            }
+        } catch (error) {
+            console.error('Error fetching order:', error);
+            // Fallback to sample data
+            loadSampleData();
+        }
+    }
+};
+
+// Load sample data
+const loadSampleData = () => {
     receiptData.value.orderItems = [
         {
             id: 1,
-            product_name: "Chicken Joy",
+            name: "Chicken Joy",
             quantity: 2,
             unit_price: 85.0,
             price: 170.0,
@@ -104,7 +207,7 @@ const loadReceiptData = () => {
         },
         {
             id: 2,
-            product_name: "Tuna Pie",
+            name: "Tuna Pie",
             quantity: 1,
             unit_price: 45.0,
             price: 45.0,
