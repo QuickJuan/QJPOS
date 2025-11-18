@@ -1,6 +1,6 @@
 <template>
     <div class="h-screen bg-gray-50 flex flex-col">
-        <div class="flex-1 flex flex-col bg-gray-50 overflow-hidden">
+        <div class="flex-1 flex flex-col bg-gray-50 overflow-y-auto">
             <slot />
         </div>
 
@@ -59,7 +59,7 @@
 
                             <!-- Tables Button -->
                             <button
-                                @click="handleTablesClick"
+                                @click="handleReviewTransactionsClick"
                                 class="flex items-center gap-2 px-4 py-2 text-white rounded-lg bg-primary transition-colors"
                             >
                                 <TableCellsIcon class="w-5 h-5" />
@@ -203,6 +203,10 @@ const handleBarcodeSearch = () => {
 const handleTablesClick = () => {
     router.visit(route("retail-cashier.tables"));
 };
+
+const handleReviewTransactionsClick = () => {
+    router.visit(route("transactions.index"));
+}
 
 const handleCashieringClick = () => {
     router.visit(route("retail-cashier.index"));

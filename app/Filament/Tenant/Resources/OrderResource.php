@@ -4,14 +4,19 @@ namespace App\Filament\Tenant\Resources;
 
 use App\Filament\Tenant\Resources\OrderResource\Pages;
 use App\Models\Order;
+use Filament\Forms;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
+use Illuminate\Support\Facades\Auth;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class OrderResource extends Resource
 {
@@ -48,6 +53,16 @@ class OrderResource extends Resource
                     ->label('Notes')
                     ->nullable(),
 
+                Select::make('status')
+                    ->label('Status')
+                    ->options([
+                        'settled' => 'Settled',
+                        'refund' => 'Refund',
+                        'credit' => 'Credit',
+                    ])
+                    ->default('settled')
+                    ->required(),
+
                 KeyValue::make('meta_data')
                     ->label('Meta Data')
                     ->keyLabel('Key')
@@ -81,16 +96,101 @@ class OrderResource extends Resource
                     ->sortable()
                     ->searchable(),
 
+                TextColumn::make('id')
+                    ->label('Receipt #')
+                    ->sortable()
+                    ->searchable(),
+
+                TextColumn::make('status')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'settled' => 'success',
+                        'refund' => 'danger',
+                        'credit' => 'warning',
+                    })
+                    ->sortable(),
+
+                TextColumn::make('tableRoom.customer_name')
+                    ->label('Customer Name')
+                    ->sortable()
+                    ->searchable(),
+
                 TextColumn::make('created_at')
                     ->label('Created At')
                     ->dateTime()
                     ->sortable(),
             ])
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('cashier_id')
+                    ->label('Cashier')
+                    ->relationship('cashier', 'name')
+                    ->preload()
+                    ->searchable(),
+
+                Tables\Filters\Filter::make('created_at')
+                    ->form([
+                        DatePicker::make('created_from')
+                            ->label('From Date'),
+                        DatePicker::make('created_until')
+                            ->label('Until Date'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['created_from'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
+                            )
+                            ->when(
+                                $data['created_until'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
+                            );
+                    }),
+
+                Tables\Filters\SelectFilter::make('status')
+                    ->options([
+                        'settled' => 'Settled',
+                        'refund' => 'Refund',
+                        'credit' => 'Credit',
+                    ]),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
+                Tables\Actions\Action::make('view_receipt')
+                    ->label('View Receipt')
+                    ->icon('heroicon-o-eye')
+                    ->url(fn (Order $record): string => route('receipt', ['id' => $record->id]))
+                    ->openUrlInNewTab(),
+                Tables\Actions\Action::make('refund')
+                    ->label('Refund')
+                    ->icon('heroicon-o-arrow-uturn-left')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalHeading('Refund Transaction')
+                    ->modalDescription('Are you sure you want to refund this transaction? This action requires authorization.')
+                    ->form([
+                        Textarea::make('notes')
+                            ->label('Refund Notes')
+                            ->required()
+                            ->placeholder('Enter reason for refund...'),
+                        TextInput::make('supervisor_name')
+                            ->label('Supervisor/Manager Name')
+                            ->required()
+                            ->placeholder('Enter supervisor name for authorization'),
+                    ])
+                    ->action(function (Order $record, array $data) {
+                        $record->update([
+                            'status' => 'refund',
+                            'meta_data' => array_merge($record->meta_data ?? [], [
+                                'refund' => [
+                                    'requested_by' => Auth::user()->name,
+                                    'supervisor' => $data['supervisor_name'],
+                                    'notes' => $data['notes'],
+                                    'refunded_at' => now(),
+                                ]
+                            ])
+                        ]);
+                    })
+                    ->visible(fn (Order $record): bool => $record->status === 'settled'),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])

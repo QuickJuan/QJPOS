@@ -1,6 +1,9 @@
 <template>
     <div
-        class="receipt-container max-w-xs mx-auto bg-white p-4 font-mono text-xs leading-tight"
+        :class="[
+            'receipt-container bg-white p-4 font-mono text-xs leading-tight',
+            embedded ? '' : 'max-w-xs mx-auto'
+        ]"
     >
         <!-- Header -->
         <div class="text-center mb-4">
@@ -26,7 +29,7 @@
             </div>
             <div class="flex justify-between" v-if="tableNumber">
                 <span>Table:</span>
-                <span>{{ tableInfo.name }}</span>
+                <span>{{ tableNumber }}</span>
             </div>
             <div class="flex justify-between" v-if="cashierName">
                 <span>Cashier:</span>
@@ -186,7 +189,7 @@ const props = defineProps<{
     businessPhone?: string;
     receiptNumber?: string;
     receiptDate?: string;
-    tableInfo?: string;
+    tableNumber?: string;
     cashierName?: string;
     orderType?: string;
     orderItems?: any[];
@@ -201,6 +204,7 @@ const props = defineProps<{
     paymentInfo?: any;
     footerMessage?: string;
     receiptFooter: any;
+    embedded?: boolean;
 }>();
 
 // Default values

@@ -11,6 +11,7 @@
         <Dropdown
             :modelValue="props.modelValue"
             @update:modelValue="emit('update:modelValue', $event)"
+            @change="emit('change', $event)"
             :options="computedOptions"
             :optionLabel="optionLabel"
             :optionValue="optionValue"
@@ -56,7 +57,7 @@ const computedOptions = computed(() => [
     ...props.options,
 ]);
 
-const emit = defineEmits(["update:modelValue", "search"]);
+const emit = defineEmits(["update:modelValue", "change", "search"]);
 
 const onFilter = (event: any) => {
     const searchQuery = event.value;
