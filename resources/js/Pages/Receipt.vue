@@ -163,7 +163,7 @@ const getReceiptData = (order: any, orderItems: any) => {
 
     // Calculate totals
     const amount = mappedOrderItems.reduce(
-        (sum: number, item: any) => sum + Number(item.amount || 0),
+        (sum: number, item: any) => sum + Number(item.quantity * item.price || 0),
         0
     );
     const lessTaxTotal = mappedOrderItems.reduce(
