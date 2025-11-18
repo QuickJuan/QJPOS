@@ -22,6 +22,10 @@ class Order extends Model
         'meta_data' => 'array',
     ];
 
+    protected $appends = [
+        'payment_info',
+    ];
+
     // SCOPES
     public function scopeAuthCashier(Builder $query): Builder
     {
@@ -37,17 +41,18 @@ class Order extends Model
         return $query;
     }
 
-    public function scopeSearch(Builder $query, string $keyword)
+    public function scopeSearch(Builder $query, ?string $keyword)
     {
         if ($keyword) {
             return $query->when($keyword, function ($query) use ($keyword) {
                 $query->where(function ($q) use ($keyword) {
-                    $q->where('id', 'like', "%{$keyword}%")
+                    $q->where('id', 'like', "%{$keyword}%") // receipt number but since we don't have receipt_number column, set the id temporarily
                         ->orWhereHas('cashier', function ($q) use ($keyword) {
-                            $q->where('name', 'like', "%{$keyword}%");
+                            $q->whereLike('name', "%$keyword%");
                         })
                         ->orWhereHas('tableRoom', function ($q) use ($keyword) {
-                            $q->where('customer_name', 'like', "%{$keyword}%");
+                            $q->whereLike('customer_name', "%$keyword%")
+                                ->orWhereLike('name', "%$keyword%");
                         });
                 });
             });
@@ -56,7 +61,7 @@ class Order extends Model
         return $query;
     }
 
-    public function scopeDateFromFilter(Builder $query, string $dateFrom): Builder
+    public function scopeDateFromFilter(Builder $query, ?string $dateFrom): Builder
     {
         if ($dateFrom) {
             return $query->when($dateFrom, fn($query) => $query->whereDate('created_at', '>=', $dateFrom));
@@ -66,17 +71,16 @@ class Order extends Model
         return $query;
     }
 
-    public function scopeDateToFilter(Builder $query, string $dateTo): Builder
+    public function scopeDateToFilter(Builder $query, ?string $dateTo): Builder
     {
         if ($dateTo) {
-            return $query->when($dateTo, fn($query) => $query->whereDate('created_at', '>=', $dateTo));
-
+            return $query->when($dateTo, fn($query) => $query->whereDate('created_at', '<=', $dateTo));
         }
 
         return $query;
     }
 
-    public function scopeCashier(Builder $query, int $cashierId): Builder
+    public function scopeCashier(Builder $query, ?int $cashierId): Builder
     {
         if ($cashierId) {
             return $query->where('cashier_id', $cashierId);
@@ -85,7 +89,7 @@ class Order extends Model
         return $query;
     }
 
-    public function scopeStatus(Builder $query, string $status): Builder
+    public function scopeStatus(Builder $query, ?string $status): Builder
     {
         if ($status) {
             return $query->where('status', $status);
@@ -112,5 +116,10 @@ class Order extends Model
     public function tableRoom(): BelongsTo
     {
         return $this->belongsTo(TableRoom::class);
+    }
+
+    public function getPaymentInfoAttribute()
+    {
+        return $this->meta_data['payment_info'] ?? null;
     }
 }

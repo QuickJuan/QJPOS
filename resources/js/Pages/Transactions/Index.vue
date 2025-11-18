@@ -6,18 +6,18 @@
                     <!-- Sidebar -->
                     <div class="space-y-4">
                         <SearchAndFIlter
-                            :search="filters.search"
-                            :dateFrom="dateFrom"
-                            :dateTo="dateTo"
+                            :search="search"
+                            :dateFrom="filters.date_from"
+                            :dateTo="filters.date_to"
                             :status="filters.status"
                             :cashier_id="filters.cashier_id"
                             :statusOptions="statusOptions"
                             :cashierDropdownOptions="cashierDropdownOptions"
-                            @search="debouncedSearch"
-                            @dateFrom="() => fetchOrders()"
-                            @dateTo="() => fetchOrders()"
-                            @status="() => fetchOrders()"
-                            @cashier_id="() => fetchOrders()"
+                            @search="(value: string) => { search = value }"
+                            @dateFrom="(value: string | null) => { filters.date_from = value }"
+                            @dateTo="(value: string | null) => { filters.date_to = value }"
+                            @status="(value: string) => { filters.status = value }"
+                            @cashier_id="(value: string) => { filters.cashier_id = value }"
                         />
 
                         <Transactions
@@ -151,6 +151,7 @@
                                         :receipt-id="activeOrder.id.toString()"
                                         :embedded="true"
                                         :order-data="activeOrder"
+                                        :receipt-footer="props.receiptFooter"
                                     />
                                 </div>
 
@@ -220,19 +221,32 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from "vue";
-import { usePage } from "@inertiajs/vue3";
+import { ref, onMounted, computed, watch, reactive } from "vue";
+import { usePage, router } from "@inertiajs/vue3";
 import { route } from "ziggy-js";
 import axios from "axios";
 import CashieringLayout from "@/Layouts/CashieringLayout.vue";
 import PageProps from "@/Types/PageProps";
 import Button from "primevue/button";
 import Order from "@/Types/Order/Order";
-import OrderResponse from "@/Types/Order/OrderResponse";
 import SearchAndFIlter from "./Partials/SearchAndFIlter.vue";
 import Transactions from "./Partials/Transactions.vue";
 import RefundDialog from "./Partials/RefundDialog.vue";
 import Receipt from "../Receipt.vue";
+import { debounce } from "lodash";
+import { filter } from "lodash";
+
+const props = defineProps<{
+    orders: any;
+    filters: {
+        search: string;
+        date_from: string;
+        date_to: string;
+        status: string;
+        cashier_id: string;
+    };
+    receiptFooter: any;
+}>();
 
 const page = usePage<PageProps>();
 const currentUser = computed(() => page.props?.auth?.user);
@@ -249,25 +263,14 @@ const statusOptions = [
     { label: "Credit", value: "credit" },
 ];
 
-const orders = ref<OrderResponse>({
-    data: [],
-    current_page: 1,
-    from: 0,
-    to: 0,
-    total: 0,
-    links: [],
+const filters = reactive({
+    date_from: props.filters.date_from || "",
+    date_to: props.filters.date_to || "",
+    status: props.filters.status || "",
+    cashier_id: props.filters.cashier_id || "",
 });
 
-const filters = ref({
-    search: "",
-    date_from: "",
-    date_to: "",
-    status: "",
-    cashier_id: "",
-});
-
-const dateFrom = ref<Date | null>(null);
-const dateTo = ref<Date | null>(null);
+const search = ref(props.filters.search || "");
 
 const showRefundModal = ref(false);
 const activeOrder = ref<Order | null>(null);
@@ -278,52 +281,6 @@ const refundForm = ref({
 });
 const refundLoading = ref(false);
 const refundMeta = computed(() => activeOrder.value?.meta_data?.refund || null);
-
-// Debounced search
-let searchTimeout: NodeJS.Timeout;
-const debouncedSearch = () => {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-        fetchOrders();
-    }, 500);
-};
-
-const syncActiveOrder = (data: Order[]) => {
-    if (!data.length) {
-        activeOrder.value = null;
-        return;
-    }
-
-    if (activeOrder.value) {
-        const stillExists = data.find(
-            (order) => order.id === activeOrder.value?.id
-        );
-        activeOrder.value = stillExists || data[0];
-    } else {
-        activeOrder.value = data[0];
-    }
-};
-
-const fetchOrders = async (page = 1) => {
-    try {
-        const params = new URLSearchParams({
-            page: page.toString(),
-            ...Object.fromEntries(
-                Object.entries(filters.value).filter(
-                    ([_, value]) => value !== ""
-                )
-            ),
-        });
-
-        const response = await axios.get(
-            route("transactions.api.orders") + "?" + params
-        );
-        orders.value = response.data;
-        syncActiveOrder(response.data.data || []);
-    } catch (error) {
-        console.error("Error fetching orders:", error);
-    }
-};
 
 const reprintReceipt = (orderId: number) => {
     const url = route("receipt", { id: orderId });
@@ -368,7 +325,6 @@ const submitRefund = async () => {
             refundForm.value
         );
         closeRefundModal();
-        fetchOrders();
     } catch (error) {
         console.error("Error refunding order:", error);
     } finally {
@@ -381,12 +337,21 @@ const goToPage = (url: string | null) => {
     const urlObj = new URL(url);
     const page = urlObj.searchParams.get("page");
     if (page) {
-        fetchOrders(parseInt(page));
+        const data: any = { page: parseInt(page) };
+        if (filters.date_from) data.date_from = filters.date_from;
+        if (filters.date_to) data.date_to = filters.date_to;
+        if (filters.status) data.status = filters.status;
+        if (filters.cashier_id) data.cashier_id = filters.cashier_id;
+        if (search.value) data.search = search.value;
+
+        router.get(route("transactions.index"), data, {
+            preserveScroll: true,
+            preserveState: true,
+        });
     }
 };
 
 const selectOrder = (order: any) => {
-    console.log(order);
     activeOrder.value = order;
 };
 
@@ -425,47 +390,38 @@ const getStatusLabel = (status: string) => {
     }
 };
 
-// Watchers to sync Date objects with string filters
-watch(dateFrom, (newDate) => {
-    filters.value.date_from = newDate
-        ? newDate.toISOString().split("T")[0]
-        : "";
-});
-
-watch(dateTo, (newDate) => {
-    filters.value.date_to = newDate ? newDate.toISOString().split("T")[0] : "";
-});
-
 watch(
-    () => filters.value.status,
-    (value) => {
-        if (value === null) {
-            filters.value.status = "";
-        }
-    }
+    search,
+    debounce((value: any) => {
+        const routeParams = {
+            search: value,
+        };
+
+        router.visit("/transactions", {
+            data: routeParams,
+            replace: true,
+            only: ["orders"],
+            preserveState: true,
+            preserveScroll: true,
+        });
+    }, 250)
 );
 
 watch(
-    () => filters.value.cashier_id,
-    (value) => {
-        if (value === null) {
-            filters.value.cashier_id = "";
-        }
-    }
+    () => filters,
+    debounce(() => {
+        const data: any = {};
+        if (filters.date_from) data.date_from = filters.date_from;
+        if (filters.date_to) data.date_to = filters.date_to;
+        if (filters.status) data.status = filters.status;
+        if (filters.cashier_id) data.cashier_id = filters.cashier_id;
+        if (search.value) data.search = search.value;
+
+        router.get(route("transactions.index"), data, {
+            preserveScroll: true,
+            preserveState: true,
+        });
+    }, 250),
+    { deep: true }
 );
-
-// Initialize dates from filters if they exist
-const initializeDates = () => {
-    if (filters.value.date_from) {
-        dateFrom.value = new Date(filters.value.date_from);
-    }
-    if (filters.value.date_to) {
-        dateTo.value = new Date(filters.value.date_to);
-    }
-};
-
-onMounted(() => {
-    initializeDates();
-    fetchOrders();
-});
 </script>

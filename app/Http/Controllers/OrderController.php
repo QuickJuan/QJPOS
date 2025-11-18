@@ -9,27 +9,6 @@ use Illuminate\Support\Facades\Auth;
 
 class OrderController extends Controller
 {
-    public function index(Request $request): JsonResponse
-    {
-        $orders = Order::with(['cashier', 'tableRoom', 'cashierSession', 'orderItems.product'])
-            ->search($request->filled('search'))
-            ->dateFromFilter($request->filled('date_from'))
-            ->dateToFilter($request->filled('date_to'))
-            ->cashier($request->filled('cashier_id'))
-            ->status($request->filled('status'))
-            ->orderBy('created_at', 'desc')
-            ->paginate(15);
-
-        return response()->json($orders);
-    }
-
-    public function show(Order $order): JsonResponse
-    {
-        $order->load(['cashier', 'tableRoom', 'cashierSession', 'orderItems.product']);
-
-        return response()->json($order);
-    }
-
     public function refund(RefundRequest $request, Order $order): JsonResponse
     {
         if ($order->status !== 'settled') {
