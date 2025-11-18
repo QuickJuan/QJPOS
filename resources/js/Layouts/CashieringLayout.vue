@@ -59,7 +59,7 @@
 
                             <!-- Tables Button -->
                             <button
-                                @click="handleTablesClick"
+                                @click="handleReviewTransactionsClick"
                                 class="flex items-center gap-2 px-4 py-2 text-white rounded-lg bg-primary transition-colors"
                             >
                                 <TableCellsIcon class="w-5 h-5" />
@@ -201,8 +201,12 @@ const handleBarcodeSearch = () => {
 };
 
 const handleTablesClick = () => {
-    router.visit(route("transactions.index"));
+    router.visit(route("retail-cashier.tables"));
 };
+
+const handleReviewTransactionsClick = () => {
+    router.visit(route("transactions.index"));
+}
 
 const handleCashieringClick = () => {
     router.visit(route("retail-cashier.index"));

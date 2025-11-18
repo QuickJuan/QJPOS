@@ -77,7 +77,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { route } from "ziggy-js";
 import axios from "axios";
@@ -123,71 +123,64 @@ const loadReceiptData = async () => {
         const orderItems = order.order_items || [];
 
         // Map orderItems to include name from product and discount
-        const mappedOrderItems = orderItems.map((item: any) => ({
-            ...item,
-            name: item.product?.name || "Unnamed item",
-            discount: item.discount_amount || 0,
-        }));
-
-        // Calculate totals
-        const subtotal = mappedOrderItems.reduce((sum: number, item: any) => sum + Number(item.sub_total || 0), 0);
-        const taxAmount = mappedOrderItems.reduce((sum: number, item: any) => sum + Number(item.less_tax || 0), 0);
-        const discountAmount = mappedOrderItems.reduce((sum: number, item: any) => sum + Number(item.discount_amount || 0), 0);
-        const totalAmount = subtotal + taxAmount - discountAmount;
-
-        receiptData.value.receiptNumber = `RCP-${order.id}`;
-        receiptData.value.date = order.created_at;
-        receiptData.value.tableNumber = order.table_room?.name || "N/A";
-        receiptData.value.cashierName = order.cashier?.name || "Unknown";
-        receiptData.value.orderType = (order as any).order_type || "dine-in";
-        receiptData.value.orderItems = mappedOrderItems;
-        receiptData.value.subtotal = subtotal;
-        receiptData.value.taxAmount = taxAmount;
-        receiptData.value.discountAmount = discountAmount;
-        receiptData.value.totalAmount = totalAmount;
-        receiptData.value.paymentInfo = (order as any).payment_info || null;
+        getReceiptData(order, orderItems);
     } else {
         // Fetch order data for standalone page
         try {
-            const response = await axios.get(route('transactions.api.orders.show', props.receiptId));
+            const response = await axios.get(
+                route("transactions.api.orders.show", props.receiptId)
+            );
             const order = response.data;
             if (order) {
                 const orderItems = order.order_items || [];
 
-                // Map orderItems to include name from product and discount
-                const mappedOrderItems = orderItems.map((item: any) => ({
-                    ...item,
-                    name: item.product?.name || "Unnamed item",
-                    discount: item.discount_amount || 0,
-                }));
-
-                // Calculate totals
-                const subtotal = mappedOrderItems.reduce((sum: number, item: any) => sum + Number(item.sub_total || 0), 0);
-                const taxAmount = mappedOrderItems.reduce((sum: number, item: any) => sum + Number(item.less_tax || 0), 0);
-                const discountAmount = mappedOrderItems.reduce((sum: number, item: any) => sum + Number(item.discount_amount || 0), 0);
-                const totalAmount = subtotal + taxAmount - discountAmount;
-
-                receiptData.value.receiptNumber = `RCP-${order.id}`;
-                receiptData.value.date = order.created_at;
-                receiptData.value.tableNumber = order.table_room?.name || "N/A";
-                receiptData.value.cashierName = order.cashier?.name || "Unknown";
-                receiptData.value.orderType = (order as any).order_type || "dine-in";
-                receiptData.value.orderItems = mappedOrderItems;
-                receiptData.value.subtotal = subtotal;
-                receiptData.value.taxAmount = taxAmount;
-                receiptData.value.discountAmount = discountAmount;
-                receiptData.value.totalAmount = totalAmount;
-                receiptData.value.paymentInfo = (order as any).payment_info || null;
+                getReceiptData(order, orderItems);
             } else {
                 // Fallback to sample data if order not found
                 loadSampleData();
             }
         } catch (error) {
-            console.error('Error fetching order:', error);
+            console.error("Error fetching order:", error);
             // Fallback to sample data
             loadSampleData();
         }
     }
+};
+
+const getReceiptData = (order: any, orderItems: any) => {
+    // Map orderItems to include name from product and discount
+    const mappedOrderItems = orderItems.map((item: any) => ({
+        ...item,
+        name: item.product?.name || "Unnamed item",
+        discount: item.discount_amount || 0,
+    }));
+
+    // Calculate totals
+    const amount = mappedOrderItems.reduce(
+        (sum: number, item: any) => sum + Number(item.amount || 0),
+        0
+    );
+    const taxAmount = mappedOrderItems.reduce(
+        (sum: number, item: any) => sum + Number(item.less_tax || 0),
+        0
+    );
+    const discountAmount = mappedOrderItems.reduce(
+        (sum: number, item: any) => sum + Number(item.discount_amount || 0),
+        0
+    );
+    const totalAmount = amount - (taxAmount + discountAmount);
+
+    receiptData.value.receiptNumber = `RCP-${order.id}`;
+    receiptData.value.date = order.created_at;
+    receiptData.value.tableNumber = order.table_room?.name || "N/A";
+    receiptData.value.cashierName = order.cashier?.name || "Unknown";
+    receiptData.value.orderType = (order as any).order_type || "dine-in";
+    receiptData.value.orderItems = mappedOrderItems;
+    receiptData.value.subtotal = amount;
+    receiptData.value.taxAmount = taxAmount;
+    receiptData.value.discountAmount = discountAmount;
+    receiptData.value.totalAmount = totalAmount;
+    receiptData.value.paymentInfo = (order as any).payment_info || null;
 };
 
 // Load sample data
@@ -254,6 +247,16 @@ const goBack = () => {
 onMounted(() => {
     loadReceiptData();
 });
+
+watch(
+    () => props.orderData,
+    (newOrderData) => {
+        if (newOrderData) {
+            loadReceiptData();
+        }
+    },
+    { immediate: false }
+);
 </script>
 
 <style>

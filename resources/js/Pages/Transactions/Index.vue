@@ -38,15 +38,11 @@
                                     class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between"
                                 >
                                     <div>
-                                        <p class="text-sm text-gray-400">
-                                            Receipt #{{ activeOrder.id }}
-                                        </p>
-
                                         <p class="text-sm text-gray-500">
                                             {{
                                                 activeOrder.table_room
                                                     ?.customer_name ||
-                                                "Customer"
+                                                "Walk-in Customer"
                                             }}
                                         </p>
                                     </div>
@@ -156,124 +152,6 @@
                                         :embedded="true"
                                         :order-data="activeOrder"
                                     />
-                                    <!-- <div
-                                        class="rounded-2xl border border-gray-100 divide-y divide-gray-100"
-                                    >
-                                        <div
-                                            class="grid grid-cols-[1.5fr_0.8fr_0.8fr_1fr_1fr_1fr_1fr] text-xs font-semibold uppercase text-gray-400 px-5 py-3 bg-gray-50"
-                                        >
-                                            <span>Item</span>
-                                            <span class="text-center">
-                                                Quantity
-                                            </span>
-                                            <span class="text-center">
-                                                Price
-                                            </span>
-                                            <span class="text-center">
-                                                Amount
-                                            </span>
-                                            <span class="text-center">
-                                                Less Tax
-                                            </span>
-                                            <span class="text-center">
-                                                Less Discount
-                                            </span>
-                                            <span class="text-center">
-                                                Subtotal
-                                            </span>
-                                        </div>
-                                        <div
-                                            v-if="
-                                                activeOrder.order_items &&
-                                                activeOrder.order_items.length
-                                            "
-                                        >
-                                            <div
-                                                v-for="item in activeOrder.order_items"
-                                                :key="item.id"
-                                                class="grid grid-cols-[1.5fr_0.8fr_0.8fr_1fr_1fr_1fr_1fr] items-center px-5 py-4 text-sm text-gray-700"
-                                            >
-                                                <div class="flex flex-col">
-                                                    <span class="font-medium">
-                                                        {{
-                                                            item.product
-                                                                ?.name ||
-                                                            "Unnamed item"
-                                                        }}
-                                                    </span>
-                                                    <span
-                                                        v-if="item.order_type"
-                                                        class="text-xs text-gray-400"
-                                                    >
-                                                        {{ item.order_type }}
-                                                    </span>
-                                                </div>
-                                                <span class="text-center">
-                                                    {{ item.quantity }}
-                                                </span>
-                                                <span class="text-right">
-                                                    {{
-                                                        formatMoney(item.price)
-                                                    }}
-                                                </span>
-                                                <span
-                                                    class="text-right font-semibold"
-                                                >
-                                                    {{
-                                                        formatMoney(item.amount)
-                                                    }}
-                                                </span>
-                                                <span
-                                                    class="text-right font-semibold"
-                                                >
-                                                    {{
-                                                        formatMoney(
-                                                            item.less_tax
-                                                        )
-                                                    }}
-                                                </span>
-                                                <span
-                                                    class="text-right font-semibold"
-                                                >
-                                                    {{
-                                                        formatMoney(
-                                                            item.discount_amount
-                                                        )
-                                                    }}
-                                                </span>
-                                                <span
-                                                    class="text-right font-semibold"
-                                                >
-                                                    {{
-                                                        formatMoney(
-                                                            item.sub_total
-                                                        )
-                                                    }}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div
-                                            v-else
-                                            class="px-5 py-6 text-sm text-gray-400"
-                                        >
-                                            No order items available for this
-                                            receipt.
-                                        </div>
-                                        <div
-                                            v-if="
-                                                activeOrder.order_items &&
-                                                activeOrder.order_items.length
-                                            "
-                                            class="flex items-center justify-between px-5 py-4 text-sm font-semibold text-gray-900 bg-gray-50"
-                                        >
-                                            <span>Total</span>
-                                            <span>
-                                                {{
-                                                    formatMoney(orderItemsTotal)
-                                                }}
-                                            </span>
-                                        </div>
-                                    </div> -->
                                 </div>
 
                                 <div
@@ -354,7 +232,6 @@ import OrderResponse from "@/Types/Order/OrderResponse";
 import SearchAndFIlter from "./Partials/SearchAndFIlter.vue";
 import Transactions from "./Partials/Transactions.vue";
 import RefundDialog from "./Partials/RefundDialog.vue";
-import { formatMoney } from "@/Utils/FormatMoney";
 import Receipt from "../Receipt.vue";
 
 const page = usePage<PageProps>();
@@ -401,17 +278,6 @@ const refundForm = ref({
 });
 const refundLoading = ref(false);
 const refundMeta = computed(() => activeOrder.value?.meta_data?.refund || null);
-const receiptPreviewUrl = computed(() =>
-    activeOrder.value ? route("receipt", { id: activeOrder.value.id }) : ""
-);
-
-const orderItemsTotal = computed(
-    () =>
-        activeOrder.value?.order_items?.reduce(
-            (sum, item) => sum + Number(item.sub_total),
-            0
-        ) ?? 0
-);
 
 // Debounced search
 let searchTimeout: NodeJS.Timeout;
@@ -520,6 +386,7 @@ const goToPage = (url: string | null) => {
 };
 
 const selectOrder = (order: any) => {
+    console.log(order);
     activeOrder.value = order;
 };
 
