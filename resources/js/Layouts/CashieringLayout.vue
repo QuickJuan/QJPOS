@@ -39,23 +39,14 @@
 
                             <!-- Tables Button -->
                             <button
+                                v-if="
+                                    !checkCurrentRoute('retail-cashier.tables')
+                                "
                                 @click="handleTablesClick"
                                 class="flex items-center gap-2 px-4 py-2 text-white rounded-lg bg-primary transition-colors"
                             >
                                 <TableCellsIcon class="w-5 h-5" />
                                 Tables
-                            </button>
-
-                            <!-- Cashiering Button -->
-                            <button
-                                v-if="
-                                    checkCurrentRoute('retail-cashier.tables')
-                                "
-                                @click="handleCashieringClick"
-                                class="flex items-center gap-2 px-4 py-2 text-white rounded-lg bg-primary transition-colors"
-                            >
-                                <TableCellsIcon class="w-5 h-5" />
-                                Cashiering
                             </button>
 
                             <!-- Review Transactions Button -->
@@ -66,47 +57,6 @@
                                 <DocumentTextIcon class="w-5 h-5" />
                                 Review Transactions
                             </button>
-
-                            <!-- More Options -->
-                            <div class="relative">
-                                <button
-                                    @click="toggleMoreOptions"
-                                    class="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                                >
-                                    <EllipsisHorizontalIcon class="w-5 h-5" />
-                                    More
-                                </button>
-
-                                <!-- More Options Dropdown -->
-                                <div
-                                    v-if="showMoreOptions"
-                                    class="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg py-2 min-w-48 z-50"
-                                >
-                                    <button
-                                        @click="handleReports"
-                                        class="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
-                                    >
-                                        <ChartBarIcon class="w-4 h-4" />
-                                        Reports
-                                    </button>
-                                    <button
-                                        @click="handleSettings"
-                                        class="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
-                                    >
-                                        <CogIcon class="w-4 h-4" />
-                                        Settings
-                                    </button>
-                                    <button
-                                        @click="handleHelp"
-                                        class="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
-                                    >
-                                        <QuestionMarkCircleIcon
-                                            class="w-4 h-4"
-                                        />
-                                        Help
-                                    </button>
-                                </div>
-                            </div>
                         </div>
                     </div>
 
@@ -131,15 +81,6 @@
             </div>
         </header>
 
-        <!-- Toggle Button for Mobile/Tablet Sidebar -->
-        <button
-            @click="toggleSidebar"
-            class="lg:hidden fixed top-4 left-4 z-50 bg-primary text-white rounded-full p-4 shadow-lg hover:bg-primary-600 transition-all"
-        >
-            <Bars3Icon v-if="!showSidebar" class="w-6 h-6" />
-            <XMarkIcon v-else class="w-6 h-6" />
-        </button>
-
         <!-- Sidebar Overlay (Mobile/Tablet) -->
         <div
             v-if="showSidebar"
@@ -150,7 +91,8 @@
         <!-- Sidebar (Mobile/Tablet) -->
         <aside
             :class="[
-                'lg:hidden fixed left-0 top-0 bottom-0 w-80 bg-white shadow-2xl z-40 transform transition-transform duration-300 ease-in-out overflow-y-auto',
+                'lg:hidden fixed left-0 bottom-0 w-80 bg-white shadow-2xl z-40 transform transition-transform duration-300 ease-in-out overflow-y-auto',
+                'top-[56px]',
                 showSidebar ? 'translate-x-0' : '-translate-x-full',
             ]"
         >
@@ -188,6 +130,7 @@
                 <!-- Action Buttons -->
                 <div class="space-y-3">
                     <button
+                        v-if="!checkCurrentRoute('retail-cashier.tables')"
                         @click="handleTablesClick"
                         class="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                     >
@@ -196,44 +139,11 @@
                     </button>
 
                     <button
-                        v-if="checkCurrentRoute('retail-cashier.tables')"
-                        @click="handleCashieringClick"
-                        class="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                    >
-                        <TableCellsIcon class="w-5 h-5" />
-                        <span class="font-medium">Cashiering</span>
-                    </button>
-
-                    <button
                         @click="handleReviewTransactionsClick"
                         class="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                     >
                         <DocumentTextIcon class="w-5 h-5" />
                         <span class="font-medium">Review Transactions</span>
-                    </button>
-
-                    <button
-                        @click="handleReports"
-                        class="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                    >
-                        <ChartBarIcon class="w-5 h-5" />
-                        <span class="font-medium">Reports</span>
-                    </button>
-
-                    <button
-                        @click="handleSettings"
-                        class="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                    >
-                        <CogIcon class="w-5 h-5" />
-                        <span class="font-medium">Settings</span>
-                    </button>
-
-                    <button
-                        @click="handleHelp"
-                        class="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                    >
-                        <QuestionMarkCircleIcon class="w-5 h-5" />
-                        <span class="font-medium">Help</span>
                     </button>
                 </div>
 
@@ -454,9 +364,11 @@ const handleClickOutside = (event: Event) => {
 
 onMounted(() => {
     document.addEventListener("click", handleClickOutside);
+    window.addEventListener("toggle-sidebar", toggleSidebar);
 });
 
 onUnmounted(() => {
     document.removeEventListener("click", handleClickOutside);
+    window.removeEventListener("toggle-sidebar", toggleSidebar);
 });
 </script>

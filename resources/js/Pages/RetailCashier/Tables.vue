@@ -1,43 +1,90 @@
 <template>
     <CashieringLayout :current-user="props.currentUser">
-        <div class="flex flex-col h-screen bg-gray-100 overflow-y-hidden">
-            <!-- Toolbar (sticky) -->
-            <div
-                class="flex flex-col md:flex-row md:items-center gap-3 p-3 bg-white shadow sticky top-0"
-            >
-                <div class="flex w-full items-center justify-between gap-4">
-                    <!-- Location Tabs (left) -->
-                    <div
-                        class="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 flex-1"
+        <!-- Fixed Header for Mobile/Tablet -->
+        <div
+            class="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-md"
+        >
+            <div class="flex items-center justify-between px-3 py-2">
+                <!-- Left: Menu Toggle -->
+                <button
+                    @click="toggleSidebar"
+                    class="bg-primary text-white rounded-lg p-2.5 shadow hover:bg-primary-600 transition-all"
+                >
+                    <svg
+                        class="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
                     >
-                        <div
-                            v-for="loc in locations"
-                            :key="loc.id"
-                            @click="selectedLocation = loc.id"
-                            :class="[
-                                'cursor-pointer whitespace-nowrap px-3 py-1 rounded text-sm font-semibold border flex items-center gap-1 transition-colors',
-                                selectedLocation === loc.id
-                                    ? 'bg-blue-600 text-white border-blue-600 shadow'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300',
-                            ]"
-                        >
-                            <span>{{ loc.name }}</span>
-                            <span>({{ loc.location_type }})</span>
-                            <span class="text-[10px] font-normal opacity-80">
-                                ({{ getTableCount(loc.id) }})
-                            </span>
-                        </div>
-                    </div>
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M4 6h16M4 12h16M4 18h16"
+                        ></path>
+                    </svg>
+                </button>
 
-                    <!-- Back Button (right) -->
-                    <div class="flex items-center gap-2 flex-shrink-0">
-                        <button
-                            @click="goBackToCashier"
-                            class="px-3 py-1 rounded bg-gray-600 text-white text-sm font-semibold hover:bg-gray-700"
-                        >
-                            ← Back to Cashier
-                        </button>
+                <!-- Center: Title -->
+                <h1 class="text-base font-bold text-gray-800">Tables</h1>
+
+                <!-- Right: Back to Cashier -->
+                <button
+                    @click="goBackToCashier"
+                    class="bg-gray-600 text-white rounded-lg p-2.5 shadow hover:bg-gray-700 transition-all"
+                >
+                    <svg
+                        class="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                        ></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <div
+            class="flex flex-col h-screen bg-gray-100 overflow-y-hidden pt-[56px] lg:pt-0"
+        >
+            <!-- Toolbar (sticky on desktop, part of content flow on mobile) -->
+            <div class="p-3 bg-white shadow lg:sticky lg:top-0">
+                <!-- Location Tabs Grid -->
+                <div
+                    class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2"
+                >
+                    <div
+                        v-for="loc in locations"
+                        :key="loc.id"
+                        @click="selectedLocation = loc.id"
+                        :class="[
+                            'cursor-pointer px-2 py-1.5 rounded text-xs sm:text-sm font-semibold border flex flex-col sm:flex-row items-center justify-center gap-1 transition-colors',
+                            selectedLocation === loc.id
+                                ? 'bg-blue-600 text-white border-blue-600 shadow'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300',
+                        ]"
+                    >
+                        <span class="truncate">{{ loc.name }}</span>
+                        <span class="text-[10px] opacity-80">
+                            ({{ getTableCount(loc.id) }})
+                        </span>
                     </div>
+                </div>
+
+                <!-- Back Button (Desktop only) -->
+                <div class="hidden lg:flex justify-end mt-3">
+                    <button
+                        @click="goBackToCashier"
+                        class="px-3 py-1 rounded bg-gray-600 text-white text-sm font-semibold hover:bg-gray-700"
+                    >
+                        ← Back to Cashier
+                    </button>
                 </div>
             </div>
 
@@ -238,6 +285,11 @@ const selectedTransferTarget = ref<any>(null);
 // Toast
 const toast = useToast();
 
+// Toggle sidebar (emit to parent layout)
+const toggleSidebar = () => {
+    window.dispatchEvent(new CustomEvent("toggle-sidebar"));
+};
+
 // Computeds
 const filteredTables = computed(() =>
     selectedLocation.value === null
@@ -273,7 +325,8 @@ const availableTransferTargets = computed(() => {
         (t) =>
             t.status === "vacant" &&
             t.id !== selectedTable.value?.id &&
-            t.table_room_location_id === selectedTable.value?.table_room_location_id
+            t.table_room_location_id ===
+                selectedTable.value?.table_room_location_id
     );
 });
 
@@ -315,7 +368,6 @@ const handleTakeOrder = (data: any) => {
                 table_id: selectedTable.value.id,
                 pax: data.pax,
                 guest_name: data.guest_name,
-
             },
             {
                 onSuccess: () => {

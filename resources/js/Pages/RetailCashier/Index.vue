@@ -1,12 +1,65 @@
 <template>
     <CashieringLayout :current-user="props.currentUser">
+        <!-- Fixed Header for Mobile/Tablet with Toggle Buttons -->
+        <div
+            class="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-md"
+        >
+            <div class="flex items-center justify-between px-3 py-2">
+                <!-- Left: Menu Toggle -->
+                <button
+                    @click="toggleSidebar"
+                    class="bg-primary text-white rounded-lg p-2.5 shadow hover:bg-primary-600 transition-all"
+                >
+                    <svg
+                        class="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M4 6h16M4 12h16M4 18h16"
+                        ></path>
+                    </svg>
+                </button>
+
+                <!-- Center: Title -->
+                <h1 class="text-base font-bold text-gray-800">QuickJuan POS</h1>
+
+                <!-- Right: Cart Toggle -->
+                <button
+                    @click="toggleOrderSummary"
+                    class="bg-primary text-white rounded-lg p-2.5 shadow hover:bg-primary-600 transition-all relative"
+                >
+                    <ShoppingCartIcon class="w-5 h-5" />
+                    <span
+                        v-if="orderItems.length > 0"
+                        class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold"
+                    >
+                        {{ orderItems.length }}
+                    </span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Order Summary Overlay (Mobile/Tablet) -->
+        <div
+            v-if="showOrderSummary"
+            @click="toggleOrderSummary"
+            class="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-20 transition-opacity"
+        ></div>
+
         <!-- Main responsive grid -->
-        <div class="flex flex-col lg:flex-row h-full min-w-0 overflow-hidden">
+        <div
+            class="flex flex-col lg:flex-row h-full min-w-0 overflow-hidden pt-[56px] lg:pt-0"
+        >
             <!-- Categories & Products Area -->
             <section
                 :class="[
                     'bg-gray-50 transition-all duration-300 flex flex-col overflow-hidden',
-                    'h-1/2 lg:h-full lg:flex-1',
+                    'h-full lg:h-full lg:flex-1',
                 ]"
             >
                 <!-- Categories View - Full Screen -->
@@ -15,7 +68,7 @@
                     class="h-full overflow-y-auto p-3 sm:p-4 lg:p-6"
                 >
                     <h2
-                        class="text-2xl sm:text-3xl lg:text-4xl font-bold text-secondary-800 mb-4 sm:mb-6 flex-shrink-0"
+                        class="hidden lg:block text-2xl sm:text-3xl lg:text-4xl font-bold text-secondary-800 mb-4 sm:mb-6 flex-shrink-0"
                     >
                         Select Category
                     </h2>
@@ -82,9 +135,17 @@
                 </div>
             </section>
 
-            <!-- Right: Order Summary - Shows below on mobile (half screen), beside on desktop -->
-            <section
-                class="h-1/2 lg:h-full w-full lg:w-[400px] xl:w-[450px] 2xl:w-[500px] flex-shrink-0 transition-all duration-300 overflow-hidden"
+            <!-- Right: Order Summary - Sidebar on mobile/tablet, fixed position on desktop -->
+            <aside
+                :class="[
+                    'lg:relative fixed right-0 bottom-0 z-30 transform transition-transform duration-300 ease-in-out overflow-hidden',
+                    'top-[56px] lg:top-0',
+                    'w-full sm:w-96 lg:w-[400px] xl:w-[450px] 2xl:w-[500px] flex-shrink-0',
+                    'bg-white lg:bg-transparent shadow-2xl lg:shadow-none',
+                    showOrderSummary
+                        ? 'translate-x-0'
+                        : 'translate-x-full lg:translate-x-0',
+                ]"
             >
                 <OrderSummary
                     :orderItems="orderItems"
@@ -105,7 +166,7 @@
                     @selected-order-type="updateOrderType"
                     @show-receipt="handleShowReceipt"
                 />
-            </section>
+            </aside>
         </div>
 
         <PackagingSelectionModal
@@ -133,6 +194,7 @@ import BeverageIcon from "@/Components/icons/CashierIcons/BeverageIcon.vue";
 import FoodIcon from "@/Components/icons/CashierIcons/FoodIcon.vue";
 import DessertIcon from "@/Components/icons/CashierIcons/DessertIcon.vue";
 import ShoppingBagIcon from "@/Components/icons/CashierIcons/ShoppingBagIcon.vue";
+import { ShoppingCartIcon } from "@heroicons/vue/24/outline";
 
 const props = defineProps<{
     categories: { data: Category[] } | Category[];
@@ -161,6 +223,7 @@ const selectedOrderItem = ref<any>(null);
 const selectedOrderType = ref<any>("dine-in");
 const showPackagingModal = ref(false);
 const selectedProductForPackaging = ref<any>(null);
+const showOrderSummary = ref(false);
 const receiptData = ref({
     receiptNumber: "",
     date: "",
@@ -286,6 +349,17 @@ const backToCategories = () => {
 
     // Navigate back to main cashier page
     router.visit(route("retail-cashier.index", queryParams));
+};
+
+// Toggle order summary sidebar
+const toggleOrderSummary = () => {
+    showOrderSummary.value = !showOrderSummary.value;
+};
+
+// Toggle main sidebar (emit to parent layout)
+const toggleSidebar = () => {
+    // Dispatch a custom event that CashieringLayout can listen to
+    window.dispatchEvent(new CustomEvent("toggle-sidebar"));
 };
 
 // Update order type
