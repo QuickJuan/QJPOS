@@ -34,7 +34,7 @@
     <!-- Responsive product grid -->
     <div class="px-3 sm:px-4 lg:px-6 pb-6">
         <div
-            class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6"
+            class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6"
         >
             <div
                 v-for="product in products"

@@ -1,9 +1,140 @@
 <template>
     <div class="h-screen bg-gray-50 flex flex-col">
+        <!-- Header (Desktop Only) -->
+        <header
+            class="hidden lg:block bg-white border-b border-gray-200 shadow-lg"
+        >
+            <div class="px-6 py-4">
+                <div class="grid grid-cols-12 gap-4 items-center">
+                    <!-- Left Column: Cashier Info -->
+                    <div class="col-span-2">
+                        <div class="text-sm">
+                            <p class="text-gray-500">Cashier</p>
+                            <p class="font-semibold text-gray-900">
+                                {{ cashierName }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Center Column: Barcode Scanner & Options -->
+                    <div class="col-span-8">
+                        <div class="flex items-center gap-4 justify-start">
+                            <!-- Barcode Scanner -->
+                            <div class="flex items-center gap-2">
+                                <QrCodeIcon class="w-5 h-5 text-gray-600" />
+                                <input
+                                    v-model="barcodeInput"
+                                    type="text"
+                                    placeholder="Scan barcode or enter product code..."
+                                    class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64"
+                                    @keyup.enter="handleBarcodeSearch"
+                                />
+                                <button
+                                    @click="handleBarcodeSearch"
+                                    class="px-4 py-2 bg-primary text-white rounded-lg transition-colors"
+                                >
+                                    Search
+                                </button>
+                            </div>
+
+                            <!-- Tables Button -->
+                            <button
+                                @click="handleTablesClick"
+                                class="flex items-center gap-2 px-4 py-2 text-white rounded-lg bg-primary transition-colors"
+                            >
+                                <TableCellsIcon class="w-5 h-5" />
+                                Tables
+                            </button>
+
+                            <!-- Cashiering Button -->
+                            <button
+                                v-if="
+                                    checkCurrentRoute('retail-cashier.tables')
+                                "
+                                @click="handleCashieringClick"
+                                class="flex items-center gap-2 px-4 py-2 text-white rounded-lg bg-primary transition-colors"
+                            >
+                                <TableCellsIcon class="w-5 h-5" />
+                                Cashiering
+                            </button>
+
+                            <!-- Review Transactions Button -->
+                            <button
+                                @click="handleReviewTransactionsClick"
+                                class="flex items-center gap-2 px-4 py-2 text-white rounded-lg bg-primary transition-colors"
+                            >
+                                <DocumentTextIcon class="w-5 h-5" />
+                                Review Transactions
+                            </button>
+
+                            <!-- More Options -->
+                            <div class="relative">
+                                <button
+                                    @click="toggleMoreOptions"
+                                    class="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                                >
+                                    <EllipsisHorizontalIcon class="w-5 h-5" />
+                                    More
+                                </button>
+
+                                <!-- More Options Dropdown -->
+                                <div
+                                    v-if="showMoreOptions"
+                                    class="absolute top-full mt-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg py-2 min-w-48 z-50"
+                                >
+                                    <button
+                                        @click="handleReports"
+                                        class="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
+                                    >
+                                        <ChartBarIcon class="w-4 h-4" />
+                                        Reports
+                                    </button>
+                                    <button
+                                        @click="handleSettings"
+                                        class="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
+                                    >
+                                        <CogIcon class="w-4 h-4" />
+                                        Settings
+                                    </button>
+                                    <button
+                                        @click="handleHelp"
+                                        class="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
+                                    >
+                                        <QuestionMarkCircleIcon
+                                            class="w-4 h-4"
+                                        />
+                                        Help
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Close Shift & Logout -->
+                    <div class="col-span-2">
+                        <div class="flex items-center gap-2 justify-end">
+                            <button
+                                @click="handleCloseShift"
+                                class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm"
+                            >
+                                Close Shift
+                            </button>
+                            <button
+                                @click="handleLogout"
+                                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                            >
+                                Logout
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
         <!-- Toggle Button for Mobile/Tablet Sidebar -->
         <button
             @click="toggleSidebar"
-            class="lg:hidden fixed bottom-4 left-4 z-50 bg-primary text-white rounded-full p-4 shadow-lg hover:bg-primary-600 transition-all"
+            class="lg:hidden fixed top-4 left-4 z-50 bg-primary text-white rounded-full p-4 shadow-lg hover:bg-primary-600 transition-all"
         >
             <Bars3Icon v-if="!showSidebar" class="w-6 h-6" />
             <XMarkIcon v-else class="w-6 h-6" />
@@ -127,136 +258,6 @@
         <div class="flex-1 flex flex-col bg-gray-50 overflow-y-auto">
             <slot />
         </div>
-
-        <!-- Footer (Desktop Only) -->
-        <footer
-            class="hidden lg:block bg-white border-t border-gray-200 shadow-lg"
-        >
-            <div class="px-6 py-4">
-                <div class="grid grid-cols-12 gap-4 items-center">
-                    <!-- Left Column: Cashier Info -->
-                    <div class="col-span-2">
-                        <div class="text-sm">
-                            <p class="text-gray-500">Cashier</p>
-                            <p class="font-semibold text-gray-900">
-                                {{ cashierName }}
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Center Column: Barcode Scanner & Options -->
-                    <div class="col-span-8">
-                        <div class="flex items-center gap-4 justify-start">
-                            <!-- Barcode Scanner -->
-                            <div class="flex items-center gap-2">
-                                <QrCodeIcon class="w-5 h-5 text-gray-600" />
-                                <input
-                                    v-model="barcodeInput"
-                                    type="text"
-                                    placeholder="Scan barcode or enter product code..."
-                                    class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64"
-                                    @keyup.enter="handleBarcodeSearch"
-                                />
-                                <button
-                                    @click="handleBarcodeSearch"
-                                    class="px-4 py-2 bg-primary text-white rounded-lg transition-colors"
-                                >
-                                    Search
-                                </button>
-                            </div>
-
-                            <!-- Hold Button -->
-                            <button
-                                @click="handleTablesClick"
-                                class="flex items-center gap-2 px-4 py-2 text-white rounded-lg bg-primary transition-colors"
-                            >
-                                <TableCellsIcon class="w-5 h-5" />
-                                Tables
-                            </button>
-
-                            <button
-                                v-if="
-                                    checkCurrentRoute('retail-cashier.tables')
-                                "
-                                @click="handleCashieringClick"
-                                class="flex items-center gap-2 px-4 py-2 text-white rounded-lg bg-primary transition-colors"
-                            >
-                                <TableCellsIcon class="w-5 h-5" />
-                                Cashiering
-                            </button>
-
-                            <!-- Tables Button -->
-                            <button
-                                @click="handleReviewTransactionsClick"
-                                class="flex items-center gap-2 px-4 py-2 text-white rounded-lg bg-primary transition-colors"
-                            >
-                                <TableCellsIcon class="w-5 h-5" />
-                                Review Transactions
-                            </button>
-
-                            <!-- More Options -->
-                            <div class="relative">
-                                <button
-                                    @click="toggleMoreOptions"
-                                    class="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                                >
-                                    <EllipsisHorizontalIcon class="w-5 h-5" />
-                                    More
-                                </button>
-
-                                <!-- More Options Dropdown -->
-                                <div
-                                    v-if="showMoreOptions"
-                                    class="absolute bottom-full mb-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg py-2 min-w-48 z-50"
-                                >
-                                    <button
-                                        @click="handleReports"
-                                        class="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
-                                    >
-                                        <ChartBarIcon class="w-4 h-4" />
-                                        Reports
-                                    </button>
-                                    <button
-                                        @click="handleSettings"
-                                        class="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
-                                    >
-                                        <CogIcon class="w-4 h-4" />
-                                        Settings
-                                    </button>
-                                    <button
-                                        @click="handleHelp"
-                                        class="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
-                                    >
-                                        <QuestionMarkCircleIcon
-                                            class="w-4 h-4"
-                                        />
-                                        Help
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Right Column: Close Shift & Logout -->
-                    <div class="col-span-2">
-                        <div class="flex items-center gap-2 justify-end">
-                            <button
-                                @click="handleCloseShift"
-                                class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm"
-                            >
-                                Close Shift
-                            </button>
-                            <button
-                                @click="handleLogout"
-                                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
-                            >
-                                Logout
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </footer>
 
         <!-- Toast Notifications -->
         <Toast />

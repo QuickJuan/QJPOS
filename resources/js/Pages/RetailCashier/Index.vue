@@ -1,26 +1,26 @@
 <template>
     <CashieringLayout :current-user="props.currentUser">
         <!-- Main responsive grid -->
-        <div class="flex flex-col lg:flex-row h-full min-w-0">
-            <!-- Categories & Products Area - Full width when categories shown -->
+        <div class="flex flex-col lg:flex-row h-full min-w-0 overflow-hidden">
+            <!-- Categories & Products Area -->
             <section
                 :class="[
-                    'bg-gray-50 overflow-hidden min-h-0 transition-all duration-300',
-                    selectedCategoryId === null ? 'flex-1' : 'flex-1',
+                    'bg-gray-50 transition-all duration-300 flex flex-col overflow-hidden',
+                    'h-1/2 lg:h-full lg:flex-1',
                 ]"
             >
                 <!-- Categories View - Full Screen -->
                 <div
                     v-if="selectedCategoryId === null"
-                    class="h-full p-3 sm:p-4 lg:p-6"
+                    class="h-full overflow-y-auto p-3 sm:p-4 lg:p-6"
                 >
                     <h2
-                        class="text-2xl sm:text-3xl lg:text-4xl font-bold text-secondary-800 mb-4 sm:mb-6"
+                        class="text-2xl sm:text-3xl lg:text-4xl font-bold text-secondary-800 mb-4 sm:mb-6 flex-shrink-0"
                     >
                         Select Category
                     </h2>
                     <div
-                        class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6"
+                        class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6 pb-4"
                     >
                         <div
                             v-for="category in activeCategories"
@@ -82,12 +82,9 @@
                 </div>
             </section>
 
-            <!-- Right: Order Summary - Hidden on mobile when showing categories, visible when showing products -->
+            <!-- Right: Order Summary - Shows below on mobile (half screen), beside on desktop -->
             <section
-                :class="[
-                    'w-full lg:w-[400px] xl:w-[450px] 2xl:w-[500px] flex-shrink-0 transition-all duration-300',
-                    selectedCategoryId === null ? 'hidden lg:block' : 'block',
-                ]"
+                class="h-1/2 lg:h-full w-full lg:w-[400px] xl:w-[450px] 2xl:w-[500px] flex-shrink-0 transition-all duration-300 overflow-hidden"
             >
                 <OrderSummary
                     :orderItems="orderItems"
