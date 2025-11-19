@@ -119,6 +119,7 @@ Route::middleware([
                     Route::controller(CashierSessionController::class)
                         ->group(function () {
                             Route::get('/', 'index')->name('index');
+                            Route::get('/{categorySlug?}', 'index')->name('category');
                             Route::get('/tables', 'tables')->name('tables');
                             Route::get('/preview', 'preview')->name('preview');
                             Route::get('/product/{product}/options', 'productOptions')->name('product.options');

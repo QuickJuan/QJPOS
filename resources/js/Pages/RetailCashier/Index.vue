@@ -1,42 +1,93 @@
 <template>
     <CashieringLayout :current-user="props.currentUser">
-        <!-- Main responsive grid: categories, products, and order panel -->
+        <!-- Main responsive grid -->
         <div class="flex flex-col lg:flex-row h-full min-w-0">
-            <!-- Categories - Top horizontal on mobile, left sidebar on desktop -->
-            <aside
-                class="bg-gray-50 flex-shrink-0 overflow-hidden w-full lg:w-28 xl:w-64 lg:h-full"
+            <!-- Categories & Products Area - Full width when categories shown -->
+            <section
+                :class="[
+                    'bg-gray-50 overflow-hidden min-h-0 transition-all duration-300',
+                    selectedCategoryId === null ? 'flex-1' : 'flex-1',
+                ]"
             >
-                <CategoryThumbnails
-                    :categories="activeCategories"
-                    :selected-category-id="selectedCategoryId"
-                    @categorySelected="handleCategorySelection"
-                />
-            </aside>
+                <!-- Categories View - Full Screen -->
+                <div
+                    v-if="selectedCategoryId === null"
+                    class="h-full p-3 sm:p-4 lg:p-6"
+                >
+                    <h2
+                        class="text-2xl sm:text-3xl lg:text-4xl font-bold text-secondary-800 mb-4 sm:mb-6"
+                    >
+                        Select Category
+                    </h2>
+                    <div
+                        class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6"
+                    >
+                        <div
+                            v-for="category in activeCategories"
+                            :key="category.id"
+                            @click="handleCategorySelection(category)"
+                            class="bg-white rounded-xl cursor-pointer hover:shadow-xl transition-all duration-200 border-2 border-gray-200 hover:border-primary-500 group flex flex-col overflow-hidden"
+                        >
+                            <!-- Category Image -->
+                            <div class="relative aspect-square bg-gray-50">
+                                <img
+                                    v-if="category.featured_image_url"
+                                    :src="category.featured_image_url"
+                                    :alt="category.name"
+                                    class="w-auto h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                                />
 
-            <!-- Center: Products Area -->
-            <section class="flex-1 bg-gray-50 overflow-hidden min-h-0">
-                <!-- Products - Scrollable area -->
-                <div class="h-full p-3 sm:p-4 lg:p-6 overflow-y-auto">
+                                <div
+                                    v-else
+                                    class="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100"
+                                >
+                                    <component
+                                        :is="
+                                            getCategoryIconComponent(
+                                                category.name
+                                            )
+                                        "
+                                        class="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 text-primary-500"
+                                    />
+                                </div>
+                            </div>
+
+                            <!-- Category Name -->
+                            <div
+                                class="p-4 sm:p-5 lg:p-6 bg-white border-t border-gray-100"
+                            >
+                                <h3
+                                    class="font-bold text-base sm:text-lg lg:text-xl text-center text-secondary-800 mb-2 min-h-[3rem] flex items-center justify-center"
+                                >
+                                    {{ category.name }}
+                                </h3>
+                                <!-- <p
+                                    class="text-sm sm:text-base text-gray-500 text-center"
+                                >
+                                    {{ category.products?.length || 0 }} items
+                                </p> -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Products View - Shown when category selected -->
+                <div v-else class="h-full overflow-y-auto">
                     <ProductThumbnails
-                        v-if="selectedCategoryId"
                         :products="filteredProducts"
                         :category-name="selectedCategoryName"
                         @backToCategories="backToCategories"
                         @addToCart="addToCart"
                     />
-                    <div v-else class="flex items-center justify-center h-full">
-                        <p
-                            class="text-gray-500 text-base sm:text-lg text-center px-4"
-                        >
-                            Select a category to view products
-                        </p>
-                    </div>
                 </div>
             </section>
 
-            <!-- Right: Order Summary - Full width on mobile, fixed width on desktop -->
+            <!-- Right: Order Summary - Hidden on mobile when showing categories, visible when showing products -->
             <section
-                class="w-full lg:w-[400px] xl:w-[450px] 2xl:w-[500px] flex-shrink-0"
+                :class="[
+                    'w-full lg:w-[400px] xl:w-[450px] 2xl:w-[500px] flex-shrink-0 transition-all duration-300',
+                    selectedCategoryId === null ? 'hidden lg:block' : 'block',
+                ]"
             >
                 <OrderSummary
                     :orderItems="orderItems"
@@ -75,13 +126,16 @@ import { router, usePage } from "@inertiajs/vue3";
 import { route } from "ziggy-js";
 import { useToast } from "primevue";
 import Category from "@/Types/Category";
-import CategoryThumbnails from "@/Components/RetailCashier/CategoryThumbnails.vue";
 import ProductThumbnails from "@/Components/RetailCashier/ProductThumbnails.vue";
 import PageProps from "@/Types/PageProps";
 import OrderSummary from "@/Components/RetailCashier/OrderSummary.vue";
 import CashieringLayout from "@/Layouts/CashieringLayout.vue";
 import PackagingSelectionModal from "@/Components/RetailCashier/PackagingSelectionModal.vue";
 import { useCashierCache } from "@/composables/useCashierCache";
+import BeverageIcon from "@/Components/icons/CashierIcons/BeverageIcon.vue";
+import FoodIcon from "@/Components/icons/CashierIcons/FoodIcon.vue";
+import DessertIcon from "@/Components/icons/CashierIcons/DessertIcon.vue";
+import ShoppingBagIcon from "@/Components/icons/CashierIcons/ShoppingBagIcon.vue";
 
 const props = defineProps<{
     categories: { data: Category[] } | Category[];
@@ -99,6 +153,7 @@ const props = defineProps<{
     taxRate: number;
     billFooter: any;
     receiptFooter: any;
+    selectedCategorySlug?: string | null;
 }>();
 
 const page = usePage<PageProps>();
@@ -106,7 +161,6 @@ const toast = useToast();
 const tableId = ref(null);
 const locationType = ref(null);
 const selectedOrderItem = ref<any>(null);
-const selectedCategoryId = ref<number | null>(null);
 const selectedOrderType = ref<any>("dine-in");
 const showPackagingModal = ref(false);
 const selectedProductForPackaging = ref<any>(null);
@@ -129,6 +183,17 @@ const {
 } = useCashierCache();
 
 const orderItems = computed(() => props.cartItems || []);
+
+// Compute selected category ID from slug in URL
+const selectedCategoryId = computed(() => {
+    if (!props.selectedCategorySlug) {
+        return null;
+    }
+    const category = activeCategories.value.find(
+        (cat) => cat.slug === props.selectedCategorySlug
+    );
+    return category?.id || null;
+});
 
 const activeCategories = computed(() => {
     const getCategoriesData = (): Category[] => {
@@ -188,13 +253,42 @@ const selectedCategoryName = computed(() => {
 });
 
 // Handle category selection
-const handleCategorySelection = (categoryId: number | null) => {
-    selectedCategoryId.value = categoryId;
+const handleCategorySelection = (category: Category) => {
+    // Get current query params
+    const params = new URLSearchParams(window.location.search);
+    const queryParams: any = {};
+
+    if (params.get("tableId")) {
+        queryParams.tableId = params.get("tableId");
+    }
+    if (params.get("locationType")) {
+        queryParams.locationType = params.get("locationType");
+    }
+
+    // Navigate to category URL
+    router.visit(
+        route("retail-cashier.category", {
+            categorySlug: category.slug,
+            ...queryParams,
+        })
+    );
 };
 
 // Back to categories
 const backToCategories = () => {
-    selectedCategoryId.value = null;
+    // Get current query params
+    const params = new URLSearchParams(window.location.search);
+    const queryParams: any = {};
+
+    if (params.get("tableId")) {
+        queryParams.tableId = params.get("tableId");
+    }
+    if (params.get("locationType")) {
+        queryParams.locationType = params.get("locationType");
+    }
+
+    // Navigate back to main cashier page
+    router.visit(route("retail-cashier.index", queryParams));
 };
 
 // Update order type
@@ -263,15 +357,6 @@ onMounted(() => {
     if (props.availableDiscounts && props.availableDiscounts.length > 0) {
         loadDiscounts(props.availableDiscounts);
     }
-
-    nextTick(() => {
-        if (
-            selectedCategoryId.value === null &&
-            activeCategories.value.length > 0
-        ) {
-            selectedCategoryId.value = activeCategories.value[0].id;
-        }
-    });
 
     // Get the tableId in URL if available
     const params = new URLSearchParams(window.location.search);
@@ -447,5 +532,22 @@ const handlePackagingConfirm = (packaging: any) => {
 const handlePackagingCancel = () => {
     showPackagingModal.value = false;
     selectedProductForPackaging.value = null;
+};
+
+const getCategoryIconComponent = (categoryName: string | undefined | null) => {
+    if (!categoryName) {
+        return ShoppingBagIcon;
+    }
+
+    const name = categoryName.toLowerCase();
+    if (name.includes("beverage") || name.includes("drink")) {
+        return BeverageIcon;
+    } else if (name.includes("food") || name.includes("meal")) {
+        return FoodIcon;
+    } else if (name.includes("dessert") || name.includes("sweet")) {
+        return DessertIcon;
+    } else {
+        return ShoppingBagIcon;
+    }
 };
 </script>
