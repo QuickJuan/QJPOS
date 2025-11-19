@@ -2,19 +2,21 @@
 
 declare (strict_types = 1);
 
-use App\Http\Controllers\AttendanceController;
+use App\Models\User;
+use Inertia\Inertia;
+use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
-use App\Http\Controllers\CashierSessionController;
 use App\Http\Controllers\HomeController;
-use App\Http\Controllers\TableManagementController;
 use App\Http\Controllers\TableRoomController;
-use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
+use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\CashierSessionController;
+use App\Http\Controllers\TableManagementController;
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
-use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
+use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 
 /*
 |--------------------------------------------------------------------------
@@ -120,6 +122,7 @@ Route::middleware([
                             Route::get('/tables', 'tables')->name('tables');
                             Route::get('/preview', 'preview')->name('preview');
                             Route::get('/product/{product}/options', 'productOptions')->name('product.options');
+                            Route::get('/{categorySlug?}', 'index')->name('category');
                             Route::post('/session/start', 'startSession')->name('session.start');
                             Route::post('/session/close', 'closeSession')->name('session.close');
                             Route::post('/cart/create-order', 'createOrder')->name('cart.create-order');
@@ -163,6 +166,17 @@ Route::middleware([
                     Route::put('/tables/{tableId}/unmerge', 'unmergeTable')->name('unmerge');
                     Route::put('/tables/{tableId}/merge', 'mergeTable')->name('merge');
                     Route::delete('/tables/{tableId}', 'destroy')->name('destroy');
+                });
+
+            // ROUTES FOR TRANSACTIONS
+            Route::as('transactions.')
+                ->prefix('/transactions')
+                ->controller(TransactionController::class)
+                ->group(function () {
+                    Route::get('/', 'index')->name('index');
+                    Route::get('/api/orders', [\App\Http\Controllers\OrderController::class, 'index'])->name('api.orders');
+                    Route::get('/api/orders/{order}', [\App\Http\Controllers\OrderController::class, 'show'])->name('api.orders.show');
+                    Route::post('/api/orders/{order}/refund', [\App\Http\Controllers\OrderController::class, 'refund'])->name('api.orders.refund');
                 });
         });
 });

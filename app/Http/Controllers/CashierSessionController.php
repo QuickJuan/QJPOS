@@ -29,7 +29,7 @@ class CashierSessionController extends Controller
         $this->discountService       = $discountService;
     }
 
-    public function index(Request $request): Response
+    public function index(Request $request, ?string $categorySlug = null): Response
     {
         // Check if the current auth user has pending cashiering.
         $pendingCashiering = $this->cashierSessionService->model->openSession()->first();
@@ -70,6 +70,9 @@ class CashierSessionController extends Controller
             $billFooter,
             $receiptFooter
         );
+
+        // Add selected category slug to view data
+        $viewData['selectedCategorySlug'] = $categorySlug;
 
         return Inertia::render('RetailCashier/Index', $viewData);
     }

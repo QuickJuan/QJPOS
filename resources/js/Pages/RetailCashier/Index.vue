@@ -1,42 +1,151 @@
 <template>
     <CashieringLayout :current-user="props.currentUser">
-        <!-- Main responsive grid: categories, products, and order panel -->
-        <div class="flex flex-col lg:flex-row h-full min-w-0">
-            <!-- Categories - Top horizontal on mobile, left sidebar on desktop -->
-            <aside
-                class="bg-gray-50 flex-shrink-0 overflow-hidden w-full lg:w-28 xl:w-64 lg:h-full"
-            >
-                <CategoryThumbnails
-                    :categories="activeCategories"
-                    :selected-category-id="selectedCategoryId"
-                    @categorySelected="handleCategorySelection"
-                />
-            </aside>
+        <!-- Fixed Header for Mobile/Tablet with Toggle Buttons -->
+        <div
+            class="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-md"
+        >
+            <div class="flex items-center justify-between px-3 py-2">
+                <!-- Left: Menu Toggle -->
+                <button
+                    @click="toggleSidebar"
+                    class="bg-primary text-white rounded-lg p-2.5 shadow hover:bg-primary-600 transition-all"
+                >
+                    <svg
+                        class="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M4 6h16M4 12h16M4 18h16"
+                        ></path>
+                    </svg>
+                </button>
 
-            <!-- Center: Products Area -->
-            <section class="flex-1 bg-gray-50 overflow-hidden min-h-0">
-                <!-- Products - Scrollable area -->
-                <div class="h-full p-3 sm:p-4 lg:p-6 overflow-y-auto">
+                <!-- Center: Title -->
+                <h1 class="text-base font-bold text-gray-800">QuickJuan POS</h1>
+
+                <!-- Right: Cart Toggle -->
+                <button
+                    @click="toggleOrderSummary"
+                    class="bg-primary text-white rounded-lg p-2.5 shadow hover:bg-primary-600 transition-all relative"
+                >
+                    <ShoppingCartIcon class="w-5 h-5" />
+                    <span
+                        v-if="orderItems.length > 0"
+                        class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold"
+                    >
+                        {{ orderItems.length }}
+                    </span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Order Summary Overlay (Mobile/Tablet) -->
+        <div
+            v-if="showOrderSummary"
+            @click="toggleOrderSummary"
+            class="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-20 transition-opacity"
+        ></div>
+
+        <!-- Main responsive grid -->
+        <div
+            class="flex flex-col lg:flex-row h-full min-w-0 overflow-hidden pt-[56px] lg:pt-0"
+        >
+            <!-- Categories & Products Area -->
+            <section
+                :class="[
+                    'bg-gray-50 transition-all duration-300 flex flex-col overflow-hidden',
+                    'h-full lg:h-full lg:flex-1',
+                ]"
+            >
+                <!-- Categories View - Full Screen -->
+                <div
+                    v-if="selectedCategoryId === null"
+                    class="h-full overflow-y-auto p-3 sm:p-4 lg:p-6"
+                >
+                    <h2
+                        class="hidden lg:block text-2xl sm:text-3xl lg:text-4xl font-bold text-secondary-800 mb-4 sm:mb-6 flex-shrink-0"
+                    >
+                        Select Category
+                    </h2>
+                    <div
+                        class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6 pb-4"
+                    >
+                        <div
+                            v-for="category in activeCategories"
+                            :key="category.id"
+                            @click="handleCategorySelection(category)"
+                            class="bg-white rounded-xl cursor-pointer hover:shadow-xl transition-all duration-200 border-2 border-gray-200 hover:border-primary-500 group flex flex-col overflow-hidden"
+                        >
+                            <!-- Category Image -->
+                            <div class="relative aspect-square bg-gray-50">
+                                <img
+                                    v-if="category.featured_image_url"
+                                    :src="category.featured_image_url"
+                                    :alt="category.name"
+                                    class="w-auto h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                                />
+
+                                <div
+                                    v-else
+                                    class="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100"
+                                >
+                                    <component
+                                        :is="
+                                            getCategoryIconComponent(
+                                                category.name
+                                            )
+                                        "
+                                        class="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 text-primary-500"
+                                    />
+                                </div>
+                            </div>
+
+                            <!-- Category Name -->
+                            <div
+                                class="p-4 sm:p-5 lg:p-6 bg-white border-t border-gray-100"
+                            >
+                                <h3
+                                    class="font-bold text-base sm:text-lg lg:text-xl text-center text-secondary-800 mb-2 min-h-[3rem] flex items-center justify-center"
+                                >
+                                    {{ category.name }}
+                                </h3>
+                                <!-- <p
+                                    class="text-sm sm:text-base text-gray-500 text-center"
+                                >
+                                    {{ category.products?.length || 0 }} items
+                                </p> -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Products View - Shown when category selected -->
+                <div v-else class="h-full overflow-y-auto">
                     <ProductThumbnails
-                        v-if="selectedCategoryId"
                         :products="filteredProducts"
                         :category-name="selectedCategoryName"
                         @backToCategories="backToCategories"
                         @addToCart="addToCart"
                     />
-                    <div v-else class="flex items-center justify-center h-full">
-                        <p
-                            class="text-gray-500 text-base sm:text-lg text-center px-4"
-                        >
-                            Select a category to view products
-                        </p>
-                    </div>
                 </div>
             </section>
 
-            <!-- Right: Order Summary - Full width on mobile, fixed width on desktop -->
-            <section
-                class="w-full lg:w-[400px] xl:w-[450px] 2xl:w-[500px] flex-shrink-0"
+            <!-- Right: Order Summary - Sidebar on mobile/tablet, fixed position on desktop -->
+            <aside
+                :class="[
+                    'lg:relative fixed right-0 bottom-0 z-30 transform transition-transform duration-300 ease-in-out overflow-hidden',
+                    'top-[56px] lg:top-0',
+                    'w-full sm:w-96 lg:w-[400px] xl:w-[450px] 2xl:w-[500px] flex-shrink-0',
+                    'bg-white lg:bg-transparent shadow-2xl lg:shadow-none',
+                    showOrderSummary
+                        ? 'translate-x-0'
+                        : 'translate-x-full lg:translate-x-0',
+                ]"
             >
                 <OrderSummary
                     :orderItems="orderItems"
@@ -57,7 +166,7 @@
                     @selected-order-type="updateOrderType"
                     @show-receipt="handleShowReceipt"
                 />
-            </section>
+            </aside>
         </div>
 
         <PackagingSelectionModal
@@ -75,13 +184,17 @@ import { router, usePage } from "@inertiajs/vue3";
 import { route } from "ziggy-js";
 import { useToast } from "primevue";
 import Category from "@/Types/Category";
-import CategoryThumbnails from "@/Components/RetailCashier/CategoryThumbnails.vue";
 import ProductThumbnails from "@/Components/RetailCashier/ProductThumbnails.vue";
 import PageProps from "@/Types/PageProps";
 import OrderSummary from "@/Components/RetailCashier/OrderSummary.vue";
 import CashieringLayout from "@/Layouts/CashieringLayout.vue";
 import PackagingSelectionModal from "@/Components/RetailCashier/PackagingSelectionModal.vue";
 import { useCashierCache } from "@/composables/useCashierCache";
+import BeverageIcon from "@/Components/icons/CashierIcons/BeverageIcon.vue";
+import FoodIcon from "@/Components/icons/CashierIcons/FoodIcon.vue";
+import DessertIcon from "@/Components/icons/CashierIcons/DessertIcon.vue";
+import ShoppingBagIcon from "@/Components/icons/CashierIcons/ShoppingBagIcon.vue";
+import { ShoppingCartIcon } from "@heroicons/vue/24/outline";
 
 const props = defineProps<{
     categories: { data: Category[] } | Category[];
@@ -99,6 +212,7 @@ const props = defineProps<{
     taxRate: number;
     billFooter: any;
     receiptFooter: any;
+    selectedCategorySlug?: string | null;
 }>();
 
 const page = usePage<PageProps>();
@@ -106,10 +220,10 @@ const toast = useToast();
 const tableId = ref(null);
 const locationType = ref(null);
 const selectedOrderItem = ref<any>(null);
-const selectedCategoryId = ref<number | null>(null);
 const selectedOrderType = ref<any>("dine-in");
 const showPackagingModal = ref(false);
 const selectedProductForPackaging = ref<any>(null);
+const showOrderSummary = ref(false);
 const receiptData = ref({
     receiptNumber: "",
     date: "",
@@ -129,6 +243,17 @@ const {
 } = useCashierCache();
 
 const orderItems = computed(() => props.cartItems || []);
+
+// Compute selected category ID from slug in URL
+const selectedCategoryId = computed(() => {
+    if (!props.selectedCategorySlug) {
+        return null;
+    }
+    const category = activeCategories.value.find(
+        (cat) => cat.slug === props.selectedCategorySlug
+    );
+    return category?.id || null;
+});
 
 const activeCategories = computed(() => {
     const getCategoriesData = (): Category[] => {
@@ -188,13 +313,53 @@ const selectedCategoryName = computed(() => {
 });
 
 // Handle category selection
-const handleCategorySelection = (categoryId: number | null) => {
-    selectedCategoryId.value = categoryId;
+const handleCategorySelection = (category: Category) => {
+    // Get current query params
+    const params = new URLSearchParams(window.location.search);
+    const queryParams: any = {};
+
+    if (params.get("tableId")) {
+        queryParams.tableId = params.get("tableId");
+    }
+    if (params.get("locationType")) {
+        queryParams.locationType = params.get("locationType");
+    }
+
+    // Navigate to category URL
+    router.visit(
+        route("retail-cashier.category", {
+            categorySlug: category.slug,
+            ...queryParams,
+        })
+    );
 };
 
 // Back to categories
 const backToCategories = () => {
-    selectedCategoryId.value = null;
+    // Get current query params
+    const params = new URLSearchParams(window.location.search);
+    const queryParams: any = {};
+
+    if (params.get("tableId")) {
+        queryParams.tableId = params.get("tableId");
+    }
+    if (params.get("locationType")) {
+        queryParams.locationType = params.get("locationType");
+    }
+
+    // Navigate back to main cashier page
+    router.visit(route("retail-cashier.index", queryParams));
+};
+
+// Toggle order summary sidebar
+const toggleOrderSummary = () => {
+    showOrderSummary.value = !showOrderSummary.value;
+};
+
+// Toggle main sidebar (emit to parent layout)
+const toggleSidebar = () => {
+    // Dispatch a custom event that CashieringLayout can listen to
+    window.dispatchEvent(new CustomEvent("toggle-sidebar"));
 };
 
 // Update order type
@@ -263,15 +428,6 @@ onMounted(() => {
     if (props.availableDiscounts && props.availableDiscounts.length > 0) {
         loadDiscounts(props.availableDiscounts);
     }
-
-    nextTick(() => {
-        if (
-            selectedCategoryId.value === null &&
-            activeCategories.value.length > 0
-        ) {
-            selectedCategoryId.value = activeCategories.value[0].id;
-        }
-    });
 
     // Get the tableId in URL if available
     const params = new URLSearchParams(window.location.search);
@@ -447,5 +603,22 @@ const handlePackagingConfirm = (packaging: any) => {
 const handlePackagingCancel = () => {
     showPackagingModal.value = false;
     selectedProductForPackaging.value = null;
+};
+
+const getCategoryIconComponent = (categoryName: string | undefined | null) => {
+    if (!categoryName) {
+        return ShoppingBagIcon;
+    }
+
+    const name = categoryName.toLowerCase();
+    if (name.includes("beverage") || name.includes("drink")) {
+        return BeverageIcon;
+    } else if (name.includes("food") || name.includes("meal")) {
+        return FoodIcon;
+    } else if (name.includes("dessert") || name.includes("sweet")) {
+        return DessertIcon;
+    } else {
+        return ShoppingBagIcon;
+    }
 };
 </script>

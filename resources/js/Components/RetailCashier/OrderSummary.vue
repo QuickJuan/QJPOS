@@ -1,6 +1,6 @@
 <template>
     <aside
-        class="h-full flex flex-col bg-gray-50 shadow-lg border-2 border-gray-200 w-full"
+        class="h-full lg:h-full flex flex-col bg-gray-50 shadow-lg border-2 border-gray-200 w-full max-h-screen lg:max-h-full"
     >
         <!-- Customer Information -->
         <CustomerInfo :table-info="tableInfo" :cart="cart" />
