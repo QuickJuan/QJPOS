@@ -122,6 +122,7 @@ Route::middleware([
                             Route::get('/tables', 'tables')->name('tables');
                             Route::get('/preview', 'preview')->name('preview');
                             Route::get('/product/{product}/options', 'productOptions')->name('product.options');
+                            Route::get('/{categorySlug?}', 'index')->name('category');
                             Route::post('/session/start', 'startSession')->name('session.start');
                             Route::post('/session/close', 'closeSession')->name('session.close');
                             Route::post('/cart/create-order', 'createOrder')->name('cart.create-order');

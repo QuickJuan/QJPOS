@@ -49,9 +49,10 @@
                             <h1 class="text-2xl font-bold text-gray-900">
                                 {{ props.product.data?.name }}
                             </h1>
-                            <p class="text-gray-600">
-                                {{ props.product.data?.description }}
-                            </p>
+                            <p
+                                class="text-gray-600"
+                                v-html="props.product.data?.description"
+                            ></p>
                             <div class="mt-2">
                                 <span
                                     class="text-lg font-semibold text-gray-900"
