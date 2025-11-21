@@ -32,7 +32,7 @@ class CashierSessionController extends Controller
     public function index(Request $request, ?string $categorySlug = null): Response
     {
         // Check if the current auth user has pending cashiering.
-        $pendingCashiering = $this->cashierSessionService->model->openSession()->first();
+        $pendingCashiering = $this->cashierSessionService->model->openSession()->with('cashier')->first();
 
         // Get categories with products directly (will be cached in browser)
         $categoriesQuery = Category::with(['products' => fn($query) => $query->where('is_active', true)->with('productPackagings', 'options')])->get();
@@ -88,11 +88,17 @@ class CashierSessionController extends Controller
         // Check if the current auth user has an open cashier session (closing_time is null)
         $openSession = $this->cashierSessionService->model
             ->openSession()
+            ->with('cashier')
             ->first();
 
+        if ($openSession) {
+            $sessionSummary = $this->cashierSessionService->getSessionSummary($openSession);
+        }
+
         return Inertia::render('RetailCashier/Preview', [
-            'activeBranch' => $activeBranch,
-            'openSession'  => $openSession,
+            'activeBranch'   => $activeBranch,
+            'openSession'    => $openSession,
+            'sessionSummary' => $sessionSummary ?? null,
         ]);
     }
 

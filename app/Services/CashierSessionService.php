@@ -40,6 +40,15 @@ class CashierSessionService
             'closing_cash'   => 0,
         ]);
 
+        $branch = Branch::find($request['branch_id']);
+
+        if (! $branch) {
+            throw new Exception('Branch not found.');
+        }
+
+        $branch->order_number += 1;
+        $branch->save();
+
         return $session;
     }
 
@@ -220,7 +229,7 @@ class CashierSessionService
             throw new Exception('Branch not found.');
         }
 
-        return $branch->order_number;
+        return $branch->or_number;
     }
 
     public function updateBillNo(int $branchId)
@@ -233,5 +242,72 @@ class CashierSessionService
 
         $branch->bill_no += 1;
         $branch->save();
+    }
+
+    public function getSessionSummary(?CashierSession $session = null): array
+    {
+        // Get all orders for this session with relationships
+        $orders = $session->orders()->with(['orderItems', 'tableRoom'])->get();
+
+        $orderSummaries = [];
+        $totalSales     = 0;
+        $itemsSettled   = 0;
+        $guestsServed   = 0;
+
+        foreach ($orders as $order) {
+            // Calculate order total from orderItems
+            $orderTotal = $order->orderItems->sum(function ($item) {
+                return ($item->price * $item->quantity) - $item->discount;
+            });
+
+            $orderSummaries[] = [
+                'invoice_number' => str_pad($order->id, 3, '0', STR_PAD_LEFT),
+                'amount'         => $orderTotal,
+            ];
+
+            $totalSales += $orderTotal;
+            $itemsSettled += $order->orderItems->count();
+
+            // Count guests - each order has a table with number_of_pax
+            if ($order->tableRoom) {
+                $guestsServed += $order->tableRoom->number_of_pax ?? 0;
+            }
+        }
+
+        // If no orders yet, check carts for pending data (for development/testing)
+        if (empty($orderSummaries)) {
+            $carts = $session->carts()->with(['cartItems', 'tableRoom'])->get();
+
+            foreach ($carts as $cart) {
+                // Count items that were placed in carts
+                $cartItemsCount = $cart->cartItems->where('placed_order', true)->count();
+                if ($cartItemsCount > 0) {
+                    // Calculate cart total
+                    $cartTotal = $cart->cartItems->where('placed_order', true)->sum(function ($item) {
+                        return ($item->price * $item->quantity) - $item->discount;
+                    });
+
+                    $orderSummaries[] = [
+                        'invoice_number' => 'CART-' . $cart->id,
+                        'amount'         => $cartTotal,
+                    ];
+
+                    $totalSales += $cartTotal;
+                    $itemsSettled += $cartItemsCount;
+
+                    // Count guests from cart tables
+                    if ($cart->tableRoom) {
+                        $guestsServed += $cart->tableRoom->number_of_pax ?? 0;
+                    }
+                }
+            }
+        }
+
+        return [
+            'orders'        => $orderSummaries,
+            'total_sales'   => $totalSales,
+            'items_settled' => $itemsSettled,
+            'guests_served' => $guestsServed,
+        ];
     }
 }

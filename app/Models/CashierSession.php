@@ -45,4 +45,14 @@ class CashierSession extends Model
     {
         return $this->belongsTo(User::class, 'check_by');
     }
+
+    public function carts()
+    {
+        return $this->hasMany(Cart::class);
+    }
+
+    public function orders()
+    {
+        return $this->hasMany(Order::class);
+    }
 }

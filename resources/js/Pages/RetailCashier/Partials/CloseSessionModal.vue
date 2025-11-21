@@ -73,30 +73,69 @@
                 </div>
             </div>
 
+            <!-- Session Summary Report -->
+            <div class="bg-white border rounded-lg p-4">
+                <h4 class="text-lg font-semibold text-gray-900 mb-4">
+                    Session Summary Report
+                </h4>
+                <div class="bg-gray-50 p-4 rounded border font-mono text-sm">
+                    <div class="text-center mb-4">
+                        <p class="font-bold text-lg">QUICKJUAN POS</p>
+                        <p class="text-xs">Session Close Report</p>
+                        <p class="text-xs">{{ new Date().toLocaleDateString() }}</p>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span>Cashier:</span>
+                            <span>{{ props.openSession?.cashier?.name || props.currentUser?.name || 'Unknown' }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Session Start:</span>
+                            <span>{{ props.openSession ? new Date(props.openSession.started_time).toLocaleDateString() + ' ' + new Date(props.openSession.started_time).toLocaleTimeString() : 'N/A' }}</span>
+                        </div>
+
+                        <!-- Sales Summary Table -->
+                        <div class="mt-4">
+                            <div class="flex justify-between font-bold border-b pb-1 mb-2">
+                                <span>Invoice Number</span>
+                                <span>Sales</span>
+                            </div>
+                            <div v-for="order in props.sessionSummary?.orders || []" :key="order.invoice_number" class="flex justify-between">
+                                <span>{{ order.invoice_number }}</span>
+                                <span>₱{{ order.amount.toFixed(2) }}</span>
+                            </div>
+                            <div v-if="(props.sessionSummary?.orders || []).length === 0" class="text-center text-gray-500 py-2">
+                                No sales data available
+                            </div>
+                            <div class="border-t pt-2 mt-2 flex justify-between font-bold">
+                                <span>total</span>
+                                <span>₱{{ (props.sessionSummary?.total_sales || 0).toFixed(2) }}</span>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between border-t pt-2">
+                            <span>Items Settled:</span>
+                            <span>{{ props.sessionSummary?.items_settled || 0 }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Guests Served:</span>
+                            <span>{{ props.sessionSummary?.guests_served || 0 }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Cash on Hand:</span>
+                            <span>₱{{ totalCashCounted.toFixed(2) }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Summary -->
             <div class="bg-gray-50 rounded-lg p-4 border">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <p class="text-sm text-gray-600">Total Cash Counted</p>
-                        <p class="text-xl font-bold text-gray-900">
-                            ₱{{ totalCashCounted.toFixed(2) }}
-                        </p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-600">Difference</p>
-                        <p
-                            :class="[
-                                'text-xl font-bold',
-                                cashDifference >= 0
-                                    ? 'text-green-600'
-                                    : 'text-red-600',
-                            ]"
-                        >
-                            {{ cashDifference >= 0 ? "+" : "" }}₱{{
-                                cashDifference.toFixed(2)
-                            }}
-                        </p>
-                    </div>
+                <div class="text-center">
+                    <p class="text-sm text-gray-600">Total Cash Counted</p>
+                    <p class="text-xl font-bold text-gray-900">
+                        ₱{{ totalCashCounted.toFixed(2) }}
+                    </p>
                 </div>
             </div>
         </div>
@@ -131,6 +170,8 @@ import { computed, ref } from "vue";
 const props = defineProps<{
     showCloseDialog: boolean;
     openSession: CashieringSession | null;
+    sessionSummary?: any;
+    currentUser?: any;
 }>();
 
 const emit = defineEmits(["confirmCloseSession", "closeModal"]);
