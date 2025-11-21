@@ -23,10 +23,10 @@
                 <span>Time:</span>
                 <span>{{ formatTime(billDate) }}</span>
             </div>
-            <div class="flex justify-between" v-if="tableInfo.name">
+            <div class="flex justify-between">
                 <span>Bill #:</span>
                 <span>
-                    {{ billNumber.padStart(6, "0") }}
+                    {{ billNumber }}
                 </span>
             </div>
             <div class="flex justify-between" v-if="cashierName">

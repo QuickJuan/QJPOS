@@ -163,6 +163,8 @@
                     :tax-rate="taxRate"
                     :bill-footer="billFooter"
                     :receipt-footer="receiptFooter"
+                    :bill-number="props.billNumber"
+                    :receipt-number="props.receiptNumber"
                     @selected-order-type="updateOrderType"
                     @show-receipt="handleShowReceipt"
                 />
@@ -213,6 +215,8 @@ const props = defineProps<{
     billFooter: any;
     receiptFooter: any;
     selectedCategorySlug?: string | null;
+    billNumber: string;
+    receiptNumber: string;
 }>();
 
 const page = usePage<PageProps>();
@@ -382,7 +386,7 @@ const handleShowReceipt = (data: any) => {
     const taxAmount = discountedSubtotal * 0.12; // 12% VAT
 
     receiptData.value = {
-        receiptNumber: `RCP-${Date.now()}`,
+        receiptNumber: props.receiptNumber,
         date: new Date().toISOString(),
         subtotal: subtotal,
         taxAmount: taxAmount,

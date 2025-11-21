@@ -36,7 +36,7 @@
                     <Button
                         v-for="location in locations"
                         :key="location.id"
-                        :label="`${location.name} (${getTableCount(
+                        :label="`${location.name} - ${location.location_type} (${getTableCount(
                             location.id
                         )})`"
                         :outlined="selectedLocation !== location.id"
@@ -120,7 +120,7 @@
                                 {{ table.table_height }} px
                             </div>
                         </div>
-                        <div
+                        <!-- <div
                             class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center"
                         >
                             <img
@@ -131,7 +131,7 @@
                                 :alt="`Table with ${table.chairs} chairs`"
                                 class="w-8 h-8 object-contain"
                             />
-                        </div>
+                        </div> -->
                     </div>
                 </div>
             </div>

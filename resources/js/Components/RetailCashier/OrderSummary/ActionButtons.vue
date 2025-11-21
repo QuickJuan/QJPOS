@@ -77,6 +77,7 @@
             :less-discount-total="props.lessDiscountTotal"
             :table-info="tableInfo"
             :bill-footer="billFooter"
+            :receipt-number="receiptNumber"
             @settle-bill="handleSettleBill"
         />
 
@@ -130,6 +131,8 @@ const props = defineProps<{
     tableInfo: any;
     billFooter: any;
     receiptFooter: any;
+    billNumber: string;
+    receiptNumber: string;
 }>();
 
 const emit = defineEmits<{
@@ -158,7 +161,7 @@ const { getNextBillNumber } = useBillNumber();
 
 // Receipt data
 const receiptData = ref({
-    receiptNumber: "001234",
+    receiptNumber: props.receiptNumber,
     date: new Date().toISOString(),
     tableNumber: "",
     cashierName: "",
@@ -261,7 +264,7 @@ const handleSettleBill = (data: any) => {
 const handlePrintBill = () => {
     // Populate bill data
     billData.value = {
-        billNumber: getNextBillNumber().toString().padStart(6, "0"),
+        billNumber: props.billNumber,
         date: new Date().toISOString(),
         tableInfo: props.tableInfo || "",
         cashierName: page.props.auth?.user?.name || "",

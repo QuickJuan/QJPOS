@@ -46,6 +46,8 @@
             :table-info="tableInfo"
             :bill-footer="billFooter"
             :receipt-footer="receiptFooter"
+            :bill-number="billNumber"
+            :receipt-number="receiptNumber"
             @update-order-type="updateOrderType"
             @save-order="handleSaveOrder"
             @checkout="handleCheckout"
@@ -134,6 +136,8 @@ const props = defineProps<{
     taxRate: number;
     billFooter: any;
     receiptFooter: any;
+    billNumber: string;
+    receiptNumber: string;
 }>();
 
 const toast = useToast();
@@ -382,6 +386,7 @@ const handleSettleBill = (data: any) => {
             amount_paid: data.amount_paid,
             total_amount: data.total_amount,
             location_type: selectedOrderType.value,
+            branch_id: page.props?.active_branch?.id,
         },
         {
             onSuccess: () => {

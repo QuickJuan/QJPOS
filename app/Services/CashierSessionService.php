@@ -3,6 +3,7 @@ namespace App\Services;
 
 use App\Enums\Receipt\Type;
 use App\Enums\TableRoomStatusType;
+use App\Models\Branch;
 use App\Models\Cart;
 use App\Models\CashierSession;
 use App\Models\ReceiptFooter;
@@ -101,7 +102,9 @@ class CashierSessionService
         $taxRate,
         array $totals,
         $billFooter,
-        $receiptFooter
+        $receiptFooter,
+        $billNumber,
+        $receiptNumber
     ): array {
         return [
             'categories'         => $categories,
@@ -119,6 +122,8 @@ class CashierSessionService
             'taxRate'            => $taxRate,
             'billFooter'         => $billFooter,
             'receiptFooter'      => $receiptFooter,
+            'billNumber'         => $billNumber,
+            'receiptNumber'      => $receiptNumber,
         ];
     }
 
@@ -194,5 +199,39 @@ class CashierSessionService
     public function getReceiptFooter(string $type = Type::RECEIPT->value)
     {
         return ReceiptFooter::where('type', $type)->first();
+    }
+
+    public function getBillNo(int $branchId): mixed
+    {
+        $branch = Branch::find($branchId);
+
+        if (! $branch) {
+            throw new Exception('Branch not found.');
+        }
+
+        return $branch->bill_no;
+    }
+
+    public function getReceiptNo(int $branchId): mixed
+    {
+        $branch = Branch::find($branchId);
+
+        if (! $branch) {
+            throw new Exception('Branch not found.');
+        }
+
+        return $branch->order_number;
+    }
+
+    public function updateBillNo(int $branchId)
+    {
+        $branch = Branch::find($branchId);
+
+        if (! $branch) {
+            throw new Exception('Branch not found.');
+        }
+
+        $branch->bill_no += 1;
+        $branch->save();
     }
 }

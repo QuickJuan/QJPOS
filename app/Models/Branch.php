@@ -17,6 +17,9 @@ class Branch extends Model
         'is_active',
         'tin',
         'registration_number',
+        'or_number',
+        'bill_no',
+        'order_number',
     ];
 
     protected $casts = [
