@@ -1,16 +1,15 @@
 <?php
 namespace App\Http\Controllers;
 
-use Exception;
-use Inertia\Inertia;
-use Inertia\Response;
-use Illuminate\Http\Request;
+use App\Http\Requests\TableReservationRequest;
+use App\Http\Requests\TableRoomRequest;
 use App\Models\TableRoomLocation;
 use App\Services\TableRoomService;
-use Illuminate\Support\Facades\Auth;
+use Exception;
 use Illuminate\Http\RedirectResponse;
-use App\Http\Requests\TableRoomRequest;
-use App\Http\Requests\TableReservationRequest;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class TableRoomController extends Controller
 {
@@ -38,12 +37,14 @@ class TableRoomController extends Controller
                 'tableRoomLocation'      => $tableRoom->tableRoomLocation,
                 'table_room_location_id' => $tableRoom->table_room_location_id,
                 'branch_id'              => $tableRoom->branch_id,
+                'location_type'          => $tableRoom->tableRoomLocation?->location_type,
             ]);
 
         $locations = TableRoomLocation::all()
             ->map(fn($location) => [
-                'id'   => $location->id,
-                'name' => $location->name,
+                'id'            => $location->id,
+                'name'          => $location->name,
+                'location_type' => $location->location_type,
             ]);
 
         return Inertia::render('TableManagement/List', [
@@ -133,10 +134,10 @@ class TableRoomController extends Controller
     public function bulkUpdatePositions(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'positions'               => ['required', 'array'],
-            'positions.*.id'          => ['required', 'integer', 'exists:table_rooms,id'],
-            'positions.*.table_x'     => ['required', 'integer'],
-            'positions.*.table_y'     => ['required', 'integer'],
+            'positions'           => ['required', 'array'],
+            'positions.*.id'      => ['required', 'integer', 'exists:table_rooms,id'],
+            'positions.*.table_x' => ['required', 'integer'],
+            'positions.*.table_y' => ['required', 'integer'],
         ]);
 
         try {

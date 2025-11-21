@@ -207,6 +207,7 @@ const props = defineProps<{
 const barcodeInput = ref("");
 const showMoreOptions = ref(false);
 const showSidebar = ref(false);
+const showCloseDialog = ref(false);
 
 // Computed properties
 const cashierName = computed(() => {
@@ -259,84 +260,9 @@ const handleReviewTransactionsClick = () => {
     router.visit(route("transactions.index"));
 };
 
-const handleCashieringClick = () => {
-    showSidebar.value = false;
-    router.visit(route("retail-cashier.index"));
-};
-
-const toggleMoreOptions = () => {
-    showMoreOptions.value = !showMoreOptions.value;
-};
-
-const handleReports = () => {
-    showMoreOptions.value = false;
-    showSidebar.value = false;
-    // Navigate to reports page
-    router.visit(route("dashboard"));
-};
-
-const handleSettings = () => {
-    showMoreOptions.value = false;
-    showSidebar.value = false;
-    // Navigate to settings page
-    toast.add({
-        severity: "info",
-        summary: "Settings",
-        detail: "Settings page coming soon",
-        life: 3000,
-    });
-};
-
-const handleHelp = () => {
-    showMoreOptions.value = false;
-    showSidebar.value = false;
-    // Show help dialog or navigate to help page
-    toast.add({
-        severity: "info",
-        summary: "Help",
-        detail: "Help documentation coming soon",
-        life: 3000,
-    });
-};
-
 const handleCloseShift = () => {
     showSidebar.value = false;
-    confirm.require({
-        message:
-            "Are you sure you want to close your shift? This will end your current cashier session.",
-        header: "Close Shift Confirmation",
-        icon: "pi pi-exclamation-triangle",
-        rejectClass: "p-button-secondary p-button-outlined",
-        rejectLabel: "Cancel",
-        acceptLabel: "Close Shift",
-        accept: () => {
-            // Handle close shift logic
-            router.post(
-                route("retail-cashier.session.close"),
-                {},
-                {
-                    onSuccess: () => {
-                        toast.add({
-                            severity: "success",
-                            summary: "Shift Closed",
-                            detail: "Your shift has been closed successfully",
-                            life: 3000,
-                        });
-                        // Redirect to dashboard or login
-                        router.visit(route("dashboard"));
-                    },
-                    onError: () => {
-                        toast.add({
-                            severity: "error",
-                            summary: "Error",
-                            detail: "Failed to close shift",
-                            life: 3000,
-                        });
-                    },
-                }
-            );
-        },
-    });
+    showCloseDialog.value = true;
 };
 
 const handleLogout = () => {

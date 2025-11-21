@@ -52,9 +52,11 @@ class CashierSessionController extends Controller
         $currentTable = $cartData['currentTable'];
 
         // Calculate totals
-        $totals     = $this->cashierSessionService->calculateTotals($cart, $cartItems);
-        $billFooter = $this->cashierSessionService->getReceiptFooter(Type::BILL->value);
+        $totals        = $this->cashierSessionService->calculateTotals($cart, $cartItems);
+        $billFooter    = $this->cashierSessionService->getReceiptFooter(Type::BILL->value);
         $receiptFooter = $this->cashierSessionService->getReceiptFooter(Type::RECEIPT->value);
+        $billNumber    = $this->cashierSessionService->getBillNo(session('active_branch')->id);
+        $receiptNumber = $this->cashierSessionService->getReceiptNo(session('active_branch')->id);
 
         // Prepare view data
         $viewData = $this->cashierSessionService->prepareViewData(
@@ -68,7 +70,9 @@ class CashierSessionController extends Controller
             $taxRate,
             $totals,
             $billFooter,
-            $receiptFooter
+            $receiptFooter,
+            $billNumber,
+            $receiptNumber,
         );
 
         // Add selected category slug to view data
@@ -197,6 +201,17 @@ class CashierSessionController extends Controller
             return redirect()->route('retail-cashier.index', ['tableId' => $request->table_id, 'locationType' => $table->tableRoomLocation->location_type])->with('success', 'Order started successfully');
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'Failed to start order: ' . $e->getMessage());
+        }
+    }
+
+    public function updateBillNo(int $branchId): RedirectResponse
+    {
+        try {
+            $this->cashierSessionService->updateBillNo($branchId);
+
+            return redirect()->back();
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'There was an error while updating the bill number.');
         }
     }
 }

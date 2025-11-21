@@ -62,6 +62,7 @@ import { ref, computed, nextTick, watch } from "vue";
 import { Dialog } from "primevue";
 import BillLayout from "@/Components/BillLayout.vue";
 import { useModalStyle } from "@/composables/useModalStyle";
+import { router, usePage } from "@inertiajs/vue3";
 
 const props = defineProps<{
     visible: boolean;
@@ -69,6 +70,8 @@ const props = defineProps<{
     billFooter: any;
     orderItems: any[];
 }>();
+
+const page = usePage();
 
 const emit = defineEmits<{
     "update:visible": [value: boolean];
@@ -98,6 +101,11 @@ const handleKeydown = (event: KeyboardEvent) => {
 
 // Print bill
 const printBill = () => {
+    // Update the bill no by adding plus 1 to the previous bill no
+    router.put(
+        `/retail-cashier/update-bill-no/${page.props?.active_branch?.id}`
+    );
+
     // Get the BillLayout element from the modal
     const billElement = document.querySelector(
         ".bill-container"

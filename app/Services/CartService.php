@@ -3,6 +3,7 @@ namespace App\Services;
 
 use App\Enums\TableRoomLocation\LocationType;
 use App\Enums\TableRoomStatusType;
+use App\Models\Branch;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\CashierSession;
@@ -385,6 +386,17 @@ class CartService
                     'number_of_pax' => null,
                 ]);
             }
+        }
+
+        // Update the branch's last order number
+        if ($request->filled('branch_id')) {
+            $branch = Branch::find($request->branch_id);
+
+            if ($branch) {
+                $branch->order_number += 1;
+                $branch->save();
+            }
+
         }
 
         return $order;

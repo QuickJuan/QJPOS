@@ -79,6 +79,26 @@ class BranchResource extends Resource
                     ->required()
                     ->searchable()
                     ->preload(),
+
+                TextInput::make('or_number')
+                    ->label('OR Number')
+                    ->nullable()
+                    ->maxLength(100),
+
+                TextInput::make('registration_number')
+                    ->label('Registration Number')
+                    ->nullable()
+                    ->maxLength(100),
+
+                TextInput::make('bill_no')
+                    ->label('Bill Number')
+                    ->nullable()
+                    ->maxLength(100),
+
+                TextInput::make('order_number')
+                    ->label('Order Number')
+                    ->nullable()
+                    ->maxLength(100),
             ]);
     }
 
@@ -118,6 +138,23 @@ class BranchResource extends Resource
 
                 TextColumn::make('tin')
                     ->label('TIN'),
+
+                TextColumn::make('registration_number')
+                    ->label('Registration Number'),
+
+                TextColumn::make('created_at')
+                    ->label('Created At')
+                    ->dateTime()
+                    ->sortable(),
+
+                TextColumn::make('or_number')
+                    ->label('OR Number'),
+
+                TextColumn::make('bill_no')
+                    ->label('Bill Number'),
+
+                TextColumn::make('order_number')
+                    ->label('Order Number'),
             ])
             ->filters([
                 //
