@@ -3,6 +3,7 @@ namespace App\Filament\Tenant\Resources;
 
 use App\Filament\Tenant\Resources\BranchResource\Pages;
 use App\Models\Branch;
+use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -99,6 +100,12 @@ class BranchResource extends Resource
                     ->label('Order Number')
                     ->nullable()
                     ->maxLength(100),
+
+                KeyValue::make('receipt_headers')
+                    ->label('Receipt Headers')
+                    ->nullable()
+                    ->addActionLabel('Add Header')
+                    ->helperText('JSON object for receipt headers'),
             ]);
     }
 

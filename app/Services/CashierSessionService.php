@@ -256,9 +256,7 @@ class CashierSessionService
 
         foreach ($orders as $order) {
             // Calculate order total from orderItems
-            $orderTotal = $order->orderItems->sum(function ($item) {
-                return ($item->price * $item->quantity) - $item->discount;
-            });
+            $orderTotal = $order->orderItems->sum(fn($item) => ($item->price * $item->quantity) - $item->discount);
 
             $orderSummaries[] = [
                 'invoice_number' => str_pad($order->id, 3, '0', STR_PAD_LEFT),
@@ -274,7 +272,6 @@ class CashierSessionService
             }
         }
 
-        // If no orders yet, check carts for pending data (for development/testing)
         if (empty($orderSummaries)) {
             $carts = $session->carts()->with(['cartItems', 'tableRoom'])->get();
 
@@ -283,9 +280,7 @@ class CashierSessionService
                 $cartItemsCount = $cart->cartItems->where('placed_order', true)->count();
                 if ($cartItemsCount > 0) {
                     // Calculate cart total
-                    $cartTotal = $cart->cartItems->where('placed_order', true)->sum(function ($item) {
-                        return ($item->price * $item->quantity) - $item->discount;
-                    });
+                    $cartTotal = $cart->cartItems->where('placed_order', true)->sum(fn($item) => ($item->price * $item->quantity) - $item->discount);
 
                     $orderSummaries[] = [
                         'invoice_number' => 'CART-' . $cart->id,
@@ -303,11 +298,42 @@ class CashierSessionService
             }
         }
 
+        $transactionsCount = count($orderSummaries);
+        $skuCount          = $itemsSettled;
+        $totalQuantity     = 0;
+
+        // Calculate total quantity from orders
+        foreach ($orders as $order) {
+            $totalQuantity += $order->orderItems->sum('quantity');
+        }
+
+        // For carts if no orders
+        if (empty($orderSummaries)) {
+            foreach ($carts as $cart) {
+                $totalQuantity += $cart->cartItems->where('placed_order', true)->sum('quantity');
+            }
+        }
+
         return [
-            'orders'        => $orderSummaries,
-            'total_sales'   => $totalSales,
-            'items_settled' => $itemsSettled,
-            'guests_served' => $guestsServed,
+            'orders'             => $orderSummaries,
+            'total_sales'        => $totalSales,
+            'gross_sales'        => $totalSales,
+            'net_sales'          => $totalSales,
+            'items_settled'      => $itemsSettled,
+            'guests_served'      => $guestsServed,
+            'transactions_count' => $transactionsCount,
+            'sku_count'          => $skuCount,
+            'total_quantity'     => $totalQuantity,
+            'cancelled_count'    => 0,
+            'cancelled_amount'   => 0,
+            'regular_discount'   => 0,
+            'senior_discount'    => 0,
+            'pwd_discount'       => 0,
+            'non_vat_sales'      => 0,
+            'vat_sales'          => $totalSales,
+            'vat_amount'         => $totalSales * 0.12,
+            'previous_reading'   => 0,
+            'running_total'      => $totalSales,
         ];
     }
 }

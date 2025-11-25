@@ -60,71 +60,20 @@
                         class="space-y-2"
                     >
                         <TextField
-                            :label="`₱${denom}`"
+                            :label="`${formatMoney(denom)}`"
                             v-model.number="cashDenominations[denom]"
                             type="number"
                             min="0"
                             :placeholder="`Count of ₱${denom}`"
                         />
                         <p class="text-xs text-gray-500">
-                            Total: ₱{{ (parseFloat(denom) * count).toFixed(2) }}
+                            Total:
+                            {{
+                                formatMoney(
+                                    (parseFloat(denom) * count).toFixed(2)
+                                )
+                            }}
                         </p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Session Summary Report -->
-            <div class="bg-white border rounded-lg p-4">
-                <h4 class="text-lg font-semibold text-gray-900 mb-4">
-                    Session Summary Report
-                </h4>
-                <div class="bg-gray-50 p-4 rounded border font-mono text-sm">
-                    <div class="text-center mb-4">
-                        <p class="font-bold text-lg">QUICKJUAN POS</p>
-                        <p class="text-xs">Session Close Report</p>
-                        <p class="text-xs">{{ new Date().toLocaleDateString() }}</p>
-                    </div>
-                    <div class="space-y-2">
-                        <div class="flex justify-between">
-                            <span>Cashier:</span>
-                            <span>{{ props.openSession?.cashier?.name || props.currentUser?.name || 'Unknown' }}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span>Session Start:</span>
-                            <span>{{ props.openSession ? new Date(props.openSession.started_time).toLocaleDateString() + ' ' + new Date(props.openSession.started_time).toLocaleTimeString() : 'N/A' }}</span>
-                        </div>
-
-                        <!-- Sales Summary Table -->
-                        <div class="mt-4">
-                            <div class="flex justify-between font-bold border-b pb-1 mb-2">
-                                <span>Invoice Number</span>
-                                <span>Sales</span>
-                            </div>
-                            <div v-for="order in props.sessionSummary?.orders || []" :key="order.invoice_number" class="flex justify-between">
-                                <span>{{ order.invoice_number }}</span>
-                                <span>₱{{ order.amount.toFixed(2) }}</span>
-                            </div>
-                            <div v-if="(props.sessionSummary?.orders || []).length === 0" class="text-center text-gray-500 py-2">
-                                No sales data available
-                            </div>
-                            <div class="border-t pt-2 mt-2 flex justify-between font-bold">
-                                <span>total</span>
-                                <span>₱{{ (props.sessionSummary?.total_sales || 0).toFixed(2) }}</span>
-                            </div>
-                        </div>
-
-                        <div class="flex justify-between border-t pt-2">
-                            <span>Items Settled:</span>
-                            <span>{{ props.sessionSummary?.items_settled || 0 }}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span>Guests Served:</span>
-                            <span>{{ props.sessionSummary?.guests_served || 0 }}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span>Cash on Hand:</span>
-                            <span>₱{{ totalCashCounted.toFixed(2) }}</span>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -134,7 +83,7 @@
                 <div class="text-center">
                     <p class="text-sm text-gray-600">Total Cash Counted</p>
                     <p class="text-xl font-bold text-gray-900">
-                        ₱{{ totalCashCounted.toFixed(2) }}
+                        {{ formatMoney(totalCashCounted.toFixed(2)) }}
                     </p>
                 </div>
             </div>
@@ -158,6 +107,16 @@
             </div>
         </template>
     </Dialog>
+
+    <SessionSummaryModal
+        :showSessionSummaryModal="showSessionSummaryModal"
+        :openSession="openSession"
+        :sessionSummary="sessionSummaryData"
+        :currentUser="currentUser"
+        :totalCashCounted="totalCashCounted"
+        @closeModal="showSessionSummaryModal = false"
+        @confirmClose="handleFinalConfirm"
+    />
 </template>
 
 <script setup lang="ts">
@@ -166,6 +125,9 @@ import CashieringSession from "@/Types/CashieringSession";
 import { formatMoney } from "@/Utils/FormatMoney";
 import { Button, Dialog } from "primevue";
 import { computed, ref } from "vue";
+import SessionSummaryModal from "./SessionSummaryModal.vue";
+import axios from "axios";
+import { route } from "ziggy-js";
 
 const props = defineProps<{
     showCloseDialog: boolean;
@@ -175,6 +137,9 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits(["confirmCloseSession", "closeModal"]);
+
+const showSessionSummaryModal = ref(false);
+const sessionSummaryData = ref(null);
 
 const expectedCash = computed(() => {
     if (!props.openSession) return 0;
@@ -209,7 +174,19 @@ const cashDifference = computed(() => {
     return totalCashCounted.value - expectedCash.value;
 });
 
-const handleConfirmCloseSession = () => {
+const handleConfirmCloseSession = async () => {
+    try {
+        const response = await axios.get(
+            route("retail-cashier.api.session-summary")
+        );
+        sessionSummaryData.value = response.data;
+        showSessionSummaryModal.value = true;
+    } catch (error) {
+        console.error("Failed to fetch session summary", error);
+    }
+};
+
+const handleFinalConfirm = () => {
     const denominationData = Object.entries(cashDenominations.value).reduce(
         (acc, [denom, count]) => {
             if (count > 0) {
@@ -224,6 +201,7 @@ const handleConfirmCloseSession = () => {
         denominationData: denominationData,
         totalCashCounted: totalCashCounted.value,
     });
+    showSessionSummaryModal.value = false;
 };
 
 const handleClose = () => {

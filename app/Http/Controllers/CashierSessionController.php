@@ -133,6 +133,18 @@ class CashierSessionController extends Controller
         }
     }
 
+    public function getSessionSummary(Request $request)
+    {
+        $openSession = $this->cashierSessionService->model->openSession()->with('cashier')->first();
+
+        if ($openSession) {
+            $sessionSummary = $this->cashierSessionService->getSessionSummary($openSession);
+            return response()->json($sessionSummary);
+        }
+
+        return response()->json(null);
+    }
+
     public function tables(): Response
     {
         $tables = TableRoom::with(['tableRoomLocation', 'mergeTo', 'carts.cartItems.product.productPackagings', 'carts.cartItems.children.product'])

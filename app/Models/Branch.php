@@ -20,11 +20,13 @@ class Branch extends Model
         'or_number',
         'bill_no',
         'order_number',
+        'receipt_headers',
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
-        'long_lat'  => 'string',
+        'is_active'       => 'boolean',
+        'long_lat'        => 'string',
+        'receipt_headers' => 'array',
     ];
 
     public function users(): BelongsToMany
