@@ -376,7 +376,7 @@ class CartService
         $cart->delete();
 
         // If there's a table, mark it as vacant
-        if ($cart->table_room_id && $cart->tableRoom->tableRoomLocation->location_type != LocationType::TAKEOUT->value) {
+        if ($cart->table_room_id && $cart->tableRoom->tableRoomLocation && $cart->tableRoom->tableRoomLocation->location_type != LocationType::TAKEOUT->value) {
             $tableRoom = $cart->tableRoom;
             if ($tableRoom) {
                 $tableRoom->update([

@@ -11,6 +11,7 @@ class CashierSession extends Model
     protected $fillable = [
         'business_date',
         'cashier_id',
+        'branch_id',
         'started_time',
         'closing_time',
         'beginning_cash',
@@ -33,6 +34,7 @@ class CashierSession extends Model
     public function scopeOpenSession(Builder $query): void
     {
         $query->where('cashier_id', Auth::id())
+            ->where('branch_id', session('active_branch')['id'])
             ->whereNull('closing_time');
     }
 
