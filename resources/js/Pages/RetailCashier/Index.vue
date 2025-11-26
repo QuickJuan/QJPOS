@@ -1,5 +1,5 @@
 <template>
-    <CashieringLayout :current-user="props.currentUser">
+    <CashieringLayout :current-user="props.currentUser" :open-session="props.pendingCashiering" :session-summary="props.sessionSummary">
         <!-- Fixed Header for Mobile/Tablet with Toggle Buttons -->
         <div
             class="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-md"
@@ -215,6 +215,7 @@ const props = defineProps<{
     billFooter: any;
     receiptFooter: any;
     selectedCategorySlug?: string | null;
+    sessionSummary?: any;
     billNumber: string;
     receiptNumber: string;
 }>();

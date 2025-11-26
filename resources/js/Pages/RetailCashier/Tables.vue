@@ -203,6 +203,7 @@
                 @mergeTable="handleMergeTable"
                 @reserveTable="handleReserveTable"
                 @unmergeTable="handleUnmergeTable"
+                @refundOrder="handleRefundOrder"
             />
 
             <!-- View Orders Modal -->
@@ -250,6 +251,7 @@ import { ref, computed, onMounted } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { route } from "ziggy-js";
 import { useToast } from "primevue";
+import axios from "axios";
 import CashieringLayout from "@/Layouts/CashieringLayout.vue";
 import TableActionModal from "./Partials/TableActionModal.vue";
 import ViewOrdersModal from "./Partials/ViewOrdersModal.vue";
@@ -605,6 +607,34 @@ const handleUnmergeTable = () => {
             },
         }
     );
+};
+
+const handleRefundOrder = async () => {
+    selectedLocation
+    try {
+        await axios.post(route('transactions.api.orders.refund', selectedTable.value.current_order.id), {
+            supervisor_name: props.currentUser?.name || 'Supervisor',
+            notes: 'Refund requested from table action'
+        });
+        toast.add({
+            severity: 'success',
+            summary: 'Success',
+            detail: 'Order refunded successfully',
+            life: 3000,
+        });
+        closeTableModal();
+        // Refresh tables
+        setTimeout(() => {
+            router.reload({ only: ["tables"] });
+        }, 100);
+    } catch (error) {
+        toast.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Failed to refund order',
+            life: 3000,
+        });
+    }
 };
 
 const closeOrdersModal = () => {

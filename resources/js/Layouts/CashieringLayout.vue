@@ -172,6 +172,16 @@
         <!-- Toast Notifications -->
         <Toast />
         <ConfirmPopup />
+
+        <!-- Close Session Modal -->
+        <CloseSessionModal
+            :session-summary="props.sessionSummary"
+            :show-close-dialog="showCloseDialog"
+            :open-session="openSession"
+            :current-user="props.currentUser"
+            @confirm-close-session="handleConfirmCloseSession"
+            @close-modal="showCloseDialog = false"
+        />
     </div>
 </template>
 <script setup lang="ts">
@@ -182,6 +192,7 @@ import { useConfirm } from "primevue";
 import { useToast } from "primevue";
 import Header from "@/Pages/RetailCashier/Partials/Header.vue";
 import { ConfirmPopup, Toast } from "primevue";
+import CloseSessionModal from "@/Pages/RetailCashier/Partials/CloseSessionModal.vue";
 import {
     QrCodeIcon,
     TableCellsIcon,
@@ -201,6 +212,8 @@ const toast = useToast();
 // Props for cashier info (can be passed from parent components)
 const props = defineProps<{
     currentUser?: any;
+    openSession?: any;
+    sessionSummary?: any;
 }>();
 
 // Reactive data
@@ -278,6 +291,36 @@ const handleLogout = () => {
             router.post(route("logout"));
         },
     });
+};
+
+const handleConfirmCloseSession = (data: any) => {
+    console.log(data);
+    router.post(
+        route("retail-cashier.session.close"),
+        {
+            cash_denomination: data.denominationData,
+            closing_cash: data.totalCashCounted,
+        },
+        {
+            onSuccess: () => {
+                showCloseDialog.value = false;
+                toast.add({
+                    severity: "success",
+                    summary: "Success",
+                    detail: "Session closed successfully",
+                    life: 3000,
+                });
+            },
+            onError: (errors) => {
+                toast.add({
+                    severity: "error",
+                    summary: "Error",
+                    detail: errors.error || "Failed to close session",
+                    life: 3000,
+                });
+            },
+        }
+    );
 };
 
 // Close dropdown when clicking outside

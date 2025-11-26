@@ -90,6 +90,20 @@
                     @click="$emit('viewOrder')"
                 />
 
+                <!-- Refund Order (only if occupied) -->
+                <Button
+                    v-if="
+                        !isTakeoutOccupied &&
+                        table &&
+                        table.status === 'occupied'
+                    "
+                    label="Refund Order"
+                    icon="pi pi-undo"
+                    class="w-full"
+                    severity="danger"
+                    @click="$emit('refundOrder')"
+                />
+
                 <!-- Merge Table (only for vacant tables) -->
                 <Button
                     v-if="
@@ -205,6 +219,7 @@ const emit = defineEmits<{
     mergeTable: [];
     reserveTable: [];
     unmergeTable: [];
+    refundOrder: [];
 }>();
 
 const isTakeoutOccupied = computed(() => {

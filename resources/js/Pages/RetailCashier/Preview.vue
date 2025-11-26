@@ -102,6 +102,7 @@
         <!-- Close Session Dialog -->
         <CloseSessionModal
             :show-close-dialog="showCloseDialog"
+            :session-summary="props.sessionSummary"
             :open-session="props.openSession"
             @confirm-close-session="confirmCloseSession"
             @close-modal="showCloseDialog = false"
@@ -125,6 +126,7 @@ import CloseSessionModal from "./Partials/CloseSessionModal.vue";
 const props = defineProps<{
     activeBranch: Branch;
     openSession: CashieringSession | null;
+    sessionSummary: any;
 }>();
 
 const page = usePage<PageProps>();
@@ -181,6 +183,7 @@ const startSession = () => {
         route("retail-cashier.session.start"),
         {
             beginning_cash: parseFloat(beginningCash.value),
+            branch_id: page.props?.active_branch?.id || null,
         },
         {
             onSuccess: () => {

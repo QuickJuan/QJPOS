@@ -125,6 +125,7 @@ Route::middleware([
                             Route::get('/{categorySlug?}', 'index')->name('category');
                             Route::post('/session/start', 'startSession')->name('session.start');
                             Route::post('/session/close', 'closeSession')->name('session.close');
+                            Route::get('/api/session-summary', 'getSessionSummary')->name('api.session-summary');
                             Route::post('/cart/create-order', 'createOrder')->name('cart.create-order');
                             Route::put('/update-bill-no/{branchId}', 'updateBillNo')->name('update-bill-no');
                         });

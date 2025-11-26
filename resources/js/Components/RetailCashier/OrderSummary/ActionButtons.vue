@@ -97,6 +97,8 @@
             :billFooter="billFooter"
         />
     </div>
+
+    <ConfirmPopup />
 </template>
 
 <script setup lang="ts">
@@ -114,6 +116,9 @@ import ReceiptModal from "./ReceiptModal.vue";
 import BillModal from "./BillModal.vue";
 import { useBillNumber } from "@/composables/useBillNumber";
 import { usePage } from "@inertiajs/vue3";
+import { ConfirmPopup, useConfirm } from "primevue";
+import axios from "axios";
+import { route } from "ziggy-js";
 
 const props = defineProps<{
     cart: any;
@@ -147,6 +152,9 @@ const emit = defineEmits<{
 
 // Use applied discount from props
 const appliedDiscount = computed(() => props.appliedDiscount);
+
+// Use confirm
+const confirm = useConfirm();
 
 // UsePage
 const page = usePage();
@@ -281,4 +289,5 @@ const handlePrintBill = () => {
 
     showBillModal.value = true;
 };
+
 </script>

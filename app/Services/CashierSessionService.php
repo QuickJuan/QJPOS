@@ -1,11 +1,13 @@
 <?php
 namespace App\Services;
 
+use App\Enums\Discount\DiscountType;
 use App\Enums\Receipt\Type;
 use App\Enums\TableRoomStatusType;
 use App\Models\Branch;
 use App\Models\Cart;
 use App\Models\CashierSession;
+use App\Models\Discount;
 use App\Models\ReceiptFooter;
 use App\Models\TableRoom;
 use Carbon\Carbon;
@@ -33,12 +35,22 @@ class CashierSessionService
 
         $session = $this->model->create([
             'business_date'  => now()->toDateString(),
+            'branch_id'      => session('active_branch')->id,
             'cashier_id'     => Auth::id(),
             'started_time'   => now(),
             'beginning_cash' => $request['beginning_cash'],
             'total_sales'    => 0,
             'closing_cash'   => 0,
         ]);
+
+        $branch = Branch::find($request['branch_id']);
+
+        if (! $branch) {
+            throw new Exception('Branch not found.');
+        }
+
+        $branch->order_number += 1;
+        $branch->save();
 
         return $session;
     }
@@ -220,7 +232,7 @@ class CashierSessionService
             throw new Exception('Branch not found.');
         }
 
-        return $branch->order_number;
+        return $branch->or_number;
     }
 
     public function updateBillNo(int $branchId)
@@ -233,5 +245,101 @@ class CashierSessionService
 
         $branch->bill_no += 1;
         $branch->save();
+    }
+
+    public function getSessionSummary(?CashierSession $session = null): array
+    {
+        // Get all orders for this session with relationships
+        $orders         = $session->orders()->with(['orderItems', 'tableRoom'])->get();
+        $seniorDiscount = Discount::where('discount_type', DiscountType::SENIOR->value)->first();
+
+        $orderSummaries    = [];
+        $totalSales        = 0;
+        $itemsSettled      = 0;
+        $guestsServed      = 0;
+        $netSales          = 0;
+        $totalLessTax      = 0;
+        $transactionsCount = count($orderSummaries);
+        $totalQuantity     = 0;
+        $vatableSales      = 0;
+        $nonVatableSales   = 0;
+        $vatAmount         = 0;
+        $regularDiscount   = 0;
+        $seniorDiscount    = 0;
+        $pwdDiscount       = 0;
+
+        foreach ($orders as $order) {
+            // Calculate order total from orderItems
+            $orderTotal = $order->orderItems->sum(fn($item) => ($item->price * $item->quantity) - $item->discount);
+            $totalQuantity += $order->orderItems->sum('quantity');
+            $totalLessTax += $order->orderItems->sum('less_tax');
+            $vatableSales += $order->orderItems->sum('vatable_sales');
+            $nonVatableSales += $order->orderItems->sum('non_vat_sales');
+            $vatAmount += $order->orderItems->sum('vat_amount');
+            $netSales += $order->orderItems->sum('amount');
+            $seniorDiscount += $order->orderItems
+                ->filter(fn($item) =>
+                    optional($item->discount)->discount_type === DiscountType::SENIOR->value
+                )
+                ->sum('discount_amount'); //TODO: Need to show the total amount of senior discount given as well
+
+            $orderSummaries[] = [
+                'id'             => $order->id,
+                'invoice_number' => str_pad($order->id, 3, '0', STR_PAD_LEFT),
+                'amount'         => $orderTotal,
+            ];
+
+            $totalSales += $orderTotal;
+            $itemsSettled += $order->orderItems->count();
+
+            // Count guests - each order has a table with number_of_pax
+            if ($order->tableRoom) {
+                $guestsServed += $order->tableRoom->number_of_pax ?? 0;
+            }
+        }
+
+        // Calculate total quantity and discounts from orders
+        foreach ($orders as $order) {
+            foreach ($order->orderItems as $item) {
+                $discountAmount = $item->discount_amount ?? $item->discount ?? 0;
+                if ($discountAmount > 0) {
+                    // Assuming discount based on discount_id indicates senior discount
+                    if ($item->discount_id) {
+                        $seniorDiscount += $discountAmount;
+                    } else {
+                        $regularDiscount += $discountAmount;
+                    }
+                }
+            }
+        }
+
+        return [
+            'orders'             => $orderSummaries,
+            'total_sales'        => $totalSales,
+            'gross_sales'        => $totalSales,
+            'net_sales'          => $netSales,
+            'items_settled'      => $itemsSettled,
+            'guests_served'      => $guestsServed,
+            'transactions_count' => $transactionsCount,
+            'sku_count'          => $itemsSettled,
+            'total_quantity'     => $totalQuantity,
+            'cancelled_count'    => 0,
+            'cancelled_amount'   => 0,
+            'regular_discount'   => $regularDiscount,
+            'senior_discount'    => $seniorDiscount,
+            'pwd_discount'       => $pwdDiscount,
+            'non_vat_sales'      => $nonVatableSales,
+            'vat_sales'          => $vatableSales,
+            'vat_amount'         => $vatAmount,
+            'less_tax'           => $totalLessTax,
+            'previous_reading'   => 0,
+            'running_total'      => $totalSales,
+            'session_number'     => str_pad($session->id, 4, '0', STR_PAD_LEFT),
+            'expected_cash'      => $session->beginning_cash ?? 0,
+            'cash_denomination'  => $session->closing_cash ?? 0,
+            'or_number'          => 'OR-' . str_pad($session->id, 4, '0', STR_PAD_LEFT),
+            'bill_number_start'  => 'BILL-' . str_pad($session->id, 4, '0', STR_PAD_LEFT),
+            'bill_number_end'    => 'BILL-' . str_pad($session->id + 1, 4, '0', STR_PAD_LEFT),
+        ];
     }
 }
