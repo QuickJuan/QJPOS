@@ -77,6 +77,7 @@
             :less-discount-total="props.lessDiscountTotal"
             :table-info="tableInfo"
             :bill-footer="billFooter"
+            :receipt-number="receiptNumber"
             @settle-bill="handleSettleBill"
         />
 
@@ -96,6 +97,8 @@
             :billFooter="billFooter"
         />
     </div>
+
+    <ConfirmPopup />
 </template>
 
 <script setup lang="ts">
@@ -113,6 +116,9 @@ import ReceiptModal from "./ReceiptModal.vue";
 import BillModal from "./BillModal.vue";
 import { useBillNumber } from "@/composables/useBillNumber";
 import { usePage } from "@inertiajs/vue3";
+import { ConfirmPopup, useConfirm } from "primevue";
+import axios from "axios";
+import { route } from "ziggy-js";
 
 const props = defineProps<{
     cart: any;
@@ -130,6 +136,8 @@ const props = defineProps<{
     tableInfo: any;
     billFooter: any;
     receiptFooter: any;
+    billNumber: string;
+    receiptNumber: string;
 }>();
 
 const emit = defineEmits<{
@@ -145,6 +153,9 @@ const emit = defineEmits<{
 // Use applied discount from props
 const appliedDiscount = computed(() => props.appliedDiscount);
 
+// Use confirm
+const confirm = useConfirm();
+
 // UsePage
 const page = usePage();
 
@@ -158,7 +169,7 @@ const { getNextBillNumber } = useBillNumber();
 
 // Receipt data
 const receiptData = ref({
-    receiptNumber: "001234",
+    receiptNumber: props.receiptNumber,
     date: new Date().toISOString(),
     tableNumber: "",
     cashierName: "",
@@ -261,7 +272,7 @@ const handleSettleBill = (data: any) => {
 const handlePrintBill = () => {
     // Populate bill data
     billData.value = {
-        billNumber: getNextBillNumber().toString().padStart(6, "0"),
+        billNumber: props.billNumber,
         date: new Date().toISOString(),
         tableInfo: props.tableInfo || "",
         cashierName: page.props.auth?.user?.name || "",
@@ -278,4 +289,5 @@ const handlePrintBill = () => {
 
     showBillModal.value = true;
 };
+
 </script>

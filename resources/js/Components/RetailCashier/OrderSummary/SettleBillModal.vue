@@ -78,6 +78,7 @@ const props = defineProps<{
     lessDiscountTotal: number;
     tableInfo: any;
     billFooter: any;
+    receiptNumber: string;
 }>();
 
 const emit = defineEmits<{
@@ -95,7 +96,7 @@ const page = usePage();
 
 // Receipt data
 const receiptData = ref({
-    receiptNumber: "001234",
+    receiptNumber: props.receiptNumber,
     date: new Date().toISOString(),
     tableNumber: "",
     cashierName: "",
@@ -113,7 +114,7 @@ const receiptData = ref({
 // Handle settle bill form submission
 const handleSettleBill = () => {
     receiptData.value = {
-        receiptNumber: `RCP-${Date.now()}`,
+        receiptNumber: props.receiptNumber,
         date: new Date().toISOString(),
         tableNumber: props.tableInfo,
         cashierName: page.props.auth?.user?.name ?? "",

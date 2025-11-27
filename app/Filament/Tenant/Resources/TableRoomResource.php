@@ -159,6 +159,7 @@ class TableRoomResource extends Resource
                 //
             ])
             ->actions([
+                Tables\Actions\ReplicateAction::make(),
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),

@@ -60,14 +60,19 @@
                         class="space-y-2"
                     >
                         <TextField
-                            :label="`₱${denom}`"
+                            :label="`${formatMoney(denom)}`"
                             v-model.number="cashDenominations[denom]"
                             type="number"
                             min="0"
                             :placeholder="`Count of ₱${denom}`"
                         />
                         <p class="text-xs text-gray-500">
-                            Total: ₱{{ (parseFloat(denom) * count).toFixed(2) }}
+                            Total:
+                            {{
+                                formatMoney(
+                                    (parseFloat(denom) * count).toFixed(2)
+                                )
+                            }}
                         </p>
                     </div>
                 </div>
@@ -75,28 +80,11 @@
 
             <!-- Summary -->
             <div class="bg-gray-50 rounded-lg p-4 border">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <p class="text-sm text-gray-600">Total Cash Counted</p>
-                        <p class="text-xl font-bold text-gray-900">
-                            ₱{{ totalCashCounted.toFixed(2) }}
-                        </p>
-                    </div>
-                    <div>
-                        <p class="text-sm text-gray-600">Difference</p>
-                        <p
-                            :class="[
-                                'text-xl font-bold',
-                                cashDifference >= 0
-                                    ? 'text-green-600'
-                                    : 'text-red-600',
-                            ]"
-                        >
-                            {{ cashDifference >= 0 ? "+" : "" }}₱{{
-                                cashDifference.toFixed(2)
-                            }}
-                        </p>
-                    </div>
+                <div class="text-center">
+                    <p class="text-sm text-gray-600">Total Cash Counted</p>
+                    <p class="text-xl font-bold text-gray-900">
+                        {{ formatMoney(totalCashCounted.toFixed(2)) }}
+                    </p>
                 </div>
             </div>
         </div>
@@ -119,6 +107,16 @@
             </div>
         </template>
     </Dialog>
+
+    <SessionSummaryModal
+        :showSessionSummaryModal="showSessionSummaryModal"
+        :openSession="openSession"
+        :sessionSummary="sessionSummaryData"
+        :currentUser="currentUser"
+        :totalCashCounted="totalCashCounted"
+        @closeModal="showSessionSummaryModal = false"
+        @confirmClose="handleFinalConfirm"
+    />
 </template>
 
 <script setup lang="ts">
@@ -127,13 +125,21 @@ import CashieringSession from "@/Types/CashieringSession";
 import { formatMoney } from "@/Utils/FormatMoney";
 import { Button, Dialog } from "primevue";
 import { computed, ref } from "vue";
+import SessionSummaryModal from "./SessionSummaryModal.vue";
+import axios from "axios";
+import { route } from "ziggy-js";
 
 const props = defineProps<{
     showCloseDialog: boolean;
     openSession: CashieringSession | null;
+    sessionSummary?: any;
+    currentUser?: any;
 }>();
 
 const emit = defineEmits(["confirmCloseSession", "closeModal"]);
+
+const showSessionSummaryModal = ref(false);
+const sessionSummaryData = ref(null);
 
 const expectedCash = computed(() => {
     if (!props.openSession) return 0;
@@ -168,7 +174,19 @@ const cashDifference = computed(() => {
     return totalCashCounted.value - expectedCash.value;
 });
 
-const handleConfirmCloseSession = () => {
+const handleConfirmCloseSession = async () => {
+    try {
+        const response = await axios.get(
+            route("retail-cashier.api.session-summary")
+        );
+        sessionSummaryData.value = response.data;
+        showSessionSummaryModal.value = true;
+    } catch (error) {
+        console.error("Failed to fetch session summary", error);
+    }
+};
+
+const handleFinalConfirm = () => {
     const denominationData = Object.entries(cashDenominations.value).reduce(
         (acc, [denom, count]) => {
             if (count > 0) {
@@ -183,6 +201,7 @@ const handleConfirmCloseSession = () => {
         denominationData: denominationData,
         totalCashCounted: totalCashCounted.value,
     });
+    showSessionSummaryModal.value = false;
 };
 
 const handleClose = () => {

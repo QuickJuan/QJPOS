@@ -1,5 +1,5 @@
 <template>
-    <CashieringLayout :current-user="props.currentUser">
+    <CashieringLayout :current-user="props.currentUser" :open-session="props.pendingCashiering" :session-summary="props.sessionSummary">
         <!-- Fixed Header for Mobile/Tablet with Toggle Buttons -->
         <div
             class="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-md"
@@ -163,6 +163,8 @@
                     :tax-rate="taxRate"
                     :bill-footer="billFooter"
                     :receipt-footer="receiptFooter"
+                    :bill-number="props.billNumber"
+                    :receipt-number="props.receiptNumber"
                     @selected-order-type="updateOrderType"
                     @show-receipt="handleShowReceipt"
                 />
@@ -213,6 +215,9 @@ const props = defineProps<{
     billFooter: any;
     receiptFooter: any;
     selectedCategorySlug?: string | null;
+    sessionSummary?: any;
+    billNumber: string;
+    receiptNumber: string;
 }>();
 
 const page = usePage<PageProps>();
@@ -382,7 +387,7 @@ const handleShowReceipt = (data: any) => {
     const taxAmount = discountedSubtotal * 0.12; // 12% VAT
 
     receiptData.value = {
-        receiptNumber: `RCP-${Date.now()}`,
+        receiptNumber: props.receiptNumber,
         date: new Date().toISOString(),
         subtotal: subtotal,
         taxAmount: taxAmount,

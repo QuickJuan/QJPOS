@@ -3,6 +3,7 @@ namespace App\Filament\Tenant\Resources;
 
 use App\Filament\Tenant\Resources\BranchResource\Pages;
 use App\Models\Branch;
+use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -79,6 +80,32 @@ class BranchResource extends Resource
                     ->required()
                     ->searchable()
                     ->preload(),
+
+                TextInput::make('or_number')
+                    ->label('OR Number')
+                    ->nullable()
+                    ->maxLength(100),
+
+                TextInput::make('registration_number')
+                    ->label('Registration Number')
+                    ->nullable()
+                    ->maxLength(100),
+
+                TextInput::make('bill_no')
+                    ->label('Bill Number')
+                    ->nullable()
+                    ->maxLength(100),
+
+                TextInput::make('order_number')
+                    ->label('Order Number')
+                    ->nullable()
+                    ->maxLength(100),
+
+                KeyValue::make('receipt_headers')
+                    ->label('Receipt Headers')
+                    ->nullable()
+                    ->addActionLabel('Add Header')
+                    ->helperText('JSON object for receipt headers'),
             ]);
     }
 
@@ -118,6 +145,23 @@ class BranchResource extends Resource
 
                 TextColumn::make('tin')
                     ->label('TIN'),
+
+                TextColumn::make('registration_number')
+                    ->label('Registration Number'),
+
+                TextColumn::make('created_at')
+                    ->label('Created At')
+                    ->dateTime()
+                    ->sortable(),
+
+                TextColumn::make('or_number')
+                    ->label('OR Number'),
+
+                TextColumn::make('bill_no')
+                    ->label('Bill Number'),
+
+                TextColumn::make('order_number')
+                    ->label('Order Number'),
             ])
             ->filters([
                 //

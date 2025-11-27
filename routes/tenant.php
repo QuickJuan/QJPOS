@@ -125,7 +125,9 @@ Route::middleware([
                             Route::get('/{categorySlug?}', 'index')->name('category');
                             Route::post('/session/start', 'startSession')->name('session.start');
                             Route::post('/session/close', 'closeSession')->name('session.close');
+                            Route::get('/api/session-summary', 'getSessionSummary')->name('api.session-summary');
                             Route::post('/cart/create-order', 'createOrder')->name('cart.create-order');
+                            Route::put('/update-bill-no/{branchId}', 'updateBillNo')->name('update-bill-no');
                         });
 
                     Route::controller(CartController::class)
@@ -177,6 +179,18 @@ Route::middleware([
                     Route::get('/api/orders', [\App\Http\Controllers\OrderController::class, 'index'])->name('api.orders');
                     Route::get('/api/orders/{order}', [\App\Http\Controllers\OrderController::class, 'show'])->name('api.orders.show');
                     Route::post('/api/orders/{order}/refund', [\App\Http\Controllers\OrderController::class, 'refund'])->name('api.orders.refund');
+                });
+
+            // ROUTES FOR CUSTOMERS
+            Route::as('customers.')
+                ->prefix('/customers')
+                ->controller(\App\Http\Controllers\CustomerController::class)
+                ->group(function () {
+                    Route::get('/', 'index')->name('index');
+                    Route::post('/', 'store')->name('store');
+                    Route::put('/{customer}', 'update')->name('update');
+                    Route::delete('/{customer}', 'destroy')->name('destroy');
+                    Route::get('/search', 'search')->name('search');
                 });
         });
 });

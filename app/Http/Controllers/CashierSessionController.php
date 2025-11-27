@@ -32,7 +32,7 @@ class CashierSessionController extends Controller
     public function index(Request $request, ?string $categorySlug = null): Response
     {
         // Check if the current auth user has pending cashiering.
-        $pendingCashiering = $this->cashierSessionService->model->openSession()->first();
+        $pendingCashiering = $this->cashierSessionService->model->openSession()->with('cashier')->first();
 
         // Get categories with products directly (will be cached in browser)
         $categoriesQuery = Category::with(['products' => fn($query) => $query->where('is_active', true)->with('productPackagings', 'options')])->get();
@@ -52,9 +52,11 @@ class CashierSessionController extends Controller
         $currentTable = $cartData['currentTable'];
 
         // Calculate totals
-        $totals     = $this->cashierSessionService->calculateTotals($cart, $cartItems);
-        $billFooter = $this->cashierSessionService->getReceiptFooter(Type::BILL->value);
+        $totals        = $this->cashierSessionService->calculateTotals($cart, $cartItems);
+        $billFooter    = $this->cashierSessionService->getReceiptFooter(Type::BILL->value);
         $receiptFooter = $this->cashierSessionService->getReceiptFooter(Type::RECEIPT->value);
+        $billNumber    = $this->cashierSessionService->getBillNo(session('active_branch')->id);
+        $receiptNumber = $this->cashierSessionService->getReceiptNo(session('active_branch')->id);
 
         // Prepare view data
         $viewData = $this->cashierSessionService->prepareViewData(
@@ -68,7 +70,9 @@ class CashierSessionController extends Controller
             $taxRate,
             $totals,
             $billFooter,
-            $receiptFooter
+            $receiptFooter,
+            $billNumber,
+            $receiptNumber,
         );
 
         // Add selected category slug to view data
@@ -84,11 +88,17 @@ class CashierSessionController extends Controller
         // Check if the current auth user has an open cashier session (closing_time is null)
         $openSession = $this->cashierSessionService->model
             ->openSession()
+            ->with('cashier')
             ->first();
 
+        if ($openSession) {
+            $sessionSummary = $this->cashierSessionService->getSessionSummary($openSession);
+        }
+
         return Inertia::render('RetailCashier/Preview', [
-            'activeBranch' => $activeBranch,
-            'openSession'  => $openSession,
+            'activeBranch'   => $activeBranch,
+            'openSession'    => $openSession,
+            'sessionSummary' => $sessionSummary ?? null,
         ]);
     }
 
@@ -121,6 +131,18 @@ class CashierSessionController extends Controller
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'There was an error while closing the session.');
         }
+    }
+
+    public function getSessionSummary(Request $request)
+    {
+        $openSession = $this->cashierSessionService->model->openSession()->with('cashier')->first();
+
+        if ($openSession) {
+            $sessionSummary = $this->cashierSessionService->getSessionSummary($openSession);
+            return response()->json($sessionSummary);
+        }
+
+        return response()->json(null);
     }
 
     public function tables(): Response
@@ -197,6 +219,17 @@ class CashierSessionController extends Controller
             return redirect()->route('retail-cashier.index', ['tableId' => $request->table_id, 'locationType' => $table->tableRoomLocation->location_type])->with('success', 'Order started successfully');
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'Failed to start order: ' . $e->getMessage());
+        }
+    }
+
+    public function updateBillNo(int $branchId): RedirectResponse
+    {
+        try {
+            $this->cashierSessionService->updateBillNo($branchId);
+
+            return redirect()->back();
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'There was an error while updating the bill number.');
         }
     }
 }
