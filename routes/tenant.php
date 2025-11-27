@@ -180,5 +180,17 @@ Route::middleware([
                     Route::get('/api/orders/{order}', [\App\Http\Controllers\OrderController::class, 'show'])->name('api.orders.show');
                     Route::post('/api/orders/{order}/refund', [\App\Http\Controllers\OrderController::class, 'refund'])->name('api.orders.refund');
                 });
+
+            // ROUTES FOR CUSTOMERS
+            Route::as('customers.')
+                ->prefix('/customers')
+                ->controller(\App\Http\Controllers\CustomerController::class)
+                ->group(function () {
+                    Route::get('/', 'index')->name('index');
+                    Route::post('/', 'store')->name('store');
+                    Route::put('/{customer}', 'update')->name('update');
+                    Route::delete('/{customer}', 'destroy')->name('destroy');
+                    Route::get('/search', 'search')->name('search');
+                });
         });
 });

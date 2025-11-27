@@ -17,7 +17,7 @@ return [
      * Only relevant if you're using the domain or subdomain identification middleware.
      */
     'central_domains' => [
-        env('CENTRAL_DOMAIN', 'quickjuan.test'),
+        env('CENTRAL_DOMAIN', 'storepos.online'),
     ],
 
     /**

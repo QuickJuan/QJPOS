@@ -10,9 +10,18 @@ use Illuminate\Support\Facades\Auth;
 class Order extends Model
 {
     protected $fillable = [
+        'customer_id',
         'cashier_id',
         'cashier_session_id',
         'table_room_id',
+        'discount_id',
+        'coupon_id',
+        'coupon_code',
+        'total_amount',
+        'total_discount',
+        'item_discount',
+        'total_due',
+        'amount_tendered',
         'notes',
         'meta_data',
         'status',
@@ -103,9 +112,24 @@ class Order extends Model
         return $this->belongsTo(User::class, 'cashier_id');
     }
 
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
+    }
+
     public function cashierSession(): BelongsTo
     {
         return $this->belongsTo(CashierSession::class, 'cashier_session_id');
+    }
+
+    public function discount(): BelongsTo
+    {
+        return $this->belongsTo(Discount::class);
+    }
+
+    public function coupon(): BelongsTo
+    {
+        return $this->belongsTo(CouponCode::class, 'coupon_id');
     }
 
     public function orderItems(): HasMany
