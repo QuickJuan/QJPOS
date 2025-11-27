@@ -1,12 +1,19 @@
 <?php
 namespace App\Http\Middleware;
 
+use App\Enums\Receipt\Type;
 use App\Services\DiscountService;
+use App\Services\ReceiptFooterService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
+    public function __construct(
+        protected ReceiptFooterService $receiptFooterService
+    ) {
+    }
+
     /**
      * The root template that's loaded on the first page visit.
      *
@@ -44,6 +51,8 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'receipt_footer' => fn() => $this->receiptFooterService->getReceiptFooter(Type::RECEIPT->value),
+            'bill_footer' => fn() => $this->receiptFooterService->getReceiptFooter(Type::BILL->value),
         ]);
     }
 }

@@ -10,7 +10,6 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\TableRoomController;
 use App\Http\Controllers\AttendanceController;
-use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\CashierSessionController;
 use App\Http\Controllers\TableManagementController;
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
@@ -170,15 +169,15 @@ Route::middleware([
                     Route::delete('/tables/{tableId}', 'destroy')->name('destroy');
                 });
 
-            // ROUTES FOR TRANSACTIONS
+            // ROUTES FOR TRANSACTIONS/ORDERS
             Route::as('transactions.')
                 ->prefix('/transactions')
-                ->controller(TransactionController::class)
+                ->controller(\App\Http\Controllers\OrderController::class)
                 ->group(function () {
                     Route::get('/', 'index')->name('index');
-                    Route::get('/api/orders', [\App\Http\Controllers\OrderController::class, 'index'])->name('api.orders');
-                    Route::get('/api/orders/{order}', [\App\Http\Controllers\OrderController::class, 'show'])->name('api.orders.show');
-                    Route::post('/api/orders/{order}/refund', [\App\Http\Controllers\OrderController::class, 'refund'])->name('api.orders.refund');
+                    Route::get('/api/orders', 'index')->name('api.orders');
+                    Route::get('/api/orders/{order}', 'show')->name('api.orders.show');
+                    Route::post('/api/orders/{order}/refund', 'refund')->name('api.orders.refund');
                 });
 
             // ROUTES FOR CUSTOMERS

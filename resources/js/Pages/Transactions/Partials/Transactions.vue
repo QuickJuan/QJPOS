@@ -31,7 +31,7 @@
                     <div
                         class="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary font-semibold"
                     >
-                        {{ order.cashier?.name?.charAt(0) || "R" }}
+                        {{ order.cashier?.name?.charAt(0) || "R" }}asdasdsa
                     </div>
                     <div class="flex-1">
                         <div class="flex items-center justify-between">

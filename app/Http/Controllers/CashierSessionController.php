@@ -53,8 +53,7 @@ class CashierSessionController extends Controller
 
         // Calculate totals
         $totals        = $this->cashierSessionService->calculateTotals($cart, $cartItems);
-        $billFooter    = $this->cashierSessionService->getReceiptFooter(Type::BILL->value);
-        $receiptFooter = $this->cashierSessionService->getReceiptFooter(Type::RECEIPT->value);
+
         $billNumber    = $this->cashierSessionService->getBillNo(session('active_branch')->id);
         $receiptNumber = $this->cashierSessionService->getReceiptNo(session('active_branch')->id);
 
@@ -69,8 +68,6 @@ class CashierSessionController extends Controller
             $currentTable,
             $taxRate,
             $totals,
-            $billFooter,
-            $receiptFooter,
             $billNumber,
             $receiptNumber,
         );

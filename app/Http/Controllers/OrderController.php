@@ -1,11 +1,9 @@
 <?php
 namespace App\Http\Controllers;
 
-use App\Enums\Receipt\Type;
 use App\Http\Requests\RefundRequest;
 use App\Models\Order;
 use App\Models\User;
-use App\Services\CashierSessionService;
 use App\Services\OrderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,8 +13,7 @@ use Inertia\Inertia;
 class OrderController extends Controller
 {
     public function __construct(
-        protected OrderService $orderService,
-        protected CashierSessionService $cashierSessionService
+        protected OrderService $orderService
     ) {
     }
 
@@ -27,14 +24,12 @@ class OrderController extends Controller
             perPage: 5
         );
 
-        $cashiers      = User::select('id', 'name')->orderBy('name')->get();
-        $receiptFooter = $this->cashierSessionService->getReceiptFooter(Type::RECEIPT->value);
+        $cashiers = User::select('id', 'name')->orderBy('name')->get();
 
         return Inertia::render('Transactions/Index', [
-            'orders'        => $orders,
-            'cashiers'      => $cashiers,
-            'receiptFooter' => $receiptFooter,
-            'filters'       => $request->only(['search', 'date_from', 'date_to', 'status', 'cashier_id']),
+            'orders'   => $orders,
+            'cashiers' => $cashiers,
+            'filters'  => $request->only(['search', 'date_from', 'date_to', 'status', 'cashier_id']),
         ]);
     }
     public function refund(RefundRequest $request, Order $order): JsonResponse
