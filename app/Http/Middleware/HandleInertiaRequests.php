@@ -41,6 +41,9 @@ class HandleInertiaRequests extends Middleware
                 'error'   => fn()   => $request->session()->get('error'),
             ],
             'active_branch' => $request->session()->get('active_branch'),
+            'auth' => [
+                'user' => $request->user(),
+            ],
         ]);
     }
 }
