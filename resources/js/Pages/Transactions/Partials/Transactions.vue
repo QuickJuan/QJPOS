@@ -1,5 +1,5 @@
 <template>
-    <div class="shadow-lg h-full">
+    <div class="border h-full">
         <div
             class="flex items-center justify-between px-5 py-4 border-b border-gray-100"
         >
@@ -101,7 +101,9 @@ const selectOrder = (order: Order) => {
 };
 
 const orderListingSubtitle = (order: Order) => {
-    return `${order?.table_room?.name}`;
+    return `${
+        order?.customer?.customer_name || order?.table_room?.name || "Walk-in"
+    }`;
 };
 
 const hasOrders = computed(

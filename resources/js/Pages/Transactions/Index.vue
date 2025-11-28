@@ -17,9 +17,9 @@
             </div>
         </template>
         <div class="flex flex-col h-full px-8 py-4">
-            <div class="flex flex-col md:flex-row gap-6 h-full">
+            <div class="flex flex-col md:flex-row gap-6 h-full overflow-hidden">
                 <!-- Sidebar -->
-                <div class="border w-full md:w-1/3 2xl:w-1/4 h-full">
+                <div class="w-full md:w-1/3 2xl:w-1/4 h-full flex flex-col">
                     <Transactions
                         :orders="orders"
                         :activeOrder="activeOrder"
@@ -29,10 +29,13 @@
                 </div>
 
                 <!-- Detail Pane -->
-                <div class="border flex flex-col w-full">
-                    <div v-if="activeOrder" class="flex flex-col">
+                <div class="flex flex-col w-full h-full overflow-hidden">
+                    <div
+                        v-if="activeOrder"
+                        class="flex flex-col h-full overflow-hidden"
+                    >
                         <div
-                            class="px-4 py-5 md:px-6 md:py-6 border-b border-gray-100 sticky top-0 bg-white z-10"
+                            class="px-4 py-5 md:px-6 md:py-6 border-b border-gray-100 bg-white flex-shrink-0"
                         >
                             <div
                                 class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between"
@@ -93,81 +96,51 @@
                             </div>
                         </div>
 
-                        <div
-                            class="px-4 py-5 md:px-6 md:py-6 flex-1 space-y-8 overflow-y-auto"
-                        >
-                            <div class="space-y-1">
-                                <p
-                                    class="text-xs uppercase tracking-wide text-gray-400"
-                                >
-                                    Cashier
-                                </p>
-                                <p class="text-lg font-semibold text-gray-900">
-                                    {{
-                                        activeOrder.cashier?.name ||
-                                        "Unknown cashier"
-                                    }}
-                                </p>
-                            </div>
-                            <div class="space-y-1">
-                                <p
-                                    class="text-xs uppercase tracking-wide text-gray-400"
-                                >
-                                    Date
-                                </p>
-                                <p class="text-lg font-semibold text-gray-900">
-                                    {{
-                                        formatDetailedDate(
-                                            activeOrder.created_at
-                                        )
-                                    }}
-                                </p>
-                            </div>
-                            <div>
-                                <p
-                                    class="text-xs uppercase tracking-wide text-gray-400 mb-3"
-                                >
-                                    Order Items
-                                </p>
-
+                        <div class="px-4 py-5 md:px-6 md:py-6 space-y-8 flex-1">
+                            <div class="flex gap-4">
                                 <Receipt
                                     :receipt-id="activeOrder.id.toString()"
                                     :embedded="true"
                                     :order-data="activeOrder"
                                     :receipt-footer="props.receiptFooter"
                                 />
-                            </div>
-
-                            <div
-                                v-if="refundMeta"
-                                class="rounded-2xl border border-red-100 bg-red-50/60 p-6 space-y-3"
-                            >
-                                <p
-                                    class="text-xs uppercase tracking-wide text-red-500"
-                                >
-                                    Refund Details
-                                </p>
-                                <p class="text-sm text-gray-700">
-                                    Requested by
-                                    <span class="font-semibold text-gray-900">
-                                        {{ refundMeta.requested_by }}
-                                    </span>
-                                    &middot; Approved by
-                                    <span class="font-semibold text-gray-900">
-                                        {{ refundMeta.supervisor }}
-                                    </span>
-                                </p>
-                                <p class="text-xs text-gray-500">
-                                    Refunded
-                                    {{
-                                        formatDetailedDate(
-                                            refundMeta.refunded_at
-                                        )
-                                    }}
-                                </p>
-                                <p class="text-sm text-gray-600 italic">
-                                    "{{ refundMeta.notes }}"
-                                </p>
+                                <div class="flex flex-col">
+                                    <div
+                                        v-if="refundMeta"
+                                        class="rounded-2xl border border-red-100 bg-red-50/60 p-6 space-y-3"
+                                    >
+                                        <p
+                                            class="text-xs uppercase tracking-wide text-red-500"
+                                        >
+                                            Refund Details
+                                        </p>
+                                        <p class="text-sm text-gray-700">
+                                            Requested by
+                                            <span
+                                                class="font-semibold text-gray-900"
+                                            >
+                                                {{ refundMeta.requested_by }}
+                                            </span>
+                                            &middot; Approved by
+                                            <span
+                                                class="font-semibold text-gray-900"
+                                            >
+                                                {{ refundMeta.supervisor }}
+                                            </span>
+                                        </p>
+                                        <p class="text-xs text-gray-500">
+                                            Refunded
+                                            {{
+                                                formatDetailedDate(
+                                                    refundMeta.refunded_at
+                                                )
+                                            }}
+                                        </p>
+                                        <p class="text-sm text-gray-600 italic">
+                                            "{{ refundMeta.notes }}"
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
