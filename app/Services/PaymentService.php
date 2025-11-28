@@ -20,7 +20,7 @@ class PaymentService
 
             // Create the order
             $order = Order::create([
-                'invoice_number'     => $this->getNextInvoiceNumber($request->branch_id),
+                'invoice_no'         => $this->getNextInvoiceNumber($request->branch_id),
                 'cashier_id'         => $cart->cashier_id,
                 'cashier_session_id' => $cart->cashier_session_id,
                 'table_room_id'      => $cart->table_room_id,
@@ -31,11 +31,11 @@ class PaymentService
                 'total_amount'       => $request->total_amount,
                 'total_discount'     => $request->total_discount ?? 0,
                 'item_discount'      => $request->item_discount ?? 0,
-                'total_due'          => $request->total_due,
-                'amount_tendered'    => $request->amount_tendered,
+                'total_due'          => $request->total_amount,
+                'amount_tendered'    => $request->amount_paid,
                 'notes'              => $cart->notes,
                 'meta_data'          => [
-                    'change'     => $request->amount_tendered - $request->total_due,
+                    'change'     => $request->amount_paid - $request->total_amount,
                     'settled_at' => now(),
                 ],
             ]);

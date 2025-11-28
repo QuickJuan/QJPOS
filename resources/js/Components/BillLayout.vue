@@ -4,6 +4,13 @@
     >
         <!-- Header -->
         <div class="text-center mb-4">
+            <div v-if="businessLogo">
+                <img
+                    :src="businessLogo"
+                    alt="Company Logo"
+                    class="w-16 h-auto mx-auto mb-2"
+                />
+            </div>
             <h1 class="text-xl font-bold mb-1">{{ businessName }}</h1>
             <p class="text-sm">{{ businessAddress }}</p>
             <p class="text-sm">{{ businessPhone }}</p>
@@ -162,6 +169,7 @@ import { computed } from "vue";
 
 // Props
 const props = defineProps<{
+    businessLogo?: string;
     businessName?: string;
     businessAddress?: string;
     businessPhone?: string;
@@ -234,7 +242,7 @@ const formatTime = (dateString: string) => {
 
 <style scoped>
 .bill-container {
-    font-family: "Courier New", monospace;
+    font-family: "Monospace", monospace;
     line-height: 1.2;
     max-width: 300px;
 }

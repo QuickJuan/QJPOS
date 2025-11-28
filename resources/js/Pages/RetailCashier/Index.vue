@@ -169,6 +169,7 @@
                     :receipt-footer="receiptFooter"
                     :bill-number="props.billNumber"
                     :receipt-number="props.receiptNumber"
+                    :general-settings="props.generalSettings"
                     @selected-order-type="updateOrderType"
                     @show-receipt="handleShowReceipt"
                 />
@@ -222,6 +223,12 @@ const props = defineProps<{
     sessionSummary?: any;
     billNumber: string;
     receiptNumber: string;
+    generalSettings: {
+        company_name: string;
+        company_address: string;
+        company_phone: string;
+        company_logo: string;
+    };
 }>();
 
 const page = usePage<PageProps>();

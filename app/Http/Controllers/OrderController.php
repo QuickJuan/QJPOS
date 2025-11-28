@@ -1,14 +1,16 @@
 <?php
 namespace App\Http\Controllers;
 
-use App\Http\Requests\RefundRequest;
-use App\Models\Order;
 use App\Models\User;
-use App\Services\OrderService;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
+use App\Models\Order;
+use Illuminate\Http\Request;
+use App\Services\OrderService;
+use App\Settings\GeneralSettings;
+use Illuminate\Http\JsonResponse;
+use App\Http\Requests\RefundRequest;
+use App\Services\GeneralSettingsService;
+use Illuminate\Support\Facades\Auth;
 
 class OrderController extends Controller
 {
@@ -19,6 +21,7 @@ class OrderController extends Controller
 
     public function index(Request $request)
     {
+        $generalSettings = app(GeneralSettingsService::class)->getCompanySettings();
         $orders = $this->orderService->getOrders(
             filters: $request->only(['search', 'date_from', 'date_to', 'status', 'cashier_id']),
             perPage: 5
@@ -30,6 +33,7 @@ class OrderController extends Controller
             'orders'   => $orders,
             'cashiers' => $cashiers,
             'filters'  => $request->only(['search', 'date_from', 'date_to', 'status', 'cashier_id']),
+            'generalSettings' => $generalSettings,
         ]);
     }
     public function refund(RefundRequest $request, Order $order): JsonResponse

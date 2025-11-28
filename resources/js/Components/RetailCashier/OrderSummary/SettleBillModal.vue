@@ -109,10 +109,28 @@ const receiptData = ref({
     discountType: null as string | null,
     totalAmount: 0,
     paymentInfo: null as any,
+    taxInfo: null as any,
 });
 
 // Handle settle bill form submission
 const handleSettleBill = () => {
+    const taxInfo = computed(() => {
+        return props.orderItems.reduce(
+            (acc: any, item: any) => {
+                acc.vatableSales += Number(item.vatable_sales) || 0;
+                acc.nonVatableSales += Number(item.non_vat_sales) || 0;
+                acc.vatExemptSales += Number(item.vat_exempt_sales) || 0;
+                acc.vatAmount += Number(item.vat_amount) || 0;
+                return acc;
+            },
+            {
+                vatableSales: 0,
+                nonVatableSales: 0,
+                vatExemptSales: 0,
+                vatAmount: 0,
+            }
+        );
+    });
     receiptData.value = {
         receiptNumber: props.receiptNumber,
         date: new Date().toISOString(),
@@ -126,6 +144,7 @@ const handleSettleBill = () => {
         discountName: appliedDiscount.value?.discountName || null,
         discountType: appliedDiscount.value?.discountType || null,
         totalAmount: parseFloat(props.total.toFixed(2)),
+        taxInfo: taxInfo.value,
         paymentInfo: {
             amount_paid: parseFloat(amountPaid.value.toString()) || 0,
             change:
