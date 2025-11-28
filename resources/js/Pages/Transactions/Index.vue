@@ -70,6 +70,13 @@
                                     <!-- Desktop action buttons -->
                                     <div class="hidden lg:flex flex-wrap gap-2">
                                         <Button
+                                            label="Thermal Print"
+                                            icon="pi pi-bluetooth"
+                                            outlined
+                                            :class="subtleActionButtonClass"
+                                            @click="showThermalPrinter = true"
+                                        />
+                                        <Button
                                             label="Re-print"
                                             icon="pi pi-print"
                                             outlined
@@ -114,7 +121,19 @@
                                             class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
                                         >
                                             <button
-                                                class="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm"
+                                                class="w-full text-left px-4 py-3 hover:bg-blue-50 flex items-center gap-3 text-sm text-blue-700"
+                                                @click="
+                                                    () => {
+                                                        showThermalPrinter = true;
+                                                        toggleActionMenu();
+                                                    }
+                                                "
+                                            >
+                                                <i class="pi pi-bluetooth"></i>
+                                                Thermal Print
+                                            </button>
+                                            <button
+                                                class="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm border-t border-gray-100"
                                                 @click="
                                                     () => {
                                                         reprintReceipt(
@@ -239,6 +258,21 @@
             @submit="submitRefund"
             @closed="handleRefundDialogClosed"
         />
+
+        <!-- Thermal Printer Dialog -->
+        <Dialog
+            v-model:visible="showThermalPrinter"
+            modal
+            header="Thermal Printer"
+            :style="{ width: '28rem' }"
+            :breakpoints="{ '1199px': '75vw', '575px': '90vw' }"
+        >
+            <ThermalPrinterManager
+                :receipt-data="thermalReceiptData"
+                @connected="handlePrinterConnected"
+                @printed="handlePrinterPrinted"
+            />
+        </Dialog>
     </TransactionsLayout>
 </template>
 
@@ -250,11 +284,13 @@ import axios from "axios";
 import TransactionsLayout from "@/Layouts/TransactionsLayout.vue";
 import PageProps from "@/Types/PageProps";
 import Button from "primevue/button";
+import Dialog from "primevue/dialog";
 import Order from "@/Types/Order/Order";
 import SearchAndFIlter from "./Partials/SearchAndFIlter.vue";
 import Transactions from "./Partials/Transactions.vue";
 import RefundDialog from "./Partials/RefundDialog.vue";
 import Receipt from "../Receipt.vue";
+import ThermalPrinterManager from "@/Components/ThermalPrinter/ThermalPrinterManager.vue";
 import { debounce } from "lodash";
 import { filter } from "lodash";
 
@@ -321,6 +357,43 @@ const refundForm = ref({
 const refundLoading = ref(false);
 const refundMeta = computed(() => activeOrder.value?.meta_data?.refund || null);
 const showActionMenu = ref(false);
+const showThermalPrinter = ref(false);
+
+// Thermal printer receipt data
+const thermalReceiptData = computed(() => {
+    if (!activeOrder.value) return null;
+
+    return {
+        storeName: "QuickJuan POS",
+        storeAddress: "123 Main Street, Your City",
+        orderNumber:
+            activeOrder.value.invoice_number || `#${activeOrder.value.id}`,
+        cashier: activeOrder.value.cashier?.name || "Unknown",
+        date: formatDetailedDate(activeOrder.value.created_at),
+        items:
+            activeOrder.value.order_items?.map((item) => ({
+                name: item.product?.name || "Item",
+                quantity: item.quantity,
+                price: item.price,
+                amount: item.amount,
+            })) || [],
+        subtotal: activeOrder.value.total_amount || 0,
+        tax: 0, // Add tax calculation if needed
+        discount: activeOrder.value.total_discount || 0,
+        total: activeOrder.value.total_amount || 0,
+        payment: {
+            method: "Cash", // Add payment method field if available
+            amount:
+                activeOrder.value.amount_tendered ||
+                activeOrder.value.total_amount ||
+                0,
+            change:
+                (activeOrder.value.amount_tendered || 0) -
+                (activeOrder.value.total_amount || 0),
+        },
+        footer: "Thank you for your business!",
+    };
+});
 
 const toggleActionMenu = () => {
     showActionMenu.value = !showActionMenu.value;
@@ -417,6 +490,16 @@ const selectOrder = (order: any) => {
 
 const handleRefundDialogClosed = () => {
     refundOrder.value = null;
+};
+
+const handlePrinterConnected = (connected: boolean) => {
+    console.log("Printer connection status:", connected);
+};
+
+const handlePrinterPrinted = (success: boolean) => {
+    if (success) {
+        showThermalPrinter.value = false;
+    }
 };
 
 const subtleActionButtonClass =
