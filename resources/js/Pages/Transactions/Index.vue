@@ -16,199 +16,172 @@
                 />
             </div>
         </template>
-        <div class="flex flex-col h-full py-6 md:py-8 px-3 md:px-6 lg:px-8">
-            <div class="space-y-6 h-full bg-red-400">
-                <div
-                    class="grid grid-cols-1 md:grid-cols-[360px_1fr] gap-6 h-full"
-                >
-                    <!-- Sidebar -->
-                    <div class="space-y-4">
-                        <Transactions
-                            :orders="orders"
-                            :activeOrder="activeOrder"
-                            @selectOrder="selectOrder"
-                            @goToPage="goToPage"
-                        />
-                    </div>
+        <div class="flex flex-col h-full px-8 py-4">
+            <div class="flex flex-col md:flex-row gap-6 h-full">
+                <!-- Sidebar -->
+                <div class="border w-full md:w-1/3 2xl:w-1/4 h-full">
+                    <Transactions
+                        :orders="orders"
+                        :activeOrder="activeOrder"
+                        @selectOrder="selectOrder"
+                        @goToPage="goToPage"
+                    />
+                </div>
 
-                    <!-- Detail Pane -->
-                    <div
-                        class="bg-white rounded-3xl shadow-lg overflow-hidden flex flex-col"
-                    >
-                        <div v-if="activeOrder" class="flex flex-col h-full">
-                            <div
-                                class="px-4 py-5 md:px-6 md:py-6 border-b border-gray-100 sticky top-0 bg-white z-10"
-                            >
-                                <div
-                                    class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between"
-                                >
-                                    <div>
-                                        <p class="text-sm text-gray-500">
-                                            {{
-                                                activeOrder.table_room
-                                                    ?.customer_name ||
-                                                "Walk-in Customer"
-                                            }}
-                                        </p>
-                                    </div>
-                                    <div
-                                        class="flex flex-wrap items-center gap-3 justify-end"
-                                    >
-                                        <span
-                                            :class="[
-                                                'px-3 py-1 rounded-full text-xs font-semibold',
-                                                getStatusClass(
-                                                    activeOrder.status
-                                                ),
-                                            ]"
-                                        >
-                                            {{
-                                                getStatusLabel(
-                                                    activeOrder.status
-                                                )
-                                            }}
-                                        </span>
-                                        <div class="flex flex-wrap gap-2">
-                                            <Button
-                                                label="Re-print"
-                                                icon="pi pi-print"
-                                                outlined
-                                                :class="subtleActionButtonClass"
-                                                @click="
-                                                    reprintReceipt(
-                                                        activeOrder.id
-                                                    )
-                                                "
-                                            />
-                                            <Button
-                                                label="Send to Email"
-                                                icon="pi pi-envelope"
-                                                outlined
-                                                :class="subtleActionButtonClass"
-                                                @click="
-                                                    sendReceiptEmail(
-                                                        activeOrder
-                                                    )
-                                                "
-                                            />
-                                            <Button
-                                                v-if="
-                                                    activeOrder.status ===
-                                                    'settled'
-                                                "
-                                                label="Refund"
-                                                icon="pi pi-undo"
-                                                outlined
-                                                :class="
-                                                    cautionActionButtonClass
-                                                "
-                                                @click="
-                                                    openRefundModal(activeOrder)
-                                                "
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div
-                                class="px-4 py-5 md:px-6 md:py-6 flex-1 space-y-8 overflow-y-auto"
-                            >
-                                <div class="space-y-1">
-                                    <p
-                                        class="text-xs uppercase tracking-wide text-gray-400"
-                                    >
-                                        Cashier
-                                    </p>
-                                    <p
-                                        class="text-lg font-semibold text-gray-900"
-                                    >
-                                        {{
-                                            activeOrder.cashier?.name ||
-                                            "Unknown cashier"
-                                        }}
-                                    </p>
-                                </div>
-                                <div class="space-y-1">
-                                    <p
-                                        class="text-xs uppercase tracking-wide text-gray-400"
-                                    >
-                                        Date
-                                    </p>
-                                    <p
-                                        class="text-lg font-semibold text-gray-900"
-                                    >
-                                        {{
-                                            formatDetailedDate(
-                                                activeOrder.created_at
-                                            )
-                                        }}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p
-                                        class="text-xs uppercase tracking-wide text-gray-400 mb-3"
-                                    >
-                                        Order Items
-                                    </p>
-
-                                    <Receipt
-                                        :receipt-id="activeOrder.id.toString()"
-                                        :embedded="true"
-                                        :order-data="activeOrder"
-                                        :receipt-footer="props.receiptFooter"
-                                    />
-                                </div>
-
-                                <div
-                                    v-if="refundMeta"
-                                    class="rounded-2xl border border-red-100 bg-red-50/60 p-6 space-y-3"
-                                >
-                                    <p
-                                        class="text-xs uppercase tracking-wide text-red-500"
-                                    >
-                                        Refund Details
-                                    </p>
-                                    <p class="text-sm text-gray-700">
-                                        Requested by
-                                        <span
-                                            class="font-semibold text-gray-900"
-                                        >
-                                            {{ refundMeta.requested_by }}
-                                        </span>
-                                        &middot; Approved by
-                                        <span
-                                            class="font-semibold text-gray-900"
-                                        >
-                                            {{ refundMeta.supervisor }}
-                                        </span>
-                                    </p>
-                                    <p class="text-xs text-gray-500">
-                                        Refunded
-                                        {{
-                                            formatDetailedDate(
-                                                refundMeta.refunded_at
-                                            )
-                                        }}
-                                    </p>
-                                    <p class="text-sm text-gray-600 italic">
-                                        "{{ refundMeta.notes }}"
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
+                <!-- Detail Pane -->
+                <div class="border flex flex-col w-full">
+                    <div v-if="activeOrder" class="flex flex-col">
                         <div
-                            v-else
-                            class="flex flex-col items-center justify-center h-full py-16 text-center text-gray-400"
+                            class="px-4 py-5 md:px-6 md:py-6 border-b border-gray-100 sticky top-0 bg-white z-10"
                         >
-                            <p class="text-lg font-semibold">
-                                No transaction selected
-                            </p>
-                            <p class="text-sm mt-2">
-                                Use the list on the left to pick a receipt to
-                                review.
-                            </p>
+                            <div
+                                class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between"
+                            >
+                                <div>
+                                    <p class="text-sm text-gray-500">
+                                        {{
+                                            activeOrder.table_room
+                                                ?.customer_name ||
+                                            "Walk-in Customer"
+                                        }}
+                                    </p>
+                                </div>
+                                <div
+                                    class="flex flex-wrap items-center gap-3 justify-end"
+                                >
+                                    <span
+                                        :class="[
+                                            'px-3 py-1 rounded-full text-xs font-semibold',
+                                            getStatusClass(activeOrder.status),
+                                        ]"
+                                    >
+                                        {{ getStatusLabel(activeOrder.status) }}
+                                    </span>
+                                    <div class="flex flex-wrap gap-2">
+                                        <Button
+                                            label="Re-print"
+                                            icon="pi pi-print"
+                                            outlined
+                                            :class="subtleActionButtonClass"
+                                            @click="
+                                                reprintReceipt(activeOrder.id)
+                                            "
+                                        />
+                                        <Button
+                                            label="Send to Email"
+                                            icon="pi pi-envelope"
+                                            outlined
+                                            :class="subtleActionButtonClass"
+                                            @click="
+                                                sendReceiptEmail(activeOrder)
+                                            "
+                                        />
+                                        <Button
+                                            v-if="
+                                                activeOrder.status === 'settled'
+                                            "
+                                            label="Refund"
+                                            icon="pi pi-undo"
+                                            outlined
+                                            :class="cautionActionButtonClass"
+                                            @click="
+                                                openRefundModal(activeOrder)
+                                            "
+                                        />
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+
+                        <div
+                            class="px-4 py-5 md:px-6 md:py-6 flex-1 space-y-8 overflow-y-auto"
+                        >
+                            <div class="space-y-1">
+                                <p
+                                    class="text-xs uppercase tracking-wide text-gray-400"
+                                >
+                                    Cashier
+                                </p>
+                                <p class="text-lg font-semibold text-gray-900">
+                                    {{
+                                        activeOrder.cashier?.name ||
+                                        "Unknown cashier"
+                                    }}
+                                </p>
+                            </div>
+                            <div class="space-y-1">
+                                <p
+                                    class="text-xs uppercase tracking-wide text-gray-400"
+                                >
+                                    Date
+                                </p>
+                                <p class="text-lg font-semibold text-gray-900">
+                                    {{
+                                        formatDetailedDate(
+                                            activeOrder.created_at
+                                        )
+                                    }}
+                                </p>
+                            </div>
+                            <div>
+                                <p
+                                    class="text-xs uppercase tracking-wide text-gray-400 mb-3"
+                                >
+                                    Order Items
+                                </p>
+
+                                <Receipt
+                                    :receipt-id="activeOrder.id.toString()"
+                                    :embedded="true"
+                                    :order-data="activeOrder"
+                                    :receipt-footer="props.receiptFooter"
+                                />
+                            </div>
+
+                            <div
+                                v-if="refundMeta"
+                                class="rounded-2xl border border-red-100 bg-red-50/60 p-6 space-y-3"
+                            >
+                                <p
+                                    class="text-xs uppercase tracking-wide text-red-500"
+                                >
+                                    Refund Details
+                                </p>
+                                <p class="text-sm text-gray-700">
+                                    Requested by
+                                    <span class="font-semibold text-gray-900">
+                                        {{ refundMeta.requested_by }}
+                                    </span>
+                                    &middot; Approved by
+                                    <span class="font-semibold text-gray-900">
+                                        {{ refundMeta.supervisor }}
+                                    </span>
+                                </p>
+                                <p class="text-xs text-gray-500">
+                                    Refunded
+                                    {{
+                                        formatDetailedDate(
+                                            refundMeta.refunded_at
+                                        )
+                                    }}
+                                </p>
+                                <p class="text-sm text-gray-600 italic">
+                                    "{{ refundMeta.notes }}"
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div
+                        v-else
+                        class="flex flex-col items-center justify-center h-full py-16 text-center text-gray-400"
+                    >
+                        <p class="text-lg font-semibold">
+                            No transaction selected
+                        </p>
+                        <p class="text-sm mt-2">
+                            Use the list on the left to pick a receipt to
+                            review.
+                        </p>
                     </div>
                 </div>
             </div>

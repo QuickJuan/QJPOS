@@ -1,5 +1,5 @@
 <template>
-    <div class="h-screen bg-red-500 flex flex-col">
+    <div class="h-screen flex flex-col">
         <header class="bg-white border-b border-gray-200 shadow-lg">
             <div class="px-4 md:px-6 lg:px-8 py-3 md:py-4">
                 <div class="flex items-center justify-between">
@@ -52,7 +52,7 @@
                 </div>
             </div>
         </header>
-        <div class="flex flex-grow h-full flex-col bg-green-300">
+        <div class="flex flex-grow h-full flex-col">
             <slot />
         </div>
     </div>
