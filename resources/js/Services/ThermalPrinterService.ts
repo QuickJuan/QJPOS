@@ -209,25 +209,39 @@ class ThermalPrinterService {
     public async printReceipt(receiptData: {
         storeName: string;
         storeAddress: string;
+        storePhone?: string;
         orderNumber: string;
         cashier: string;
         date: string;
+        time?: string;
+        tableNumber?: string;
+        orderType?: string;
         items: Array<{
             name: string;
             quantity: number | string;
             price: number | string;
             amount: number | string;
+            selectedOptions?: Array<{
+                name: string;
+                price: number | string;
+            }>;
+            lessTax?: number | string;
+            discount?: number | string;
+            orderType?: string;
         }>;
         subtotal: number | string;
-        tax?: number | string;
-        discount?: number | string;
+        lessTax?: number | string;
+        lessDiscount?: number | string;
         total: number | string;
-        payment: {
+        payment?: {
             method: string;
-            amount: number | string;
+            amountPaid: number | string;
             change?: number | string;
         };
-        footer?: string;
+        receiptFooter?: {
+            footer_notes?: string;
+        };
+        footerMessage?: string;
     }): Promise<void> {
         if (!this.isConnected()) {
             throw new Error('Printer not connected. Please connect first.');
@@ -243,87 +257,188 @@ class ThermalPrinterService {
             // Set character encoding to UTF-8
             commands.push(...[0x1b, 0x74, 0x06]); // ESC t 6
 
-            // Store header - centered, bold, large
+            // Header - Business Info
             commands.push(...[0x1b, 0x61, 0x01]); // Center align
             commands.push(...[0x1b, 0x45, 0x01]); // Bold on
             commands.push(...[0x1d, 0x21, 0x11]); // Double size
             commands.push(...this.stringToBytes(receiptData.storeName));
-            commands.push(...[0x0a, 0x0a]); // Line feeds
+            commands.push(...[0x0a]);
 
-            // Store address - normal size
+            // Store address and phone - normal size
             commands.push(...[0x1d, 0x21, 0x00]); // Normal size
             commands.push(...[0x1b, 0x45, 0x00]); // Bold off
             commands.push(...this.stringToBytes(receiptData.storeAddress));
-            commands.push(...[0x0a, 0x0a]);
-
-            // Order info - left align
-            commands.push(...[0x1b, 0x61, 0x00]); // Left align
-            commands.push(...this.stringToBytes(`Order #: ${receiptData.orderNumber}`));
             commands.push(0x0a);
-            commands.push(...this.stringToBytes(`Cashier: ${receiptData.cashier}`));
-            commands.push(0x0a);
-            commands.push(...this.stringToBytes(`Date: ${receiptData.date}`));
-            commands.push(...[0x0a, 0x0a]);
+            if (receiptData.storePhone) {
+                commands.push(...this.stringToBytes(receiptData.storePhone));
+                commands.push(0x0a);
+            }
 
-            // Separator line (dynamic width based on printer config)
-            const separatorChar = '-';
+            // Header separator
             const separatorWidth = this.currentConfig?.character_width || 47;
-            const separatorLine = separatorChar.repeat(separatorWidth);
+            commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
+            commands.push(...[0x0a, 0x0a]);
+
+            // Receipt Info - left align
+            commands.push(...[0x1b, 0x61, 0x00]); // Left align
+            commands.push(...this.stringToBytes(this.formatInfoLine('Receipt #:', receiptData.orderNumber)));
+            commands.push(0x0a);
+            commands.push(...this.stringToBytes(this.formatInfoLine('Date:', this.formatReceiptDate(receiptData.date))));
+            commands.push(0x0a);
+            if (receiptData.time) {
+                commands.push(...this.stringToBytes(this.formatInfoLine('Time:', receiptData.time)));
+                commands.push(0x0a);
+            }
+            if (receiptData.tableNumber) {
+                commands.push(...this.stringToBytes(this.formatInfoLine('Table:', receiptData.tableNumber)));
+                commands.push(0x0a);
+            }
+            if (receiptData.cashier) {
+                commands.push(...this.stringToBytes(this.formatInfoLine('Cashier:', receiptData.cashier)));
+                commands.push(0x0a);
+            }
+            if (receiptData.orderType) {
+                commands.push(...this.stringToBytes(this.formatInfoLine('Order Type:', receiptData.orderType)));
+                commands.push(0x0a);
+            }
+            commands.push(0x0a);
+
+            // Items separator
+            const separatorLine = '-'.repeat(separatorWidth);
             commands.push(...this.stringToBytes(separatorLine));
             commands.push(0x0a);
 
-            // Items
-            receiptData.items.forEach(item => {
-                const line = this.formatItemLine(item.name, item.quantity, item.price, item.amount);
-                commands.push(...this.stringToBytes(line));
-                commands.push(0x0a);
+            // ORDER ITEMS header - centered
+            commands.push(...[0x1b, 0x61, 0x01]); // Center align
+            commands.push(...[0x1b, 0x45, 0x01]); // Bold on
+            commands.push(...this.stringToBytes('ORDER ITEMS'));
+            commands.push(...[0x1b, 0x45, 0x00]); // Bold off
+            commands.push(...[0x0a, 0x0a]);
+
+            // Left align for items
+            commands.push(...[0x1b, 0x61, 0x00]);
+
+            // Group items by order type (matching ReceiptLayout)
+            const groupedItems = this.groupItemsByOrderType(receiptData.items);
+
+            Object.entries(groupedItems).forEach(([orderType, items]) => {
+                // Order type header if there are multiple types
+                if (Object.keys(groupedItems).length > 1) {
+                    commands.push(...[0x1b, 0x61, 0x01]); // Center align
+                    commands.push(...[0x1b, 0x45, 0x01]); // Bold on
+                    commands.push(...this.stringToBytes(this.getOrderTypeLabel(orderType)));
+                    commands.push(...[0x1b, 0x45, 0x00]); // Bold off
+                    commands.push(...[0x1b, 0x61, 0x00]); // Left align
+                    commands.push(...[0x0a, 0x0a]);
+                }
+
+                // Print items in this group
+                items.forEach(item => {
+                    // Main item line
+                    commands.push(...this.stringToBytes(item.name));
+                    commands.push(0x0a);
+
+                    // Quantity and price line (indented)
+                    if (typeof item.quantity === 'number' && item.quantity >= 1) {
+                        const qtyLine = this.formatQuantityLine(item.quantity, item.price, item.amount);
+                        commands.push(...this.stringToBytes(`  ${qtyLine}`));
+                        commands.push(0x0a);
+                    }
+
+                    // Selected options (if any)
+                    if (item.selectedOptions && item.selectedOptions.length > 0) {
+                        item.selectedOptions.forEach(option => {
+                            const optionLine = this.formatOptionLine(option.name, option.price);
+                            commands.push(...this.stringToBytes(`  ${optionLine}`));
+                            commands.push(0x0a);
+                        });
+                    }
+
+                    // Less tax (if any)
+                    if (item.lessTax && parseFloat(String(item.lessTax)) > 0) {
+                        const taxLine = this.formatDeductionLine('Less Tax:', item.lessTax);
+                        commands.push(...this.stringToBytes(`  ${taxLine}`));
+                        commands.push(0x0a);
+                    }
+
+                    // Less discount (if any)
+                    if (item.discount && parseFloat(String(item.discount)) > 0) {
+                        const discountLine = this.formatDeductionLine('Less Discount:', item.discount);
+                        commands.push(...this.stringToBytes(`  ${discountLine}`));
+                        commands.push(0x0a);
+                    }
+
+                    commands.push(0x0a); // Space between items
+                });
             });
 
-            // Separator line
+            // Items separator
             commands.push(...this.stringToBytes(separatorLine));
             commands.push(0x0a);
 
-            // Totals - right align for amounts
+            // Totals section
             const subtotal = typeof receiptData.subtotal === 'string' ? parseFloat(receiptData.subtotal) || 0 : receiptData.subtotal;
             commands.push(...this.stringToBytes(this.formatTotalLine('Subtotal:', subtotal)));
             commands.push(0x0a);
 
-            if (receiptData.tax) {
-                const tax = typeof receiptData.tax === 'string' ? parseFloat(receiptData.tax) || 0 : receiptData.tax;
-                commands.push(...this.stringToBytes(this.formatTotalLine('Tax:', tax)));
+            // Less Tax (matching ReceiptLayout naming)
+            if (receiptData.lessTax && parseFloat(String(receiptData.lessTax)) > 0) {
+                const lessTax = typeof receiptData.lessTax === 'string' ? parseFloat(receiptData.lessTax) || 0 : receiptData.lessTax;
+                commands.push(...this.stringToBytes(this.formatTotalLine('Less Tax:', -lessTax)));
                 commands.push(0x0a);
             }
 
-            if (receiptData.discount) {
-                const discount = typeof receiptData.discount === 'string' ? parseFloat(receiptData.discount) || 0 : receiptData.discount;
-                commands.push(...this.stringToBytes(this.formatTotalLine('Discount:', -discount)));
+            // Less Discount (matching ReceiptLayout naming)
+            if (receiptData.lessDiscount && parseFloat(String(receiptData.lessDiscount)) > 0) {
+                const lessDiscount = typeof receiptData.lessDiscount === 'string' ? parseFloat(receiptData.lessDiscount) || 0 : receiptData.lessDiscount;
+                commands.push(...this.stringToBytes(this.formatTotalLine('Less Discount:', -lessDiscount)));
                 commands.push(0x0a);
             }
 
-            // Total - bold
+            // Total separator and amount - bold
+            commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
+            commands.push(0x0a);
             commands.push(...[0x1b, 0x45, 0x01]); // Bold on
             const total = typeof receiptData.total === 'string' ? parseFloat(receiptData.total) || 0 : receiptData.total;
             commands.push(...this.stringToBytes(this.formatTotalLine('TOTAL:', total)));
             commands.push(...[0x1b, 0x45, 0x00]); // Bold off
             commands.push(...[0x0a, 0x0a]);
 
-            // Payment info
-            const paymentAmount = typeof receiptData.payment.amount === 'string' ? parseFloat(receiptData.payment.amount) || 0 : receiptData.payment.amount;
-            commands.push(...this.stringToBytes(this.formatTotalLine('Payment:', paymentAmount)));
-            commands.push(0x0a);
-            commands.push(...this.stringToBytes(`Method: ${receiptData.payment.method}`));
-            commands.push(0x0a);
+            // Payment info (matching ReceiptLayout format)
+            if (receiptData.payment) {
+                commands.push(...[0x1b, 0x61, 0x01]); // Center align
+                commands.push(...[0x1b, 0x45, 0x01]); // Bold on
+                commands.push(...this.stringToBytes('PAYMENT'));
+                commands.push(...[0x1b, 0x45, 0x00]); // Bold off
+                commands.push(...[0x1b, 0x61, 0x00]); // Left align
+                commands.push(...[0x0a, 0x0a]);
 
-            if (receiptData.payment.change) {
-                const change = typeof receiptData.payment.change === 'string' ? parseFloat(receiptData.payment.change) || 0 : receiptData.payment.change;
-                commands.push(...this.stringToBytes(this.formatTotalLine('Change:', change)));
+                const paymentAmount = typeof receiptData.payment.amountPaid === 'string' ? parseFloat(receiptData.payment.amountPaid) || 0 : receiptData.payment.amountPaid;
+                commands.push(...this.stringToBytes(this.formatTotalLine('Amount Paid:', paymentAmount)));
+                commands.push(0x0a);
+
+                if (receiptData.payment.change && parseFloat(String(receiptData.payment.change)) > 0) {
+                    const change = typeof receiptData.payment.change === 'string' ? parseFloat(receiptData.payment.change) || 0 : receiptData.payment.change;
+                    commands.push(...this.stringToBytes(this.formatTotalLine('Change:', change)));
+                    commands.push(0x0a);
+                }
+
+                commands.push(...this.stringToBytes(this.formatTotalLine('Payment Method:', receiptData.payment.method)));
                 commands.push(...[0x0a, 0x0a]);
             }
 
-            // Footer
-            if (receiptData.footer) {
-                commands.push(...[0x1b, 0x61, 0x01]); // Center align
-                commands.push(...this.stringToBytes(receiptData.footer));
+            // Final separator
+            commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
+            commands.push(...[0x0a, 0x0a]);
+
+            // Footer (matching ReceiptLayout)
+            commands.push(...[0x1b, 0x61, 0x01]); // Center align
+            const footerNotes = receiptData.receiptFooter?.footer_notes || 'Thank you for dining with us! Please settle your bill at the counter.';
+            commands.push(...this.stringToBytes(footerNotes));
+            commands.push(...[0x0a, 0x0a]);
+
+            if (receiptData.footerMessage) {
+                commands.push(...this.stringToBytes(receiptData.footerMessage));
                 commands.push(...[0x0a, 0x0a]);
             }
 
@@ -379,10 +494,120 @@ class ThermalPrinterService {
      */
     private formatTotalLine(label: string, amount: number | string): string {
         const maxWidth = this.currentConfig?.character_width || 47;
+
+        // Handle special case for Payment Method (no amount formatting)
+        if (label === 'Payment Method:') {
+            const valueText = String(amount);
+            const spaces = ' '.repeat(Math.max(0, maxWidth - label.length - valueText.length));
+            return `${label}${spaces}${valueText}`;
+        }
+
         const numAmount = typeof amount === 'string' ? parseFloat(amount) || 0 : amount;
         const amountText = numAmount.toFixed(2);
         const spaces = ' '.repeat(Math.max(0, maxWidth - label.length - amountText.length));
         return `${label}${spaces}${amountText}`;
+    }
+
+    /**
+     * Format info line for receipt details (Receipt #, Date, etc.)
+     */
+    private formatInfoLine(label: string, value: string): string {
+        const maxWidth = this.currentConfig?.character_width || 47;
+        const spaces = ' '.repeat(Math.max(1, maxWidth - label.length - value.length));
+        return `${label}${spaces}${value}`;
+    }
+
+    /**
+     * Format quantity and price line for items
+     */
+    private formatQuantityLine(quantity: number, price: number | string, amount: number | string): string {
+        const maxWidth = (this.currentConfig?.character_width || 47) - 2; // Account for indentation
+        const numPrice = typeof price === 'string' ? parseFloat(price) || 0 : price;
+        const numAmount = typeof amount === 'string' ? parseFloat(amount) || 0 : amount;
+
+        const qtyPriceText = `${quantity} x ${numPrice.toFixed(2)}`;
+        const amountText = numAmount.toFixed(2);
+        const spaces = ' '.repeat(Math.max(1, maxWidth - qtyPriceText.length - amountText.length));
+
+        return `${qtyPriceText}${spaces}${amountText}`;
+    }
+
+    /**
+     * Format option line for selected options
+     */
+    private formatOptionLine(name: string, price: number | string): string {
+        const maxWidth = (this.currentConfig?.character_width || 47) - 2; // Account for indentation
+        const numPrice = typeof price === 'string' ? parseFloat(price) || 0 : price;
+        const priceText = numPrice.toFixed(2);
+        const optionText = `+ ${name}`;
+        const spaces = ' '.repeat(Math.max(1, maxWidth - optionText.length - priceText.length));
+
+        return `${optionText}${spaces}${priceText}`;
+    }
+
+    /**
+     * Format deduction line (Less Tax, Less Discount)
+     */
+    private formatDeductionLine(label: string, amount: number | string): string {
+        const maxWidth = (this.currentConfig?.character_width || 47) - 2; // Account for indentation
+        const numAmount = typeof amount === 'string' ? parseFloat(amount) || 0 : amount;
+        const amountText = `-${numAmount.toFixed(2)}`;
+        const spaces = ' '.repeat(Math.max(1, maxWidth - label.length - amountText.length));
+
+        return `${label}${spaces}${amountText}`;
+    }
+
+    /**
+     * Group items by order type (matching ReceiptLayout behavior)
+     */
+    private groupItemsByOrderType(items: Array<{
+        name: string;
+        quantity: number | string;
+        price: number | string;
+        amount: number | string;
+        selectedOptions?: Array<{
+            name: string;
+            price: number | string;
+        }>;
+        lessTax?: number | string;
+        discount?: number | string;
+        orderType?: string;
+    }>): { [key: string]: any[] } {
+        const groups: { [key: string]: any[] } = {};
+
+        items.forEach(item => {
+            const orderType = item.orderType || 'dine-in';
+            if (!groups[orderType]) {
+                groups[orderType] = [];
+            }
+            groups[orderType].push(item);
+        });
+
+        return groups;
+    }
+
+    /**
+     * Get order type label (matching ReceiptLayout)
+     */
+    private getOrderTypeLabel(orderType: string): string {
+        const labels: { [key: string]: string } = {
+            'dine-in': 'Dine-in',
+            'takeout': 'Takeout',
+            'delivery': 'Delivery'
+        };
+        return labels[orderType] || orderType;
+    }
+
+    /**
+     * Format date for receipt (matching ReceiptLayout)
+     */
+    private formatReceiptDate(dateString: string): string {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
     }
 
     /**

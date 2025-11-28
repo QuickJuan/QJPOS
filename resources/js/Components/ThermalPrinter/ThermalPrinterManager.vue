@@ -108,20 +108,27 @@ interface ReceiptItem {
 interface ReceiptData {
     storeName: string;
     storeAddress: string;
+    storePhone?: string;
     orderNumber: string;
     cashier: string;
     date: string;
+    time?: string;
+    tableNumber?: string;
+    orderType?: string;
     items: ReceiptItem[];
     subtotal: number;
-    tax?: number;
-    discount?: number;
+    lessTax?: number;
+    lessDiscount?: number;
     total: number;
-    payment: {
+    payment?: {
         method: string;
-        amount: number;
+        amountPaid: number;
         change?: number;
     };
-    footer?: string;
+    receiptFooter?: {
+        footer_notes?: string;
+    };
+    footerMessage?: string;
 }
 
 const props = defineProps<{
