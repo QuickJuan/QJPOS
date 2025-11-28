@@ -16,10 +16,14 @@
                 />
             </div>
         </template>
-        <div class="flex flex-col h-full px-8 py-4">
-            <div class="flex flex-col md:flex-row gap-6 h-full overflow-hidden">
+        <div class="flex flex-col h-full px-4 md:px-6 lg:px-8 py-4">
+            <div
+                class="flex flex-col md:flex-row gap-4 md:gap-6 h-full overflow-hidden"
+            >
                 <!-- Sidebar -->
-                <div class="w-full md:w-1/3 2xl:w-1/4 h-full flex flex-col">
+                <div
+                    class="w-full md:w-3/5 2xl:w-1/4 h-auto md:h-full flex flex-col min-h-[300px] md:min-h-0"
+                >
                     <Transactions
                         :orders="orders"
                         :activeOrder="activeOrder"
@@ -29,7 +33,9 @@
                 </div>
 
                 <!-- Detail Pane -->
-                <div class="flex flex-col w-full h-full overflow-hidden">
+                <div
+                    class="flex flex-col w-full h-auto md:h-full overflow-hidden"
+                >
                     <div
                         v-if="activeOrder"
                         class="flex flex-col h-full overflow-hidden"
@@ -60,7 +66,9 @@
                                     >
                                         {{ getStatusLabel(activeOrder.status) }}
                                     </span>
-                                    <div class="flex flex-wrap gap-2">
+
+                                    <!-- Desktop action buttons -->
+                                    <div class="hidden lg:flex flex-wrap gap-2">
                                         <Button
                                             label="Re-print"
                                             icon="pi pi-print"
@@ -92,19 +100,82 @@
                                             "
                                         />
                                     </div>
+
+                                    <!-- Mobile hamburger menu -->
+                                    <div class="lg:hidden relative">
+                                        <Button
+                                            icon="pi pi-ellipsis-v"
+                                            outlined
+                                            :class="subtleActionButtonClass"
+                                            @click="toggleActionMenu"
+                                        />
+                                        <div
+                                            v-if="showActionMenu"
+                                            class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
+                                        >
+                                            <button
+                                                class="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm"
+                                                @click="
+                                                    () => {
+                                                        reprintReceipt(
+                                                            activeOrder.id
+                                                        );
+                                                        toggleActionMenu();
+                                                    }
+                                                "
+                                            >
+                                                <i class="pi pi-print"></i>
+                                                Re-print
+                                            </button>
+                                            <button
+                                                class="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm border-t border-gray-100"
+                                                @click="
+                                                    () => {
+                                                        sendReceiptEmail(
+                                                            activeOrder
+                                                        );
+                                                        toggleActionMenu();
+                                                    }
+                                                "
+                                            >
+                                                <i class="pi pi-envelope"></i>
+                                                Send to Email
+                                            </button>
+                                            <button
+                                                v-if="
+                                                    activeOrder.status ===
+                                                    'settled'
+                                                "
+                                                class="w-full text-left px-4 py-3 hover:bg-amber-50 flex items-center gap-3 text-sm border-t border-gray-100 text-amber-700"
+                                                @click="
+                                                    () => {
+                                                        openRefundModal(
+                                                            activeOrder
+                                                        );
+                                                        toggleActionMenu();
+                                                    }
+                                                "
+                                            >
+                                                <i class="pi pi-undo"></i>
+                                                Refund
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="px-4 py-5 md:px-6 md:py-6 space-y-8 flex-1">
-                            <div class="flex gap-4">
+                        <div
+                            class="px-4 py-5 md:px-6 md:py-6 space-y-8 flex-1 overflow-y-auto"
+                        >
+                            <div class="flex flex-col lg:flex-row gap-4">
                                 <Receipt
                                     :receipt-id="activeOrder.id.toString()"
                                     :embedded="true"
                                     :order-data="activeOrder"
                                     :receipt-footer="props.receiptFooter"
                                 />
-                                <div class="flex flex-col">
+                                <div class="flex flex-col w-full lg:w-auto">
                                     <div
                                         v-if="refundMeta"
                                         class="rounded-2xl border border-red-100 bg-red-50/60 p-6 space-y-3"
@@ -172,7 +243,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch, reactive } from "vue";
+import { ref, computed, watch, reactive, onMounted, onUnmounted } from "vue";
 import { usePage, router } from "@inertiajs/vue3";
 import { route } from "ziggy-js";
 import axios from "axios";
@@ -249,6 +320,27 @@ const refundForm = ref({
 });
 const refundLoading = ref(false);
 const refundMeta = computed(() => activeOrder.value?.meta_data?.refund || null);
+const showActionMenu = ref(false);
+
+const toggleActionMenu = () => {
+    showActionMenu.value = !showActionMenu.value;
+};
+
+// Close menu when clicking outside
+const handleClickOutside = (event: MouseEvent) => {
+    const target = event.target as HTMLElement;
+    if (!target.closest(".relative")) {
+        showActionMenu.value = false;
+    }
+};
+
+onMounted(() => {
+    document.addEventListener("click", handleClickOutside);
+});
+
+onUnmounted(() => {
+    document.removeEventListener("click", handleClickOutside);
+});
 
 const reprintReceipt = (orderId: number) => {
     const url = route("receipt", { id: orderId });

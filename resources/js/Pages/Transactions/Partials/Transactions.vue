@@ -18,12 +18,16 @@
             class="divide-y divide-gray-100 max-h-[60vh] md:max-h-[75vh] lg:max-h-[80vh] overflow-y-auto"
         >
             <button
-                v-for="order in props.orders.data"
+                v-for="(order, index) in props.orders.data"
                 :key="order.id"
                 @click="selectOrder(order)"
                 :class="[
-                    'w-full text-left px-5 py-4 transition hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                    activeOrder?.id === order.id ? 'bg-primary/5' : 'bg-white',
+                    'w-full text-left px-5 py-4 transition cursor-pointer hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                    activeOrder?.id === order.id
+                        ? 'bg-primary/5'
+                        : index % 2 === 0
+                        ? 'bg-white'
+                        : 'bg-gray-50',
                 ]"
             >
                 <div class="flex items-start gap-4">
@@ -33,11 +37,19 @@
                         <!-- {{ order.cashier?.name?.charAt(0) }} -->
                     </div>
                     <div class="flex-1">
-                        <div class="flex items-center justify-between">
+                        <div class="flex flex-col">
                             <p
-                                class="font-semibold text-gray-900 text-base md:text-lg"
+                                class="font-semibold text-gray-900 text-base xl:text-lg"
                             >
                                 {{ orderListingSubtitle(order) }}
+                            </p>
+                            <p>
+                                Invoice No:
+                                <span
+                                    class="font-semibold text-gray-900 text-base xl:text-lg"
+                                >
+                                    {{ order?.or_number }}
+                                </span>
                             </p>
                             <span class="text-xs md:text-sm text-gray-400">
                                 {{ formatDate(order.created_at) }}
@@ -46,7 +58,7 @@
                         <p
                             class="text-sm md:text-base text-gray-500 mt-1 line-clamp-2"
                         >
-                            {{ order.cashier?.name || "Unknown" }}
+                            Cashier: {{ order.cashier?.name || "Unknown" }}
                         </p>
                     </div>
                 </div>
@@ -59,23 +71,40 @@
             </div>
         </div>
         <div
-            v-if="hasOrders"
-            class="px-5 py-4 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500"
+            v-if="hasOrders && showPagination"
+            class="px-5 py-4 border-t border-gray-100 flex flex-col space-y-4 xl:flex-row items-center justify-between text-sm text-gray-500"
         >
             <span>Showing {{ orders.from }} - {{ orders.to }}</span>
-            <div class="flex gap-2">
+            <div class="flex gap-2 items-center">
                 <button
-                    v-for="link in orders.links"
-                    :key="link.label"
-                    v-html="link.label"
-                    @click="$emit('goToPage', link.url)"
+                    @click="$emit('goToPage', prevPageUrl)"
+                    :disabled="!prevPageUrl"
                     :class="[
-                        'px-3 py-1 rounded-full border text-xs',
-                        link.active
-                            ? 'bg-primary text-white border-primary'
-                            : 'border-gray-200 text-gray-500 hover:bg-gray-50',
+                        'px-3 py-2 rounded-lg border text-sm flex items-center gap-1',
+                        prevPageUrl
+                            ? 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                            : 'border-gray-100 text-gray-300 cursor-not-allowed',
                     ]"
-                ></button>
+                >
+                    <i class="pi pi-chevron-left text-xs"></i>
+                    <span class="hidden sm:inline">Previous</span>
+                </button>
+                <span class="text-xs text-gray-500">
+                    Page {{ orders.current_page }}
+                </span>
+                <button
+                    @click="$emit('goToPage', nextPageUrl)"
+                    :disabled="!nextPageUrl"
+                    :class="[
+                        'px-3 py-2 rounded-lg border text-sm flex items-center gap-1',
+                        nextPageUrl
+                            ? 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                            : 'border-gray-100 text-gray-300 cursor-not-allowed',
+                    ]"
+                >
+                    <span class="hidden sm:inline">Next</span>
+                    <i class="pi pi-chevron-right text-xs"></i>
+                </button>
             </div>
         </div>
     </div>
@@ -109,4 +138,23 @@ const orderListingSubtitle = (order: Order) => {
 const hasOrders = computed(
     () => props.orders.data && props.orders.data.length > 0
 );
+
+const prevPageUrl = computed(() => {
+    const prevLink = props.orders.links?.find(
+        (link) =>
+            link.label.includes("Previous") || link.label.includes("&laquo;")
+    );
+    return prevLink?.url || null;
+});
+
+const nextPageUrl = computed(() => {
+    const nextLink = props.orders.links?.find(
+        (link) => link.label.includes("Next") || link.label.includes("&raquo;")
+    );
+    return nextLink?.url || null;
+});
+
+const showPagination = computed(() => {
+    return prevPageUrl.value || nextPageUrl.value;
+});
 </script>
