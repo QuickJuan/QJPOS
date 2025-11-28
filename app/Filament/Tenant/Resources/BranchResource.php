@@ -3,7 +3,7 @@ namespace App\Filament\Tenant\Resources;
 
 use App\Filament\Tenant\Resources\BranchResource\Pages;
 use App\Models\Branch;
-use Filament\Forms\Components\KeyValue;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -101,11 +101,19 @@ class BranchResource extends Resource
                     ->nullable()
                     ->maxLength(100),
 
-                KeyValue::make('receipt_headers')
+                Repeater::make('receipt_headers')
                     ->label('Receipt Headers')
-                    ->nullable()
-                    ->addActionLabel('Add Header')
-                    ->helperText('JSON object for receipt headers'),
+                    ->simple(
+                        TextInput::make('header')
+                            ->label('Header Line')
+                            ->required()
+                            ->maxLength(255)
+                            ->placeholder('Enter receipt header text')
+                    )
+                    ->addActionLabel('Add Header Line')
+                    ->helperText('Add multiple lines of header text for receipts (e.g., business name, address, contact info)')
+                    ->collapsible()
+                    ->nullable(),
             ]);
     }
 

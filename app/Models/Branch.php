@@ -26,7 +26,7 @@ class Branch extends Model
     protected $casts = [
         'is_active'       => 'boolean',
         'long_lat'        => 'string',
-        'receipt_headers' => 'array',
+        'receipt_headers' => 'array', // Array of strings for receipt headers
     ];
 
     public function users(): BelongsToMany
