@@ -191,5 +191,25 @@ Route::middleware([
                     Route::delete('/{customer}', 'destroy')->name('destroy');
                     Route::get('/search', 'search')->name('search');
                 });
+
+            // ROUTES FOR PRINTER CONFIGURATION
+            Route::as('printer-config.')
+                ->prefix('/printer-config')
+                ->controller(\App\Http\Controllers\PrinterConfigController::class)
+                ->group(function () {
+                    Route::get('/', 'index')->name('index');
+                    Route::post('/', 'store')->name('store');
+                    Route::put('/{printerConfig}', 'update')->name('update');
+                    Route::delete('/{printerConfig}', 'destroy')->name('destroy');
+                    Route::post('/{printerConfig}/test', 'testPrinter')->name('test');
+                });
+
+            // API ROUTES FOR PRINTER CONFIGURATION
+            Route::as('api.printer-config.')
+                ->prefix('/api/printer-config')
+                ->controller(\App\Http\Controllers\PrinterConfigController::class)
+                ->group(function () {
+                    Route::get('/{type}', 'getConfig')->name('get-config');
+                });
         });
 });

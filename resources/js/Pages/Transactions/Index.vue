@@ -70,13 +70,11 @@
                                     <!-- Desktop action buttons -->
                                     <div class="hidden lg:flex flex-wrap gap-2">
                                         <Button
-                                            label="Re-print"
+                                            label="Print"
                                             icon="pi pi-print"
                                             outlined
                                             :class="subtleActionButtonClass"
-                                            @click="
-                                                reprintReceipt(activeOrder.id)
-                                            "
+                                            @click="handleThermalPrint"
                                         />
                                         <Button
                                             label="Send to Email"
@@ -102,7 +100,7 @@
                                     </div>
 
                                     <!-- Mobile hamburger menu -->
-                                    <div class="lg:hidden relative">
+                                    <div class="lg:hidden relative z-50">
                                         <Button
                                             icon="pi pi-ellipsis-v"
                                             outlined
@@ -111,24 +109,32 @@
                                         />
                                         <div
                                             v-if="showActionMenu"
-                                            class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
+                                            class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-[100]"
+                                        >
+                                            class="fixed inset-0 z-[90]
+                                            lg:hidden" @click="toggleActionMenu"
+                                            >
+                                        </div>
+                                        <!-- Mobile menu -->
+                                        <div
+                                            v-if="showActionMenu"
+                                            class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-[100]"
+                                            data-menu-container
                                         >
                                             <button
-                                                class="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm"
+                                                class="w-full text-left px-4 py-3 hover:bg-blue-50 flex items-center gap-3 text-sm text-blue-700 transition-colors duration-150"
                                                 @click="
                                                     () => {
-                                                        reprintReceipt(
-                                                            activeOrder.id
-                                                        );
+                                                        handleThermalPrint();
                                                         toggleActionMenu();
                                                     }
                                                 "
                                             >
                                                 <i class="pi pi-print"></i>
-                                                Re-print
+                                                Print
                                             </button>
                                             <button
-                                                class="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm border-t border-gray-100"
+                                                class="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm border-t border-gray-100 transition-colors duration-150"
                                                 @click="
                                                     () => {
                                                         sendReceiptEmail(
@@ -239,6 +245,23 @@
             @submit="submitRefund"
             @closed="handleRefundDialogClosed"
         />
+
+        <!-- Thermal Printer Dialog -->
+        <Dialog
+            v-model:visible="showThermalPrinter"
+            modal
+            header="Thermal Printer"
+            :style="{ width: '28rem' }"
+            :breakpoints="{ '1199px': '75vw', '575px': '90vw' }"
+        >
+            <ThermalPrinterManager
+                :receipt-data="thermalReceiptData"
+                :auto-print="true"
+                @connected="handlePrinterConnected"
+                @printed="handlePrinterPrinted"
+                @open-settings="handleOpenPrinterSettings"
+            />
+        </Dialog>
     </TransactionsLayout>
 </template>
 
@@ -250,13 +273,16 @@ import axios from "axios";
 import TransactionsLayout from "@/Layouts/TransactionsLayout.vue";
 import PageProps from "@/Types/PageProps";
 import Button from "primevue/button";
+import Dialog from "primevue/dialog";
 import Order from "@/Types/Order/Order";
 import SearchAndFIlter from "./Partials/SearchAndFIlter.vue";
 import Transactions from "./Partials/Transactions.vue";
 import RefundDialog from "./Partials/RefundDialog.vue";
 import Receipt from "../Receipt.vue";
-import { debounce } from "lodash";
-import { filter } from "lodash";
+import ThermalPrinterManager from "@/Components/ThermalPrinter/ThermalPrinterManager.vue";
+import { thermalPrinter } from "@/Services/ThermalPrinterService";
+import debounce from "lodash/debounce";
+import filter from "lodash/filter";
 
 const props = defineProps<{
     orders: any;
@@ -321,6 +347,76 @@ const refundForm = ref({
 const refundLoading = ref(false);
 const refundMeta = computed(() => activeOrder.value?.meta_data?.refund || null);
 const showActionMenu = ref(false);
+const showThermalPrinter = ref(false);
+
+// Thermal printer receipt data
+const thermalReceiptData = computed(() => {
+    if (!activeOrder.value) return null;
+
+    // Format date and time separately (matching ReceiptLayout)
+    const orderDate = new Date(activeOrder.value.created_at);
+    const dateStr = orderDate.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+    });
+    const timeStr = orderDate.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+    });
+
+    return {
+        storeName: "Quick Juan Restaurant", // Match ReceiptLayout default
+        storeAddress: "123 Main Street, Makati City, Philippines", // Match ReceiptLayout default
+        storePhone: "(02) 123-4567", // Match ReceiptLayout default
+        orderNumber: `RCP-${activeOrder.value.id}`, // Match ReceiptLayout format
+        cashier: activeOrder.value.cashier?.name || "Unknown",
+        date: dateStr,
+        time: timeStr,
+        tableNumber: activeOrder.value.table_room?.name || null,
+        orderType: null, // Remove single order type since items can have different types
+        items:
+            activeOrder.value.order_items?.map((item) => ({
+                name: item.product?.name || "Item",
+                quantity: item.quantity,
+                price: item.price,
+                amount: item.amount,
+                selectedOptions:
+                    (item as any).selected_options?.map((option: any) => ({
+                        name: option.name,
+                        price: option.price,
+                    })) || [],
+                lessTax: (item as any).less_tax || 0,
+                discount: (item as any).discount_amount || 0,
+                orderType: (item as any).order_type || "dine-in", // Each item has its own order type
+            })) || [],
+        subtotal: activeOrder.value.total_amount || 0,
+        lessTax: 0, // Calculate from items if needed
+        lessDiscount: (activeOrder.value as any).total_discount || 0,
+        total: activeOrder.value.total_amount || 0,
+        payment: (activeOrder.value as any).amount_tendered
+            ? {
+                  method: activeOrder.value.payment_method || "Cash",
+                  amountPaid: (activeOrder.value as any).amount_tendered,
+                  change: Math.max(
+                      0,
+                      ((activeOrder.value as any).amount_tendered || 0) -
+                          (activeOrder.value.total_amount || 0)
+                  ),
+              }
+            : {
+                  method: activeOrder.value.payment_method || "Cash",
+                  amountPaid: activeOrder.value.total_amount,
+                  change: 0,
+              },
+        receiptFooter: {
+            footer_notes:
+                "Thank you for dining with us! Please settle your bill at the counter.",
+        },
+        footerMessage: "Generated by Quick Juan POS System", // Match ReceiptLayout default
+    };
+});
 
 const toggleActionMenu = () => {
     showActionMenu.value = !showActionMenu.value;
@@ -329,7 +425,10 @@ const toggleActionMenu = () => {
 // Close menu when clicking outside
 const handleClickOutside = (event: MouseEvent) => {
     const target = event.target as HTMLElement;
-    if (!target.closest(".relative")) {
+    if (
+        !target.closest(".relative") &&
+        !target.closest("[data-menu-container]")
+    ) {
         showActionMenu.value = false;
     }
 };
@@ -341,11 +440,6 @@ onMounted(() => {
 onUnmounted(() => {
     document.removeEventListener("click", handleClickOutside);
 });
-
-const reprintReceipt = (orderId: number) => {
-    const url = route("receipt", { id: orderId });
-    window.open(`${url}?print=1`, "_blank");
-};
 
 const sendReceiptEmail = (order: Order) => {
     alert(`Sending receipt #${order.id} to customer's email...`);
@@ -417,6 +511,94 @@ const selectOrder = (order: any) => {
 
 const handleRefundDialogClosed = () => {
     refundOrder.value = null;
+};
+
+// Thermal print handling
+const handleThermalPrint = async () => {
+    if (!activeOrder.value) return;
+
+    // Load printer config first
+    try {
+        const printerConfig = await thermalPrinter.loadPrinterConfig("receipt");
+
+        if (!printerConfig) {
+            // No printer configured - go to config page
+            console.log("No printer configuration found, redirecting to setup");
+            router.get("/printer-config");
+            return;
+        }
+
+        console.log("Printer config loaded:", printerConfig.name);
+
+        // Check if already connected
+        const isConnected = thermalPrinter.isConnected();
+
+        if (isConnected) {
+            // Already connected - print immediately
+            console.log("Printer already connected, printing...");
+            try {
+                await thermalPrinter.printReceipt(thermalReceiptData.value);
+                console.log("✅ Receipt printed successfully");
+            } catch (error) {
+                console.error("Print failed:", error);
+                showThermalPrinter.value = true;
+            }
+        } else {
+            // Not connected - try to connect first
+            console.log("Printer not connected, attempting to connect...");
+            try {
+                const connected = await thermalPrinter.connectToPrinter(
+                    printerConfig
+                );
+
+                if (connected) {
+                    // Successfully connected - now print
+                    console.log("✅ Connected successfully, printing...");
+                    await thermalPrinter.printReceipt(thermalReceiptData.value);
+                    console.log("✅ Receipt printed successfully");
+                } else {
+                    // Connection failed - show modal for manual retry
+                    console.log("❌ Connection failed, showing modal");
+                    showThermalPrinter.value = true;
+                }
+            } catch (error) {
+                console.error("Connection/print failed:", error);
+
+                // If it's a user cancellation, don't show modal
+                if (
+                    error.message.includes("User cancelled") ||
+                    error.name === "NotFoundError"
+                ) {
+                    console.log("User cancelled connection");
+                    return;
+                }
+
+                // Other errors - show modal for manual retry
+                showThermalPrinter.value = true;
+            }
+        }
+    } catch (error) {
+        console.error("Failed to load printer config:", error);
+        // If config loading fails completely, go to config page
+        router.get("/printer-config");
+    }
+};
+
+const handlePrinterConnected = (connected: boolean) => {
+    console.log("Printer connection status:", connected);
+};
+
+const handlePrinterPrinted = (success: boolean) => {
+    if (success) {
+        showThermalPrinter.value = false;
+    }
+};
+
+const handleOpenPrinterSettings = () => {
+    // Close thermal printer modal and open printer configuration
+    showThermalPrinter.value = false;
+    // Navigate to printer config page
+    router.get("/printer-config");
 };
 
 const subtleActionButtonClass =
