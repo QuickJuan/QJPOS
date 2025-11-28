@@ -70,20 +70,11 @@
                                     <!-- Desktop action buttons -->
                                     <div class="hidden lg:flex flex-wrap gap-2">
                                         <Button
-                                            label="Thermal Print"
-                                            icon="pi pi-bluetooth"
-                                            outlined
-                                            :class="subtleActionButtonClass"
-                                            @click="showThermalPrinter = true"
-                                        />
-                                        <Button
-                                            label="Re-print"
+                                            label="Print"
                                             icon="pi pi-print"
                                             outlined
                                             :class="subtleActionButtonClass"
-                                            @click="
-                                                reprintReceipt(activeOrder.id)
-                                            "
+                                            @click="handleThermalPrint"
                                         />
                                         <Button
                                             label="Send to Email"
@@ -124,27 +115,13 @@
                                                 class="w-full text-left px-4 py-3 hover:bg-blue-50 flex items-center gap-3 text-sm text-blue-700"
                                                 @click="
                                                     () => {
-                                                        showThermalPrinter = true;
+                                                        handleThermalPrint();
                                                         toggleActionMenu();
                                                     }
                                                 "
                                             >
                                                 <i class="pi pi-bluetooth"></i>
                                                 Thermal Print
-                                            </button>
-                                            <button
-                                                class="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm border-t border-gray-100"
-                                                @click="
-                                                    () => {
-                                                        reprintReceipt(
-                                                            activeOrder.id
-                                                        );
-                                                        toggleActionMenu();
-                                                    }
-                                                "
-                                            >
-                                                <i class="pi pi-print"></i>
-                                                Re-print
                                             </button>
                                             <button
                                                 class="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm border-t border-gray-100"
@@ -269,8 +246,10 @@
         >
             <ThermalPrinterManager
                 :receipt-data="thermalReceiptData"
+                :auto-print="true"
                 @connected="handlePrinterConnected"
                 @printed="handlePrinterPrinted"
+                @open-settings="handleOpenPrinterSettings"
             />
         </Dialog>
     </TransactionsLayout>
@@ -291,6 +270,7 @@ import Transactions from "./Partials/Transactions.vue";
 import RefundDialog from "./Partials/RefundDialog.vue";
 import Receipt from "../Receipt.vue";
 import ThermalPrinterManager from "@/Components/ThermalPrinter/ThermalPrinterManager.vue";
+import { thermalPrinter } from "@/Services/ThermalPrinterService";
 import { debounce } from "lodash";
 import { filter } from "lodash";
 
@@ -415,11 +395,6 @@ onUnmounted(() => {
     document.removeEventListener("click", handleClickOutside);
 });
 
-const reprintReceipt = (orderId: number) => {
-    const url = route("receipt", { id: orderId });
-    window.open(`${url}?print=1`, "_blank");
-};
-
 const sendReceiptEmail = (order: Order) => {
     alert(`Sending receipt #${order.id} to customer's email...`);
 };
@@ -492,6 +467,37 @@ const handleRefundDialogClosed = () => {
     refundOrder.value = null;
 };
 
+// Thermal print handling
+const handleThermalPrint = async () => {
+    if (!activeOrder.value) return;
+
+    // Load printer config and check connection status
+    try {
+        await thermalPrinter.loadPrinterConfig("receipt");
+        const isConnected = thermalPrinter.isConnected();
+
+        if (isConnected) {
+            // Auto-print immediately without showing modal
+            try {
+                await thermalPrinter.printReceipt(thermalReceiptData.value);
+                // Success - no modal needed
+                console.log("Receipt printed successfully");
+            } catch (error) {
+                console.error("Auto-print failed:", error);
+                // Show modal on error for manual retry
+                showThermalPrinter.value = true;
+            }
+        } else {
+            // Not connected - navigate directly to printer settings
+            router.get("/printer-config");
+        }
+    } catch (error) {
+        console.error("Failed to load printer config:", error);
+        // If config loading fails, show modal as fallback
+        showThermalPrinter.value = true;
+    }
+};
+
 const handlePrinterConnected = (connected: boolean) => {
     console.log("Printer connection status:", connected);
 };
@@ -500,6 +506,13 @@ const handlePrinterPrinted = (success: boolean) => {
     if (success) {
         showThermalPrinter.value = false;
     }
+};
+
+const handleOpenPrinterSettings = () => {
+    // Close thermal printer modal and open printer configuration
+    showThermalPrinter.value = false;
+    // Navigate to printer config page
+    router.get("/printer-config");
 };
 
 const subtleActionButtonClass =

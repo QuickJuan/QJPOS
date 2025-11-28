@@ -59,14 +59,15 @@
             </div>
         </div>
 
-        <!-- Test Print Button -->
+        <!-- Printer Settings Button -->
         <Button
             v-if="isConnected"
-            @click="testPrint"
-            :loading="printing"
-            icon="pi pi-print"
-            label="Test Print"
+            @click="openPrinterSettings"
+            icon="pi pi-cog"
+            label="Printer Settings"
             size="small"
+            severity="secondary"
+            outlined
             class="mb-4"
         />
 
@@ -79,6 +80,15 @@
             label="Print Receipt"
             severity="success"
         />
+
+        <!-- Auto-printing status -->
+        <div
+            v-if="autoPrinting"
+            class="flex items-center gap-2 text-sm text-gray-600 mt-2"
+        >
+            <i class="pi pi-spin pi-spinner"></i>
+            <span>Printing receipt...</span>
+        </div>
     </div>
 </template>
 
@@ -117,11 +127,13 @@ interface ReceiptData {
 const props = defineProps<{
     receiptData?: ReceiptData;
     autoConnect?: boolean;
+    autoPrint?: boolean;
 }>();
 
 const emit = defineEmits<{
     connected: [connected: boolean];
     printed: [success: boolean];
+    openSettings: [];
 }>();
 
 const toast = useToast();
@@ -129,6 +141,7 @@ const toast = useToast();
 const isConnected = ref(false);
 const connecting = ref(false);
 const printing = ref(false);
+const autoPrinting = ref(false);
 const isBluetoothSupported = ref(false);
 
 // Check browser compatibility
@@ -150,7 +163,20 @@ const connectPrinter = async () => {
 
     connecting.value = true;
     try {
-        const connected = await thermalPrinter.connectToPrinter();
+        // Try to connect using receipt printer configuration first
+        let connected = false;
+
+        try {
+            connected = await thermalPrinter.connectToPrinterType("receipt");
+        } catch (error) {
+            console.warn(
+                "Failed to connect with receipt config, trying default connection:",
+                error
+            );
+            // Fall back to default connection if receipt config fails
+            connected = await thermalPrinter.connectToPrinter();
+        }
+
         isConnected.value = connected;
 
         if (connected) {
@@ -161,6 +187,13 @@ const connectPrinter = async () => {
                 life: 3000,
             });
             emit("connected", true);
+
+            // Auto-print if enabled and receipt data is available
+            if (props.autoPrint && props.receiptData) {
+                setTimeout(() => {
+                    printReceipt();
+                }, 500); // Small delay to ensure connection is stable
+            }
         } else {
             toast.add({
                 severity: "error",
@@ -200,30 +233,9 @@ const disconnectPrinter = async () => {
     }
 };
 
-// Test print
-const testPrint = async () => {
-    if (!isConnected.value) return;
-
-    printing.value = true;
-    try {
-        await thermalPrinter.testPrint();
-        toast.add({
-            severity: "success",
-            summary: "Test Print",
-            detail: "Test print completed successfully",
-            life: 3000,
-        });
-    } catch (error: any) {
-        console.error("Test print error:", error);
-        toast.add({
-            severity: "error",
-            summary: "Print Failed",
-            detail: error.message || "Failed to print test page",
-            life: 5000,
-        });
-    } finally {
-        printing.value = false;
-    }
+// Open printer settings
+const openPrinterSettings = () => {
+    emit("openSettings");
 };
 
 // Print receipt
@@ -231,6 +243,7 @@ const printReceipt = async () => {
     if (!isConnected.value || !props.receiptData) return;
 
     printing.value = true;
+    autoPrinting.value = props.autoPrint || false;
     try {
         await thermalPrinter.printReceipt(props.receiptData);
         toast.add({
@@ -251,6 +264,7 @@ const printReceipt = async () => {
         emit("printed", false);
     } finally {
         printing.value = false;
+        autoPrinting.value = false;
     }
 };
 
@@ -264,8 +278,27 @@ onMounted(async () => {
     checkBluetoothSupport();
     checkConnectionStatus();
 
-    if (props.autoConnect && isBluetoothSupported.value && !isConnected.value) {
-        await connectPrinter();
+    // Auto-load receipt printer configuration and connect if auto-connect is enabled
+    if (isBluetoothSupported.value) {
+        try {
+            // Load the receipt printer configuration
+            await thermalPrinter.loadPrinterConfig("receipt");
+
+            // Check if already connected and auto-print if needed
+            if (isConnected.value && props.autoPrint && props.receiptData) {
+                setTimeout(() => {
+                    printReceipt();
+                }, 500);
+            } else if (!isConnected.value && props.autoConnect) {
+                await connectPrinter();
+            }
+        } catch (error) {
+            console.error("Failed to load printer config:", error);
+            // Continue without config if it fails
+            if (!isConnected.value && props.autoConnect) {
+                await connectPrinter();
+            }
+        }
     }
 });
 
@@ -279,7 +312,7 @@ defineExpose({
     connectPrinter,
     disconnectPrinter,
     printReceipt,
-    testPrint,
+    openPrinterSettings,
     isConnected: computed(() => isConnected.value),
     isBluetoothSupported: computed(() => isBluetoothSupported.value),
 });

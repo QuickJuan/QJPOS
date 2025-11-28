@@ -1,4 +1,5 @@
 import { Buffer } from 'buffer';
+import axios from 'axios';
 
 interface PrinterDevice {
     gatt?: {
@@ -15,6 +16,23 @@ interface BluetoothPrintService {
     characteristic: BluetoothRemoteGATTCharacteristic | null;
 }
 
+interface PrinterConfig {
+    id: number;
+    name: string;
+    type: 'kitchen' | 'bar' | 'receipt';
+    bluetooth_name?: string;
+    bluetooth_address?: string;
+    service_uuid: string;
+    characteristic_uuid: string;
+    paper_size: '36mm' | '76mm';
+    character_width: number;
+    is_active: boolean;
+    auto_cut: boolean;
+    cut_spacing: number;
+    print_categories?: string[];
+    notes?: string;
+}
+
 class ThermalPrinterService {
     private bluetooth: BluetoothPrintService = {
         device: null,
@@ -23,8 +41,9 @@ class ThermalPrinterService {
         characteristic: null,
     };
 
-    private readonly PRINTER_SERVICE_UUID = '000018f0-0000-1000-8000-00805f9b34fb';
-    private readonly PRINTER_CHARACTERISTIC_UUID = '00002af1-0000-1000-8000-00805f9b34fb';
+    private currentConfig: PrinterConfig | null = null;
+    private readonly DEFAULT_SERVICE_UUID = '000018f0-0000-1000-8000-00805f9b34fb';
+    private readonly DEFAULT_CHARACTERISTIC_UUID = '00002af1-0000-1000-8000-00805f9b34fb';
 
     /**
      * Check if Web Bluetooth is supported
@@ -34,46 +53,96 @@ class ThermalPrinterService {
     }
 
     /**
-     * Connect to a Bluetooth thermal printer
+     * Load printer configuration from API
      */
-    public async connectToPrinter(): Promise<boolean> {
+    public async loadPrinterConfig(type: 'kitchen' | 'bar' | 'receipt'): Promise<PrinterConfig | null> {
+        try {
+            const response = await axios.get(`/api/printer-config/${type}`);
+            this.currentConfig = response.data;
+            return this.currentConfig;
+        } catch (error) {
+            console.error('Failed to load printer config:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Connect to a Bluetooth thermal printer with optional configuration
+     * If device is provided, reuse existing connection instead of requesting new pairing
+     */
+    public async connectToPrinter(config?: PrinterConfig, existingDevice?: BluetoothDevice): Promise<boolean> {
         if (!this.isBluetoothSupported()) {
             throw new Error('Web Bluetooth is not supported in this browser');
         }
 
+        // Use provided config or current config
+        const printerConfig = config || this.currentConfig;
+
         try {
-            // Request device with printer service
-            this.bluetooth.device = await navigator.bluetooth.requestDevice({
-                filters: [
-                    { services: [this.PRINTER_SERVICE_UUID] },
-                    { namePrefix: 'POS' },
-                    { namePrefix: 'EPSON' },
-                    { namePrefix: 'CITIZEN' },
-                    { namePrefix: 'STAR' },
-                ],
-                optionalServices: [this.PRINTER_SERVICE_UUID],
-            });
+            // If we have an existing device, try to reuse it
+            if (existingDevice && existingDevice.gatt) {
+                this.bluetooth.device = existingDevice;
 
-            if (!this.bluetooth.device) {
-                throw new Error('No device selected');
+                // Check if already connected
+                if (existingDevice.gatt.connected) {
+                    console.log('♻️ Reusing existing Bluetooth connection');
+                    this.bluetooth.server = existingDevice.gatt;
+                } else {
+                    console.log('🔄 Reconnecting to existing device');
+                    this.bluetooth.server = await existingDevice.gatt.connect();
+                }
+            } else {
+                // Request new device
+                console.log('🔍 Requesting new Bluetooth device');
+
+                // Build device filters based on configuration
+                const filters: BluetoothLEScanFilter[] = [
+                    { services: [printerConfig?.service_uuid || this.DEFAULT_SERVICE_UUID] }
+                ];
+
+                // Add name filters if bluetooth_name is specified
+                if (printerConfig?.bluetooth_name) {
+                    filters.push({ name: printerConfig.bluetooth_name });
+                } else {
+                    // Default name prefixes
+                    filters.push(
+                        { namePrefix: 'POS' },
+                        { namePrefix: 'EPSON' },
+                        { namePrefix: 'CITIZEN' },
+                        { namePrefix: 'STAR' }
+                    );
+                }
+
+                // Request device with printer service
+                this.bluetooth.device = await navigator.bluetooth.requestDevice({
+                    filters,
+                    optionalServices: [printerConfig?.service_uuid || this.DEFAULT_SERVICE_UUID],
+                });
+
+                if (!this.bluetooth.device) {
+                    throw new Error('No device selected');
+                }
+
+                // Connect to GATT server
+                this.bluetooth.server = await this.bluetooth.device.gatt?.connect();
             }
-
-            // Connect to GATT server
-            this.bluetooth.server = await this.bluetooth.device.gatt?.connect();
 
             if (!this.bluetooth.server) {
                 throw new Error('Failed to connect to GATT server');
             }
 
+            // Store the config for this connection
+            if (printerConfig) {
+                this.currentConfig = printerConfig;
+            }
+
             // Get printer service
-            this.bluetooth.service = await this.bluetooth.server.getPrimaryService(
-                this.PRINTER_SERVICE_UUID
-            );
+            const serviceUuid = printerConfig?.service_uuid || this.DEFAULT_SERVICE_UUID;
+            this.bluetooth.service = await this.bluetooth.server.getPrimaryService(serviceUuid);
 
             // Get write characteristic
-            this.bluetooth.characteristic = await this.bluetooth.service.getCharacteristic(
-                this.PRINTER_CHARACTERISTIC_UUID
-            );
+            const characteristicUuid = printerConfig?.characteristic_uuid || this.DEFAULT_CHARACTERISTIC_UUID;
+            this.bluetooth.characteristic = await this.bluetooth.service.getCharacteristic(characteristicUuid);
 
             console.log('✅ Successfully connected to thermal printer');
             return true;
@@ -196,8 +265,11 @@ class ThermalPrinterService {
             commands.push(...this.stringToBytes(`Date: ${receiptData.date}`));
             commands.push(...[0x0a, 0x0a]);
 
-            // Separator line (48 characters for 76mm paper)
-            commands.push(...this.stringToBytes('------------------------------------------------'));
+            // Separator line (dynamic width based on printer config)
+            const separatorChar = '-';
+            const separatorWidth = this.currentConfig?.character_width || 48;
+            const separatorLine = separatorChar.repeat(separatorWidth);
+            commands.push(...this.stringToBytes(separatorLine));
             commands.push(0x0a);
 
             // Items
@@ -208,7 +280,7 @@ class ThermalPrinterService {
             });
 
             // Separator line
-            commands.push(...this.stringToBytes('------------------------------------------------'));
+            commands.push(...this.stringToBytes(separatorLine));
             commands.push(0x0a);
 
             // Totals - right align for amounts
@@ -255,13 +327,16 @@ class ThermalPrinterService {
                 commands.push(...[0x0a, 0x0a]);
             }
 
-            // Add extra spacing before cut to prevent text cutoff
-            commands.push(...[0x0a, 0x0a, 0x0a, 0x0a, 0x0a]); // 5 line feeds for proper spacing
+            // Add spacing before cut based on printer configuration
+            const cutSpacing = this.currentConfig?.cut_spacing || 5;
+            for (let i = 0; i < cutSpacing; i++) {
+                commands.push(0x0a);
+            }
 
-            // Cut paper
-            commands.push(...[0x1d, 0x56, 0x00]); // Full cut
-
-            // Send to printer
+            // Cut paper if auto_cut is enabled
+            if (this.currentConfig?.auto_cut !== false) {
+                commands.push(...[0x1d, 0x56, 0x00]); // Full cut
+            }            // Send to printer
             const data = new Uint8Array(commands);
             await this.sendToPrinter(data);
 
@@ -282,7 +357,7 @@ class ThermalPrinterService {
     /**
      * Format item line for receipt (76mm paper - 48 characters width)
      */
-    private formatItemLine(name: string, quantity: number, price: number | string, amount: number | string): string {
+    private formatItemLine(name: string, quantity: number | string, price: number | string, amount: number | string): string {
         const maxWidth = 48; // 76mm paper width
         const numPrice = typeof price === 'string' ? parseFloat(price) || 0 : price;
         const numAmount = typeof amount === 'string' ? parseFloat(amount) || 0 : amount;
@@ -300,13 +375,13 @@ class ThermalPrinterService {
 
         return `${itemName} ${qtyPriceText}${spaces}${amountText}`;
     }    /**
-     * Format total line for receipt (76mm paper - 48 characters width)
+     * Format total line for receipt with dynamic width based on printer config
      */
     private formatTotalLine(label: string, amount: number | string): string {
-        const maxWidth = 48; // 76mm paper width
+        const maxWidth = this.currentConfig?.character_width || 48;
         const numAmount = typeof amount === 'string' ? parseFloat(amount) || 0 : amount;
         const amountText = numAmount.toFixed(2);
-        const spaces = ' '.repeat(maxWidth - label.length - amountText.length);
+        const spaces = ' '.repeat(Math.max(0, maxWidth - label.length - amountText.length));
         return `${label}${spaces}${amountText}`;
     }
 
@@ -328,7 +403,8 @@ class ThermalPrinterService {
         commands.push(...[0x1b, 0x45, 0x01]); // Bold on
 
         // Test text
-        commands.push(...this.stringToBytes('TEST PRINT - 76mm'));
+        const configInfo = this.currentConfig ? `${this.currentConfig.name} - ${this.currentConfig.paper_size}` : 'DEFAULT CONFIG';
+        commands.push(...this.stringToBytes(`TEST PRINT - ${configInfo}`));
         commands.push(...[0x0a, 0x0a]);
 
         // Normal text
@@ -336,22 +412,61 @@ class ThermalPrinterService {
         commands.push(...[0x1b, 0x61, 0x00]); // Left align
         commands.push(...this.stringToBytes('Printer connected successfully!'));
         commands.push(...[0x0a]);
-        commands.push(...this.stringToBytes('Paper width: 76mm (48 characters)'));
-        commands.push(...[0x0a]);
-        commands.push(...this.stringToBytes('------------------------------------------------'));
+
+        if (this.currentConfig) {
+            commands.push(...this.stringToBytes(`Config: ${this.currentConfig.name}`));
+            commands.push(...[0x0a]);
+            commands.push(...this.stringToBytes(`Paper: ${this.currentConfig.paper_size} (${this.currentConfig.character_width} chars)`));
+            commands.push(...[0x0a]);
+        }
+
+        // Dynamic separator
+        const separatorWidth = this.currentConfig?.character_width || 48;
+        commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
         commands.push(...[0x0a, 0x0a]);
 
-        // Add proper spacing before cut
-        commands.push(...[0x0a, 0x0a, 0x0a, 0x0a, 0x0a]); // 5 line feeds
+        // Add proper spacing before cut based on config
+        const cutSpacing = this.currentConfig?.cut_spacing || 5;
+        for (let i = 0; i < cutSpacing; i++) {
+            commands.push(0x0a);
+        }
 
-        // Cut
-        commands.push(...[0x1d, 0x56, 0x00]);
+        // Cut if auto_cut is enabled
+        if (this.currentConfig?.auto_cut !== false) {
+            commands.push(...[0x1d, 0x56, 0x00]);
+        }
 
         const data = new Uint8Array(commands);
         await this.sendToPrinter(data);
+    }
+
+    /**
+     * Connect to a specific printer type (kitchen, bar, receipt)
+     */
+    public async connectToPrinterType(type: 'kitchen' | 'bar' | 'receipt'): Promise<boolean> {
+        const config = await this.loadPrinterConfig(type);
+        if (!config) {
+            throw new Error(`No active ${type} printer configuration found`);
+        }
+        return this.connectToPrinter(config);
+    }
+
+    /**
+     * Get current printer configuration
+     */
+    public getCurrentConfig(): PrinterConfig | null {
+        return this.currentConfig;
+    }
+
+    /**
+     * Set printer configuration manually
+     */
+    public setConfig(config: PrinterConfig): void {
+        this.currentConfig = config;
     }
 }
 
 // Export singleton instance
 export const thermalPrinter = new ThermalPrinterService();
 export default ThermalPrinterService;
+export type { PrinterConfig };
