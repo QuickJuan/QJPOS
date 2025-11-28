@@ -29,6 +29,7 @@ class BranchResource extends JsonResource
             'bill_no'             => $this->bill_no,
             'order_number'        => $this->order_number,
             'receipt_headers'     => $this->receipt_headers,
+            'receipt_footer'      => $this->receipt_footer,
             'users'               => UserResource::collection($this->whenLoaded('users')),
         ];
     }

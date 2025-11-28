@@ -105,7 +105,39 @@ class ViewBranch extends ViewRecord
                             })
                             ->html()
                             ->placeholder('No receipt headers configured'),
-                    ]),
+
+                        TextEntry::make('receipt_footer')
+                            ->label('Receipt Footer')
+                            ->formatStateUsing(function ($state, $record) {
+                                $footers = $record->receipt_footer;
+
+                                if (empty($footers)) {
+                                    return 'No receipt footer configured';
+                                }
+
+                                // Handle different possible data structures
+                                if (is_string($footers)) {
+                                    $footers = json_decode($footers, true);
+                                }
+
+                                if (!is_array($footers)) {
+                                    return 'No receipt footer configured';
+                                }
+
+                                // If it's an array of objects with 'footer' key (from simple repeater)
+                                if (isset($footers[0]) && is_array($footers[0]) && isset($footers[0]['footer'])) {
+                                    $footerStrings = array_column($footers, 'footer');
+                                } else {
+                                    // If it's already a flat array of strings
+                                    $footerStrings = $footers;
+                                }
+
+                                return implode('<br>', array_filter($footerStrings));
+                            })
+                            ->html()
+                            ->placeholder('No receipt footer configured'),
+                    ])
+                    ->columnSpan(1),
 
                 Section::make('Associated Users')
                     ->schema([
@@ -118,7 +150,9 @@ class ViewBranch extends ViewRecord
                                     ->implode('<br>')
                             )
                             ->html(),
-                    ]),
-            ]);
+                    ])
+                    ->columnSpan(1),
+            ])
+            ->columns(2);
     }
 }

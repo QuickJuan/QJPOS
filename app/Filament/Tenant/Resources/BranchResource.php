@@ -114,6 +114,20 @@ class BranchResource extends Resource
                     ->helperText('Add multiple lines of header text for receipts (e.g., business name, address, contact info)')
                     ->collapsible()
                     ->nullable(),
+
+                Repeater::make('receipt_footer')
+                    ->label('Receipt Footer')
+                    ->simple(
+                        TextInput::make('footer')
+                            ->label('Footer Line')
+                            ->required()
+                            ->maxLength(255)
+                            ->placeholder('Enter receipt footer text')
+                    )
+                    ->addActionLabel('Add Footer Line')
+                    ->helperText('Add multiple lines of footer text for receipts (e.g., thank you message, contact info)')
+                    ->collapsible()
+                    ->nullable(),
             ]);
     }
 

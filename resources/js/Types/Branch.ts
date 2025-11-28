@@ -14,4 +14,5 @@ export default interface Branch {
     bill_no?: string;
     order_number?: string;
     receipt_headers?: string[];
+    receipt_footer?: string[];
 }
