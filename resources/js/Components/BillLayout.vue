@@ -234,7 +234,7 @@ const formatTime = (dateString: string) => {
 
 <style scoped>
 .bill-container {
-    font-family: "Courier New", monospace;
+    font-family: "Monospace", monospace;
     line-height: 1.2;
     max-width: 300px;
 }

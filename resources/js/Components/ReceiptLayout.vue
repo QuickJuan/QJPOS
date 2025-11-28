@@ -2,7 +2,7 @@
     <div
         :class="[
             'receipt-container bg-white p-4 font-mono text-xs leading-tight',
-            embedded ? '' : 'max-w-xs mx-auto'
+            embedded ? '' : 'max-w-xs mx-auto',
         ]"
     >
         <!-- Header -->
@@ -124,48 +124,54 @@
                 <span>Subtotal:</span>
                 <span>{{ formatMoney(subtotal) }}</span>
             </div>
-
-            <!-- Less Tax -->
-            <div class="flex justify-between" v-if="lessTax">
-                <span>Less Tax:</span>
-                <span>-{{ formatMoney(lessTax) }}</span>
-            </div>
-
-            <!-- Less Discount -->
-            <div class="flex justify-between" v-if="lessDiscount">
-                <span>Less Discount:</span>
-                <span>-{{ formatMoney(lessDiscount) }}</span>
-            </div>
-
             <div
                 class="border-t border-dashed pt-1 flex justify-between font-bold"
             >
                 <span>TOTAL:</span>
                 <span>{{ formatMoney(totalAmount) }}</span>
             </div>
-        </div>
-
-        <!-- Payment Info -->
-        <div class="mb-3" v-if="paymentInfo">
-            <div class="text-center font-bold mb-2">PAYMENT</div>
-            <div class="flex justify-between">
-                <span>Amount Paid:</span>
+            <div class="flex justify-between" v-if="paymentInfo">
+                <span>Payment Received:</span>
                 <span>{{ formatMoney(paymentInfo.amount_paid) }}</span>
             </div>
-            <div class="flex justify-between">
+            <div class="flex justify-between" v-if="paymentInfo">
                 <span>Change:</span>
                 <span>{{ formatMoney(paymentInfo.change) }}</span>
             </div>
+        </div>
+
+        <!-- Payment Info -->
+        <div class="mb-3" v-if="taxInfo">
             <div class="flex justify-between">
-                <span>Payment Method:</span>
-                <span>{{ paymentInfo.method || "Cash" }}</span>
+                <span>VAT Sales:</span>
+                <span>{{ formatMoney(taxInfo.vatSales) ?? 0 }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span>Non-VAT Sales:</span>
+                <span>{{ formatMoney(taxInfo.nonVatSales) ?? 0 }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span>VAT Exempt Sales:</span>
+                <span>{{ formatMoney(taxInfo.vatExemptSales) }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span>Total Vat Amount:</span>
+                <span>{{ formatMoney(taxInfo.vatAmount) }}</span>
+            </div>
+            <div class="flex justify-between" v-if="lessTax">
+                <span>Total Less Tax:</span>
+                <span>-{{ formatMoney(lessTax) ?? 0 }}</span>
+            </div>
+            <div class="flex justify-between" v-if="lessDiscount">
+                <span>Total Less Discount:</span>
+                <span>-{{ formatMoney(lessDiscount) ?? 0 }}</span>
             </div>
         </div>
 
         <div class="border-b border-dashed"></div>
 
         <!-- Footer -->
-        <div class="text-center text-xs">
+        <div class="text-center text-xs mt-10">
             <p class="mb-1">
                 {{
                     receiptFooter?.footer_notes ??
@@ -202,6 +208,7 @@ const props = defineProps<{
     isSeniorDiscount?: boolean;
     totalAmount?: number;
     paymentInfo?: any;
+    taxInfo?: any;
     footerMessage?: string;
     receiptFooter: any;
     embedded?: boolean;
@@ -257,7 +264,7 @@ const formatTime = (dateString: string) => {
 
 <style scoped>
 .receipt-container {
-    font-family: "Courier New", monospace;
+    font-family: "Monospace", monospace;
     line-height: 1.2;
     max-width: 300px;
 }

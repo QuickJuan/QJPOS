@@ -184,6 +184,7 @@ const receiptData = ref({
     isSeniorDiscount: false,
     totalAmount: 0,
     paymentInfo: null as any,
+    taxInfo: null as any,
 });
 
 const billData = ref({

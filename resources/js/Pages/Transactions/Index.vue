@@ -343,8 +343,83 @@ onUnmounted(() => {
 });
 
 const reprintReceipt = (orderId: number) => {
-    const url = route("receipt", { id: orderId });
-    window.open(`${url}?print=1`, "_blank");
+    // Get the ReceiptLayout element from the modal
+    const receiptElement = document.querySelector(
+        ".receipt-container"
+    ) as HTMLElement;
+    if (!receiptElement) {
+        console.error("Receipt element not found");
+        return;
+    }
+
+    // Create a temporary print-friendly version
+    const printContent = receiptElement.cloneNode(true) as HTMLElement;
+
+    // Create hidden iframe for printing
+    const iframe = document.createElement("iframe");
+    iframe.style.display = "none";
+    document.body.appendChild(iframe);
+
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (iframeDoc) {
+        iframeDoc.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Receipt - RCP-${orderId}</title>
+                <style>
+                    @media print {
+                        body { margin: 0; }
+                    }
+                    body {
+                        font-family: 'Courier New', monospace;
+                        font-size: 12px;
+                        line-height: 1.2;
+                        margin: 0;
+                        padding: 10px;
+                        background: white;
+                    }
+                    .receipt-container {
+                        max-width: 300px;
+                        margin: 0 auto;
+                    }
+                    .text-center { text-align: center; }
+                    .text-right { text-align: right; }
+                    .font-bold { font-weight: bold; }
+                    .mb-2 { margin-bottom: 8px; }
+                    .mb-4 { margin-bottom: 16px; }
+                    .border-t { border-top: 1px solid #000; }
+                    .border-b { border-bottom: 1px solid #000; }
+                    .text-red-600 { color: #dc2626; }
+                    .text-gray-500 { color: #6b7280; }
+                    .text-gray-600 { color: #4b5563; }
+                    .flex { display: flex; }
+                    .justify-between { justify-content: space-between; }
+                    .flex-1 { flex: 1; }
+                    .ml-2 { margin-left: 8px; }
+                    .mt-2 { margin-top: 8px; }
+                    .mt-4 { margin-top: 16px; }
+                    .mb-1 { margin-bottom: 4px; }
+                    .pt-1 { padding-top: 4px; }
+                    .border-dashed { border-style: dashed; border-width: 1px; }
+                </style>
+            </head>
+            <body>
+                ${printContent.outerHTML}
+            </body>
+            </html>
+        `);
+        iframeDoc.close();
+
+        // Print and cleanup
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+
+        // Remove iframe after printing
+        setTimeout(() => {
+            document.body.removeChild(iframe);
+        }, 1000);
+    }
 };
 
 const sendReceiptEmail = (order: Order) => {
