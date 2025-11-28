@@ -1,8 +1,12 @@
 <template>
-    <CashieringLayout :current-user="props.currentUser" :open-session="props.pendingCashiering" :session-summary="props.sessionSummary">
+    <CashieringLayout
+        :current-user="props.currentUser"
+        :open-session="props.pendingCashiering"
+        :session-summary="props.sessionSummary"
+    >
         <!-- Fixed Header for Mobile/Tablet with Toggle Buttons -->
         <div
-            class="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-md"
+            class="lg:hidden fixed top-0 left-0 right-0 z-[60] bg-white border-b border-gray-200 shadow-md"
         >
             <div class="flex items-center justify-between px-3 py-2">
                 <!-- Left: Menu Toggle -->

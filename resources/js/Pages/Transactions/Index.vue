@@ -100,7 +100,7 @@
                                     </div>
 
                                     <!-- Mobile hamburger menu -->
-                                    <div class="lg:hidden relative">
+                                    <div class="lg:hidden relative z-50">
                                         <Button
                                             icon="pi pi-ellipsis-v"
                                             outlined
@@ -109,10 +109,20 @@
                                         />
                                         <div
                                             v-if="showActionMenu"
-                                            class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
+                                            class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-[100]"
+                                        >
+                                            class="fixed inset-0 z-[90]
+                                            lg:hidden" @click="toggleActionMenu"
+                                            >
+                                        </div>
+                                        <!-- Mobile menu -->
+                                        <div
+                                            v-if="showActionMenu"
+                                            class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-[100]"
+                                            data-menu-container
                                         >
                                             <button
-                                                class="w-full text-left px-4 py-3 hover:bg-blue-50 flex items-center gap-3 text-sm text-blue-700"
+                                                class="w-full text-left px-4 py-3 hover:bg-blue-50 flex items-center gap-3 text-sm text-blue-700 transition-colors duration-150"
                                                 @click="
                                                     () => {
                                                         handleThermalPrint();
@@ -120,11 +130,11 @@
                                                     }
                                                 "
                                             >
-                                                <i class="pi pi-bluetooth"></i>
-                                                Thermal Print
+                                                <i class="pi pi-print"></i>
+                                                Print
                                             </button>
                                             <button
-                                                class="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm border-t border-gray-100"
+                                                class="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm border-t border-gray-100 transition-colors duration-150"
                                                 @click="
                                                     () => {
                                                         sendReceiptEmail(
@@ -382,7 +392,10 @@ const toggleActionMenu = () => {
 // Close menu when clicking outside
 const handleClickOutside = (event: MouseEvent) => {
     const target = event.target as HTMLElement;
-    if (!target.closest(".relative")) {
+    if (
+        !target.closest(".relative") &&
+        !target.closest("[data-menu-container]")
+    ) {
         showActionMenu.value = false;
     }
 };
@@ -471,30 +484,70 @@ const handleRefundDialogClosed = () => {
 const handleThermalPrint = async () => {
     if (!activeOrder.value) return;
 
-    // Load printer config and check connection status
+    // Load printer config first
     try {
-        await thermalPrinter.loadPrinterConfig("receipt");
+        const printerConfig = await thermalPrinter.loadPrinterConfig("receipt");
+
+        if (!printerConfig) {
+            // No printer configured - go to config page
+            console.log("No printer configuration found, redirecting to setup");
+            router.get("/printer-config");
+            return;
+        }
+
+        console.log("Printer config loaded:", printerConfig.name);
+
+        // Check if already connected
         const isConnected = thermalPrinter.isConnected();
 
         if (isConnected) {
-            // Auto-print immediately without showing modal
+            // Already connected - print immediately
+            console.log("Printer already connected, printing...");
             try {
                 await thermalPrinter.printReceipt(thermalReceiptData.value);
-                // Success - no modal needed
-                console.log("Receipt printed successfully");
+                console.log("✅ Receipt printed successfully");
             } catch (error) {
-                console.error("Auto-print failed:", error);
-                // Show modal on error for manual retry
+                console.error("Print failed:", error);
                 showThermalPrinter.value = true;
             }
         } else {
-            // Not connected - navigate directly to printer settings
-            router.get("/printer-config");
+            // Not connected - try to connect first
+            console.log("Printer not connected, attempting to connect...");
+            try {
+                const connected = await thermalPrinter.connectToPrinter(
+                    printerConfig
+                );
+
+                if (connected) {
+                    // Successfully connected - now print
+                    console.log("✅ Connected successfully, printing...");
+                    await thermalPrinter.printReceipt(thermalReceiptData.value);
+                    console.log("✅ Receipt printed successfully");
+                } else {
+                    // Connection failed - show modal for manual retry
+                    console.log("❌ Connection failed, showing modal");
+                    showThermalPrinter.value = true;
+                }
+            } catch (error) {
+                console.error("Connection/print failed:", error);
+
+                // If it's a user cancellation, don't show modal
+                if (
+                    error.message.includes("User cancelled") ||
+                    error.name === "NotFoundError"
+                ) {
+                    console.log("User cancelled connection");
+                    return;
+                }
+
+                // Other errors - show modal for manual retry
+                showThermalPrinter.value = true;
+            }
         }
     } catch (error) {
         console.error("Failed to load printer config:", error);
-        // If config loading fails, show modal as fallback
-        showThermalPrinter.value = true;
+        // If config loading fails completely, go to config page
+        router.get("/printer-config");
     }
 };
 

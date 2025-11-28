@@ -267,7 +267,7 @@ class ThermalPrinterService {
 
             // Separator line (dynamic width based on printer config)
             const separatorChar = '-';
-            const separatorWidth = this.currentConfig?.character_width || 48;
+            const separatorWidth = this.currentConfig?.character_width || 47;
             const separatorLine = separatorChar.repeat(separatorWidth);
             commands.push(...this.stringToBytes(separatorLine));
             commands.push(0x0a);
@@ -355,10 +355,10 @@ class ThermalPrinterService {
     }
 
     /**
-     * Format item line for receipt (76mm paper - 48 characters width)
+     * Format item line for receipt (76mm paper - 47 characters width)
      */
     private formatItemLine(name: string, quantity: number | string, price: number | string, amount: number | string): string {
-        const maxWidth = 48; // 76mm paper width
+        const maxWidth = 47; // 76mm paper width
         const numPrice = typeof price === 'string' ? parseFloat(price) || 0 : price;
         const numAmount = typeof amount === 'string' ? parseFloat(amount) || 0 : amount;
         const numQuantity = typeof quantity === 'string' ? parseInt(quantity) || 0 : quantity;
@@ -367,7 +367,7 @@ class ThermalPrinterService {
         const amountText = numAmount.toFixed(2);
 
         // Truncate name if too long (allow more characters for 76mm)
-        let itemName = name.length > 30 ? name.substring(0, 27) + '...' : name;
+        let itemName = name.length > 29 ? name.substring(0, 26) + '...' : name;
 
         // Calculate spaces needed
         const spacesNeeded = maxWidth - itemName.length - qtyPriceText.length - amountText.length;
@@ -378,7 +378,7 @@ class ThermalPrinterService {
      * Format total line for receipt with dynamic width based on printer config
      */
     private formatTotalLine(label: string, amount: number | string): string {
-        const maxWidth = this.currentConfig?.character_width || 48;
+        const maxWidth = this.currentConfig?.character_width || 47;
         const numAmount = typeof amount === 'string' ? parseFloat(amount) || 0 : amount;
         const amountText = numAmount.toFixed(2);
         const spaces = ' '.repeat(Math.max(0, maxWidth - label.length - amountText.length));
@@ -421,7 +421,7 @@ class ThermalPrinterService {
         }
 
         // Dynamic separator
-        const separatorWidth = this.currentConfig?.character_width || 48;
+        const separatorWidth = this.currentConfig?.character_width || 47;
         commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
         commands.push(...[0x0a, 0x0a]);
 

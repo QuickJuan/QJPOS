@@ -940,7 +940,7 @@ const printerTypes = [
 
 const paperSizes = [
     { label: "36mm (32 chars)", value: "36mm" },
-    { label: "76mm (48 chars)", value: "76mm" },
+    { label: "76mm (47 chars)", value: "76mm" },
 ];
 
 // Methods
@@ -974,7 +974,7 @@ const updateCharacterWidth = () => {
     if (form.paper_size === "36mm") {
         form.character_width = 32;
     } else if (form.paper_size === "76mm") {
-        form.character_width = 48;
+        form.character_width = 47;
     }
 };
 
