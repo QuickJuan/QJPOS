@@ -114,7 +114,8 @@ class CashierSessionService
         $taxRate,
         array $totals,
         $billNumber,
-        $receiptNumber
+        $receiptNumber,
+        $generalSettings
     ): array {
         return [
             'categories'         => $categories,
@@ -132,6 +133,7 @@ class CashierSessionService
             'taxRate'            => $taxRate,
             'billNumber'         => $billNumber,
             'receiptNumber'      => $receiptNumber,
+            'generalSettings'    => $generalSettings,
         ];
     }
 

@@ -13,9 +13,12 @@
                 class="border border-gray-200 rounded-lg p-4 bg-gray-50 max-h-96 overflow-y-auto"
             >
                 <BillLayout
-                    :business-name="'Quick Juan Restaurant'"
-                    :business-address="'123 Main Street, Makati City, Philippines'"
-                    :business-phone="'(02) 123-4567'"
+                    :business-logo="generalSettings.company_logo"
+                    :business-name="
+                        generalSettings.company_name ?? 'Quick Juan Restaurant'
+                    "
+                    :business-address="generalSettings.company_address"
+                    :business-phone="generalSettings.company_phone"
                     :bill-number="billData.billNumber"
                     :bill-date="billData.date"
                     :table-info="billData.tableInfo"
@@ -69,6 +72,12 @@ const props = defineProps<{
     billData: any;
     billFooter: any;
     orderItems: any[];
+    generalSettings: {
+        company_name: string;
+        company_address: string;
+        company_phone: string;
+        company_logo: string;
+    };
 }>();
 
 const page = usePage();

@@ -87,6 +87,7 @@
             :receipt-data="receiptData"
             :order-items="orderItems"
             :receipt-footer="receiptFooter"
+            :general-settings="generalSettings"
         />
 
         <BillModal
@@ -95,6 +96,7 @@
             :order-items="orderItems"
             :table-info="tableInfo"
             :billFooter="billFooter"
+            :general-settings="generalSettings"
         />
     </div>
 
@@ -138,6 +140,12 @@ const props = defineProps<{
     receiptFooter: any;
     billNumber: string;
     receiptNumber: string;
+    generalSettings: {
+        company_name: string;
+        company_address: string;
+        company_phone: string;
+        company_logo: string;
+    };
 }>();
 
 const emit = defineEmits<{

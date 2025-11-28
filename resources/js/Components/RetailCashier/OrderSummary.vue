@@ -48,6 +48,7 @@
             :receipt-footer="receiptFooter"
             :bill-number="billNumber"
             :receipt-number="receiptNumber"
+            :general-settings="props.generalSettings"
             @update-order-type="updateOrderType"
             @save-order="handleSaveOrder"
             @checkout="handleCheckout"
@@ -138,6 +139,12 @@ const props = defineProps<{
     receiptFooter: any;
     billNumber: string;
     receiptNumber: string;
+    generalSettings: {
+        company_name: string;
+        company_address: string;
+        company_phone: string;
+        company_logo: string;
+    };
 }>();
 
 const toast = useToast();

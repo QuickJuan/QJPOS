@@ -174,6 +174,7 @@
                                     :embedded="true"
                                     :order-data="activeOrder"
                                     :receipt-footer="props.receiptFooter"
+                                    :general-settings="props.generalSettings"
                                 />
                                 <div class="flex flex-col w-full lg:w-auto">
                                     <div
@@ -268,10 +269,15 @@ const props = defineProps<{
         cashier_id: string;
     };
     receiptFooter: any;
+    generalSettings: {
+        company_name: string;
+        company_address: string;
+        company_phone: string;
+        company_logo: string;
+    };
 }>();
 
 const page = usePage<PageProps>();
-const currentUser = computed(() => page.props?.auth?.user);
 const cashierOptions = computed(() => page.props?.cashiers || []);
 const cashierDropdownOptions = computed(() =>
     cashierOptions.value.map((cashier: { id: number; name: string }) => ({

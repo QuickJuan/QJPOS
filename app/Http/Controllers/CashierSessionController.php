@@ -1,23 +1,23 @@
 <?php
 namespace App\Http\Controllers;
 
-use App\Enums\Receipt\Type;
-use App\Http\Requests\CashierSessionRequest;
-use App\Http\Resources\CategoryResource;
-use App\Http\Resources\ProductResource;
-use App\Models\Category;
-use App\Models\Modifier;
-use App\Models\Product;
-use App\Models\TableRoom;
-use App\Models\TableRoomLocation;
-use App\Services\CashierSessionService;
-use App\Services\DiscountService;
 use Exception;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Models\Product;
+use App\Models\Category;
+use App\Models\Modifier;
+use App\Models\TableRoom;
+use Illuminate\Http\Request;
+use App\Models\TableRoomLocation;
+use App\Services\DiscountService;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\RedirectResponse;
+use App\Http\Resources\ProductResource;
+use App\Services\CashierSessionService;
+use App\Http\Resources\CategoryResource;
+use App\Services\GeneralSettingsService;
+use App\Http\Requests\CashierSessionRequest;
 
 class CashierSessionController extends Controller
 {
@@ -57,6 +57,9 @@ class CashierSessionController extends Controller
         $billNumber    = $this->cashierSessionService->getBillNo(session('active_branch')->id);
         $receiptNumber = $this->cashierSessionService->getReceiptNo(session('active_branch')->id);
 
+        // Get the General Settings
+        $generalSettings = app(GeneralSettingsService::class)->getCompanySettings();
+
         // Prepare view data
         $viewData = $this->cashierSessionService->prepareViewData(
             $categories,
@@ -70,6 +73,7 @@ class CashierSessionController extends Controller
             $totals,
             $billNumber,
             $receiptNumber,
+            $generalSettings
         );
 
         // Add selected category slug to view data

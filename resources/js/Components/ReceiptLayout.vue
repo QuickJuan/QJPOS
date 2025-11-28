@@ -1,4 +1,4 @@
-<template>
+    <template>
     <div
         :class="[
             'receipt-container bg-white p-4 font-mono text-xs leading-tight',
@@ -7,6 +7,13 @@
     >
         <!-- Header -->
         <div class="text-center mb-4">
+            <div v-if="businessLogo">
+                <img
+                    :src="businessLogo"
+                    alt="Company Logo"
+                    class="w-16 h-auto mx-auto mb-2"
+                />
+            </div>
             <h1 class="text-lg font-bold mb-1">{{ businessName }}</h1>
             <p class="text-xs">{{ businessAddress }}</p>
             <p class="text-xs">{{ businessPhone }}</p>
@@ -190,6 +197,7 @@ import { computed } from "vue";
 
 // Props
 const props = defineProps<{
+    businessLogo?: string;
     businessName?: string;
     businessAddress?: string;
     businessPhone?: string;
@@ -215,6 +223,7 @@ const props = defineProps<{
 }>();
 
 // Default values
+const businessLogo = computed(() => props.businessLogo);
 const businessName = computed(() => props.businessName || "Quick Juan POS");
 const businessAddress = computed(
     () => props.businessAddress || "123 Main Street, City, State"

@@ -13,9 +13,12 @@
                 class="border border-gray-200 rounded-lg p-4 bg-gray-50 max-h-96 overflow-y-auto"
             >
                 <ReceiptLayout
-                    :business-name="'Quick Juan Restaurant'"
-                    :business-address="'123 Main Street, Makati City, Philippines'"
-                    :business-phone="'(02) 123-4567'"
+                    :business-logo="generalSettings.company_logo"
+                    :business-name="
+                        generalSettings.company_name ?? 'Quick Juan Restaurant'
+                    "
+                    :business-address="generalSettings.company_address"
+                    :business-phone="generalSettings.company_phone"
                     :receipt-number="receiptData.receiptNumber"
                     :receipt-date="receiptData.date"
                     :table-info="receiptData.tableNumber"
@@ -69,6 +72,12 @@ const props = defineProps<{
     receiptData: any;
     orderItems: any[];
     receiptFooter: any;
+    generalSettings: {
+        company_name: string;
+        company_address: string;
+        company_phone: string;
+        company_logo: string;
+    };
 }>();
 
 const emit = defineEmits<{
