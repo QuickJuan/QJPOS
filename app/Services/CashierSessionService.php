@@ -113,8 +113,6 @@ class CashierSessionService
         $currentTable,
         $taxRate,
         array $totals,
-        $billFooter,
-        $receiptFooter,
         $billNumber,
         $receiptNumber
     ): array {
@@ -132,8 +130,6 @@ class CashierSessionService
             'lessTaxTotal'       => $totals['lessTaxTotal'],
             'lessDiscountTotal'  => $totals['lessDiscountTotal'],
             'taxRate'            => $taxRate,
-            'billFooter'         => $billFooter,
-            'receiptFooter'      => $receiptFooter,
             'billNumber'         => $billNumber,
             'receiptNumber'      => $receiptNumber,
         ];
@@ -206,11 +202,6 @@ class CashierSessionService
         }
 
         return compact('subAmount', 'lessTaxTotal', 'lessDiscountTotal', 'total');
-    }
-
-    public function getReceiptFooter(string $type = Type::RECEIPT->value)
-    {
-        return ReceiptFooter::where('type', $type)->first();
     }
 
     public function getBillNo(int $branchId): mixed

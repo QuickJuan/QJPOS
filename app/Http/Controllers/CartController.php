@@ -5,16 +5,22 @@ use App\Http\Requests\ApplyDiscountToCartItemRequest;
 use App\Http\Requests\CartRequest;
 use App\Services\CartService;
 use App\Services\CashierSessionService;
+use App\Services\PaymentService;
 use Exception;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class CartController extends Controller
 {
-    public function __construct(protected CartService $cartService, protected CashierSessionService $cashierSessionService)
+    public function __construct(
+        protected CartService $cartService,
+        protected CashierSessionService $cashierSessionService,
+        protected PaymentService $paymentService
+    )
     {
         $this->cartService           = $cartService;
         $this->cashierSessionService = $cashierSessionService;
+        $this->paymentService        = $paymentService;
     }
 
     public function addToCart(CartRequest $request): RedirectResponse
@@ -131,7 +137,7 @@ class CartController extends Controller
                 return redirect()->back()->with('error', 'Cart ID is empty.');
             }
 
-            $this->cartService->settleBill($request, $cartId);
+            $this->paymentService->settleBill($request, $cartId);
 
             return redirect()->back()->with('success', 'Bill settled successfully.');
         } catch (Exception $e) {
