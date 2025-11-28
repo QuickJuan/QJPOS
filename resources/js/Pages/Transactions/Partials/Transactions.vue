@@ -4,9 +4,6 @@
             class="flex items-center justify-between px-5 py-4 border-b border-gray-100"
         >
             <div>
-                <p class="text-xs uppercase tracking-wide text-gray-400">
-                    Inbox
-                </p>
                 <p class="text-lg font-semibold text-gray-900">
                     Latest Transactions
                 </p>
@@ -17,7 +14,9 @@
                 {{ props.orders.total }}
             </span>
         </div>
-        <div class="divide-y divide-gray-100 max-h-[65vh] overflow-y-auto">
+        <div
+            class="divide-y divide-gray-100 max-h-[60vh] md:max-h-[75vh] lg:max-h-[80vh] overflow-y-auto"
+        >
             <button
                 v-for="order in props.orders.data"
                 :key="order.id"
@@ -35,14 +34,18 @@
                     </div>
                     <div class="flex-1">
                         <div class="flex items-center justify-between">
-                            <p class="font-semibold text-gray-900">
+                            <p
+                                class="font-semibold text-gray-900 text-base md:text-lg"
+                            >
                                 {{ orderListingSubtitle(order) }}
                             </p>
-                            <span class="text-xs text-gray-400">
+                            <span class="text-xs md:text-sm text-gray-400">
                                 {{ formatDate(order.created_at) }}
                             </span>
                         </div>
-                        <p class="text-sm text-gray-500 mt-1 line-clamp-2">
+                        <p
+                            class="text-sm md:text-base text-gray-500 mt-1 line-clamp-2"
+                        >
                             {{ order.cashier?.name || "Unknown" }}
                         </p>
                     </div>

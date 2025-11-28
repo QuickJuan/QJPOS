@@ -1,25 +1,28 @@
 <template>
-    <CashieringLayout :current-user="currentUser">
-        <div class="min-h-screen bg-[#f5f6fb] py-8 px-4 lg:px-8">
-            <div class="max-w-7xl mx-auto space-y-6">
-                <div class="grid grid-cols-1 xl:grid-cols-[360px_1fr] gap-6">
+    <TransactionsLayout>
+        <template #header>
+            <div>
+                <SearchAndFIlter
+                    :search="search"
+                    :dateRange="dateRange"
+                    :status="filters.status"
+                    :cashier_id="filters.cashier_id"
+                    :statusOptions="statusOptions"
+                    :cashierDropdownOptions="cashierDropdownOptions"
+                    @search="(value: string) => { search = value }"
+                    @dateRange="handleDateRangeChange"
+                    @status="(value: string) => { filters.status = value }"
+                    @cashier_id="(value: string) => { filters.cashier_id = value }"
+                />
+            </div>
+        </template>
+        <div class="flex flex-col h-full py-6 md:py-8 px-3 md:px-6 lg:px-8">
+            <div class="space-y-6 h-full bg-red-400">
+                <div
+                    class="grid grid-cols-1 md:grid-cols-[360px_1fr] gap-6 h-full"
+                >
                     <!-- Sidebar -->
                     <div class="space-y-4">
-                        <SearchAndFIlter
-                            :search="search"
-                            :dateFrom="filters.date_from"
-                            :dateTo="filters.date_to"
-                            :status="filters.status"
-                            :cashier_id="filters.cashier_id"
-                            :statusOptions="statusOptions"
-                            :cashierDropdownOptions="cashierDropdownOptions"
-                            @search="(value: string) => { search = value }"
-                            @dateFrom="(value: string | null) => { filters.date_from = value }"
-                            @dateTo="(value: string | null) => { filters.date_to = value }"
-                            @status="(value: string) => { filters.status = value }"
-                            @cashier_id="(value: string) => { filters.cashier_id = value }"
-                        />
-
                         <Transactions
                             :orders="orders"
                             :activeOrder="activeOrder"
@@ -33,7 +36,9 @@
                         class="bg-white rounded-3xl shadow-lg overflow-hidden flex flex-col"
                     >
                         <div v-if="activeOrder" class="flex flex-col h-full">
-                            <div class="px-8 py-6 border-b border-gray-100">
+                            <div
+                                class="px-4 py-5 md:px-6 md:py-6 border-b border-gray-100 sticky top-0 bg-white z-10"
+                            >
                                 <div
                                     class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between"
                                 >
@@ -107,7 +112,7 @@
                             </div>
 
                             <div
-                                class="px-8 py-6 flex-1 space-y-8 overflow-y-auto"
+                                class="px-4 py-5 md:px-6 md:py-6 flex-1 space-y-8 overflow-y-auto"
                             >
                                 <div class="space-y-1">
                                     <p
@@ -217,7 +222,7 @@
             @submit="submitRefund"
             @closed="handleRefundDialogClosed"
         />
-    </CashieringLayout>
+    </TransactionsLayout>
 </template>
 
 <script setup lang="ts">
@@ -225,7 +230,7 @@ import { ref, onMounted, computed, watch, reactive } from "vue";
 import { usePage, router } from "@inertiajs/vue3";
 import { route } from "ziggy-js";
 import axios from "axios";
-import CashieringLayout from "@/Layouts/CashieringLayout.vue";
+import TransactionsLayout from "@/Layouts/TransactionsLayout.vue";
 import PageProps from "@/Types/PageProps";
 import Button from "primevue/button";
 import Order from "@/Types/Order/Order";
@@ -271,6 +276,23 @@ const filters = reactive({
 });
 
 const search = ref(props.filters.search || "");
+
+// Compute dateRange from filters
+const dateRange = computed<[Date | null, Date | null] | null>(() => {
+    if (!filters.date_from && !filters.date_to) return null;
+    return [
+        filters.date_from ? new Date(filters.date_from) : null,
+        filters.date_to ? new Date(filters.date_to) : null,
+    ];
+});
+
+const handleDateRangeChange = ([start, end]: [
+    string | null,
+    string | null
+]) => {
+    filters.date_from = start || "";
+    filters.date_to = end || "";
+};
 
 const showRefundModal = ref(false);
 const activeOrder = ref<Order | null>(null);

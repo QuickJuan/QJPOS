@@ -1,68 +1,56 @@
 <template>
-    <div class="bg-white p-5 space-y-4">
-        <div class="relative max-w-xl mx-auto">
-            <span
-                class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-            >
-                <MagnifyingGlassIcon class="w-5 h-5" />
-            </span>
+    <div class="">
+        <div
+            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 items-center gap-3 md:gap-4"
+        >
             <TextField
                 v-model="searchValue"
                 type="text"
                 placeholder="Search receipts, users..."
-                class="w-full rounded-2xl border border-gray-200 bg-gray-50/70 pl-12 pr-4 py-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
+                class="w-full"
                 @input="handleSearchInput"
             />
-        </div>
 
-        <div class="grid grid-cols-1 gap-4">
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                    <label class="text-xs font-semibold text-gray-500">
-                        From Date
-                    </label>
-                    <Calendar
-                        v-model="dateFromValue"
-                        dateFormat="yy-mm-dd"
-                        placeholder="Select"
-                        class="w-full mt-1 rounded-2xl"
-                        @date-select="handleDateFromSelect"
-                    />
-                </div>
-                <div>
-                    <label class="text-xs font-semibold text-gray-500">
-                        To Date
-                    </label>
-                    <Calendar
-                        v-model="dateToValue"
-                        dateFormat="yy-mm-dd"
-                        placeholder="Select"
-                        class="w-full mt-1 rounded-2xl"
-                        @date-select="handleDateToSelect"
-                    />
-                </div>
+            <div>
+                <DatePicker
+                    v-model="dateRange"
+                    selectionMode="range"
+                    :manualInput="false"
+                    dateFormat="yy-mm-dd"
+                    placeholder="Select Date Range"
+                    class="w-full"
+                    showIcon
+                    iconDisplay="input"
+                    @update:model-value="handleRangeUpdate"
+                />
             </div>
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+
+            <div class="">
                 <SelectField
                     v-model="statusValue"
                     :options="props.statusOptions"
                     label="Status"
+                    :hideLabel="true"
                     optionLabel="label"
                     optionValue="value"
                     placeholder="All Status"
                     showClear
-                    class="w-full mt-1 rounded-2xl"
+                    class="w-full rounded-2xl"
                     @change="handleStatusChange"
                 />
+            </div>
+
+            <div class="">
                 <SelectField
                     label="Cashier"
+                    :hideLabel="true"
                     v-model="cashierIdValue"
                     :options="props.cashierDropdownOptions"
                     optionLabel="label"
                     optionValue="value"
                     placeholder="All Cashiers"
                     showClear
-                    class="w-full mt-1 rounded-2xl"
+                    class="w-full rounded-2xl"
                     @change="handleCashierChange"
                 />
             </div>
@@ -73,14 +61,12 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
 import TextField from "@/Components/Form/TextField.vue";
-import Calendar from "primevue/calendar";
 import SelectField from "@/Components/Form/SelectField.vue";
-import MagnifyingGlassIcon from "@/Components/icons/MagnifyingGlassIcon.vue";
+import DatePicker from "primevue/datepicker";
 
 const props = defineProps<{
     search: string;
-    dateFrom: string | null;
-    dateTo: string | null;
+    dateRange: [Date | null, Date | null] | null;
     status: string;
     statusOptions: Array<{ label: string; value: string }>;
     cashierDropdownOptions: Array<{ label: string; value: string }>;
@@ -89,16 +75,14 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     (e: "search", value: string): void;
-    (e: "dateFrom", value: string | null): void;
-    (e: "dateTo", value: string | null): void;
+    (e: "dateRange", value: [string | null, string | null]): void;
     (e: "status", value: string): void;
     (e: "cashier_id", value: string): void;
 }>();
 
 // Local reactive values
 const searchValue = ref(props.search);
-const dateFromValue = ref(props.dateFrom);
-const dateToValue = ref(props.dateTo);
+const dateRange = ref<[Date | null, Date | null] | null>(props.dateRange);
 const statusValue = ref(props.status);
 const cashierIdValue = ref(props.cashier_id);
 
@@ -111,17 +95,11 @@ watch(
 );
 
 watch(
-    () => props.dateFrom,
+    () => props.dateRange,
     (newValue) => {
-        dateFromValue.value = newValue;
-    }
-);
-
-watch(
-    () => props.dateTo,
-    (newValue) => {
-        dateToValue.value = newValue;
-    }
+        dateRange.value = newValue;
+    },
+    { immediate: true }
 );
 
 watch(
@@ -143,12 +121,12 @@ const handleSearchInput = () => {
     emit("search", searchValue.value);
 };
 
-const handleDateFromSelect = () => {
-    emit("dateFrom", dateFromValue.value);
-};
-
-const handleDateToSelect = () => {
-    emit("dateTo", dateToValue.value);
+const handleRangeUpdate = () => {
+    const [start, end] = (dateRange.value || []) as [Date | null, Date | null];
+    emit("dateRange", [
+        start ? formatYMD(start) : null,
+        end ? formatYMD(end) : null,
+    ]);
 };
 
 const handleStatusChange = () => {
@@ -158,4 +136,11 @@ const handleStatusChange = () => {
 const handleCashierChange = () => {
     emit("cashier_id", cashierIdValue.value);
 };
+
+function formatYMD(d: Date) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
 </script>
