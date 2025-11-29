@@ -1,18 +1,14 @@
 <?php
 namespace App\Http\Middleware;
 
-use App\Enums\Receipt\Type;
+use App\Models\CashierSession;
 use App\Services\DiscountService;
-use App\Services\ReceiptFooterService;
+use App\Services\GeneralSettingsService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
-    public function __construct(
-        protected ReceiptFooterService $receiptFooterService
-    ) {
-    }
 
     /**
      * The root template that's loaded on the first page visit.
@@ -42,17 +38,68 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $activeBranch = $this->getActiveBranch($request);
+
         return array_merge(parent::share($request), [
             'flash'          => [
                 'success' => fn() => $request->session()->get('success'),
                 'error'   => fn()   => $request->session()->get('error'),
             ],
-            'active_branch' => $request->session()->get('active_branch'),
+            'active_branch' => $activeBranch,
             'auth' => [
                 'user' => $request->user(),
             ],
-            'receipt_footer' => fn() => $this->receiptFooterService->getReceiptFooter(Type::RECEIPT->value),
-            'bill_footer' => fn() => $this->receiptFooterService->getReceiptFooter(Type::BILL->value),
+            // Receipt Configuration
+            'receipt_headers' => fn() => $activeBranch['receipt_headers'] ?? [],
+            'receipt_footer' => fn() => $activeBranch['receipt_footer'] ?? [],
+            'bill_footer' => fn() => $activeBranch['receipt_footer'] ?? [],
+            // Company Information
+            'company_info' => fn() => $this->getCompanyInfo(),
         ]);
+    }
+
+    /**
+     * Get active branch from current user's cashier session
+     */
+    private function getActiveBranch(Request $request): ?array
+    {
+        if (!$request->user()) {
+            return null;
+        }
+
+        // Get the current user's active cashier session
+        $cashierSession = CashierSession::with('branch')
+            ->where('cashier_id', $request->user()->id)
+            ->whereNull('closing_time')
+            ->latest('started_time')
+            ->first();
+
+        if (!$cashierSession || !$cashierSession->branch) {
+            return null;
+        }
+
+        return $cashierSession->branch->toArray();
+    }
+
+    /**
+     * Get company information from general settings
+     */
+    private function getCompanyInfo(): array
+    {
+        try {
+            $companySettings = app(GeneralSettingsService::class)->getCompanySettings();
+            return [
+                'name' => $companySettings['company_name'] ?? '',
+                'address' => $companySettings['company_address'] ?? '',
+                'contact' => $companySettings['company_contact'] ?? '',
+
+            ];
+        } catch (\Exception $e) {
+            return [
+                'name' => '',
+                'address' => '',
+                'contact' => '',
+            ];
+        }
     }
 }

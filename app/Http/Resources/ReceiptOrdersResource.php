@@ -36,20 +36,20 @@ class ReceiptOrdersResource extends JsonResource
 
             // Cashier Information
             'cashier' => [
-                'id' => $this->cashier_id,
+                'id' => $this->cashier->id,
                 'name' => $this->cashier?->name,
             ],
 
             // Branch Information & Receipt Configuration
             'branch' => [
-                'id' => $this->branch?->id,
-                'name' => $this->branch?->name,
-                'address' => $this->branch?->address,
-                'phone' => $this->branch?->phone,
-                'tin' => $this->branch?->tin,
-                'registration_number' => $this->branch?->registration_number,
-                'receipt_headers' => $this->branch?->receipt_headers ?? [],
-                'receipt_footer' => $this->branch?->receipt_footer ?? [],
+                'id' => $this->cashierSession->branch?->id,
+                'name' => $this->cashierSession->branch?->name,
+                'address' => $this->cashierSession->branch?->address,
+                'phone' => $this->cashierSession->branch?->phone,
+                'tin' => $this->cashierSession->branch?->tin,
+                'registration_number' => $this->cashierSession->branch?->registration_number,
+                'receipt_headers' => $this->cashierSession->branch?->receipt_headers ?? [],
+                'receipt_footer' => $this->cashierSession->branch?->receipt_footer ?? [],
             ],
 
             // Financial Information

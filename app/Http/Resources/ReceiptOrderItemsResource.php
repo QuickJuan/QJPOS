@@ -28,10 +28,12 @@ class ReceiptOrderItemsResource extends JsonResource
             $result[] = [
                 'orderId' => $items->first()->order_id ?? null,
                 'orderType' => $this->formatOrderType($orderType),
-                'orderItems' => $parentItems->map(function ($item) {
+                'orderItems' => $parentItems->map(function ($item) use ($orderType) {
                     return [
                         'id' => $item->id,
-                        'name' => $item->name,
+                        'orderType' => $orderType,
+                        'order_id' => $item->order_id,
+                        'description' => $item->description ?? $item->product->name,
                         'quantity' => $item->quantity,
                         'price' => $item->price,
                         'amount' => $item->amount,
@@ -41,8 +43,7 @@ class ReceiptOrderItemsResource extends JsonResource
                         'sub_total' => $item->sub_total ?? 0,
                         'vatable_sales' => $item->vatable_sales ?? 0,
                         'vat_amount' => $item->vat_amount ?? 0,
-                        'orderType' => $orderType,
-                        'order_id' => $item->order_id,
+                        'modifiers' => $item->modifiers ?? [],
                         'sub_items' => $this->getSubItems($item->id),
                         // Add any other order item fields you need
                     ];
@@ -66,7 +67,7 @@ class ReceiptOrderItemsResource extends JsonResource
         return $subItems->map(function ($subItem) {
             return [
                 'id' => $subItem->id,
-                'name' => $subItem->name,
+                'description' => $subItem->description ?? $subItem->product->name,
                 'quantity' => $subItem->quantity,
                 'price' => $subItem->price,
                 'amount' => $subItem->amount,

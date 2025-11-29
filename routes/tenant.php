@@ -10,6 +10,7 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\TableRoomController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\Api\ReceiptController;
 use App\Http\Controllers\CashierSessionController;
 use App\Http\Controllers\TableManagementController;
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
@@ -212,4 +213,14 @@ Route::middleware([
                     Route::get('/{type}', 'getConfig')->name('get-config');
                 });
         });
+
+        // // Web Receipt Route (for browser viewing)
+        // Route::get('/receipt/{receiptNumber}', function($receiptNumber) {
+        //     return Inertia::render('Receipt', [
+        //         'receiptNumber' => $receiptNumber,
+        //     ]);
+        // })->name('receipt.view');
 });
+
+
+
