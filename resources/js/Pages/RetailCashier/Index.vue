@@ -289,6 +289,7 @@ onMounted(() => {
     // Initialize cashier state from server data
     if (props.cart) {
         addCart(props.cart);
+        setSelectedCart(props.cart.id);
     }
 
     if (props.pendingCashiering?.id) {

@@ -1,4 +1,4 @@
-    <template>
+<template>
     <div
         :class="[
             'receipt-container bg-white p-4 font-mono text-xs leading-tight',
@@ -63,62 +63,68 @@
                     {{ getOrderTypeLabel(String(orderType)) }}
                 </div>
 
-                <div v-for="item in items" :key="item.id" class="mb-3">
-                    <div class="flex justify-between">
-                        <span class="flex-1">{{ item.name }}</span>
-                    </div>
-                    <div
-                        v-if="item.quantity >= 1"
-                        class="ml-2 text-xs text-gray-600"
-                    >
+                <div v-for="item in items" :key="item.id" class="my-3">
+                    <template v-if="item.parent_id == null">
                         <div class="flex justify-between">
-                            <span>
-                                {{ item.quantity }} x
-                                {{ formatMoney(item.price) }}
-                            </span>
-                            <span>{{ formatMoney(item.amount) }}</span>
+                            <span class="flex-1">{{ item.name }}</span>
                         </div>
-                    </div>
-
-                    <!-- Selected Options -->
-                    <div
-                        v-if="
-                            item.selected_options &&
-                            item.selected_options.length > 0
-                        "
-                        class="ml-2 text-xs"
-                    >
                         <div
-                            v-for="option in item.selected_options"
-                            :key="option.id"
-                            class="flex justify-between"
+                            v-if="item.quantity >= 1"
+                            class="ml-2 text-xs text-gray-600"
                         >
-                            <span>+ {{ option.name }}</span>
-                            <span>{{ formatMoney(option.price) }}</span>
+                            <div class="flex justify-between">
+                                <span>
+                                    {{ item.quantity }} x
+                                    {{ formatMoney(item.price) }}
+                                </span>
+                                <span>{{ formatMoney(item.amount) }}</span>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- Less Tax -->
-                    <div
-                        v-if="item.less_tax > 0"
-                        class="ml-2 text-xs text-gray-600"
-                    >
-                        <div class="flex justify-between">
-                            <span>Less Tax: </span>
-                            <span>-{{ formatMoney(item.less_tax) }}</span>
+                        <!-- Less Tax -->
+                        <div
+                            v-if="item.less_tax > 0"
+                            class="ml-2 text-xs text-gray-600"
+                        >
+                            <div class="flex justify-between">
+                                <span>Less Tax: </span>
+                                <span>-{{ formatMoney(item.less_tax) }}</span>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- Less Discount -->
-                    <div
-                        v-if="item.discount > 0"
-                        class="ml-2 text-xs text-gray-600"
-                    >
-                        <div class="flex justify-between">
-                            <span>Less Discount: </span>
-                            <span>-{{ formatMoney(item.discount) }}</span>
+                        <!-- Less Discount -->
+                        <div
+                            v-if="item.discount > 0"
+                            class="ml-2 text-xs text-gray-600"
+                        >
+                            <div class="flex justify-between">
+                                <span>Less Discount: </span>
+                                <span>-{{ formatMoney(item.discount) }}</span>
+                            </div>
                         </div>
-                    </div>
+
+                        <!-- Selected Options -->
+                        <div
+                            v-if="item.children && item.children.length > 0"
+                            class="ml-2 mb-4 space-y-1"
+                        >
+                            <div
+                                v-for="option in item.children"
+                                :key="option.id"
+                                class="flex items-center justify-between"
+                            >
+                                <div class="flex items-center gap-2 flex-1">
+                                    <span class="text-xs font-medium"> • </span>
+                                    <span class="text-xs flex-1 ml-2">
+                                        {{ option.product.name }}
+                                    </span>
+                                </div>
+                                <span class="text-xs font-medium">
+                                    +{{ formatMoney(option.price) }}
+                                </span>
+                            </div>
+                        </div>
+                    </template>
                 </div>
             </div>
         </div>

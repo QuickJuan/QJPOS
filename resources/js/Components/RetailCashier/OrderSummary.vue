@@ -161,7 +161,6 @@ const emit = defineEmits<{
     selectTable: [];
 }>();
 
-console.log(props.locationType);
 // State
 const selectedOrderType = ref("dine-in");
 const tableInfo = ref(props.currentTable);
@@ -301,7 +300,7 @@ const removeOrder = (orderItem: any) => {
 const saveEdit = (editedItem: any) => {
     if (editedItem) {
         router.put(
-            route("retail-cashier.cart.update", editedItem.id),
+            route("retail-cashier.cart.update-item", editedItem.id),
             {
                 quantity: editedItem.quantity,
                 selected_options: editedItem.selected_options || [],
@@ -405,7 +404,7 @@ const handleSettleBill = (data: any) => {
                 toast.add({
                     severity: "success",
                     summary: "Success",
-                    detail: "Bill settled successfully",
+                    detail: page.props.flash.success,
                     life: 3000,
                 });
                 // Emit event to show receipt modal

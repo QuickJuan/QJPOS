@@ -453,7 +453,6 @@ const otherDiscounts = computed(() => {
 const selectDiscount = (discount: any) => {
     selectedDiscountId.value = String(discount.id);
     const calculatedDiscountAmount = calculateDiscountAmount(discount);
-    console.log(calculatedDiscountAmount, selectedItemsSubtotal.value);
 
     lessTaxValue.value = calculatedDiscountAmount.map((d) => d?.lessTax || 0);
     lessDiscountValue.value = calculatedDiscountAmount.map(

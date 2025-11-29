@@ -71,7 +71,7 @@
                                                 "
                                                 class="text-xs text-blue-600 font-medium ml-1 hover:text-blue-800 underline cursor-pointer"
                                             >
-                                                (Modified)
+                                                (with modifier)
                                             </button>
                                         </h4>
                                         <!-- Order Type Badge -->

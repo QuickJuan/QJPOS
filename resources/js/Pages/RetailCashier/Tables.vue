@@ -431,6 +431,10 @@ const handleTakeOrder = (data: any) => {
                             life: 3000,
                         });
                         closeTableModal();
+                        // Refresh tables to show updated status
+                        setTimeout(() => {
+                            router.reload({ only: ["tables"] });
+                        }, 100);
                     },
                     onError: () => {
                         toast.add({

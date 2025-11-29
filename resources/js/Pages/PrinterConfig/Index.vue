@@ -186,7 +186,7 @@
             v-model:visible="showAddDialog"
             :header="editingPrinter ? 'Edit Printer' : 'Add New Printer'"
             modal
-            class="w-full md:w-[50rem]"
+            class="w-full md:w-[80rem]"
         >
             <form @submit.prevent="savePrinter" class="space-y-6">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">

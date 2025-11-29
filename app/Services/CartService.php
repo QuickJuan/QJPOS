@@ -337,7 +337,7 @@ class CartService
             throw new Exception('Cart not found.');
         }
 
-        $cartItems = $cart->cartItems()->findMany($request->cartItemIds);
+        $cartItems = CartItem::findMany($request->cartItemIds);
 
         if ($cartItems->isEmpty()) {
             throw new Exception('Cart items is empty.');

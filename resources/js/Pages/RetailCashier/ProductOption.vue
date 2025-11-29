@@ -77,7 +77,7 @@
                         Customize Your Order
                     </h2>
 
-                    <Tabs class="w-full" :value="1" scrollable>
+                    <Tabs class="w-full" :value="selectedTab" scrollable>
                         <TabList>
                             <Tab
                                 v-for="option in props.product.data?.options"
@@ -218,7 +218,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { route } from "ziggy-js";
 import { router, usePage } from "@inertiajs/vue3";
 import {
@@ -246,6 +246,7 @@ const selectedOptions = ref<Record<string, any>>({});
 const params = new URLSearchParams(window.location.search);
 const productPackagingId = ref(null);
 const tableId = ref(null);
+const selectedTab = ref(null);
 
 productPackagingId.value = params.get("packagingId");
 tableId.value = params.get("tableId");
@@ -311,4 +312,14 @@ const addToCart = () => {
         }
     );
 };
+
+watch(
+    () => props.product.data?.options,
+    (options) => {
+        if (options && options.length > 0) {
+            selectedTab.value = options[0].id;
+        }
+    },
+    { immediate: true }
+);
 </script>

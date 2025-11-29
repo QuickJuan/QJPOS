@@ -5,18 +5,25 @@ use App\Enums\TableRoomLocation\LocationType;
 use App\Enums\TableRoomStatusType;
 use App\Models\Branch;
 use App\Models\Cart;
+use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\TableRoom;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class PaymentService
 {
     public function settleBill(Request $request, int $cartId): mixed
     {
-        return DB::transaction(function () use ($request, $cartId) {
-            $cart = Cart::with(['cartItems', 'tableRoom.tableRoomLocation'])->findOrFail($cartId);
+        Log::info('Settle bill started', ['cartId' => $cartId, 'request' => $request->all()]);
+
+        try {
+            return DB::transaction(function () use ($request, $cartId) {
+                $cart = Cart::with(['cartItems', 'tableRoom.tableRoomLocation'])->findOrFail($cartId);
+
+                Log::info('Cart found', ['cart' => $cart->id, 'items' => $cart->cartItems->count()]);
 
             // Create the order
             $order = Order::create([
@@ -40,8 +47,10 @@ class PaymentService
                 ],
             ]);
 
-            // Bulk insert order items using insert() - most efficient
-            $orderItemsData = $cart->cartItems->map(function ($cartItem) use ($order) {
+            // Get cart items for processing
+            $cartItems = CartItem::where('cart_id', $cart->id)->get();
+
+            $orderItemsData = $cartItems->map(function ($cartItem) use ($order) {
                 return [
                     'order_id'             => $order->id,
                     'product_id'           => $cartItem->product_id,
@@ -64,7 +73,7 @@ class PaymentService
                     'is_void'              => $cartItem->is_void ?? false,
                     'reason'               => $cartItem->reason,
                     'notes'                => $cartItem->notes,
-                    'meta_data'            => $cartItem->meta_data,
+                    'meta_data'            => json_encode($cartItem->meta_data ?? []),
                     'created_at'           => now(),
                     'updated_at'           => now(),
                 ];
@@ -74,7 +83,7 @@ class PaymentService
             OrderItem::insert($orderItemsData);
 
             // Delete cart and its items
-            $cart->cartItems()->delete();
+            CartItem::where('cart_id', $cart->id)->delete();
             $cart->delete();
 
             // Update table status if applicable
@@ -93,6 +102,10 @@ class PaymentService
 
             return $order->load('orderItems');
         });
+        } catch (\Exception $e) {
+            Log::error('Settle bill failed', ['error' => $e->getMessage(), 'cartId' => $cartId]);
+            throw $e;
+        }
     }
 
     protected function getNextInvoiceNumber(?int $branchId = null): string
