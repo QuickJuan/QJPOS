@@ -61,10 +61,10 @@
     <!-- Embedded layout when used as component -->
     <div v-else>
         <ReceiptLayout
-            :business-logo="generalSettings.company_logo"
-            :business-name="generalSettings.company_name ?? 'QuickJuan POS'"
-            :business-address="generalSettings.company_address"
-            :business-phone="generalSettings.company_phone"
+            :business-logo="generalSettings?.company_logo"
+            :business-name="generalSettings?.company_name ?? 'QuickJuan POS'"
+            :business-address="generalSettings?.company_address"
+            :business-phone="generalSettings?.company_phone"
             :receipt-number="receiptData.receiptNumber"
             :receipt-date="receiptData.date"
             :table-info="receiptData.tableNumber"

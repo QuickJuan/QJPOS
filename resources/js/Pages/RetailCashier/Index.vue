@@ -77,7 +77,7 @@
                         Select Category
                     </h2>
                     <div
-                        class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6 pb-4"
+                        class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6 pb-4"
                     >
                         <div
                             v-for="category in activeCategories"

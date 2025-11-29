@@ -57,8 +57,87 @@ class ViewBranch extends ViewRecord
 
                         TextEntry::make('tin')
                             ->label('TIN'),
+
+                        TextEntry::make('registration_number')
+                            ->label('Registration Number'),
+
+                        TextEntry::make('or_number')
+                            ->label('OR Number'),
+
+                        TextEntry::make('bill_no')
+                            ->label('Bill Number'),
+
+                        TextEntry::make('order_number')
+                            ->label('Order Number'),
                     ])
                     ->columns(3),
+
+                Section::make('Receipt Configuration')
+                    ->schema([
+                        TextEntry::make('receipt_headers')
+                            ->label('Receipt Headers')
+                            ->formatStateUsing(function ($state, $record) {
+                                // Debug: Let's see what the actual data looks like
+                                $headers = $record->receipt_headers;
+
+                                if (empty($headers)) {
+                                    return 'No receipt headers configured';
+                                }
+
+                                // Handle different possible data structures
+                                if (is_string($headers)) {
+                                    $headers = json_decode($headers, true);
+                                }
+
+                                if (!is_array($headers)) {
+                                    return 'No receipt headers configured';
+                                }
+
+                                // If it's an array of objects with 'header' key (from simple repeater)
+                                if (isset($headers[0]) && is_array($headers[0]) && isset($headers[0]['header'])) {
+                                    $headerStrings = array_column($headers, 'header');
+                                } else {
+                                    // If it's already a flat array of strings
+                                    $headerStrings = $headers;
+                                }
+
+                                return implode('<br>', array_filter($headerStrings));
+                            })
+                            ->html()
+                            ->placeholder('No receipt headers configured'),
+
+                        TextEntry::make('receipt_footer')
+                            ->label('Receipt Footer')
+                            ->formatStateUsing(function ($state, $record) {
+                                $footers = $record->receipt_footer;
+
+                                if (empty($footers)) {
+                                    return 'No receipt footer configured';
+                                }
+
+                                // Handle different possible data structures
+                                if (is_string($footers)) {
+                                    $footers = json_decode($footers, true);
+                                }
+
+                                if (!is_array($footers)) {
+                                    return 'No receipt footer configured';
+                                }
+
+                                // If it's an array of objects with 'footer' key (from simple repeater)
+                                if (isset($footers[0]) && is_array($footers[0]) && isset($footers[0]['footer'])) {
+                                    $footerStrings = array_column($footers, 'footer');
+                                } else {
+                                    // If it's already a flat array of strings
+                                    $footerStrings = $footers;
+                                }
+
+                                return implode('<br>', array_filter($footerStrings));
+                            })
+                            ->html()
+                            ->placeholder('No receipt footer configured'),
+                    ])
+                    ->columnSpan(1),
 
                 Section::make('Associated Users')
                     ->schema([
@@ -71,7 +150,9 @@ class ViewBranch extends ViewRecord
                                     ->implode('<br>')
                             )
                             ->html(),
-                    ]),
-            ]);
+                    ])
+                    ->columnSpan(1),
+            ])
+            ->columns(2);
     }
 }

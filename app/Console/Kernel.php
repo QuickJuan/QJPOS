@@ -21,7 +21,34 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        // Central app backup - daily at 2 AM
+        $schedule->command('central:backup --db-only')
+                 ->daily()
+                 ->at('02:00')
+                 ->name('central-daily-backup')
+                 ->withoutOverlapping();
+
+        // Weekly full central backup (with files) - Sundays at 3 AM
+        $schedule->command('central:backup')
+                 ->weekly()
+                 ->sundays()
+                 ->at('03:00')
+                 ->name('central-weekly-backup')
+                 ->withoutOverlapping();
+
+        // All tenants backup - daily at 1 AM
+        $schedule->command('tenant:backup --all-tenants')
+                 ->daily()
+                 ->at('01:00')
+                 ->name('tenant-daily-backup')
+                 ->withoutOverlapping();
+
+        // Clean old backups - daily at 4 AM
+        $schedule->command('backup:clean')
+                 ->daily()
+                 ->at('04:00')
+                 ->name('backup-cleanup')
+                 ->withoutOverlapping();
     }
 
     /**

@@ -25,6 +25,11 @@ class BranchResource extends JsonResource
             'is_active'           => $this->is_active,
             'tin'                 => $this->tin,
             'registration_number' => $this->registration_number,
+            'or_number'           => $this->or_number,
+            'bill_no'             => $this->bill_no,
+            'order_number'        => $this->order_number,
+            'receipt_headers'     => $this->receipt_headers,
+            'receipt_footer'      => $this->receipt_footer,
             'users'               => UserResource::collection($this->whenLoaded('users')),
         ];
     }

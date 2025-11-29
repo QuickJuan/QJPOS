@@ -16,6 +16,8 @@
         "laravel/jetstream": "^5.3",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
+        "shuvroroy/filament-spatie-laravel-backup": "^2.2",
+        "spatie/laravel-backup": "^9.3",
         "stancl/tenancy": "^3.9",
         "tightenco/ziggy": "^2.0"
     },

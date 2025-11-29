@@ -57,4 +57,9 @@ class CashierSession extends Model
     {
         return $this->hasMany(Order::class);
     }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
+    }
 }

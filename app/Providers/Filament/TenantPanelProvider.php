@@ -16,6 +16,7 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use ShuvroRoy\FilamentSpatieLaravelBackup\FilamentSpatieLaravelBackupPlugin;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -43,6 +44,11 @@ class TenantPanelProvider extends PanelProvider
                 Widgets\AccountWidget::class,
                 Widgets\FilamentInfoWidget::class,
             ])
+            ->plugins([
+                FilamentSpatieLaravelBackupPlugin::make()
+                    ->usingQueue('backups') // Optional: use queue for backups
+                    ->usingPolingInterval('30s'), // Optional: polling interval
+            ])
             ->middleware($this->registerMiddlewares())
             ->login()
             ->authMiddleware([
@@ -51,7 +57,8 @@ class TenantPanelProvider extends PanelProvider
             ->navigationGroups([
                 'Store',
                 'Products',
-                'Table / Rooms'
+                'Table / Rooms',
+                'System'
                 // Add more group names as needed
             ]);
     }
