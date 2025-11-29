@@ -335,6 +335,7 @@ class ThermalPrinterService {
                 // Print items in this group
                 items.forEach(item => {
                     // Main item line
+
                     commands.push(...this.stringToBytes(item.name));
                     commands.push(0x0a);
 

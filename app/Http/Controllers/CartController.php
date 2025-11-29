@@ -33,6 +33,39 @@ class CartController extends Controller
         }
     }
 
+    public function updateCart(Request $request, int $cartId): RedirectResponse
+    {
+        try {
+            if (!$cartId) {
+                return redirect()->back()->with('error', 'Cart ID is empty.');
+            }
+
+            $this->cartService->updateCart($request, $cartId);
+
+            return redirect()->back()->with('success', 'Cart updated successfully.');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'There was an error updating cart.');
+        }
+    }
+
+    public function mergeCart(Request $request): RedirectResponse
+    {
+        try {
+            $sourceCartId = $request->input('source_cart_id');
+            $targetTableId = $request->input('target_table_id');
+
+            if (!$sourceCartId || !$targetTableId) {
+                return redirect()->back()->with('error', 'Source cart ID and target table ID are required.');
+            }
+
+            $this->cartService->mergeCart($request, $sourceCartId, $targetTableId);
+
+            return redirect()->back()->with('success', 'Cart items merged successfully.');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'There was an error merging cart items: ' . $e->getMessage());
+        }
+    }
+
     public function updateCartItem(Request $request, int $cartItemId): RedirectResponse
     {
         try {

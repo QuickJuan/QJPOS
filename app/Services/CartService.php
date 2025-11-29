@@ -102,6 +102,119 @@ class CartService
         return $cartItem->load('children');
     }
 
+    public function updateCart(Request $request, int $cartId): mixed
+    {
+        $cashierSession = $this->cashierSession->openSession()->first();
+
+        if (! $cashierSession) {
+            throw new Exception('No active cashier session found.');
+        }
+
+        $cart = Cart::find($cartId);
+
+        if (! $cart) {
+            throw new Exception('Cart not found.');
+        }
+
+        // Verify the cart belongs to the current cashier session
+        if ($cart->cashier_session_id !== $cashierSession->id) {
+            throw new Exception('Unauthorized cart access.');
+        }
+
+        // Update cart properties
+        $updateData = $request->only(['table_id', 'order_type', 'customer_name', 'customer_phone']);
+
+        // Remove null values to avoid overwriting existing data with null
+        $updateData = array_filter($updateData, function($value) {
+            return $value !== null;
+        });
+
+        if (empty($updateData)) {
+            throw new Exception('No valid data provided for update.');
+        }
+
+        $cart->update($updateData);
+
+        return $cart->fresh();
+    }
+
+    public function mergeCart(Request $request, int $sourceCartId, int $targetTableId): mixed
+    {
+        $cashierSession = $this->cashierSession->openSession()->first();
+
+        if (!$cashierSession) {
+            throw new Exception('No active cashier session found.');
+        }
+
+        // Find the source cart
+        $sourceCart = Cart::find($sourceCartId);
+        if (!$sourceCart) {
+            throw new Exception('Source cart not found.');
+        }
+
+        // Verify the source cart belongs to the current cashier session
+        if ($sourceCart->cashier_session_id !== $cashierSession->id) {
+            throw new Exception('Unauthorized source cart access.');
+        }
+
+        // Find the target cart by table ID
+        $targetCart = Cart::where('table_id', $targetTableId)
+                         ->where('cashier_session_id', $cashierSession->id)
+                         ->first();
+
+        if (!$targetCart) {
+            throw new Exception('Target table cart not found.');
+        }
+
+        // Get all cart items from source cart
+        $sourceCartItems = $sourceCart->cartItems;
+
+        if ($sourceCartItems->isEmpty()) {
+            throw new Exception('No items to merge from source cart.');
+        }
+
+        // Move all cart items from source cart to target cart
+        foreach ($sourceCartItems as $cartItem) {
+            $cartItem->update([
+                'cart_id' => $targetCart->id,
+            ]);
+
+            // Also update child items (options/addons) if any
+            $cartItem->children()->update([
+                'cart_id' => $targetCart->id,
+            ]);
+        }
+
+        // Recalculate target cart totals
+        $this->recalculateCartTotals($targetCart);
+
+        // Delete the source cart since it's now empty
+        $sourceCart->delete();
+
+        return $targetCart->fresh(['cartItems']);
+    }
+
+    protected function recalculateCartTotals(Cart $cart): void
+    {
+        $cartItems = $cart->cartItems()->whereNull('parent_id')->get();
+
+        $subTotal = 0;
+        $totalDiscount = 0;
+
+        foreach ($cartItems as $item) {
+            $subTotal += $item->sub_total;
+            $totalDiscount += $item->discount_amount ?? 0;
+        }
+
+        $totalAmount = $subTotal - $totalDiscount;
+
+        $cart->update([
+            'sub_total' => $subTotal,
+            'discount_amount' => $totalDiscount,
+            'total_amount' => $totalAmount,
+        ]);
+    }
+
     public function updateCartItem(Request $request, int $cartItemId): mixed
     {
         $cashierSession = $this->cashierSession->openSession()->first();

@@ -51,7 +51,7 @@ class HandleInertiaRequests extends Middleware
             ],
             // Receipt Configuration
             'receipt_headers' => fn() => $activeBranch['receipt_headers'] ?? [],
-            'receipt_footer' => fn() => $activeBranch['receipt_footer'] ?? [],
+            'receipt_footers' => fn() => $activeBranch['receipt_footer'] ?? [],
             'bill_footer' => fn() => $activeBranch['receipt_footer'] ?? [],
             // Company Information
             'company_info' => fn() => $this->getCompanyInfo(),
