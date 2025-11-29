@@ -301,6 +301,7 @@ const props = defineProps<{
         company_phone: string;
         company_logo: string;
     };
+    active_branch: any
 }>();
 
 const page = usePage<PageProps>();
