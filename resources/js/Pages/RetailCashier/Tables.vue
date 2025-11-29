@@ -260,6 +260,7 @@ import ReserveTableModal from "./Partials/ReserveTableModal.vue";
 import TransferTableModal from "./Partials/TransferTableModal.vue";
 import PageProps from "@/Types/PageProps";
 import { formatTimeOccupied } from "@/Utils/FormatTime";
+import { useCashier } from "@/composables/useCashier";
 
 // Props
 const props = defineProps<{
@@ -286,6 +287,9 @@ const selectedTransferTarget = ref<any>(null);
 
 // Toast
 const toast = useToast();
+
+// Initialize cashier state
+const { selectedCart, updateCart, setSelectedCart } = useCashier();
 
 // Toggle sidebar (emit to parent layout)
 const toggleSidebar = () => {
@@ -364,45 +368,144 @@ const goBackToCashier = () => {
 
 const handleTakeOrder = (data: any) => {
     if (selectedTable.value.status === "vacant") {
-        router.post(
-            route("retail-cashier.cart.create-order"),
-            {
-                table_id: selectedTable.value.id,
-                pax: data.pax,
-                guest_name: data.guest_name,
-            },
-            {
-                onSuccess: () => {
-                    toast.add({
-                        severity: "success",
-                        summary: "Order Started",
-                        detail: `Started order for ${data.guest_name} (${data.pax} pax)`,
-                        life: 3000,
-                    });
-                    closeTableModal();
+        // Check if we have a selected cart without a table assigned
+        if (selectedCart.value && !selectedCart.value.table_id) {
+            // Update the existing cart with the table information
+            router.put(
+                route("retail-cashier.cart.update", selectedCart.value.id),
+                {
+                    table_id: selectedTable.value.id,
+                    pax: data.pax,
+                    guest_name: data.guest_name,
+                    order_type: "dine-in",
                 },
-                onError: () => {
-                    toast.add({
-                        severity: "error",
-                        summary: "Error",
-                        detail: "Failed to start order",
-                        life: 3000,
-                    });
+                {
+                    onSuccess: (response) => {
+                        // Update the cart in local storage
+                        updateCart(selectedCart.value.id, {
+                            table_id: selectedTable.value.id,
+                            order_type: "dine-in",
+                        });
+
+                        toast.add({
+                            severity: "success",
+                            summary: "Table Assigned",
+                            detail: `Assigned table ${selectedTable.value.name} to existing order for ${data.guest_name} (${data.pax} pax)`,
+                            life: 3000,
+                        });
+                        closeTableModal();
+
+                        // Navigate to cashier with the assigned table
+                        router.visit(
+                            route("retail-cashier.index", {
+                                tableId: selectedTable.value.id,
+                                locationType: "dine-in",
+                            })
+                        );
+                    },
+                    onError: () => {
+                        toast.add({
+                            severity: "error",
+                            summary: "Error",
+                            detail: "Failed to assign table to order",
+                            life: 3000,
+                        });
+                    },
+                }
+            );
+        } else {
+            // Create a new order as before
+            router.post(
+                route("retail-cashier.cart.create-order"),
+                {
+                    table_id: selectedTable.value.id,
+                    pax: data.pax,
+                    guest_name: data.guest_name,
                 },
-            }
-        );
+                {
+                    onSuccess: () => {
+                        toast.add({
+                            severity: "success",
+                            summary: "Order Started",
+                            detail: `Started order for ${data.guest_name} (${data.pax} pax)`,
+                            life: 3000,
+                        });
+                        closeTableModal();
+                    },
+                    onError: () => {
+                        toast.add({
+                            severity: "error",
+                            summary: "Error",
+                            detail: "Failed to start order",
+                            life: 3000,
+                        });
+                    },
+                }
+            );
+        }
     } else {
-        router.visit(
-            route("retail-cashier.index", {
-                // Check if the selected table is merged to the other table.
-                // If yes, use the merge_to column as tableId.
-                // If no, use the id of the selected table
-                tableId: selectedTable.value.merged_to
-                    ? selectedTable.value.merge_to
-                    : selectedTable.value.id,
-            })
-        );
-        closeTableModal();
+        // Table is occupied - check if we have a current cart to merge
+        if (
+            selectedCart.value &&
+            selectedCart.value.cart_items &&
+            selectedCart.value.cart_items.length > 0
+        ) {
+            // We have items in current cart - need to merge with existing table cart
+            const targetTableId = selectedTable.value.merged_to
+                ? selectedTable.value.merge_to
+                : selectedTable.value.id;
+
+            // Call merge cart API
+            router.post(
+                route("retail-cashier.cart.merge"),
+                {
+                    source_cart_id: selectedCart.value.id,
+                    target_table_id: targetTableId,
+                },
+                {
+                    onSuccess: (response) => {
+                        toast.add({
+                            severity: "success",
+                            summary: "Cart Merged",
+                            detail: "Your current cart items have been merged with the table's existing order.",
+                            life: 3000,
+                        });
+                        closeTableModal();
+
+                        // Clear the current cart from localStorage since it's merged
+                        setSelectedCart(null);
+
+                        // Navigate to cashier with the target table
+                        router.visit(
+                            route("retail-cashier.index", {
+                                tableId: targetTableId,
+                            })
+                        );
+                    },
+                    onError: () => {
+                        toast.add({
+                            severity: "error",
+                            summary: "Merge Failed",
+                            detail: "Failed to merge cart items with table order.",
+                            life: 3000,
+                        });
+                    },
+                }
+            );
+        } else {
+            // No current cart items, just navigate to the occupied table
+            router.visit(
+                route("retail-cashier.index", {
+                    // Check if the selected table is merged to the other table.
+                    // If yes, use the merge_to column as tableId.
+                    // If no, use the id of the selected table
+                    tableId: selectedTable.value.merged_to
+                        ? selectedTable.value.merge_to
+                        : selectedTable.value.id,
+                })
+            );
+            closeTableModal();
+        }
     }
 };
 
@@ -610,16 +713,22 @@ const handleUnmergeTable = () => {
 };
 
 const handleRefundOrder = async () => {
-    selectedLocation
+    selectedLocation;
     try {
-        await axios.post(route('transactions.api.orders.refund', selectedTable.value.current_order.id), {
-            supervisor_name: props.currentUser?.name || 'Supervisor',
-            notes: 'Refund requested from table action'
-        });
+        await axios.post(
+            route(
+                "transactions.api.orders.refund",
+                selectedTable.value.current_order.id
+            ),
+            {
+                supervisor_name: props.currentUser?.name || "Supervisor",
+                notes: "Refund requested from table action",
+            }
+        );
         toast.add({
-            severity: 'success',
-            summary: 'Success',
-            detail: 'Order refunded successfully',
+            severity: "success",
+            summary: "Success",
+            detail: "Order refunded successfully",
             life: 3000,
         });
         closeTableModal();
@@ -629,9 +738,9 @@ const handleRefundOrder = async () => {
         }, 100);
     } catch (error) {
         toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'Failed to refund order',
+            severity: "error",
+            summary: "Error",
+            detail: "Failed to refund order",
             life: 3000,
         });
     }

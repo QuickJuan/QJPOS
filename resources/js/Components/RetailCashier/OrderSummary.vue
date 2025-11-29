@@ -3,7 +3,11 @@
         class="h-full lg:h-full flex flex-col bg-gray-50 shadow-lg border-2 border-gray-200 w-full max-h-screen lg:max-h-full"
     >
         <!-- Customer Information -->
-        <CustomerInfo :table-info="tableInfo" :cart="cart" />
+        <CustomerInfo
+            :table-info="tableInfo"
+            :cart="cart"
+            @select-table="$emit('selectTable')"
+        />
 
         <!-- Cart Items Area -->
         <div class="flex-1 flex flex-col min-h-0">
@@ -154,6 +158,7 @@ const emit = defineEmits<{
     selectedOrderType: [value: string];
     showReceipt: [data: any];
     printBill: [];
+    selectTable: [];
 }>();
 
 console.log(props.locationType);

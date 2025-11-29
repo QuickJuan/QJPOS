@@ -39,10 +39,10 @@
                 >
                     <ShoppingCartIcon class="w-5 h-5" />
                     <span
-                        v-if="orderItems.length > 0"
+                        v-if="cartCount > 0"
                         class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold"
                     >
-                        {{ orderItems.length }}
+                        {{ cartCount }}
                     </span>
                 </button>
             </div>
@@ -60,84 +60,14 @@
             class="flex flex-col lg:flex-row h-full min-w-0 overflow-hidden pt-[56px] lg:pt-0"
         >
             <!-- Categories & Products Area -->
-            <section
-                :class="[
-                    'bg-gray-50 transition-all duration-300 flex flex-col overflow-hidden',
-                    'h-full lg:h-full lg:flex-1',
-                ]"
-            >
-                <!-- Categories View - Full Screen -->
-                <div
-                    v-if="selectedCategoryId === null"
-                    class="h-full overflow-y-auto p-3 sm:p-4 lg:p-6"
-                >
-                    <h2
-                        class="hidden lg:block text-2xl sm:text-3xl lg:text-4xl font-bold text-secondary-800 mb-4 sm:mb-6 flex-shrink-0"
-                    >
-                        Select Category
-                    </h2>
-                    <div
-                        class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-6 pb-4"
-                    >
-                        <div
-                            v-for="category in activeCategories"
-                            :key="category.id"
-                            @click="handleCategorySelection(category)"
-                            class="bg-white rounded-xl cursor-pointer hover:shadow-xl transition-all duration-200 border-2 border-gray-200 hover:border-primary-500 group flex flex-col overflow-hidden"
-                        >
-                            <!-- Category Image -->
-                            <div class="relative aspect-square bg-gray-50">
-                                <img
-                                    v-if="category.featured_image_url"
-                                    :src="category.featured_image_url"
-                                    :alt="category.name"
-                                    class="w-auto h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                                />
-
-                                <div
-                                    v-else
-                                    class="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100"
-                                >
-                                    <component
-                                        :is="
-                                            getCategoryIconComponent(
-                                                category.name
-                                            )
-                                        "
-                                        class="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 text-primary-500"
-                                    />
-                                </div>
-                            </div>
-
-                            <!-- Category Name -->
-                            <div
-                                class="p-4 sm:p-5 lg:p-6 bg-white border-t border-gray-100"
-                            >
-                                <h3
-                                    class="font-bold text-base sm:text-lg lg:text-xl text-center text-secondary-800 mb-2 min-h-[3rem] flex items-center justify-center"
-                                >
-                                    {{ category.name }}
-                                </h3>
-                                <!-- <p
-                                    class="text-sm sm:text-base text-gray-500 text-center"
-                                >
-                                    {{ category.products?.length || 0 }} items
-                                </p> -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Products View - Shown when category selected -->
-                <div v-else class="h-full overflow-y-auto">
-                    <ProductThumbnails
-                        :products="filteredProducts"
-                        :category-name="selectedCategoryName"
-                        @backToCategories="backToCategories"
-                        @addToCart="addToCart"
-                    />
-                </div>
-            </section>
+            <CategoryProductSelection
+                :categories="props.categories"
+                :selected-category-slug="props.selectedCategorySlug"
+                :cached-categories="cachedCategories"
+                :table-id="tableId"
+                :location-type="locationType"
+                :selected-order-type="selectedOrderType"
+            />
 
             <!-- Right: Order Summary - Sidebar on mobile/tablet, fixed position on desktop -->
             <aside
@@ -158,10 +88,10 @@
                     :available-modifiers="props.availableModifiers"
                     :table-id="tableId"
                     :location-type="locationType"
-                    :cart="cart"
+                    :cart="selectedCart || props.cart"
                     :current-table="props.currentTable"
-                    :sub-total="subTotal"
-                    :total="total"
+                    :sub-total="selectedCart?.sub_total || subTotal"
+                    :total="selectedCart?.total_amount || total"
                     :less-tax-total="lessTaxTotal"
                     :less-discount-total="lessDiscountTotal"
                     :tax-rate="taxRate"
@@ -170,18 +100,15 @@
                     :bill-number="props.billNumber"
                     :receipt-number="props.receiptNumber"
                     :general-settings="props.generalSettings"
+                    :open-carts="openCarts"
+                    :selected-cart-id="selectedCart?.id || null"
                     @selected-order-type="updateOrderType"
                     @show-receipt="handleShowReceipt"
+                    @switch-cart="setSelectedCart"
+                    @select-table="handleSelectTable"
                 />
             </aside>
         </div>
-
-        <PackagingSelectionModal
-            v-model="showPackagingModal"
-            :product="selectedProductForPackaging"
-            @confirm="handlePackagingConfirm"
-            @cancel="handlePackagingCancel"
-        />
     </CashieringLayout>
 </template>
 
@@ -191,16 +118,12 @@ import { router, usePage } from "@inertiajs/vue3";
 import { route } from "ziggy-js";
 import { useToast } from "primevue";
 import Category from "@/Types/Category";
-import ProductThumbnails from "@/Components/RetailCashier/ProductThumbnails.vue";
 import PageProps from "@/Types/PageProps";
 import OrderSummary from "@/Components/RetailCashier/OrderSummary.vue";
 import CashieringLayout from "@/Layouts/CashieringLayout.vue";
-import PackagingSelectionModal from "@/Components/RetailCashier/PackagingSelectionModal.vue";
+import CategoryProductSelection from "@/Components/RetailCashier/CategoryProductSelection.vue";
 import { useCashierCache } from "@/composables/useCashierCache";
-import BeverageIcon from "@/Components/icons/CashierIcons/BeverageIcon.vue";
-import FoodIcon from "@/Components/icons/CashierIcons/FoodIcon.vue";
-import DessertIcon from "@/Components/icons/CashierIcons/DessertIcon.vue";
-import ShoppingBagIcon from "@/Components/icons/CashierIcons/ShoppingBagIcon.vue";
+import { useCashier } from "@/composables/useCashier";
 import { ShoppingCartIcon } from "@heroicons/vue/24/outline";
 
 const props = defineProps<{
@@ -237,8 +160,6 @@ const tableId = ref(null);
 const locationType = ref(null);
 const selectedOrderItem = ref<any>(null);
 const selectedOrderType = ref<any>("dine-in");
-const showPackagingModal = ref(false);
-const selectedProductForPackaging = ref<any>(null);
 const showOrderSummary = ref(false);
 const receiptData = ref({
     receiptNumber: "",
@@ -258,114 +179,24 @@ const {
     loadDiscounts,
 } = useCashierCache();
 
-const orderItems = computed(() => props.cartItems || []);
+// Initialize cashier state
+const {
+    selectedCart,
+    openCarts,
+    hasOpenCarts,
+    cartCount,
+    addCart,
+    updateCart,
+    setSelectedCart,
+    setTableInfo,
+    setCashierSession,
+    initializeFromServerData,
+} = useCashier();
 
-// Compute selected category ID from slug in URL
-const selectedCategoryId = computed(() => {
-    if (!props.selectedCategorySlug) {
-        return null;
-    }
-    const category = activeCategories.value.find(
-        (cat) => cat.slug === props.selectedCategorySlug
-    );
-    return category?.id || null;
+const orderItems = computed(() => {
+    // Use selected cart items if available, fallback to props
+    return selectedCart.value?.items || props.cartItems || [];
 });
-
-const activeCategories = computed(() => {
-    const getCategoriesData = (): Category[] => {
-        if (Array.isArray(props.categories)) {
-            return props.categories;
-        } else if (
-            props.categories &&
-            typeof props.categories === "object" &&
-            "data" in props.categories &&
-            Array.isArray(props.categories.data)
-        ) {
-            return props.categories.data;
-        }
-        return [];
-    };
-
-    const categoriesData = getCategoriesData();
-
-    if (cachedCategories.value.length > 0) {
-        return cachedCategories.value;
-    }
-
-    const filtered = categoriesData.filter(
-        (category) => category && category.id && category.name
-    );
-
-    return filtered;
-});
-
-// Get all products from all categories
-const allProducts = computed(() => {
-    return activeCategories.value.flatMap(
-        (category) => category.products || []
-    );
-});
-
-// Filter products based on selected category
-const filteredProducts = computed(() => {
-    if (selectedCategoryId.value === null) {
-        return allProducts.value;
-    }
-    const selectedCategory = activeCategories.value.find(
-        (cat) => cat.id === selectedCategoryId.value
-    );
-    return selectedCategory?.products || [];
-});
-
-// Get selected category name
-const selectedCategoryName = computed(() => {
-    if (selectedCategoryId.value === null) {
-        return null;
-    }
-    const category = activeCategories.value.find(
-        (cat) => cat.id === selectedCategoryId.value
-    );
-    return category?.name || "Unknown Category";
-});
-
-// Handle category selection
-const handleCategorySelection = (category: Category) => {
-    // Get current query params
-    const params = new URLSearchParams(window.location.search);
-    const queryParams: any = {};
-
-    if (params.get("tableId")) {
-        queryParams.tableId = params.get("tableId");
-    }
-    if (params.get("locationType")) {
-        queryParams.locationType = params.get("locationType");
-    }
-
-    // Navigate to category URL
-    router.visit(
-        route("retail-cashier.category", {
-            categorySlug: category.slug,
-            ...queryParams,
-        })
-    );
-};
-
-// Back to categories
-const backToCategories = () => {
-    // Get current query params
-    const params = new URLSearchParams(window.location.search);
-    const queryParams: any = {};
-
-    if (params.get("tableId")) {
-        queryParams.tableId = params.get("tableId");
-    }
-    if (params.get("locationType")) {
-        queryParams.locationType = params.get("locationType");
-    }
-
-    // Navigate back to main cashier page
-    router.visit(route("retail-cashier.index", queryParams));
-};
 
 // Toggle order summary sidebar
 const toggleOrderSummary = () => {
@@ -384,6 +215,16 @@ const updateOrderType = (type: string) => {
 };
 
 // Handle show receipt modal
+const handleSelectTable = () => {
+    // Navigate to tables page with current cart context
+    router.visit(route("retail-cashier.tables"), {
+        data: {
+            from_cashier: true,
+            current_cart_id: selectedCart.value?.id || props.cart?.id,
+        },
+    });
+};
+
 const handleShowReceipt = (data: any) => {
     // Prepare receipt data
     const subtotal = orderItems.value.reduce(
@@ -445,6 +286,15 @@ onMounted(() => {
         loadDiscounts(props.availableDiscounts);
     }
 
+    // Initialize cashier state from server data
+    if (props.cart) {
+        addCart(props.cart);
+    }
+
+    if (props.pendingCashiering?.id) {
+        setCashierSession(props.pendingCashiering.id);
+    }
+
     // Get the tableId in URL if available
     const params = new URLSearchParams(window.location.search);
     const urlTableId = params.get("tableId");
@@ -453,6 +303,9 @@ onMounted(() => {
     locationType.value = urlLocationType;
     selectedOrderType.value = urlLocationType;
 
+    // Update cashier state with table info
+    setTableInfo(urlTableId, urlLocationType);
+
     // If no tableId in URL and we have a pending cashiering session, redirect to tables page
     // if (!urlTableId && props.pendingCashiering) {
     //     nextTick(() => {
@@ -460,181 +313,4 @@ onMounted(() => {
     //     });
     // }
 });
-
-const addToCart = (product: any, packaging?: any) => {
-    if (packaging) {
-        // Packaging already selected, proceed
-        if (product.options && product.options.length > 0) {
-            // Has options, redirect to options page with packaging
-            router.visit(
-                route("retail-cashier.product.options", {
-                    product: product.id,
-                    orderType: selectedOrderType.value,
-                    tableId: tableId.value,
-                    packagingId: packaging.id,
-                })
-            );
-        } else {
-            // No options, add to cart with packaging
-            router.post(
-                route("retail-cashier.cart.add"),
-                {
-                    quantity: 1,
-                    product_id: product.id,
-                    product_packaging_id: packaging.id,
-                    table_id: tableId.value,
-                    total_price: parseFloat(packaging.price || 0),
-                    order_type: selectedOrderType.value,
-                    selected_options: [],
-                },
-                {
-                    preserveScroll: false,
-                    onSuccess: () => {
-                        toast.add({
-                            severity: "success",
-                            summary: "Success",
-                            detail: page.props.flash.success,
-                            life: 3000,
-                        });
-                    },
-                    onError: (errors) => {
-                        console.error("Failed to add item to cart:", errors);
-                    },
-                }
-            );
-        }
-    } else {
-        // No packaging provided, check if product has packagings
-        if (
-            product.product_packagings &&
-            product.multiple_packaging && // Check if the multiple packaging is true
-            product.product_packagings.length > 0
-        ) {
-            if (product.product_packagings.length === 1) {
-                // Auto-select the single packaging
-                const packaging = product.product_packagings[0];
-                if (product.options && product.options.length > 0) {
-                    // Has options, redirect to options page with packaging
-                    router.visit(
-                        route("retail-cashier.product.options", {
-                            product: product.id,
-                            orderType: selectedOrderType.value,
-                            tableId: tableId.value,
-                            packagingId: packaging.id,
-                        })
-                    );
-                } else {
-                    // No options, add to cart with packaging
-                    router.post(
-                        route("retail-cashier.cart.add"),
-                        {
-                            quantity: 1,
-                            product_id: product.id,
-                            product_packaging_id: packaging.id,
-                            table_id: tableId.value,
-                            total_price: parseFloat(packaging.price || 0),
-                            order_type: selectedOrderType.value,
-                            selected_options: [],
-                        },
-                        {
-                            preserveScroll: false,
-                            onSuccess: () => {
-                                toast.add({
-                                    severity: "success",
-                                    summary: "Success",
-                                    detail: page.props.flash.success,
-                                    life: 3000,
-                                });
-                            },
-                            onError: (errors) => {
-                                console.error(
-                                    "Failed to add item to cart:",
-                                    errors
-                                );
-                            },
-                        }
-                    );
-                }
-            } else {
-                // Multiple packagings, show modal
-                selectedProductForPackaging.value = product;
-                showPackagingModal.value = true;
-            }
-        } else {
-            // No packaging, check options
-            if (product.options && product.options.length > 0) {
-                // Redirect to options page
-                router.visit(
-                    route("retail-cashier.product.options", {
-                        product: product.id,
-                        orderType: selectedOrderType.value,
-                        tableId: tableId.value,
-                    })
-                );
-            } else {
-                // No options, add to cart without packaging
-                router.post(
-                    route("retail-cashier.cart.add"),
-                    {
-                        quantity: 1,
-                        product_id: product.id,
-                        product_packaging_id: null,
-                        table_id: tableId.value,
-                        total_price: parseFloat(product.average_cost || "0"),
-                        order_type: selectedOrderType.value,
-                        selected_options: [],
-                    },
-                    {
-                        preserveScroll: false,
-                        onSuccess: () => {
-                            toast.add({
-                                severity: "success",
-                                summary: "Success",
-                                detail: page.props.flash.success,
-                                life: 3000,
-                            });
-                        },
-                        onError: (errors) => {
-                            console.error(
-                                "Failed to add item to cart:",
-                                errors
-                            );
-                        },
-                    }
-                );
-            }
-        }
-    }
-};
-
-const handlePackagingConfirm = (packaging: any) => {
-    const product = selectedProductForPackaging.value;
-    if (product) {
-        addToCart(product, packaging);
-    }
-    showPackagingModal.value = false;
-    selectedProductForPackaging.value = null;
-};
-
-const handlePackagingCancel = () => {
-    showPackagingModal.value = false;
-    selectedProductForPackaging.value = null;
-};
-
-const getCategoryIconComponent = (categoryName: string | undefined | null) => {
-    if (!categoryName) {
-        return ShoppingBagIcon;
-    }
-
-    const name = categoryName.toLowerCase();
-    if (name.includes("beverage") || name.includes("drink")) {
-        return BeverageIcon;
-    } else if (name.includes("food") || name.includes("meal")) {
-        return FoodIcon;
-    } else if (name.includes("dessert") || name.includes("sweet")) {
-        return DessertIcon;
-    } else {
-        return ShoppingBagIcon;
-    }
-};
 </script>

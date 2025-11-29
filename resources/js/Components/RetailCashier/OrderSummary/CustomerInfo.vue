@@ -21,8 +21,15 @@
             <div class="flex items-center gap-2">
                 <MapPinIcon class="w-4 h-4 text-secondary-500" />
                 <span class="text-sm text-secondary-600">Table:</span>
-                <span class="text-sm font-medium text-secondary-800">
-                    {{ tableInfo.name || "No Table" }}
+                <button
+                    v-if="!tableInfo.name"
+                    @click="$emit('selectTable')"
+                    class="text-sm font-medium text-primary-600 hover:text-primary-700 underline cursor-pointer transition-colors duration-200"
+                >
+                    No Table - Click to select
+                </button>
+                <span v-else class="text-sm font-medium text-secondary-800">
+                    {{ tableInfo.name }}
                 </span>
                 <span class="text-xs text-secondary-500">•</span>
                 <span class="text-sm text-secondary-600">
@@ -40,6 +47,10 @@ import { ref } from "vue";
 const props = defineProps<{
     cart: any;
     tableInfo: any;
+}>();
+
+defineEmits<{
+    selectTable: [];
 }>();
 
 const currentShift = ref(props.cart?.id);

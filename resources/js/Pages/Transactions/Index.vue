@@ -373,11 +373,13 @@ const thermalReceiptData = computed(() => {
     });
 
     return {
-        storeName: "Quick Juan Restaurant", // Match ReceiptLayout default
-        storeAddress: "123 Main Street, Makati City, Philippines", // Match ReceiptLayout default
-        storePhone: "(02) 123-4567", // Match ReceiptLayout default
-        orderNumber: `RCP-${activeOrder.value.id}`, // Match ReceiptLayout format
+        storeName: props.generatelSettings?.company_name , // Match ReceiptLayout default
+        storeAddress: props.active_branch?.address, // Match ReceiptLayout default
+        storePhone: props.active_branch?.contact, // Match ReceiptLayout default
+        orderNumber: `O.R: ${activeOrder.value.id}`, // Match ReceiptLayout format
         cashier: activeOrder.value.cashier?.name || "Unknown",
+        receiptHeaders: props.active_branch?.receipt_headers,
+        receiptFooters: props.active_branch?.receipt_foters,
         date: dateStr,
         time: timeStr,
         tableNumber: activeOrder.value.table_room?.name || null,
