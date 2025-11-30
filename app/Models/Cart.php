@@ -23,6 +23,7 @@ class Cart extends Model
         'total_due',
         'amount_tendered',
         'session_id',
+        'bill_no',
         'notes',
         'meta_data',
     ];
