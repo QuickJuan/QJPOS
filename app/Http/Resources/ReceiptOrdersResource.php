@@ -17,9 +17,8 @@ class ReceiptOrdersResource extends JsonResource
         return [
             // Order Information
             'id' => $this->id,
-            'or_number' => $this->or_number,
+            'invoice_no' => $this->invoice_no,
             'bill_number' => $this->bill_number,
-            'receipt_number' => $this->receipt_number ?? $this->or_number,
             'order_date' => $this->created_at,
             'order_type' => $this->order_type,
             'status' => $this->status,

@@ -9,7 +9,7 @@
                     :src="businessLogo"
                     alt="Company Logo"
                     class="w-16 h-auto mx-auto mb-2"
-                    style="max-width: 64px;"
+                    style="max-width: 64px"
                 />
             </div>
             <h1 class="text-xl font-bold mb-1">{{ businessName }}</h1>
@@ -110,11 +110,7 @@
                                 class="flex items-center justify-between"
                             >
                                 <div class="flex items-center gap-2 flex-1">
-                                    <span
-                                        class="text-xs font-medium"
-                                    >
-                                        •
-                                    </span>
+                                    <span class="text-xs font-medium"> • </span>
                                     <span class="text-xs flex-1 ml-2">
                                         {{ option.product.name }}
                                     </span>
@@ -134,7 +130,7 @@
         <!-- Totals -->
         <div class="mt-3 mb-5">
             <!-- Subtotal -->
-            <div class="flex justify-between">
+            <div class="flex justify-between" v-if="subtotal != totalAmount">
                 <span>Subtotal:</span>
                 <span>{{ formatMoney(subtotal) }}</span>
             </div>
