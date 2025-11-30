@@ -520,4 +520,24 @@ class CartService
 
         return $order;
     }
+
+    public function updateBillNumber(int $cartId, int $branchId): void
+    {
+        $branch = Branch::find($branchId);
+        if (!$branch) {
+            throw new Exception('Branch not found.');
+        }
+
+        // Increment the bill number
+        $branch->increment('bill_no');
+        $newBillNumber = $branch->bill_no;
+
+        // Update the cart with the new bill number
+        $cart = Cart::find($cartId);
+        if (!$cart) {
+            throw new Exception('Cart not found.');
+        }
+
+        $cart->update(['bill_no' => $newBillNumber]);
+    }
 }

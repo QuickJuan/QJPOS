@@ -25,6 +25,9 @@ class PaymentService
 
                 Log::info('Cart found', ['cart' => $cart->id, 'items' => $cart->cartItems->count()]);
 
+            // Get cart items for processing
+            $cartItems = CartItem::where('cart_id', $cart->id)->get();
+
             // Create the order
             $order = Order::create([
                 'invoice_no'         => $this->getNextInvoiceNumber($request->branch_id),
@@ -47,8 +50,7 @@ class PaymentService
                 ],
             ]);
 
-            // Get cart items for processing
-            $cartItems = CartItem::where('cart_id', $cart->id)->get();
+            // Use the already fetched cart items for processing
 
             $orderItemsData = $cartItems->map(function ($cartItem) use ($order) {
                 return [
@@ -82,6 +84,25 @@ class PaymentService
             // Bulk insert - single INSERT query instead of N queries
             OrderItem::insert($orderItemsData);
 
+            // Calculate VAT totals using database aggregation and update the order
+            $vatTotals = OrderItem::where('order_id', $order->id)
+                ->selectRaw('
+                    SUM(vatable_sales) as vatable_sales,
+                    SUM(vat_amount) as vat_amount,
+                    SUM(vat_exempt_sales) as vat_exempt_sales,
+                    SUM(zero_rated_sales) as zero_rated_sales,
+                    SUM(non_vat_sales) as non_vat
+                ')
+                ->first();
+
+            $order->update([
+                'vatable_sales'    => $vatTotals->vatable_sales ?? 0,
+                'vat_amount'       => $vatTotals->vat_amount ?? 0,
+                'vat_exempt_sales' => $vatTotals->vat_exempt_sales ?? 0,
+                'zero_rated_sales' => $vatTotals->zero_rated_sales ?? 0,
+                'non_vat'          => $vatTotals->non_vat ?? 0,
+            ]);
+
             // Delete cart and its items
             CartItem::where('cart_id', $cart->id)->delete();
             $cart->delete();
@@ -108,18 +129,16 @@ class PaymentService
         }
     }
 
+
+
     protected function getNextInvoiceNumber(?int $branchId = null): string
     {
         if ($branchId) {
             $branch = Branch::find($branchId);
             if ($branch) {
-                // Increment and save the order number atomically
-                $branch->increment('order_number');
-                $invoiceNumber = $branch->order_number;
-
-                // Also update or_number to keep it in sync
-                $branch->or_number = $invoiceNumber;
-                $branch->save();
+                // Increment the or_number atomically
+                $branch->increment('or_number');
+                $invoiceNumber = $branch->or_number;
 
                 return (string) $invoiceNumber;
             }
@@ -129,4 +148,5 @@ class PaymentService
         $lastOrder = Order::latest('id')->first();
         return (string) ($lastOrder ? ($lastOrder->id + 1) : 1);
     }
+
 }

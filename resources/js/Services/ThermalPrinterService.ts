@@ -31,6 +31,13 @@ interface PrinterConfig {
     cut_spacing: number;
     print_categories?: string[];
     notes?: string;
+    font_sizes?: {
+        company_name?: 'small' | 'medium' | 'large';
+        headers?: 'small' | 'medium' | 'large';
+        items?: 'small' | 'medium' | 'large';
+        totals?: 'small' | 'medium' | 'large';
+        footer?: 'small' | 'medium' | 'large';
+    };
 }
 
 class ThermalPrinterService {
@@ -44,6 +51,35 @@ class ThermalPrinterService {
     private currentConfig: PrinterConfig | null = null;
     private readonly DEFAULT_SERVICE_UUID = '000018f0-0000-1000-8000-00805f9b34fb';
     private readonly DEFAULT_CHARACTERISTIC_UUID = '00002af1-0000-1000-8000-00805f9b34fb';
+
+    // ESC/POS Command Constants for better readability
+    private readonly ESC_POS = {
+        // Basic Commands
+        INIT: [0x1b, 0x40],           // ESC @ - Initialize printer
+        LINE_FEED: [0x0a],            // LF - Line feed
+
+        // Text Alignment
+        ALIGN_LEFT: [0x1b, 0x61, 0x00],     // ESC a 0 - Left align
+        ALIGN_CENTER: [0x1b, 0x61, 0x01],   // ESC a 1 - Center align
+        ALIGN_RIGHT: [0x1b, 0x61, 0x02],    // ESC a 2 - Right align
+
+        // Text Emphasis
+        BOLD_ON: [0x1b, 0x45, 0x01],        // ESC E 1 - Bold on
+        BOLD_OFF: [0x1b, 0x45, 0x00],       // ESC E 0 - Bold off
+
+        // Font Sizes
+        FONT_NORMAL: [0x1d, 0x21, 0x00],    // GS ! 0 - Normal size
+        FONT_DOUBLE_WIDTH: [0x1d, 0x21, 0x01], // GS ! 1 - Double width
+        FONT_DOUBLE_HEIGHT: [0x1d, 0x21, 0x10], // GS ! 16 - Double height
+        FONT_DOUBLE_BOTH: [0x1d, 0x21, 0x11],   // GS ! 17 - Double width & height
+
+        // Paper Control
+        FULL_CUT: [0x1d, 0x56, 0x00],       // GS V 0 - Full cut
+        PARTIAL_CUT: [0x1d, 0x56, 0x01],    // GS V 1 - Partial cut
+
+        // Character Encoding
+        SET_UTF8: [0x1b, 0x74, 0x06],       // ESC t 6 - Set UTF-8 encoding
+    };
 
     /**
      * Check if Web Bluetooth is supported
@@ -252,71 +288,76 @@ class ThermalPrinterService {
             const commands: number[] = [];
 
             // Initialize printer
-            commands.push(...[0x1b, 0x40]); // ESC @
+            commands.push(...this.ESC_POS.INIT);
 
             // Set character encoding to UTF-8
-            commands.push(...[0x1b, 0x74, 0x06]); // ESC t 6
+            commands.push(...this.ESC_POS.SET_UTF8);
 
             // Header - Business Info
-            commands.push(...[0x1b, 0x61, 0x01]); // Center align
-            commands.push(...[0x1b, 0x45, 0x01]); // Bold on
-            commands.push(...[0x1d, 0x21, 0x11]); // Double size
-            commands.push(...this.stringToBytes(receiptData.storeName));
-            commands.push(...[0x0a]);
+            commands.push(...this.ESC_POS.ALIGN_CENTER);
+            commands.push(...this.ESC_POS.BOLD_ON);
 
-            // Store address and phone - normal size
-            commands.push(...[0x1d, 0x21, 0x00]); // Normal size
-            commands.push(...[0x1b, 0x45, 0x00]); // Bold off
+            // Company name with configurable font size (default: medium for better fit)
+            const companyNameSize = this.currentConfig?.font_sizes?.company_name || 'medium';
+            this.addTextWithSize(commands, receiptData.storeName, companyNameSize);
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            // Store address and phone - small size
+            commands.push(...this.ESC_POS.BOLD_OFF);
             commands.push(...this.stringToBytes(receiptData.storeAddress));
-            commands.push(0x0a);
+            commands.push(...this.ESC_POS.LINE_FEED);
             if (receiptData.storePhone) {
                 commands.push(...this.stringToBytes(receiptData.storePhone));
-                commands.push(0x0a);
+                commands.push(...this.ESC_POS.LINE_FEED);
             }
 
             // Header separator
             const separatorWidth = this.currentConfig?.character_width || 47;
             commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
-            commands.push(...[0x0a, 0x0a]);
+            commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
             // Receipt Info - left align
-            commands.push(...[0x1b, 0x61, 0x00]); // Left align
+            commands.push(...this.ESC_POS.ALIGN_LEFT);
             commands.push(...this.stringToBytes(this.formatInfoLine('Receipt #:', receiptData.orderNumber)));
-            commands.push(0x0a);
+            commands.push(...this.ESC_POS.LINE_FEED);
             commands.push(...this.stringToBytes(this.formatInfoLine('Date:', this.formatReceiptDate(receiptData.date))));
-            commands.push(0x0a);
+            commands.push(...this.ESC_POS.LINE_FEED);
             if (receiptData.time) {
                 commands.push(...this.stringToBytes(this.formatInfoLine('Time:', receiptData.time)));
-                commands.push(0x0a);
+                commands.push(...this.ESC_POS.LINE_FEED);
             }
             if (receiptData.tableNumber) {
                 commands.push(...this.stringToBytes(this.formatInfoLine('Table:', receiptData.tableNumber)));
-                commands.push(0x0a);
+                commands.push(...this.ESC_POS.LINE_FEED);
             }
             if (receiptData.cashier) {
                 commands.push(...this.stringToBytes(this.formatInfoLine('Cashier:', receiptData.cashier)));
-                commands.push(0x0a);
+                commands.push(...this.ESC_POS.LINE_FEED);
             }
             if (receiptData.orderType) {
                 commands.push(...this.stringToBytes(this.formatInfoLine('Order Type:', receiptData.orderType)));
-                commands.push(0x0a);
+                commands.push(...this.ESC_POS.LINE_FEED);
             }
-            commands.push(0x0a);
+            commands.push(...this.ESC_POS.LINE_FEED);
 
             // Items separator
             const separatorLine = '-'.repeat(separatorWidth);
             commands.push(...this.stringToBytes(separatorLine));
-            commands.push(0x0a);
+            commands.push(...this.ESC_POS.LINE_FEED);
 
             // ORDER ITEMS header - centered
-            commands.push(...[0x1b, 0x61, 0x01]); // Center align
-            commands.push(...[0x1b, 0x45, 0x01]); // Bold on
-            commands.push(...this.stringToBytes('ORDER ITEMS'));
-            commands.push(...[0x1b, 0x45, 0x00]); // Bold off
-            commands.push(...[0x0a, 0x0a]);
+            commands.push(...this.ESC_POS.ALIGN_CENTER);
+            commands.push(...this.ESC_POS.BOLD_ON);
+
+            // Headers with configurable font size
+            const headerSize = this.currentConfig?.font_sizes?.headers || 'small';
+            this.addTextWithSize(commands, 'ORDER ITEMS', headerSize);
+
+            commands.push(...this.ESC_POS.BOLD_OFF);
+            commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
             // Left align for items
-            commands.push(...[0x1b, 0x61, 0x00]);
+            commands.push(...this.ESC_POS.ALIGN_LEFT);
 
             // Group items by order type (matching ReceiptLayout)
             const groupedItems = this.groupItemsByOrderType(receiptData.items);
@@ -324,26 +365,26 @@ class ThermalPrinterService {
             Object.entries(groupedItems).forEach(([orderType, items]) => {
                 // Order type header if there are multiple types
                 if (Object.keys(groupedItems).length > 1) {
-                    commands.push(...[0x1b, 0x61, 0x01]); // Center align
-                    commands.push(...[0x1b, 0x45, 0x01]); // Bold on
+                    commands.push(...this.ESC_POS.ALIGN_CENTER);
+                    commands.push(...this.ESC_POS.BOLD_ON);
                     commands.push(...this.stringToBytes(this.getOrderTypeLabel(orderType)));
-                    commands.push(...[0x1b, 0x45, 0x00]); // Bold off
-                    commands.push(...[0x1b, 0x61, 0x00]); // Left align
-                    commands.push(...[0x0a, 0x0a]);
+                    commands.push(...this.ESC_POS.BOLD_OFF);
+                    commands.push(...this.ESC_POS.ALIGN_LEFT);
+                    commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
                 }
 
                 // Print items in this group
                 items.forEach(item => {
                     // Main item line
-
                     commands.push(...this.stringToBytes(item.name));
-                    commands.push(0x0a);
+                    commands.push(...this.ESC_POS.LINE_FEED);
 
-                    // Quantity and price line (indented)
-                    if (typeof item.quantity === 'number' && item.quantity >= 1) {
-                        const qtyLine = this.formatQuantityLine(item.quantity, item.price, item.amount);
+                    // Quantity and price line (indented) - always show if we have price and amount
+                    const quantity = typeof item.quantity === 'string' ? parseInt(item.quantity) || 1 : (item.quantity || 1);
+                    if (item.price !== undefined && item.amount !== undefined) {
+                        const qtyLine = this.formatQuantityLine(quantity, item.price, item.amount);
                         commands.push(...this.stringToBytes(`  ${qtyLine}`));
-                        commands.push(0x0a);
+                        commands.push(...this.ESC_POS.LINE_FEED);
                     }
 
                     // Selected options (if any)
@@ -351,7 +392,7 @@ class ThermalPrinterService {
                         item.selectedOptions.forEach(option => {
                             const optionLine = this.formatOptionLine(option.name, option.price);
                             commands.push(...this.stringToBytes(`  ${optionLine}`));
-                            commands.push(0x0a);
+                            commands.push(...this.ESC_POS.LINE_FEED);
                         });
                     }
 
@@ -359,100 +400,106 @@ class ThermalPrinterService {
                     if (item.lessTax && parseFloat(String(item.lessTax)) > 0) {
                         const taxLine = this.formatDeductionLine('Less Tax:', item.lessTax);
                         commands.push(...this.stringToBytes(`  ${taxLine}`));
-                        commands.push(0x0a);
+                        commands.push(...this.ESC_POS.LINE_FEED);
                     }
 
                     // Less discount (if any)
                     if (item.discount && parseFloat(String(item.discount)) > 0) {
                         const discountLine = this.formatDeductionLine('Less Discount:', item.discount);
                         commands.push(...this.stringToBytes(`  ${discountLine}`));
-                        commands.push(0x0a);
+                        commands.push(...this.ESC_POS.LINE_FEED);
                     }
 
-                    commands.push(0x0a); // Space between items
+                    commands.push(...this.ESC_POS.LINE_FEED); // Space between items
                 });
             });
 
             // Items separator
             commands.push(...this.stringToBytes(separatorLine));
-            commands.push(0x0a);
+            commands.push(...this.ESC_POS.LINE_FEED);
 
             // Totals section
             const subtotal = typeof receiptData.subtotal === 'string' ? parseFloat(receiptData.subtotal) || 0 : receiptData.subtotal;
             commands.push(...this.stringToBytes(this.formatTotalLine('Subtotal:', subtotal)));
-            commands.push(0x0a);
+            commands.push(...this.ESC_POS.LINE_FEED);
 
             // Less Tax (matching ReceiptLayout naming)
             if (receiptData.lessTax && parseFloat(String(receiptData.lessTax)) > 0) {
                 const lessTax = typeof receiptData.lessTax === 'string' ? parseFloat(receiptData.lessTax) || 0 : receiptData.lessTax;
                 commands.push(...this.stringToBytes(this.formatTotalLine('Less Tax:', -lessTax)));
-                commands.push(0x0a);
+                commands.push(...this.ESC_POS.LINE_FEED);
             }
 
             // Less Discount (matching ReceiptLayout naming)
             if (receiptData.lessDiscount && parseFloat(String(receiptData.lessDiscount)) > 0) {
                 const lessDiscount = typeof receiptData.lessDiscount === 'string' ? parseFloat(receiptData.lessDiscount) || 0 : receiptData.lessDiscount;
                 commands.push(...this.stringToBytes(this.formatTotalLine('Less Discount:', -lessDiscount)));
-                commands.push(0x0a);
+                commands.push(...this.ESC_POS.LINE_FEED);
             }
 
             // Total separator and amount - bold
             commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
-            commands.push(0x0a);
-            commands.push(...[0x1b, 0x45, 0x01]); // Bold on
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.ESC_POS.BOLD_ON);
+
+            // Total with configurable font size
             const total = typeof receiptData.total === 'string' ? parseFloat(receiptData.total) || 0 : receiptData.total;
-            commands.push(...this.stringToBytes(this.formatTotalLine('TOTAL:', total)));
-            commands.push(...[0x1b, 0x45, 0x00]); // Bold off
-            commands.push(...[0x0a, 0x0a]);
+            const totalSize = this.currentConfig?.font_sizes?.totals || 'medium';
+            this.addTextWithSize(commands, this.formatTotalLine('TOTAL:', total), totalSize);
+
+            commands.push(...this.ESC_POS.BOLD_OFF);
+            commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
             // Payment info (matching ReceiptLayout format)
             if (receiptData.payment) {
-                commands.push(...[0x1b, 0x61, 0x01]); // Center align
-                commands.push(...[0x1b, 0x45, 0x01]); // Bold on
+                commands.push(...this.ESC_POS.ALIGN_CENTER);
+                commands.push(...this.ESC_POS.BOLD_ON);
                 commands.push(...this.stringToBytes('PAYMENT'));
-                commands.push(...[0x1b, 0x45, 0x00]); // Bold off
-                commands.push(...[0x1b, 0x61, 0x00]); // Left align
-                commands.push(...[0x0a, 0x0a]);
+                commands.push(...this.ESC_POS.BOLD_OFF);
+                commands.push(...this.ESC_POS.ALIGN_LEFT);
+                commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
                 const paymentAmount = typeof receiptData.payment.amountPaid === 'string' ? parseFloat(receiptData.payment.amountPaid) || 0 : receiptData.payment.amountPaid;
                 commands.push(...this.stringToBytes(this.formatTotalLine('Amount Paid:', paymentAmount)));
-                commands.push(0x0a);
+                commands.push(...this.ESC_POS.LINE_FEED);
 
                 if (receiptData.payment.change && parseFloat(String(receiptData.payment.change)) > 0) {
                     const change = typeof receiptData.payment.change === 'string' ? parseFloat(receiptData.payment.change) || 0 : receiptData.payment.change;
                     commands.push(...this.stringToBytes(this.formatTotalLine('Change:', change)));
-                    commands.push(0x0a);
+                    commands.push(...this.ESC_POS.LINE_FEED);
                 }
 
                 commands.push(...this.stringToBytes(this.formatTotalLine('Payment Method:', receiptData.payment.method)));
-                commands.push(...[0x0a, 0x0a]);
+                commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
             }
 
             // Final separator
             commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
-            commands.push(...[0x0a, 0x0a]);
+            commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
             // Footer (matching ReceiptLayout)
-            commands.push(...[0x1b, 0x61, 0x01]); // Center align
+            commands.push(...this.ESC_POS.ALIGN_CENTER);
             const footerNotes = receiptData.receiptFooter?.footer_notes || 'Thank you for dining with us! Please settle your bill at the counter.';
             commands.push(...this.stringToBytes(footerNotes));
-            commands.push(...[0x0a, 0x0a]);
+            commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
             if (receiptData.footerMessage) {
                 commands.push(...this.stringToBytes(receiptData.footerMessage));
-                commands.push(...[0x0a, 0x0a]);
+                commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
             }
 
             // Add spacing before cut based on printer configuration
             const cutSpacing = this.currentConfig?.cut_spacing || 5;
             for (let i = 0; i < cutSpacing; i++) {
-                commands.push(0x0a);
+                commands.push(...this.ESC_POS.LINE_FEED);
             }
 
             // Cut paper if auto_cut is enabled
             if (this.currentConfig?.auto_cut !== false) {
-                commands.push(...[0x1d, 0x56, 0x00]); // Full cut
-            }            // Send to printer
+                commands.push(...this.ESC_POS.FULL_CUT);
+            }
+
+            // Send to printer
             const data = new Uint8Array(commands);
             await this.sendToPrinter(data);
 
@@ -468,6 +515,36 @@ class ThermalPrinterService {
      */
     private stringToBytes(str: string): number[] {
         return Array.from(new TextEncoder().encode(str));
+    }
+
+    /**
+     * Get font size ESC/POS commands
+     */
+    private getFontSizeCommands(size: 'small' | 'medium' | 'large' = 'small'): number[] {
+        switch (size) {
+            case 'small':
+                return this.ESC_POS.FONT_NORMAL;
+            case 'medium':
+                return this.ESC_POS.FONT_DOUBLE_WIDTH;
+            case 'large':
+                return this.ESC_POS.FONT_DOUBLE_BOTH;
+            default:
+                return this.ESC_POS.FONT_NORMAL;
+        }
+    }
+
+    /**
+     * Apply font size and add text with automatic size reset
+     */
+    private addTextWithSize(commands: number[], text: string, size: 'small' | 'medium' | 'large' = 'small'): void {
+        // Set font size
+        commands.push(...this.getFontSizeCommands(size));
+        // Add text
+        commands.push(...this.stringToBytes(text));
+        // Reset to normal size if not small
+        if (size !== 'small') {
+            commands.push(...this.getFontSizeCommands('small'));
+        }
     }
 
     /**
@@ -612,6 +689,283 @@ class ThermalPrinterService {
     }
 
     /**
+     * Print bill using ESC/POS commands
+     */
+    public async printBill(billData: {
+        storeName: string;
+        storeAddress: string;
+        storePhone?: string;
+        billNumber: string;
+        cashier: string;
+        date: string;
+        time?: string;
+        tableInfo: {
+            name?: string;
+            number_of_pax?: number;
+        };
+        orderType?: string;
+        items: Array<{
+            name: string;
+            quantity: number | string;
+            price: number | string;
+            amount: number | string;
+            selectedOptions?: Array<{
+                name: string;
+                price: number | string;
+            }>;
+            lessTax?: number | string;
+            discount?: number | string;
+            orderType?: string;
+        }>;
+        subtotal: number | string;
+        lessTax?: number | string;
+        lessDiscount?: number | string;
+        discountAmount?: number | string;
+        discountName?: string;
+        discountType?: string;
+        removeTax?: boolean;
+        total: number | string;
+        payment?: {
+            method: string;
+            amountPaid: number | string;
+            change?: number | string;
+        };
+        billFooter?: {
+            footer_notes?: string;
+        };
+        footerMessage?: string;
+    }): Promise<void> {
+        if (!this.isConnected()) {
+            throw new Error('Printer not connected. Please connect first.');
+        }
+
+        try {
+            // Build ESC/POS commands
+            const commands: number[] = [];
+
+            // Initialize printer
+            commands.push(...this.ESC_POS.INIT);
+
+            // Set character encoding to UTF-8
+            commands.push(...this.ESC_POS.SET_UTF8);
+
+            // Header - Business Info
+            commands.push(...this.ESC_POS.ALIGN_CENTER);
+            commands.push(...this.ESC_POS.BOLD_ON);
+
+            // Company name with configurable font size (default: medium for better fit)
+            const companyNameSize = this.currentConfig?.font_sizes?.company_name || 'medium';
+            this.addTextWithSize(commands, billData.storeName, companyNameSize);
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            // Store address and phone - normal size
+            commands.push(...this.ESC_POS.BOLD_OFF);
+            commands.push(...this.stringToBytes(billData.storeAddress));
+            commands.push(...this.ESC_POS.LINE_FEED);
+            if (billData.storePhone) {
+                commands.push(...this.stringToBytes(billData.storePhone));
+                commands.push(...this.ESC_POS.LINE_FEED);
+            }
+
+            // Header separator
+            const separatorWidth = this.currentConfig?.character_width || 47;
+            commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            // Table header - medium size and centered
+            commands.push(...this.ESC_POS.ALIGN_CENTER);
+            this.addTextWithSize(commands, `Table #: ${billData.tableInfo.name || 'N/A'}`, 'medium');
+            commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+
+            // Bill Info - left align
+            commands.push(...this.ESC_POS.ALIGN_LEFT);
+            commands.push(...this.stringToBytes(this.formatInfoLine('Date:', this.formatReceiptDate(billData.date))));
+            commands.push(...this.ESC_POS.LINE_FEED);
+            if (billData.time) {
+                commands.push(...this.stringToBytes(this.formatInfoLine('Time:', billData.time)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+            }
+            commands.push(...this.stringToBytes(this.formatInfoLine('Bill #:', billData.billNumber)));
+            commands.push(...this.ESC_POS.LINE_FEED);
+            if (billData.cashier) {
+                commands.push(...this.stringToBytes(this.formatInfoLine('Cashier:', billData.cashier)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+            }
+            if (billData.orderType) {
+                commands.push(...this.stringToBytes(this.formatInfoLine('Order Type:', billData.orderType)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+            }
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            // Items separator
+            const separatorLine = '-'.repeat(separatorWidth);
+            commands.push(...this.stringToBytes(separatorLine));
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            // ORDER ITEMS header - centered with configurable font size
+            commands.push(...this.ESC_POS.ALIGN_CENTER);
+            commands.push(...this.ESC_POS.BOLD_ON);
+            const headerSize = this.currentConfig?.font_sizes?.headers || 'small';
+            this.addTextWithSize(commands, 'ORDER ITEMS', headerSize);
+            commands.push(...this.ESC_POS.BOLD_OFF);
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            // Group items by order type (matching BillLayout)
+            const groupedItems = this.groupItemsByOrderType(billData.items);
+
+            Object.entries(groupedItems).forEach(([orderType, items]) => {
+                // Order type header - always show to match BillLayout
+                commands.push(...this.ESC_POS.ALIGN_CENTER);
+                commands.push(...this.stringToBytes(this.getOrderTypeLabel(orderType)));
+                commands.push(...this.ESC_POS.ALIGN_LEFT);
+                commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+
+                // Print items in this group
+                items.forEach(item => {
+                    // Main item line
+                    commands.push(...this.stringToBytes(item.name));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+
+                    // Quantity and price line (indented) - always show if we have price and amount
+                    const quantity = typeof item.quantity === 'string' ? parseInt(item.quantity) || 1 : (item.quantity || 1);
+                    if (item.price !== undefined && item.amount !== undefined) {
+                        const qtyLine = this.formatQuantityLine(quantity, item.price, item.amount);
+                        commands.push(...this.stringToBytes(`  ${qtyLine}`));
+                        commands.push(...this.ESC_POS.LINE_FEED);
+                    }
+
+                    // Selected options (if any)
+                    if (item.selectedOptions && item.selectedOptions.length > 0) {
+                        item.selectedOptions.forEach(option => {
+                            const optionLine = this.formatOptionLine(option.name, option.price);
+                            commands.push(...this.stringToBytes(`  ${optionLine}`));
+                            commands.push(...this.ESC_POS.LINE_FEED);
+                        });
+                    }
+
+                    // Less tax (if any)
+                    if (item.lessTax && parseFloat(String(item.lessTax)) > 0) {
+                        const taxLine = this.formatDeductionLine('Less Tax:', item.lessTax);
+                        commands.push(...this.stringToBytes(`  ${taxLine}`));
+                        commands.push(...this.ESC_POS.LINE_FEED);
+                    }
+
+                    // Less discount (if any)
+                    if (item.discount && parseFloat(String(item.discount)) > 0) {
+                        const discountLine = this.formatDeductionLine('Less Discount:', item.discount);
+                        commands.push(...this.stringToBytes(`  ${discountLine}`));
+                        commands.push(...this.ESC_POS.LINE_FEED);
+                    }
+
+                    commands.push(...this.ESC_POS.LINE_FEED); // Space between items
+                });
+            });
+
+            // Items separator
+            commands.push(...this.stringToBytes(separatorLine));
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            //only show the sub total if they are not equal with the total
+            // Totals section
+            if (billData.subtotal !== billData.total) {
+                const subtotal = typeof billData.subtotal === 'string' ? parseFloat(billData.subtotal) || 0 : billData.subtotal;
+                commands.push(...this.stringToBytes(this.formatTotalLine('Subtotal:', subtotal)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+            }
+
+            // Less Tax (if applicable)
+            if (billData.lessTax && parseFloat(String(billData.lessTax)) > 0) {
+                const lessTax = typeof billData.lessTax === 'string' ? parseFloat(billData.lessTax) || 0 : billData.lessTax;
+                commands.push(...this.stringToBytes(this.formatTotalLine('Less Tax:', -lessTax)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+            }
+
+            // Less Discount (if applicable)
+            if (billData.lessDiscount && parseFloat(String(billData.lessDiscount)) > 0) {
+                const lessDiscount = typeof billData.lessDiscount === 'string' ? parseFloat(billData.lessDiscount) || 0 : billData.lessDiscount;
+                commands.push(...this.stringToBytes(this.formatTotalLine('Less Discount:', -lessDiscount)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+            }
+
+            // Discount details (if applicable)
+            if (billData.discountAmount && parseFloat(String(billData.discountAmount)) > 0) {
+                const discountAmount = typeof billData.discountAmount === 'string' ? parseFloat(billData.discountAmount) || 0 : billData.discountAmount;
+                const discountLabel = billData.discountName ? `${billData.discountName}:` : 'Discount:';
+                commands.push(...this.stringToBytes(this.formatTotalLine(discountLabel, -discountAmount)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+            }
+
+            // Total separator and amount - bold with configurable font size
+            commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.ESC_POS.BOLD_ON);
+            const total = typeof billData.total === 'string' ? parseFloat(billData.total) || 0 : billData.total;
+            const totalSize = this.currentConfig?.font_sizes?.totals || 'medium';
+            this.addTextWithSize(commands, this.formatTotalLine('TOTAL:', total), totalSize);
+            commands.push(...this.ESC_POS.BOLD_OFF);
+            commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+
+            // Payment info (if provided)
+            if (billData.payment) {
+                commands.push(...this.ESC_POS.ALIGN_CENTER);
+                commands.push(...this.ESC_POS.BOLD_ON);
+                commands.push(...this.stringToBytes('PAYMENT'));
+                commands.push(...this.ESC_POS.BOLD_OFF);
+                commands.push(...this.ESC_POS.ALIGN_LEFT);
+                commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+
+                const paymentAmount = typeof billData.payment.amountPaid === 'string' ? parseFloat(billData.payment.amountPaid) || 0 : billData.payment.amountPaid;
+                commands.push(...this.stringToBytes(this.formatTotalLine('Amount Paid:', paymentAmount)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+
+                if (billData.payment.change && parseFloat(String(billData.payment.change)) > 0) {
+                    const change = typeof billData.payment.change === 'string' ? parseFloat(billData.payment.change) || 0 : billData.payment.change;
+                    commands.push(...this.stringToBytes(this.formatTotalLine('Change:', change)));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                }
+
+                commands.push(...this.stringToBytes(this.formatTotalLine('Payment Method:', billData.payment.method)));
+                commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+            }
+
+            // Final separator
+            commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
+            commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+
+            // Footer (matching BillLayout)
+            commands.push(...this.ESC_POS.ALIGN_CENTER);
+            const footerNotes = billData.billFooter?.footer_notes || 'Thank you for dining with us!';
+            commands.push(...this.stringToBytes(footerNotes));
+            commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+
+            if (billData.footerMessage) {
+                commands.push(...this.stringToBytes(billData.footerMessage));
+                commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+            }
+
+            // Add spacing before cut based on printer configuration
+            const cutSpacing = this.currentConfig?.cut_spacing || 5;
+            for (let i = 0; i < cutSpacing; i++) {
+                commands.push(...this.ESC_POS.LINE_FEED);
+            }
+
+            // Cut paper if auto_cut is enabled
+            if (this.currentConfig?.auto_cut !== false) {
+                commands.push(...this.ESC_POS.FULL_CUT);
+            }
+
+            // Send to printer
+            const data = new Uint8Array(commands);
+            await this.sendToPrinter(data);
+
+            console.log('✅ Bill printed successfully');
+        } catch (error) {
+            console.error('❌ Failed to print bill:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Test printer connection with a simple test print
      */
     public async testPrint(): Promise<void> {
@@ -622,44 +976,44 @@ class ThermalPrinterService {
         const commands: number[] = [];
 
         // Initialize
-        commands.push(...[0x1b, 0x40]); // ESC @
+        commands.push(...this.ESC_POS.INIT);
 
         // Center align, bold
-        commands.push(...[0x1b, 0x61, 0x01]); // Center
-        commands.push(...[0x1b, 0x45, 0x01]); // Bold on
+        commands.push(...this.ESC_POS.ALIGN_CENTER);
+        commands.push(...this.ESC_POS.BOLD_ON);
 
         // Test text
         const configInfo = this.currentConfig ? `${this.currentConfig.name} - ${this.currentConfig.paper_size}` : 'DEFAULT CONFIG';
         commands.push(...this.stringToBytes(`TEST PRINT - ${configInfo}`));
-        commands.push(...[0x0a, 0x0a]);
+        commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
         // Normal text
-        commands.push(...[0x1b, 0x45, 0x00]); // Bold off
-        commands.push(...[0x1b, 0x61, 0x00]); // Left align
+        commands.push(...this.ESC_POS.BOLD_OFF);
+        commands.push(...this.ESC_POS.ALIGN_LEFT);
         commands.push(...this.stringToBytes('Printer connected successfully!'));
-        commands.push(...[0x0a]);
+        commands.push(...this.ESC_POS.LINE_FEED);
 
         if (this.currentConfig) {
             commands.push(...this.stringToBytes(`Config: ${this.currentConfig.name}`));
-            commands.push(...[0x0a]);
+            commands.push(...this.ESC_POS.LINE_FEED);
             commands.push(...this.stringToBytes(`Paper: ${this.currentConfig.paper_size} (${this.currentConfig.character_width} chars)`));
-            commands.push(...[0x0a]);
+            commands.push(...this.ESC_POS.LINE_FEED);
         }
 
         // Dynamic separator
         const separatorWidth = this.currentConfig?.character_width || 47;
         commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
-        commands.push(...[0x0a, 0x0a]);
+        commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
         // Add proper spacing before cut based on config
         const cutSpacing = this.currentConfig?.cut_spacing || 5;
         for (let i = 0; i < cutSpacing; i++) {
-            commands.push(0x0a);
+            commands.push(...this.ESC_POS.LINE_FEED);
         }
 
         // Cut if auto_cut is enabled
         if (this.currentConfig?.auto_cut !== false) {
-            commands.push(...[0x1d, 0x56, 0x00]);
+            commands.push(...this.ESC_POS.FULL_CUT);
         }
 
         const data = new Uint8Array(commands);

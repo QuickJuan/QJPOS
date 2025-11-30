@@ -211,4 +211,24 @@ class CartController extends Controller
             return redirect()->back()->with('error', 'There was an error transferring the order: ' . $e->getMessage());
         }
     }
+
+    public function updateBillNumber(Request $request, int $cartId): RedirectResponse
+    {
+        try {
+            if (!$cartId) {
+                return redirect()->back()->with('error', 'Cart ID is empty.');
+            }
+
+            $branchId = $request->input('branch_id') ?? session('active_branch')->id;
+            if (!$branchId) {
+                return redirect()->back()->with('error', 'Branch ID is required.');
+            }
+
+            $this->cartService->updateBillNumber($cartId, $branchId);
+
+            return redirect()->back()->with('success', 'Bill number updated successfully.');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'There was an error updating bill number: ' . $e->getMessage());
+        }
+    }
 }

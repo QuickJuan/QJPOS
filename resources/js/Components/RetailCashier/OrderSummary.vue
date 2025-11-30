@@ -159,6 +159,7 @@ const emit = defineEmits<{
     showReceipt: [data: any];
     printBill: [];
     selectTable: [];
+    redirectToTables: [];
 }>();
 
 // State
@@ -404,9 +405,10 @@ const handleSettleBill = (data: any) => {
                 toast.add({
                     severity: "success",
                     summary: "Success",
-                    detail: page.props.flash.success,
+                    detail: "Bill settled successfully!",
                     life: 3000,
                 });
+
                 // Emit event to show receipt modal
                 emit("showReceipt", data);
             },
@@ -549,5 +551,9 @@ watch(
 
 const handlePrintBill = () => {
     emit("printBill");
+};
+
+const handleRedirectToTables = () => {
+    router.visit(route("retail-cashier.tables"));
 };
 </script>
