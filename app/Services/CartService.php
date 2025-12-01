@@ -194,7 +194,7 @@ class CartService
 
         // Delete the source cart since it's now empty
         $sourceCart->delete();
-        
+
         return $targetCart->fresh();
 
         // return $targetCart->fresh(['cartItems']);

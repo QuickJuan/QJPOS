@@ -16,9 +16,8 @@
                     <ChevronDownIcon class="w-4 h-4 ml-auto" />
                 </button>
 
-                <!-- Place Order Button - Show beside order type when table is selected and there are items to place -->
+                <!-- Place Order Button - Show whenever there are items to place -->
                 <button
-                    v-if="tableId && hasItemsToPlace"
                     @click="
                         $emit('checkout', {
                             cart_id: props.cart.id,
@@ -35,7 +34,6 @@
             <div class="grid grid-cols-2 gap-2">
                 <button
                     @click="showMoreOptionsModal = true"
-                    :disabled="orderItems.length === 0"
                     class="py-2 px-3 bg-secondary-600 text-white rounded-lg font-semibold hover:bg-secondary-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 text-sm"
                 >
                     <span>More Options</span>
@@ -173,9 +171,9 @@ const emit = defineEmits<{
 // Use applied discount from props
 const appliedDiscount = computed(() => props.appliedDiscount);
 
-// Check if there are items that can be placed (have place_order false)
+// Check if there are items that can be placed (have placed_order false)
 const hasItemsToPlace = computed(() => {
-    return props.orderItems.some((item) => item.place_order === false);
+    return props.orderItems.some((item) => item.placed_order === false);
 });
 
 // Use confirm

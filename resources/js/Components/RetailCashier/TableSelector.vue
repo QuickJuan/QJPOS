@@ -75,6 +75,36 @@ const tables = ref<Table[]>([]);
 const loading = ref(false);
 const isInitializing = ref(false);
 
+// Watch for selectedTable changes to ensure it doesn't get cleared unexpectedly
+watch(
+    () => selectedTable.value,
+    (newValue, oldValue) => {
+        console.log("selectedTable changed from", oldValue, "to", newValue);
+        // If selectedTable becomes null unexpectedly, try to restore from localStorage
+        if (newValue === null && oldValue !== null) {
+            const cashierStateKey = "quickjuan_cashier_state";
+            const existingState = localStorage.getItem(cashierStateKey);
+            if (existingState) {
+                try {
+                    const cashierState = JSON.parse(existingState);
+                    if (
+                        cashierState.tableId &&
+                        typeof cashierState.tableId === "number"
+                    ) {
+                        console.log(
+                            "Restoring selectedTable from localStorage:",
+                            cashierState.tableId
+                        );
+                        selectedTable.value = cashierState.tableId;
+                    }
+                } catch (error) {
+                    console.error("Error restoring from localStorage:", error);
+                }
+            }
+        }
+    }
+);
+
 // Watch for prop changes to update selected table (but don't override localStorage)
 watch(
     () => props.currentTableId,

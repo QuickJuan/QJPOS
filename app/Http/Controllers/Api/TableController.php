@@ -18,18 +18,22 @@ class TableController extends Controller
         $branch = Branch::findOrFail($branchId);
 
         $tables = $branch->tableRooms()
-            ->with(['carts', 'carts.cartItems.product'])
+            ->with(['carts' => function($query) {
+                $query->whereHas('cartItems'); // Only get carts that have items
+            }, 'carts.cartItems.product'])
             ->orderBy('name')
             ->get()
             ->map(function ($table) {
-                $activeCart = $table->carts->first(); // Get the first active cart
+                $activeCart = $table->carts->first(); // Get the first active cart with items
+                $hasActiveItems = $activeCart && $activeCart->cartItems->count() > 0;
+
                 return [
                     'id' => $table->id,
                     'name' => $table->name,
                     'capacity' => $table->chairs,
-                    'status' => $activeCart ? 'occupied' : 'available',
+                    'status' => $hasActiveItems ? 'occupied' : 'available',
                     'cart_id' => $activeCart?->id,
-                    'has_orders' => $activeCart?->cartItems->count() > 0
+                    'has_orders' => $hasActiveItems
                 ];
             });
 
