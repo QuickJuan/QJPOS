@@ -31,7 +31,7 @@ class TableController extends Controller
                     'id' => $table->id,
                     'name' => $table->name,
                     'capacity' => $table->chairs,
-                    'status' => $hasActiveItems ? 'occupied' : 'available',
+                    'status' => $table->status,
                     'cart_id' => $activeCart?->id,
                     'has_orders' => $hasActiveItems
                 ];
