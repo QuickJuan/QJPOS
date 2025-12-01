@@ -58,10 +58,11 @@ class CartController extends Controller
                 return redirect()->back()->with('error', 'Source cart ID and target table ID are required.');
             }
 
-            $this->cartService->mergeCart($request, $sourceCartId, $targetTableId);
-
-            return redirect()->back()->with('success', 'Cart items merged successfully.');
+            $mergedCart = $this->cartService->mergeCart($request, $sourceCartId, $targetTableId);
+            
+            return redirect()->back()->with('success', 'Cart items merged successfully and source cart is deleted.');
         } catch (Exception $e) {
+            \Log::error('Cart merge error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'There was an error merging cart items: ' . $e->getMessage());
         }
     }

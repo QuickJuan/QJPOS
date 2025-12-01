@@ -215,6 +215,15 @@ Route::middleware([
                 ->group(function () {
                     Route::get('/{type}', 'getConfig')->name('get-config');
                 });
+
+            // API ROUTES FOR TABLES
+            Route::as('api.tables.')
+                ->prefix('/api')
+                ->controller(\App\Http\Controllers\Api\TableController::class)
+                ->group(function () {
+                    Route::get('/branches/{branchId}/tables', 'getTablesByBranch')->name('branch-tables');
+                    Route::get('/tables/{tableId}/with-cart', 'getTableWithCart')->name('table-with-cart');
+                });
         });
 
         // // Web Receipt Route (for browser viewing)

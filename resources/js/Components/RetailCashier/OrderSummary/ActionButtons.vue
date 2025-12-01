@@ -1,15 +1,35 @@
 <template>
     <div class="p-4 border-t border-gray-200 bg-white">
         <div class="space-y-3">
-            <!-- Order Type Button -->
-            <button
-                @click="showOrderTypeModal = true"
-                class="w-full py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-secondary-700 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-            >
-                <component :is="selectedOrderTypeData.icon" class="w-4 h-4" />
-                <span>{{ selectedOrderTypeData.label }}</span>
-                <ChevronDownIcon class="w-4 h-4 ml-auto" />
-            </button>
+            <!-- Order Type and Place Order Row -->
+            <div class="flex gap-2">
+                <!-- Order Type Button -->
+                <button
+                    @click="showOrderTypeModal = true"
+                    class="flex-1 py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-secondary-700 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                    <component
+                        :is="selectedOrderTypeData.icon"
+                        class="w-4 h-4"
+                    />
+                    <span>{{ selectedOrderTypeData.label }}</span>
+                    <ChevronDownIcon class="w-4 h-4 ml-auto" />
+                </button>
+
+                <!-- Place Order Button - Show beside order type when table is selected and there are items to place -->
+                <button
+                    v-if="tableId && hasItemsToPlace"
+                    @click="
+                        $emit('checkout', {
+                            cart_id: props.cart.id,
+                            discount_id: appliedDiscount?.discountId,
+                        })
+                    "
+                    class="px-4 py-2.5 bg-success-600 text-white rounded-lg font-semibold hover:bg-success-700 transition-colors text-sm whitespace-nowrap"
+                >
+                    Place Order
+                </button>
+            </div>
 
             <!-- Action Buttons -->
             <div class="grid grid-cols-2 gap-2">
@@ -21,20 +41,8 @@
                     <span>More Options</span>
                     <ChevronDownIcon class="w-3 h-3" />
                 </button>
-                <button
-                    v-if="tableId"
-                    @click="
-                        $emit('checkout', {
-                            cart_id: props.cart.id,
-                            discount_id: appliedDiscount?.discountId,
-                        })
-                    "
-                    :disabled="orderItems.every((item) => item.is_served)"
-                    class="py-2 px-3 bg-success-600 text-white rounded-lg font-semibold hover:bg-success-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
-                >
-                    Place Order
-                </button>
 
+                <!-- Settle Bill Button -->
                 <button
                     @click="showSettleBillModal = true"
                     class="py-2 px-3 bg-success-600 text-white rounded-lg font-semibold hover:bg-success-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
@@ -61,6 +69,8 @@
             @open-discount-modal="handleApplyDiscount"
             @add-modifier="handleAddModifier"
             @print-bill="handlePrintBill"
+            @view-table="handleViewTable"
+            @end-of-shift="handleEndOfShift"
         />
 
         <!-- Settle Bill Modal -->
@@ -156,10 +166,17 @@ const emit = defineEmits<{
     addModifier: [];
     settleBill: [data: any];
     printBill: [];
+    viewTable: [];
+    endOfShift: [];
 }>();
 
 // Use applied discount from props
 const appliedDiscount = computed(() => props.appliedDiscount);
+
+// Check if there are items that can be placed (have place_order false)
+const hasItemsToPlace = computed(() => {
+    return props.orderItems.some((item) => item.place_order === false);
+});
 
 // Use confirm
 const confirm = useConfirm();
@@ -284,7 +301,7 @@ const handlePrintBill = () => {
         billNumber: props.billNumber,
         date: new Date().toISOString(),
         tableInfo: props.tableInfo || "",
-        cashierName: page.props.auth?.user?.name || "",
+        cashierName: (page.props.auth as any)?.user?.name || "",
         orderType: props.selectedOrderType,
         orderItems: props.orderItems,
         subtotal: parseFloat(props.subTotal.toFixed(2)),
@@ -299,4 +316,13 @@ const handlePrintBill = () => {
     showBillModal.value = true;
 };
 
+// Handle view table
+const handleViewTable = () => {
+    emit("viewTable");
+};
+
+// Handle end of shift
+const handleEndOfShift = () => {
+    emit("endOfShift");
+};
 </script>

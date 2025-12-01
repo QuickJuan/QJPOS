@@ -7,6 +7,7 @@
             :table-info="tableInfo"
             :cart="cart"
             @select-table="$emit('selectTable')"
+            @table-changed="handleTableChanged"
         />
 
         <!-- Cart Items Area -->
@@ -60,6 +61,8 @@
             @add-modifier="handleAddModifier"
             @settle-bill="handleSettleBill"
             @print-bill="handlePrintBill"
+            @view-table="handleViewTable"
+            @end-of-shift="handleEndOfShift"
         />
 
         <!-- Edit Item Modal -->
@@ -553,7 +556,166 @@ const handlePrintBill = () => {
     emit("printBill");
 };
 
+const handleViewTable = () => {
+    router.visit(route("retail-cashier.tables"));
+};
+
+const handleEndOfShift = () => {
+    // Handle end of shift logic - could emit an event or show confirmation
+    confirm.require({
+        message: "Are you sure you want to end your shift?",
+        header: "End of Shift",
+        icon: "pi pi-exclamation-triangle",
+        rejectProps: {
+            label: "Cancel",
+            severity: "secondary",
+            outlined: true,
+        },
+        acceptProps: {
+            label: "End Shift",
+            severity: "danger",
+        },
+        accept: () => {
+            // Redirect to close session or handle shift end
+            router.visit(route("home"));
+        },
+    });
+};
+
 const handleRedirectToTables = () => {
     router.visit(route("retail-cashier.tables"));
+};
+
+// Update cashier state in localStorage
+const updateCashierStateInLocalStorage = (
+    tableId: number | null,
+    cartId?: number | null
+) => {
+    try {
+        const cashierStateKey = "quickjuan_cashier_state";
+        const existingState = localStorage.getItem(cashierStateKey);
+        let cashierState = existingState ? JSON.parse(existingState) : {};
+
+        // Update the tableId and optionally cartId in the cashier state
+        cashierState.tableId = tableId;
+        if (cartId) {
+            cashierState.cartId = cartId;
+        }
+        cashierState.lastUpdated = new Date().toISOString();
+
+        // Save back to localStorage
+        localStorage.setItem(cashierStateKey, JSON.stringify(cashierState));
+
+        console.log(
+            "Updated cashier state with tableId:",
+            tableId,
+            "cartId:",
+            cartId
+        );
+    } catch (error) {
+        console.error("Failed to update cashier state in localStorage:", error);
+    }
+};
+
+const handleTableChanged = (tableData: {
+    table: any | null;
+    cart: any | null;
+    shouldMerge: boolean;
+}) => {
+    console.log("handleTableChanged called with:", tableData);
+
+    // Validate that we have the expected data structure
+    if (!tableData) {
+        console.error("tableData is null or undefined");
+        toast.add({
+            severity: "error",
+            summary: "Error",
+            detail: "Invalid table data received",
+            life: 3000,
+        });
+        return;
+    }
+
+    // Update table info
+    tableInfo.value = tableData.table;
+
+    // If we need to merge carts (table has existing items)
+    if (tableData.shouldMerge && tableData.cart && props.cart?.id) {
+        console.log("Merging carts:", {
+            source_cart_id: props.cart.id,
+            target_cart_id: tableData.cart.id,
+            table_room_id: tableData.table?.id,
+        });
+
+        router.post(
+            route("retail-cashier.cart.merge"),
+            {
+                source_cart_id: props.cart.id,
+                target_table_id: tableData.table?.id,
+                delete_source_cart: true, // Explicitly request source cart deletion
+            },
+            {
+                preserveScroll: true,
+                onSuccess: (response) => {
+                    console.log("Cart merge successful:", response);
+
+                    // Update localStorage with the target cart ID (the one we merged into)
+                    updateCashierStateInLocalStorage(
+                        tableData.table?.id,
+                        tableData.cart.id
+                    );
+
+                    toast.add({
+                        severity: "success",
+                        summary: "Cart Merged",
+                        detail: "Items have been merged with the existing table cart",
+                        life: 3000,
+                    });
+
+                    // Reload the page to show the merged cart
+                    setTimeout(() => {
+                        router.reload({
+                            onSuccess: () => {
+                                console.log("Page reloaded with merged cart");
+                            },
+                        });
+                    }, 1000);
+                },
+                onError: (errors) => {
+                    console.error("Merge error:", errors);
+                    toast.add({
+                        severity: "error",
+                        summary: "Merge Failed",
+                        detail:
+                            page.props.flash?.error ||
+                            "Failed to merge cart items",
+                        life: 3000,
+                    });
+                },
+            }
+        );
+    } else {
+        // Update localStorage for regular table selection
+
+        updateCashierStateInLocalStorage(
+            tableData.table?.id,
+            tableData.cart?.id
+        );
+
+        // Navigate to the cashier page to reload with the selected table
+        router.visit(route("retail-cashier.index"), {
+            preserveScroll: true,
+            onSuccess: () => {
+                if (tableData.table) {
+                    toast.add({
+                        severity: "success",
+                        summary: "Table Selected",
+                        detail: `Switched to ${tableData.table.name}`,
+                        life: 2000,
+                    });
+                }
+            },
+        });
+    }
 };
 </script>

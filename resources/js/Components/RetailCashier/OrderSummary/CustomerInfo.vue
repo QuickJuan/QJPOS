@@ -18,40 +18,46 @@
                     {{ tableInfo?.customer_name || "Walk-in Customer" }}
                 </span>
             </div>
-            <div class="flex items-center gap-2">
-                <MapPinIcon class="w-4 h-4 text-secondary-500" />
-                <span class="text-sm text-secondary-600">Table:</span>
-                <button
-                    v-if="!tableInfo.name"
-                    @click="$emit('selectTable')"
-                    class="text-sm font-medium text-primary-600 hover:text-primary-700 underline cursor-pointer transition-colors duration-200"
-                >
-                    No Table - Click to select
-                </button>
-                <span v-else class="text-sm font-medium text-secondary-800">
-                    {{ tableInfo.name }}
-                </span>
-                <span class="text-xs text-secondary-500">•</span>
-                <span class="text-sm text-secondary-600">
-                    {{ tableInfo?.number_of_pax || 1 }} guests
-                </span>
-            </div>
+
+            <!-- Table Selector -->
+            <TableSelector
+                :current-table-id="currentTableId"
+                :branch-id="branchId"
+                :selected-cart-id="cart?.id"
+                @table-changed="handleTableChanged"
+            />
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { UserIcon, MapPinIcon } from "@heroicons/vue/24/outline";
-import { ref } from "vue";
+import { UserIcon } from "@heroicons/vue/24/outline";
+import { ref, computed } from "vue";
+import { usePage } from "@inertiajs/vue3";
+import TableSelector from "../TableSelector.vue";
+import PageProps from "@/Types/PageProps";
 
 const props = defineProps<{
     cart: any;
     tableInfo: any;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
     selectTable: [];
+    tableChanged: [data: { table: any | null; cart: any | null }];
 }>();
 
+const page = usePage<PageProps>();
 const currentShift = ref(props.cart?.id);
+
+// Get branch ID from page props
+const branchId = computed(() => page.props?.active_branch?.id);
+const currentTableId = computed(() => props.tableInfo?.id || null);
+
+const handleTableChanged = (tableData: {
+    table: any | null;
+    cart: any | null;
+}) => {
+    emit("tableChanged", tableData);
+};
 </script>

@@ -1,6 +1,89 @@
 import { Buffer } from 'buffer';
 import axios from 'axios';
 
+interface BillData {
+    storeName: string;
+    storeAddress: string;
+    storePhone?: string;
+    billNumber: string;
+    cashier: string;
+    date: string;
+    time?: string;
+    tableInfo: {
+        name?: string;
+        number_of_pax?: number;
+    };
+    orderType?: string;
+    items: Array<{
+        name: string;
+        quantity: number | string;
+        price: number | string;
+        amount: number | string;
+        selectedOptions?: Array<{
+            name: string;
+            price: number | string;
+        }>;
+        lessTax?: number | string;
+        discount?: number | string;
+        orderType?: string;
+    }>;
+    subtotal: number | string;
+    lessTax?: number | string;
+    lessDiscount?: number | string;
+    discountAmount?: number | string;
+    discountName?: string;
+    discountType?: string;
+    removeTax?: boolean;
+    total: number | string;
+    payment?: {
+        method: string;
+        amountPaid: number | string;
+        change?: number | string;
+    };
+    billFooter?: {
+        footer_notes?: string;
+    };
+    footerMessage?: string;
+}
+
+interface ReceiptData {
+    storeName: string;
+    storeAddress: string;
+    storePhone?: string;
+    orderNumber: string;
+    cashier: string;
+    date: string;
+    time?: string;
+    tableNumber?: string;
+    orderType?: string;
+    items: Array<{
+        name: string;
+        quantity: number | string;
+        price: number | string;
+        amount: number | string;
+        selectedOptions?: Array<{
+            name: string;
+            price: number | string;
+        }>;
+        lessTax?: number | string;
+        discount?: number | string;
+        orderType?: string;
+    }>;
+    subtotal: number | string;
+    lessTax?: number | string;
+    lessDiscount?: number | string;
+    total: number | string;
+    payment?: {
+        method: string;
+        amountPaid: number | string;
+        change?: number | string;
+    };
+    receiptFooter?: {
+        footer_notes?: string;
+    };
+    footerMessage?: string;
+}
+
 interface PrinterDevice {
     gatt?: {
         connected?: boolean;
@@ -242,43 +325,7 @@ class ThermalPrinterService {
     /**
      * Print receipt using ESC/POS commands
      */
-    public async printReceipt(receiptData: {
-        storeName: string;
-        storeAddress: string;
-        storePhone?: string;
-        orderNumber: string;
-        cashier: string;
-        date: string;
-        time?: string;
-        tableNumber?: string;
-        orderType?: string;
-        items: Array<{
-            name: string;
-            quantity: number | string;
-            price: number | string;
-            amount: number | string;
-            selectedOptions?: Array<{
-                name: string;
-                price: number | string;
-            }>;
-            lessTax?: number | string;
-            discount?: number | string;
-            orderType?: string;
-        }>;
-        subtotal: number | string;
-        lessTax?: number | string;
-        lessDiscount?: number | string;
-        total: number | string;
-        payment?: {
-            method: string;
-            amountPaid: number | string;
-            change?: number | string;
-        };
-        receiptFooter?: {
-            footer_notes?: string;
-        };
-        footerMessage?: string;
-    }): Promise<void> {
+    public async printReceipt(receiptData: ReceiptData): Promise<void> {
         if (!this.isConnected()) {
             throw new Error('Printer not connected. Please connect first.');
         }
@@ -691,50 +738,7 @@ class ThermalPrinterService {
     /**
      * Print bill using ESC/POS commands
      */
-    public async printBill(billData: {
-        storeName: string;
-        storeAddress: string;
-        storePhone?: string;
-        billNumber: string;
-        cashier: string;
-        date: string;
-        time?: string;
-        tableInfo: {
-            name?: string;
-            number_of_pax?: number;
-        };
-        orderType?: string;
-        items: Array<{
-            name: string;
-            quantity: number | string;
-            price: number | string;
-            amount: number | string;
-            selectedOptions?: Array<{
-                name: string;
-                price: number | string;
-            }>;
-            lessTax?: number | string;
-            discount?: number | string;
-            orderType?: string;
-        }>;
-        subtotal: number | string;
-        lessTax?: number | string;
-        lessDiscount?: number | string;
-        discountAmount?: number | string;
-        discountName?: string;
-        discountType?: string;
-        removeTax?: boolean;
-        total: number | string;
-        payment?: {
-            method: string;
-            amountPaid: number | string;
-            change?: number | string;
-        };
-        billFooter?: {
-            footer_notes?: string;
-        };
-        footerMessage?: string;
-    }): Promise<void> {
+    public async printBill(billData: BillData): Promise<void> {
         if (!this.isConnected()) {
             throw new Error('Printer not connected. Please connect first.');
         }
@@ -1049,4 +1053,4 @@ class ThermalPrinterService {
 // Export singleton instance
 export const thermalPrinter = new ThermalPrinterService();
 export default ThermalPrinterService;
-export type { PrinterConfig };
+export type { PrinterConfig, BillData, ReceiptData };
