@@ -60,7 +60,29 @@
             class="flex flex-col lg:flex-row h-full min-w-0 overflow-hidden pt-[56px] lg:pt-0"
         >
             <!-- Categories & Products Area -->
+            <div
+                class="flex-1 flex items-center justify-center"
+                v-if="!tableId"
+            >
+                <div class="flex flex-col items-center justify-center">
+                    <img
+                        :src="props.generalSettings.company_logo"
+                        alt="Company Logo"
+                        class="w-32 h-32 object-contain mb-4 opacity-60"
+                    />
+                    <p class="text-lg text-gray-400 font-semibold mb-6">
+                        Select a table to start ordering
+                    </p>
+                    <button
+                        @click="handleSelectTable"
+                        class="px-6 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary-600 transition-colors shadow-md"
+                    >
+                        Start Ordering
+                    </button>
+                </div>
+            </div>
             <CategoryProductSelection
+                v-if="tableId"
                 :categories="props.categories"
                 :selected-category-slug="props.selectedCategorySlug"
                 :cached-categories="cachedCategories"
@@ -71,6 +93,7 @@
 
             <!-- Right: Order Summary - Sidebar on mobile/tablet, fixed position on desktop -->
             <aside
+                v-if="tableId"
                 :class="[
                     'lg:relative fixed right-0 bottom-0 z-30 transform transition-transform duration-300 ease-in-out overflow-hidden',
                     'top-[56px] lg:top-0',
@@ -98,7 +121,7 @@
                     :bill-footer="billFooter"
                     :receipt-footer="receiptFooter"
                     :bill-number="props.billNumber"
-                    :receipt-number="props.receiptNumber"
+                    :receipt-number="String(props.receiptNumber)"
                     :general-settings="props.generalSettings"
                     :open-carts="openCarts"
                     :selected-cart-id="selectedCart?.id || null"
@@ -217,7 +240,7 @@ const updateOrderType = (type: string) => {
 // Handle show receipt modal
 const handleSelectTable = () => {
     // Navigate to tables page with current cart context
-    router.visit(route("retail-cashier.tables"), {
+    router.visit(route("resto.tables"), {
         data: {
             from_cashier: true,
             current_cart_id: selectedCart.value?.id || props.cart?.id,
@@ -310,7 +333,7 @@ onMounted(() => {
     // If no tableId in URL and we have a pending cashiering session, redirect to tables page
     // if (!urlTableId && props.pendingCashiering) {
     //     nextTick(() => {
-    //         router.visit(route("retail-cashier.tables"));
+    //         router.visit(route("resto.tables"));
     //     });
     // }
 });

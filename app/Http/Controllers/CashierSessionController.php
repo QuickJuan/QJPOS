@@ -79,10 +79,10 @@ class CashierSessionController extends Controller
         // Add selected category slug to view data
         $viewData['selectedCategorySlug'] = $categorySlug;
 
-        return Inertia::render('RetailCashier/Index', $viewData);
+        return Inertia::render('Resto/Index', $viewData);
     }
 
-    public function preview(): Response
+    public function preview(Request $request): Response
     {
         $activeBranch = session('active_branch');
 
@@ -96,7 +96,7 @@ class CashierSessionController extends Controller
             $sessionSummary = $this->cashierSessionService->getSessionSummary($openSession);
         }
 
-        return Inertia::render('RetailCashier/Preview', [
+        return Inertia::render('Resto/Preview', [
             'activeBranch'   => $activeBranch,
             'openSession'    => $openSession,
             'sessionSummary' => $sessionSummary ?? null,
@@ -118,7 +118,7 @@ class CashierSessionController extends Controller
     {
         $product = Product::with(['options.optionItems.product.media'])->findOrFail($productId);
 
-        return Inertia::render('RetailCashier/ProductOption', [
+        return Inertia::render('Resto/ProductOption', [
             'product' => ProductResource::make($product),
         ]);
     }
@@ -205,7 +205,7 @@ class CashierSessionController extends Controller
                 'location_type' => $location->location_type,
             ]);
 
-        return Inertia::render('RetailCashier/Tables', [
+        return Inertia::render('Resto/Tables', [
             'tables'      => $tables,
             'locations'   => $locations,
             'currentUser' => Auth::user(),

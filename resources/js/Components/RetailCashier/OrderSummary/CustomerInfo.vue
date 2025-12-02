@@ -19,13 +19,13 @@
                 </span>
             </div>
 
-            <!-- Table Selector -->
-            <TableSelector
-                :current-table-id="currentTableId"
-                :branch-id="branchId"
-                :selected-cart-id="cart?.id"
-                @table-changed="handleTableChanged"
-            />
+            <!-- Selected Table Label -->
+            <div class="flex items-center gap-2">
+                <span class="text-sm text-secondary-600">Table:</span>
+                <span class="text-sm font-medium text-secondary-800">
+                    {{ tableInfo?.name || "No Table Selected" }}
+                </span>
+            </div>
         </div>
     </div>
 </template>
@@ -34,7 +34,6 @@
 import { UserIcon } from "@heroicons/vue/24/outline";
 import { ref, computed } from "vue";
 import { usePage } from "@inertiajs/vue3";
-import TableSelector from "../TableSelector.vue";
 import PageProps from "@/Types/PageProps";
 
 const props = defineProps<{

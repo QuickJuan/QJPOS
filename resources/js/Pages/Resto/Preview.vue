@@ -136,7 +136,7 @@ const beginningCash = ref("");
 const showCloseDialog = ref(false);
 
 const continueSession = () => {
-    router.visit(route("retail-cashier.index"));
+    router.visit(route("resto.index"));
 };
 
 const confirmCloseSessionModal = (event: any) => {
@@ -144,9 +144,9 @@ const confirmCloseSessionModal = (event: any) => {
 };
 
 const confirmCloseSession = (data: any) => {
-    console.log(data)
+    console.log(data);
     router.post(
-        route("retail-cashier.session.close"),
+        route("resto.session.close"),
         {
             cash_denomination: data.denominationData,
             closing_cash: data.totalCashCounted,
@@ -180,7 +180,7 @@ const startSession = () => {
     }
 
     router.post(
-        route("retail-cashier.session.start"),
+        route("resto.session.start"),
         {
             beginning_cash: parseFloat(beginningCash.value),
             branch_id: page.props?.active_branch?.id || null,

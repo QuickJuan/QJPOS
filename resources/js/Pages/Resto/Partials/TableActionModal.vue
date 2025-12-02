@@ -2,7 +2,7 @@
     <Dialog
         :visible="show"
         modal
-        :header="`Table ${table?.name || ''}`"
+        :header="`${table?.name || ''}`"
         :style="{ width: '400px' }"
         :closable="true"
         @hide="handleClose"
@@ -63,19 +63,6 @@
                     :disabled="!table"
                 />
 
-                <!-- Take Order -->
-                <Button
-                    v-if="
-                        !isTakeoutOccupied && table && table.status === 'vacant'
-                    "
-                    label="Take Order"
-                    icon="pi pi-plus"
-                    class="w-full"
-                    severity="success"
-                    @click="handleTakeOrder"
-                    :disabled="!table"
-                />
-
                 <!-- View Order (only if occupied) -->
                 <Button
                     v-if="
@@ -90,18 +77,14 @@
                     @click="$emit('viewOrder')"
                 />
 
-                <!-- Refund Order (only if occupied) -->
+                <!-- Vacant table (only if occupied and there is no cart associated with it or no cart items) -->
                 <Button
-                    v-if="
-                        !isTakeoutOccupied &&
-                        table &&
-                        table.status === 'occupied'
-                    "
-                    label="Refund Order"
+                    v-if="table && table.status === 'occupied'"
+                    label="Vacant Table"
                     icon="pi pi-undo"
                     class="w-full"
-                    severity="danger"
-                    @click="$emit('refundOrder')"
+                    severity="warning"
+                    @click="vacantTable"
                 />
 
                 <!-- Merge Table (only for vacant tables) -->
@@ -150,13 +133,24 @@
                 />
             </div>
 
-            <!-- Pax/Guest Input for Vacant Tables -->
+            <!-- Pax/Guest Input for Vacant Tables: show immediately -->
             <div
-                v-if="table && table.status === 'vacant' && showPaxInput"
+                v-if="table && table.status === 'vacant'"
                 class="space-y-3 border-t pt-4"
             >
-                <h4 class="font-medium text-gray-900">Order Details</h4>
-
+                <h4 class="font-medium text-gray-900">Guest Count</h4>
+                <div class="flex flex-wrap gap-2 mb-2">
+                    <button
+                        v-for="n in [1, 2, 3, 4, 6, 8, 9, 0]"
+                        :key="n"
+                        type="button"
+                        class="px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-800 font-semibold hover:bg-primary hover:text-white transition-colors"
+                        :class="{ 'bg-primary text-white': pax === n }"
+                        @click="pax = n"
+                    >
+                        {{ n }}
+                    </button>
+                </div>
                 <div>
                     <TextField
                         label="Number of Pax"
@@ -165,9 +159,9 @@
                         :max="table ? table.chairs : 10"
                         class="w-full"
                         placeholder="Enter number of guests"
+                        type="number"
                     />
                 </div>
-
                 <div>
                     <TextField
                         label="Guest Name"
@@ -175,17 +169,16 @@
                         :min="1"
                         :max="table ? table.chairs : 10"
                         class="w-full"
-                        placeholder="Enter number of guests"
+                        placeholder="Enter guest name"
                         @keyup.enter="confirmTakeOrder"
                     />
                 </div>
-
                 <div class="flex gap-2">
                     <Button
                         label="Cancel"
                         severity="secondary"
                         class="flex-1"
-                        @click="cancelPaxInput"
+                        @click="handleClose"
                     />
                     <Button
                         label="Start Order"
@@ -204,6 +197,7 @@ import { ref, watch, computed } from "vue";
 import Dialog from "primevue/dialog";
 import Button from "primevue/button";
 import TextField from "@/Components/Form/TextField.vue";
+import { useTable } from "@/composables/useTable";
 
 const props = defineProps<{
     show: boolean;
@@ -212,7 +206,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     close: [];
-    takeOrder: [data: { pax: number; guest_name: string }];
+    takeOrder: [data: { pax: number; guest_name: string; table: any }];
     claimOrder: [];
     transferNumber: [];
     viewOrder: [];
@@ -221,6 +215,8 @@ const emit = defineEmits<{
     unmergeTable: [];
     refundOrder: [];
 }>();
+
+const { vacantTable: vacantTableAction, takeOrder } = useTable();
 
 const isTakeoutOccupied = computed(() => {
     return (
@@ -233,7 +229,6 @@ const isTakeoutOccupied = computed(() => {
 
 const pax = ref(1);
 const guestName = ref("");
-const showPaxInput = ref(false);
 
 watch(
     () => props.show,
@@ -241,35 +236,27 @@ watch(
         if (newShow) {
             pax.value = 1;
             guestName.value = "";
-            showPaxInput.value = false;
         }
     }
 );
-
-const handleTakeOrder = () => {
-    if (props.table && props.table.status === "vacant") {
-        // Show pax input for vacant tables
-        showPaxInput.value = true;
-    } else if (props.table) {
-        // For occupied tables, proceed directly
-        emit("takeOrder", { pax: 1, guest_name: "Existing Guest" });
-    }
-};
 
 const handleClose = () => {
     emit("close");
 };
 
 const confirmTakeOrder = () => {
-    emit("takeOrder", {
+    takeOrder(props.table.id, {
         pax: pax.value,
         guest_name: guestName.value.trim(),
     });
+    handleClose();
 };
 
-const cancelPaxInput = () => {
-    showPaxInput.value = false;
-    pax.value = 1;
-    guestName.value = "";
+const vacantTable = () => {
+    if (!props.table?.id) {
+        return;
+    }
+    vacantTableAction(props.table.id);
+    handleClose();
 };
 </script>

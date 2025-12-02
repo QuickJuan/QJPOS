@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
-use App\Models\TableRoom;
 use App\Models\Branch;
+use App\Models\TableRoom;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use App\Http\Controllers\Controller;
+use App\Http\Resources\TableListingResource;
 
 class TableController extends Controller
 {
@@ -81,5 +82,15 @@ class TableController extends Controller
                 })
             ] : null
         ]);
+    }
+
+
+    public function list(Request $request): JsonResponse
+    {
+        $tables = TableRoom::with(['tableRoomLocation', 'mergeTo'])
+            ->activeBranch();
+
+
+        return response()->json(TableListingResource::collection($tables));
     }
 }

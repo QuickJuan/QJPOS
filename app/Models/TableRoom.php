@@ -77,6 +77,11 @@ class TableRoom extends Model implements HasMedia
         return $this->belongsTo(TableRoom::class, 'merge_to');
     }
 
+    public function mergedTables(): HasMany
+    {
+        return $this->hasMany(TableRoom::class, 'merge_to');
+    }
+
     public function tableRoomLocation(): BelongsTo
     {
         return $this->belongsTo(TableRoomLocation::class);
@@ -85,5 +90,10 @@ class TableRoom extends Model implements HasMedia
     public function carts(): HasMany
     {
         return $this->hasMany(Cart::class);
+    }
+
+    public function cart(): HasOne
+    {
+        return $this->hasOne(Cart::class)->latest();
     }
 }

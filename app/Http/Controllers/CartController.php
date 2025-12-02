@@ -149,16 +149,25 @@ class CartController extends Controller
         }
     }
 
-    public function placeOrder(Request $request, int $cartId): RedirectResponse
+    public function placeOrder(Request $request): RedirectResponse
     {
         try {
-            if (! $cartId) {
-                return redirect()->back()->with('error', 'Cart ID is empty.');
+
+            $payload = $request->validate([
+                'cart_id' => 'required|integer|exists:carts,id',
+                'table_id' => 'required|integer|exists:table_rooms,id',
+            ]);
+
+            $success = $this->cartService->placeOrder($payload);
+
+            if ($success === false) {
+                return redirect()->back()->with('error', 'There was an error placing order.');
             }
 
-            $this->cartService->placeOrder($request, $cartId);
+            return redirect()->route('resto.tables')
+                ->with('success', 'Order placed successfully, We will start preparing your order');
 
-            return redirect()->route('retail-cashier.tables')->with('success', 'Successfully Placed Order.');
+
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'There was an error placing order.');
         }

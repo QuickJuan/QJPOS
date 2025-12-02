@@ -503,7 +503,7 @@ const applyDiscount = () => {
 
     // Send single request with cartItemIds to backend
     router.put(
-        route("retail-cashier.cart.apply-discount"),
+        route("resto.cart.apply-discount"),
         {
             cartItemIds: selectedItemIds,
             discount_id: selectedDiscountId.value,

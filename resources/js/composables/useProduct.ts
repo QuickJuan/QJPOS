@@ -26,7 +26,7 @@ export const useProduct = () => {
             if (product.options && product.options.length > 0) {
                 // Has options, redirect to options page with packaging
                 router.visit(
-                    route("retail-cashier.product.options", {
+                    route("resto.product.options", {
                         product: product.id,
                         orderType: selectedOrderType,
                         tableId: tableId,
@@ -36,7 +36,7 @@ export const useProduct = () => {
             } else {
                 // No options, add to cart with packaging
                 router.post(
-                    route("retail-cashier.cart.add"),
+                    route("resto.cart.add"),
                     {
                         quantity: 1,
                         product_id: product.id,
@@ -75,7 +75,7 @@ export const useProduct = () => {
                     if (product.options && product.options.length > 0) {
                         // Has options, redirect to options page with packaging
                         router.visit(
-                            route("retail-cashier.product.options", {
+                            route("resto.product.options", {
                                 product: product.id,
                                 orderType: selectedOrderType,
                                 tableId: tableId,
@@ -85,7 +85,7 @@ export const useProduct = () => {
                     } else {
                         // No options, add to cart with packaging
                         router.post(
-                            route("retail-cashier.cart.add"),
+                            route("resto.cart.add"),
                             {
                                 quantity: 1,
                                 product_id: product.id,
@@ -124,7 +124,7 @@ export const useProduct = () => {
                 if (product.options && product.options.length > 0) {
                     // Redirect to options page
                     router.visit(
-                        route("retail-cashier.product.options", {
+                        route("resto.product.options", {
                             product: product.id,
                             orderType: selectedOrderType,
                             tableId: tableId,
@@ -133,7 +133,7 @@ export const useProduct = () => {
                 } else {
                     // No options, add to cart without packaging
                     router.post(
-                        route("retail-cashier.cart.add"),
+                        route("resto.cart.add"),
                         {
                             quantity: 1,
                             product_id: product.id,

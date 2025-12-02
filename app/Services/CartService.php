@@ -430,15 +430,26 @@ class CartService
         return $cartItem->delete();
     }
 
-    public function placeOrder(Request $request, int $cartId): int | RedirectResponse
+    public function placeOrder($payload): bool
     {
         // Get the current open cashier session
-        $cart = Cart::findOrFail($cartId);
+        $cart = Cart::findOrFail($payload['cart_id']);
 
-        return $cart->cartItems()->update([
-            'placed_order' => true,
-            'discount_id'  => $request->filled('discountId') ?? null,
-        ]);
+
+        if ($cart) {
+           $cartItems =  $cart->cartItems()->update([
+                'placed_order' => true,
+            ]);
+
+
+            return $cart->update([
+                'table_room_id' => $payload['table_id'],
+            ]);
+
+
+        }
+
+        return false;
     }
 
     public function claimOrder(int $tableId): mixed

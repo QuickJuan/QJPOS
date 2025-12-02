@@ -198,7 +198,7 @@ const handleCategorySelection = (category: Category) => {
 
     // Navigate to category URL
     router.visit(
-        route("retail-cashier.category", {
+        route("resto.category", {
             categorySlug: category.slug,
             ...queryParams,
         })
@@ -219,7 +219,7 @@ const backToCategories = () => {
     }
 
     // Navigate back to main cashier page
-    router.visit(route("retail-cashier.index", queryParams));
+    router.visit(route("resto.index", queryParams));
 };
 
 // Handle adding product to cart

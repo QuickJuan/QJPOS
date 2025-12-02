@@ -363,16 +363,20 @@ const closeTableModal = () => {
 };
 
 const goBackToCashier = () => {
-    router.visit(route("retail-cashier.index"));
+    router.visit(route("resto.index"));
 };
 
 const handleTakeOrder = (data: any) => {
+    alert("emit");
+    console.log(data);
+    selectedTable.value = data.table;
+    console.log("select teb", selectedTable.value);
     if (selectedTable.value.status === "vacant") {
         // Check if we have a selected cart without a table assigned
         if (selectedCart.value && !selectedCart.value.table_id) {
             // Update the existing cart with the table information
             router.put(
-                route("retail-cashier.cart.update", selectedCart.value.id),
+                route("resto.cart.update", selectedCart.value.id),
                 {
                     table_id: selectedTable.value.id,
                     pax: data.pax,
@@ -387,17 +391,9 @@ const handleTakeOrder = (data: any) => {
                             order_type: "dine-in",
                         });
 
-                        toast.add({
-                            severity: "success",
-                            summary: "Table Assigned",
-                            detail: `Assigned table ${selectedTable.value.name} to existing order for ${data.guest_name} (${data.pax} pax)`,
-                            life: 3000,
-                        });
-                        closeTableModal();
-
                         // Navigate to cashier with the assigned table
                         router.visit(
-                            route("retail-cashier.index", {
+                            route("resto.index", {
                                 tableId: selectedTable.value.id,
                                 locationType: "dine-in",
                             })
@@ -416,7 +412,7 @@ const handleTakeOrder = (data: any) => {
         } else {
             // Create a new order as before
             router.post(
-                route("retail-cashier.cart.create-order"),
+                route("resto.cart.create-order"),
                 {
                     table_id: selectedTable.value.id,
                     pax: data.pax,
@@ -461,7 +457,7 @@ const handleTakeOrder = (data: any) => {
 
             // Call merge cart API
             router.post(
-                route("retail-cashier.cart.merge"),
+                route("resto.cart.merge"),
                 {
                     source_cart_id: selectedCart.value.id,
                     target_table_id: targetTableId,
@@ -481,7 +477,7 @@ const handleTakeOrder = (data: any) => {
 
                         // Navigate to cashier with the target table
                         router.visit(
-                            route("retail-cashier.index", {
+                            route("resto.index", {
                                 tableId: targetTableId,
                             })
                         );
@@ -499,7 +495,7 @@ const handleTakeOrder = (data: any) => {
         } else {
             // No current cart items, just navigate to the occupied table
             router.visit(
-                route("retail-cashier.index", {
+                route("resto.index", {
                     // Check if the selected table is merged to the other table.
                     // If yes, use the merge_to column as tableId.
                     // If no, use the id of the selected table
@@ -580,7 +576,7 @@ const handleClaimOrder = () => {
     }
 
     router.post(
-        route("retail-cashier.cart.claim-order", {
+        route("resto.cart.claim-order", {
             tableId: selectedTable.value.id,
         }),
         {},
@@ -636,7 +632,7 @@ const confirmTransfer = () => {
     }
 
     router.post(
-        route("retail-cashier.order.transfer", {
+        route("resto.order.transfer", {
             tableId: selectedTable.value.id,
         }),
         {
@@ -671,7 +667,7 @@ const confirmTransfer = () => {
 
 const handleViewOrder = () => {
     router.visit(
-        route("retail-cashier.index", {
+        route("resto.index", {
             // Check if the selected table is merged to the other table.
             // If yes, use the merge_to column as tableId.
             // If no, use the id of the selected table
@@ -756,7 +752,7 @@ const closeOrdersModal = () => {
 };
 
 const viewOrderDetails = (order: any) => {
-    router.visit(`/retail-cashier?tableId=${order.table_room.id}`);
+    router.visit(`/resto?tableId=${order.table_room.id}`);
 };
 
 onMounted(() => {

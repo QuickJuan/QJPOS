@@ -68,7 +68,7 @@
                 <!-- Action Buttons -->
                 <div class="space-y-3">
                     <button
-                        v-if="!checkCurrentRoute('retail-cashier.tables')"
+                        v-if="!checkCurrentRoute('resto.tables')"
                         @click="handleTablesClick"
                         class="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                     >
@@ -128,9 +128,9 @@ import { router, usePage } from "@inertiajs/vue3";
 import { route } from "ziggy-js";
 import { useConfirm } from "primevue";
 import { useToast } from "primevue";
-import Header from "@/Pages/RetailCashier/Partials/Header.vue";
+import Header from "@/Pages/Resto/Partials/Header.vue";
 import { ConfirmPopup, Toast } from "primevue";
-import CloseSessionModal from "@/Pages/RetailCashier/Partials/CloseSessionModal.vue";
+import CloseSessionModal from "@/Pages/Resto/Partials/CloseSessionModal.vue";
 import {
     QrCodeIcon,
     TableCellsIcon,
@@ -203,7 +203,7 @@ const handleBarcodeSearch = () => {
 
 const handleTablesClick = () => {
     showSidebar.value = false;
-    router.visit(route("retail-cashier.tables"));
+    router.visit(route("resto.tables"));
 };
 
 const handleReviewTransactionsClick = () => {
@@ -234,7 +234,7 @@ const handleLogout = () => {
 const handleConfirmCloseSession = (data: any) => {
     console.log(data);
     router.post(
-        route("retail-cashier.session.close"),
+        route("resto.session.close"),
         {
             cash_denomination: data.denominationData,
             closing_cash: data.totalCashCounted,

@@ -144,4 +144,13 @@ class TableRoomService
             'status'   => TableRoomStatusType::VACANT->value,
         ]);
     }
+
+
+    public function list(Int $branchId): \Illuminate\Database\Eloquent\Collection
+    {
+        return $this->model->with(['tableRoomLocation'])
+            ->where('merge_to', null)
+            ->where('branch_id', $branchId)
+            ->orderBy('table_room_locations.name')->get();
+    }
 }

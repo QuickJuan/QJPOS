@@ -9,7 +9,7 @@
         @update:visible="handleClose"
     >
         <div class="space-y-6">
-            <!-- Sales Summary -->
+            <!-- Sales Summary - Updated -->
             <div class="bg-gray-50 rounded-lg p-4 border">
                 <h4 class="text-lg font-semibold text-gray-900 mb-4">
                     Sales Summary
@@ -176,9 +176,7 @@ const cashDifference = computed(() => {
 
 const handleConfirmCloseSession = async () => {
     try {
-        const response = await axios.get(
-            route("retail-cashier.api.session-summary")
-        );
+        const response = await axios.get(route("resto.api.session-summary"));
         sessionSummaryData.value = response.data;
         showSessionSummaryModal.value = true;
     } catch (error) {

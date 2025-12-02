@@ -118,9 +118,7 @@ const printBill = async () => {
     try {
         // Update the bill no by adding plus 1 to the previous bill no
         router.put(
-            `/retail-cashier/update-bill-no/${
-                (page.props as any)?.active_branch?.id
-            }`
+            `/resto/update-bill-no/${(page.props as any)?.active_branch?.id}`
         );
 
         // Check if printer is connected

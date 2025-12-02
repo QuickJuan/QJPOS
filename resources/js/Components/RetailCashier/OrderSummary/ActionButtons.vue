@@ -18,12 +18,7 @@
 
                 <!-- Place Order Button - Show whenever there are items to place -->
                 <button
-                    @click="
-                        $emit('checkout', {
-                            cart_id: props.cart.id,
-                            discount_id: appliedDiscount?.discountId,
-                        })
-                    "
+                    @click="placeOrder(props.tableId, props.cart?.id)"
                     class="px-4 py-2.5 bg-success-600 text-white rounded-lg font-semibold hover:bg-success-700 transition-colors text-sm whitespace-nowrap"
                 >
                     Place Order
@@ -129,6 +124,7 @@ import { usePage } from "@inertiajs/vue3";
 import { ConfirmPopup, useConfirm } from "primevue";
 import axios from "axios";
 import { route } from "ziggy-js";
+import { useTable } from "@/composables/useTable";
 
 const props = defineProps<{
     cart: any;
@@ -176,6 +172,7 @@ const hasItemsToPlace = computed(() => {
     return props.orderItems.some((item) => item.placed_order === false);
 });
 
+const { placeOrder } = useTable();
 // Use confirm
 const confirm = useConfirm();
 

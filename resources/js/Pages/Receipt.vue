@@ -220,7 +220,7 @@ const printReceipt = () => {
 
 // Go back to cashier
 const goBack = () => {
-    router.visit(route("retail-cashier.index"));
+    router.visit(route("resto.index"));
 };
 
 onMounted(() => {
