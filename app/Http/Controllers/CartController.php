@@ -164,7 +164,7 @@ class CartController extends Controller
                 return redirect()->back()->with('error', 'There was an error placing order.');
             }
 
-            return redirect()->route('resto.tables')
+            return redirect()->route('table-rooms.index')
                 ->with('success', 'Order placed successfully, We will start preparing your order');
 
 

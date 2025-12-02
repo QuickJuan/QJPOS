@@ -291,6 +291,7 @@ const handleSettleBill = (data: any) => {
 
 // Handle print bill
 const handlePrintBill = () => {
+    console.log("bills data items ", props.orderItems);
     // Populate bill data
     billData.value = {
         billNumber: props.billNumber,

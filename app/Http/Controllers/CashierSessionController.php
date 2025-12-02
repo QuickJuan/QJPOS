@@ -108,7 +108,7 @@ class CashierSessionController extends Controller
         try {
             $this->cashierSessionService->startSession($request);
 
-            return redirect()->route('retail-cashier.index')->with('success', 'New session successfully created');
+            return redirect()->route('resto.index')->with('success', 'New session successfully created');
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'There was an error while starting new session.');
         }
@@ -217,7 +217,7 @@ class CashierSessionController extends Controller
         try {
             [$table, $cart] = $this->cashierSessionService->createOrder($request);
 
-            return redirect()->route('retail-cashier.index', ['tableId' => $request->table_id, 'locationType' => $table->tableRoomLocation->location_type])->with('success', 'Order started successfully');
+            return redirect()->route('resto.index', ['tableId' => $request->table_id, 'locationType' => $table->tableRoomLocation->location_type])->with('success', 'Order started successfully');
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'Failed to start order: ' . $e->getMessage());
         }

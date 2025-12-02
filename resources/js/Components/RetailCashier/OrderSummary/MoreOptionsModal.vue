@@ -7,7 +7,7 @@
         @update:visible="handleClose"
     >
         <div class="space-y-3">
-            <button
+            <!-- <button
                 @click="handleSaveOrder"
                 :disabled="orderItems.length === 0"
                 class="w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center gap-3 bg-gray-100 text-secondary-700 hover:bg-gray-200 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
@@ -19,7 +19,7 @@
                         Save order for later processing
                     </div>
                 </div>
-            </button>
+            </button> -->
 
             <button
                 @click="handleApplyDiscount"

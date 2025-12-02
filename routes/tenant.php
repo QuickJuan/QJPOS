@@ -119,7 +119,7 @@ Route::middleware([
                     Route::controller(CashierSessionController::class)
                         ->group(function () {
                             Route::get('/', 'index')->name('index');
-                            Route::get('/tables', 'tables')->name('tables');
+                            // Route::get('/tables', 'tables')->name('tables');
                             Route::get('/preview', 'preview')->name('preview');
                             Route::get('/product/{product}/options', 'productOptions')->name('product.options');
                             Route::get('/{categorySlug?}', 'index')->name('category');
@@ -163,6 +163,7 @@ Route::middleware([
                 ->prefix('/table-rooms')
                 ->controller(TableRoomController::class)
                 ->group(function () {
+                    Route::get('/', 'index')->name('index');
                     Route::get('/list', 'list')->name('list');
                     Route::post('/tables', 'store')->name('store');
                     Route::post('/tables/bulk-update-positions', 'bulkUpdatePositions')->name('bulk-update-positions');
@@ -170,6 +171,7 @@ Route::middleware([
                     Route::post('/tables/{tableId}/vacant', 'vacantTable')->name('vacant');
                     Route::put('/tables/{tableId}', 'update')->name('update');
                     Route::put('/tables/{tableId}/unmerge', 'unmergeTable')->name('unmerge');
+                    Route::put('/tables/{tableId}/unmerge-all', 'unmergeAllTables')->name('unmerge-all');
                     Route::put('/tables/{tableId}/merge', 'mergeTable')->name('merge');
                     Route::delete('/tables/{tableId}', 'destroy')->name('destroy');
                 });

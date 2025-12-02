@@ -2,23 +2,53 @@
     <Dialog
         :visible="show"
         modal
-        :header="`${table?.name || ''}`"
-        :style="{ width: '400px' }"
+        :header="`${
+            table?.mergedTo
+                ? 'Merged to ' + table.mergedToTable
+                : table?.name || ''
+        }`"
+        :style="{ width: '800px' }"
         :closable="true"
         @hide="handleClose"
         @update:visible="handleClose"
     >
         <div class="space-y-4">
+            <!-- Merged Table Info Badge -->
+            <div
+                v-if="hasMergedTables"
+                class="bg-purple-50 border border-purple-200 p-3 rounded-lg"
+            >
+                <p class="text-sm font-medium text-purple-900">
+                    <i class="pi pi-info-circle mr-2"></i>
+                    This table has {{ allNestedMergedTables.length }} merged
+                    {{
+                        allNestedMergedTables.length === 1 ? "table" : "tables"
+                    }}
+                </p>
+
+                <div class="mt-2 space-y-1">
+                    <p
+                        v-for="mergedTable in allNestedMergedTables"
+                        :key="mergedTable.id"
+                        class="text-xs text-purple-700"
+                    >
+                        <span class="inline-block mr-2">•</span>
+                        <span class="font-medium">{{ mergedTable.name }}</span>
+                    </p>
+                </div>
+            </div>
+
             <!-- Table Info -->
             <div class="bg-gray-50 p-4 rounded-lg">
                 <div class="flex items-center justify-between mb-2">
                     <span class="text-sm font-medium text-gray-700">
                         Status:
                     </span>
+
                     <span
                         :class="[
                             'px-2 py-1 text-xs font-medium rounded-full capitalize',
-                            table?.status === 'vacant' &&
+                            table?.status === 'available' &&
                                 'bg-green-100 text-green-800',
                             table?.status === 'occupied' &&
                                 'bg-red-100 text-red-800',
@@ -31,24 +61,24 @@
                         {{ table?.status ?? "" }}
                     </span>
                 </div>
-                <div class="text-sm text-gray-600">
-                    <p>{{ table?.chairs }} chairs</p>
-                    <p v-if="table?.current_order">
-                        Current Order: #{{ table.current_order.id }}
-                    </p>
+                <div
+                    class="flex text-sm text-gray-600 justify-between space-y-1"
+                >
+                    <p v-if="table?.mergedTo">Original #</p>
+                    <p v-if="table?.mergedTo">{{ table.name }}</p>
                 </div>
             </div>
 
             <!-- Action Buttons -->
-            <div class="space-y-3">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <!-- Order Claim -->
                 <Button
                     v-if="isTakeoutOccupied"
                     label="Order Claim"
                     icon="pi pi-plus"
-                    class="w-full"
+                    class="w-full h-12"
                     severity="success"
-                    @click="$emit('claimOrder')"
+                    @click="handleClaimOrder"
                     :disabled="!table"
                 />
 
@@ -57,9 +87,9 @@
                     v-if="isTakeoutOccupied"
                     label="Transfer Number"
                     icon="pi pi-arrow-right"
-                    class="w-full"
+                    class="w-full h-12"
                     severity="success"
-                    @click="$emit('transferNumber')"
+                    @click="handleTransferNumber"
                     :disabled="!table"
                 />
 
@@ -72,41 +102,57 @@
                     "
                     label="View Order"
                     icon="pi pi-eye"
-                    class="w-full"
+                    class="w-full h-12"
                     severity="info"
-                    @click="$emit('viewOrder')"
+                    @click="handleViewOrder"
                 />
 
-                <!-- Vacant table (only if occupied and there is no cart associated with it or no cart items) -->
+                <!-- Vacant table (only if occupied and not merged) -->
                 <Button
-                    v-if="table && table.status === 'occupied'"
+                    v-if="
+                        table && table.status === 'occupied' && !table.mergedTo
+                    "
                     label="Vacant Table"
                     icon="pi pi-undo"
-                    class="w-full"
+                    class="w-full h-12"
                     severity="warning"
                     @click="vacantTable"
                 />
 
-                <!-- Merge Table (only for vacant tables) -->
+                <!-- Merge Table (only for available tables) -->
                 <Button
                     v-if="
-                        !isTakeoutOccupied && table && table.status === 'vacant'
+                        !isTakeoutOccupied &&
+                        table &&
+                        table.status === 'available' &&
+                        !table.mergedTo
                     "
                     label="Merge Table"
                     icon="pi pi-link"
-                    class="w-full"
+                    class="w-full h-12"
                     severity="secondary"
-                    @click="$emit('mergeTable')"
+                    @click="handleMergeTable"
                 />
 
-                <!-- Unmerge Table (only for merged tables) -->
+                <!-- Unmerge Table (this table from its parent) -->
+
                 <Button
-                    v-if="!isTakeoutOccupied && table.merge_to"
-                    label="Unmerge Table"
+                    v-if="table?.mergedTo"
+                    label="Unmerge from Parent Table"
                     icon="pi pi-arrow-up-right-and-arrow-down-left-from-center"
-                    class="w-full"
+                    class="w-full h-12"
                     severity="warning"
-                    @click="$emit('unmergeTable')"
+                    @click="handleUnmergeFromTable"
+                />
+
+                <!-- Unmerge all merged tables from this table -->
+                <Button
+                    v-if="table?.mergedTables && table.mergedTables.length > 0"
+                    label="Unmerge All Tables"
+                    icon="pi pi-arrow-up-right-and-arrow-down-left-from-center"
+                    class="w-full h-12"
+                    severity="warning"
+                    @click="handleUnmergeTables"
                 />
 
                 <!-- Reserve/Unreserve -->
@@ -122,21 +168,21 @@
                             ? 'pi pi-times'
                             : 'pi pi-clock'
                     "
-                    class="w-full"
+                    class="w-full h-12"
                     :severity="
                         table && table.status === 'reserved'
                             ? 'danger'
                             : 'warning'
                     "
-                    @click="$emit('reserveTable')"
+                    @click="handleReserveTable"
                     :disabled="!table"
                 />
             </div>
 
-            <!-- Pax/Guest Input for Vacant Tables: show immediately -->
+            <!-- Pax/Guest Input for Available Tables: show immediately -->
             <div
-                v-if="table && table.status === 'vacant'"
-                class="space-y-3 border-t pt-4"
+                v-if="table && table.status === 'available' && !table.mergeTo"
+                class="space-y-3 border-t pt-4 space-y-8"
             >
                 <h4 class="font-medium text-gray-900">Guest Count</h4>
                 <div class="flex flex-wrap gap-2 mb-2">
@@ -144,14 +190,14 @@
                         v-for="n in [1, 2, 3, 4, 6, 8, 9, 0]"
                         :key="n"
                         type="button"
-                        class="px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-800 font-semibold hover:bg-primary hover:text-white transition-colors"
-                        :class="{ 'bg-primary text-white': pax === n }"
+                        class="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-800 font-semibold hover:bg-primary hover:text-white transition-colors"
+                        :class="{ 'bg-primary text-red-500': pax === n }"
                         @click="pax = n"
                     >
                         {{ n }}
                     </button>
                 </div>
-                <div>
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
                     <TextField
                         label="Number of Pax"
                         v-model="pax"
@@ -161,19 +207,18 @@
                         placeholder="Enter number of guests"
                         type="number"
                     />
-                </div>
-                <div>
                     <TextField
                         label="Guest Name"
                         v-model="guestName"
                         :min="1"
                         :max="table ? table.chairs : 10"
-                        class="w-full"
+                        class="w-full md:col-span-3"
                         placeholder="Enter guest name"
                         @keyup.enter="confirmTakeOrder"
                     />
                 </div>
-                <div class="flex gap-2">
+
+                <div class="flex gap-4">
                     <Button
                         label="Cancel"
                         severity="secondary"
@@ -198,6 +243,7 @@ import Dialog from "primevue/dialog";
 import Button from "primevue/button";
 import TextField from "@/Components/Form/TextField.vue";
 import { useTable } from "@/composables/useTable";
+import TableManagementLayout from "@/Layouts/TableManagementLayout.vue";
 
 const props = defineProps<{
     show: boolean;
@@ -210,13 +256,23 @@ const emit = defineEmits<{
     claimOrder: [];
     transferNumber: [];
     viewOrder: [];
-    mergeTable: [];
+    mergeTable: [table: any];
     reserveTable: [];
     unmergeTable: [];
     refundOrder: [];
 }>();
 
-const { vacantTable: vacantTableAction, takeOrder } = useTable();
+const {
+    vacantTable: vacantTableAction,
+    takeOrder,
+    unmergeFromTable,
+    unmergeTables,
+    viewOrder,
+    mergeTable,
+    claimOrder,
+    transferNumber,
+    reserveTable,
+} = useTable();
 
 const isTakeoutOccupied = computed(() => {
     return (
@@ -225,6 +281,24 @@ const isTakeoutOccupied = computed(() => {
         props.table.tableRoomLocation &&
         props.table.tableRoomLocation.location_type === "takeout"
     );
+});
+
+const hasMergedTables = computed(() => {
+    return props.table?.mergedTables && props.table.mergedTables.length > 0;
+});
+
+const getAllMergedTables = (tables: any[] = [], result: any[] = []): any[] => {
+    for (const table of tables || []) {
+        result.push(table);
+        if (table.mergedTables && table.mergedTables.length > 0) {
+            getAllMergedTables(table.mergedTables, result);
+        }
+    }
+    return result;
+};
+
+const allNestedMergedTables = computed(() => {
+    return getAllMergedTables(props.table?.mergedTables);
 });
 
 const pax = ref(1);
@@ -257,6 +331,47 @@ const vacantTable = () => {
         return;
     }
     vacantTableAction(props.table.id);
+    handleClose();
+};
+
+const handleUnmergeFromTable = () => {
+    if (!props.table?.id) {
+        return;
+    }
+    unmergeFromTable(props.table.id);
+    handleClose();
+};
+
+const handleUnmergeTables = () => {
+    if (!props.table?.id) {
+        return;
+    }
+    unmergeTables(props.table.id);
+    handleClose();
+};
+
+const handleViewOrder = () => {
+    viewOrder(props.table);
+    handleClose();
+};
+
+const handleMergeTable = () => {
+    emit("mergeTable", props.table);
+    handleClose();
+};
+
+const handleClaimOrder = () => {
+    claimOrder(props.table.id);
+    handleClose();
+};
+
+const handleTransferNumber = () => {
+    transferNumber(props.table);
+    handleClose();
+};
+
+const handleReserveTable = () => {
+    reserveTable(props.table);
     handleClose();
 };
 </script>

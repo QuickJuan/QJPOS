@@ -553,7 +553,7 @@ const handlePrintBill = () => {
 };
 
 const handleViewTable = () => {
-    router.visit(route("resto.tables"));
+    router.visit(route("table-rooms.index"));
 };
 
 const handleEndOfShift = () => {

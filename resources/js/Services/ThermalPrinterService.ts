@@ -444,17 +444,23 @@ class ThermalPrinterService {
                     }
 
                     // Less tax (if any)
-                    if (item.lessTax && parseFloat(String(item.lessTax)) > 0) {
-                        const taxLine = this.formatDeductionLine('Less Tax:', item.lessTax);
-                        commands.push(...this.stringToBytes(`  ${taxLine}`));
-                        commands.push(...this.ESC_POS.LINE_FEED);
+                    if (item.less_tax !== undefined && item.less_tax !== null && item.less_tax !== '') {
+                        const lessTaxValue = typeof item.less_tax === 'string' ? parseFloat(item.less_tax) : item.less_tax;
+                        if (lessTaxValue !== 0) {
+                            const taxLine = this.formatDeductionLine('Less Tax:', lessTaxValue);
+                            commands.push(...this.stringToBytes(`  ${taxLine}`));
+                            commands.push(...this.ESC_POS.LINE_FEED);
+                        }
                     }
 
                     // Less discount (if any)
-                    if (item.discount && parseFloat(String(item.discount)) > 0) {
-                        const discountLine = this.formatDeductionLine('Less Discount:', item.discount);
-                        commands.push(...this.stringToBytes(`  ${discountLine}`));
-                        commands.push(...this.ESC_POS.LINE_FEED);
+                    if (item.discount !== undefined && item.discount !== null && item.discount !== '') {
+                        const discountValue = typeof item.discount === 'string' ? parseFloat(item.discount) : item.discount;
+                        if (discountValue !== 0) {
+                            const discountLine = this.formatDeductionLine('Less Discount:', discountValue);
+                            commands.push(...this.stringToBytes(`  ${discountLine}`));
+                            commands.push(...this.ESC_POS.LINE_FEED);
+                        }
                     }
 
                     commands.push(...this.ESC_POS.LINE_FEED); // Space between items
@@ -471,17 +477,21 @@ class ThermalPrinterService {
             commands.push(...this.ESC_POS.LINE_FEED);
 
             // Less Tax (matching ReceiptLayout naming)
-            if (receiptData.lessTax && parseFloat(String(receiptData.lessTax)) > 0) {
-                const lessTax = typeof receiptData.lessTax === 'string' ? parseFloat(receiptData.lessTax) || 0 : receiptData.lessTax;
-                commands.push(...this.stringToBytes(this.formatTotalLine('Less Tax:', -lessTax)));
-                commands.push(...this.ESC_POS.LINE_FEED);
+            if (receiptData.lessTax !== undefined && receiptData.lessTax !== null && receiptData.lessTax !== '') {
+                const lessTaxValue = typeof receiptData.lessTax === 'string' ? parseFloat(receiptData.lessTax) : receiptData.lessTax;
+                if (lessTaxValue !== 0) {
+                    commands.push(...this.stringToBytes(this.formatTotalLine('Less Tax:', -lessTaxValue)));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                }
             }
 
             // Less Discount (matching ReceiptLayout naming)
-            if (receiptData.lessDiscount && parseFloat(String(receiptData.lessDiscount)) > 0) {
-                const lessDiscount = typeof receiptData.lessDiscount === 'string' ? parseFloat(receiptData.lessDiscount) || 0 : receiptData.lessDiscount;
-                commands.push(...this.stringToBytes(this.formatTotalLine('Less Discount:', -lessDiscount)));
-                commands.push(...this.ESC_POS.LINE_FEED);
+            if (receiptData.lessDiscount !== undefined && receiptData.lessDiscount !== null && receiptData.lessDiscount !== '') {
+                const lessDiscountValue = typeof receiptData.lessDiscount === 'string' ? parseFloat(receiptData.lessDiscount) : receiptData.lessDiscount;
+                if (lessDiscountValue !== 0) {
+                    commands.push(...this.stringToBytes(this.formatTotalLine('Less Discount:', -lessDiscountValue)));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                }
             }
 
             // Total separator and amount - bold
@@ -628,7 +638,7 @@ class ThermalPrinterService {
         }
 
         const numAmount = typeof amount === 'string' ? parseFloat(amount) || 0 : amount;
-        const amountText = numAmount.toFixed(2);
+        const amountText = this.formatNumberWithComma(numAmount.toFixed(2));
         const spaces = ' '.repeat(Math.max(0, maxWidth - label.length - amountText.length));
         return `${label}${spaces}${amountText}`;
     }
@@ -650,8 +660,8 @@ class ThermalPrinterService {
         const numPrice = typeof price === 'string' ? parseFloat(price) || 0 : price;
         const numAmount = typeof amount === 'string' ? parseFloat(amount) || 0 : amount;
 
-        const qtyPriceText = `${quantity} x ${numPrice.toFixed(2)}`;
-        const amountText = numAmount.toFixed(2);
+        const qtyPriceText = `${quantity} x ${this.formatNumberWithComma(numPrice.toFixed(2))}`;
+        const amountText = this.formatNumberWithComma(numAmount.toFixed(2));
         const spaces = ' '.repeat(Math.max(1, maxWidth - qtyPriceText.length - amountText.length));
 
         return `${qtyPriceText}${spaces}${amountText}`;
@@ -663,7 +673,7 @@ class ThermalPrinterService {
     private formatOptionLine(name: string, price: number | string): string {
         const maxWidth = (this.currentConfig?.character_width || 47) - 2; // Account for indentation
         const numPrice = typeof price === 'string' ? parseFloat(price) || 0 : price;
-        const priceText = numPrice.toFixed(2);
+        const priceText = this.formatNumberWithComma(numPrice.toFixed(2));
         const optionText = `+ ${name}`;
         const spaces = ' '.repeat(Math.max(1, maxWidth - optionText.length - priceText.length));
 
@@ -676,7 +686,7 @@ class ThermalPrinterService {
     private formatDeductionLine(label: string, amount: number | string): string {
         const maxWidth = (this.currentConfig?.character_width || 47) - 2; // Account for indentation
         const numAmount = typeof amount === 'string' ? parseFloat(amount) || 0 : amount;
-        const amountText = `-${numAmount.toFixed(2)}`;
+        const amountText = `-${this.formatNumberWithComma(numAmount.toFixed(2))}`;
         const spaces = ' '.repeat(Math.max(1, maxWidth - label.length - amountText.length));
 
         return `${label}${spaces}${amountText}`;
@@ -778,7 +788,7 @@ class ThermalPrinterService {
 
             // Table header - medium size and centered
             commands.push(...this.ESC_POS.ALIGN_CENTER);
-            this.addTextWithSize(commands, `Table #: ${billData.tableInfo.name || 'N/A'}`, 'medium');
+            this.addTextWithSize(commands, ` ${billData.tableInfo.name || 'N/A'}`, 'medium');
             commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
             // Bill Info - left align
@@ -795,10 +805,7 @@ class ThermalPrinterService {
                 commands.push(...this.stringToBytes(this.formatInfoLine('Cashier:', billData.cashier)));
                 commands.push(...this.ESC_POS.LINE_FEED);
             }
-            if (billData.orderType) {
-                commands.push(...this.stringToBytes(this.formatInfoLine('Order Type:', billData.orderType)));
-                commands.push(...this.ESC_POS.LINE_FEED);
-            }
+
             commands.push(...this.ESC_POS.LINE_FEED);
 
             // Items separator
@@ -807,11 +814,11 @@ class ThermalPrinterService {
             commands.push(...this.ESC_POS.LINE_FEED);
 
             // ORDER ITEMS header - centered with configurable font size
-            commands.push(...this.ESC_POS.ALIGN_CENTER);
-            commands.push(...this.ESC_POS.BOLD_ON);
-            const headerSize = this.currentConfig?.font_sizes?.headers || 'small';
-            this.addTextWithSize(commands, 'ORDER ITEMS', headerSize);
-            commands.push(...this.ESC_POS.BOLD_OFF);
+            // commands.push(...this.ESC_POS.ALIGN_CENTER);
+            // commands.push(...this.ESC_POS.BOLD_ON);
+            // const headerSize = this.currentConfig?.font_sizes?.headers || 'small';
+            // this.addTextWithSize(commands, 'ORDER ITEMS', headerSize);
+            // commands.push(...this.ESC_POS.BOLD_OFF);
             commands.push(...this.ESC_POS.LINE_FEED);
 
             // Group items by order type (matching BillLayout)
@@ -848,17 +855,23 @@ class ThermalPrinterService {
                     }
 
                     // Less tax (if any)
-                    if (item.lessTax && parseFloat(String(item.lessTax)) > 0) {
-                        const taxLine = this.formatDeductionLine('Less Tax:', item.lessTax);
-                        commands.push(...this.stringToBytes(`  ${taxLine}`));
-                        commands.push(...this.ESC_POS.LINE_FEED);
+                    if (item.less_tax !== undefined && item.less_tax !== null && item.less_tax !== '') {
+                        const lessTaxValue = typeof item.less_tax === 'string' ? parseFloat(item.less_tax) : item.less_tax  ;
+                        if (lessTaxValue !== 0) {
+                            const taxLine = this.formatDeductionLine('Less Tax:', lessTaxValue);
+                            commands.push(...this.stringToBytes(`  ${taxLine}`));
+                            commands.push(...this.ESC_POS.LINE_FEED);
+                        }
                     }
 
                     // Less discount (if any)
-                    if (item.discount && parseFloat(String(item.discount)) > 0) {
-                        const discountLine = this.formatDeductionLine('Less Discount:', item.discount);
-                        commands.push(...this.stringToBytes(`  ${discountLine}`));
-                        commands.push(...this.ESC_POS.LINE_FEED);
+                    if (item.discount !== undefined && item.discount !== null && item.discount !== '') {
+                        const discountValue = typeof item.discount === 'string' ? parseFloat(item.discount) : item.discount;
+                        if (discountValue !== 0) {
+                            const discountLine = this.formatDeductionLine('Less Discount:', discountValue);
+                            commands.push(...this.stringToBytes(`  ${discountLine}`));
+                            commands.push(...this.ESC_POS.LINE_FEED);
+                        }
                     }
 
                     commands.push(...this.ESC_POS.LINE_FEED); // Space between items
@@ -878,17 +891,21 @@ class ThermalPrinterService {
             }
 
             // Less Tax (if applicable)
-            if (billData.lessTax && parseFloat(String(billData.lessTax)) > 0) {
-                const lessTax = typeof billData.lessTax === 'string' ? parseFloat(billData.lessTax) || 0 : billData.lessTax;
-                commands.push(...this.stringToBytes(this.formatTotalLine('Less Tax:', -lessTax)));
-                commands.push(...this.ESC_POS.LINE_FEED);
+            if (billData.lessTax !== undefined && billData.lessTax !== null && billData.lessTax !== '') {
+                const lessTaxValue = typeof billData.lessTax === 'string' ? parseFloat(billData.lessTax) : billData.lessTax;
+                if (lessTaxValue !== 0) {
+                    commands.push(...this.stringToBytes(this.formatTotalLine('Less Tax:', -lessTaxValue)));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                }
             }
 
             // Less Discount (if applicable)
-            if (billData.lessDiscount && parseFloat(String(billData.lessDiscount)) > 0) {
-                const lessDiscount = typeof billData.lessDiscount === 'string' ? parseFloat(billData.lessDiscount) || 0 : billData.lessDiscount;
-                commands.push(...this.stringToBytes(this.formatTotalLine('Less Discount:', -lessDiscount)));
-                commands.push(...this.ESC_POS.LINE_FEED);
+            if (billData.lessDiscount !== undefined && billData.lessDiscount !== null && billData.lessDiscount !== '') {
+                const lessDiscountValue = typeof billData.lessDiscount === 'string' ? parseFloat(billData.lessDiscount) : billData.lessDiscount;
+                if (lessDiscountValue !== 0) {
+                    commands.push(...this.stringToBytes(this.formatTotalLine('Less Discount:', -lessDiscountValue)));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                }
             }
 
             // Discount details (if applicable)
@@ -1047,6 +1064,15 @@ class ThermalPrinterService {
      */
     public setConfig(config: PrinterConfig): void {
         this.currentConfig = config;
+    }
+
+    /**
+     * Format number with comma separators (e.g., 1000.00 → 1,000.00)
+     */
+    private formatNumberWithComma(numberString: string): string {
+        const parts = numberString.split('.');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        return parts.join('.');
     }
 }
 

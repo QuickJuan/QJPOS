@@ -7,9 +7,11 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\Request;
 use App\Models\TableRoomLocation;
+use App\Enums\TableRoomStatusType;
 use App\Services\TableRoomService;
 use Illuminate\Http\RedirectResponse;
 use App\Http\Requests\TableRoomRequest;
+use App\Http\Resources\TableLocationResource;
 use App\Http\Requests\TableReservationRequest;
 
 class TableRoomController extends Controller
@@ -22,12 +24,14 @@ class TableRoomController extends Controller
 
     public function index(Request $request)
     {
+
         //get the active branch using user cashier id from session
-        $branchId = auth()->user()->cashier?->branch_id ?? null;
-        $tableRooms = $this->tableRoomService->list($branchId);
+        $cashierSession = $request->user()->cashierSession;
+
+        $tableRooms = $this->tableRoomService->list($cashierSession->branch_id);
 
         return Inertia::render('Resto/Tables', [
-            'tableRooms' => $tableRooms,
+            'tableRooms' => json_decode(json_encode(TableLocationResource::collection($tableRooms)), true),
         ]);
     }
 
@@ -125,7 +129,38 @@ class TableRoomController extends Controller
         try {
             $this->tableRoomService->unmergeTable($tableId);
 
-            return redirect()->route('resto.tables')->with('success', 'Table unmerged successfully.');
+            $redirectUrl = route('table-rooms.index');
+            if ($request->has('locationId')) {
+                $redirectUrl .= '?locationId=' . $request->query('locationId');
+            }
+
+            return redirect($redirectUrl)->with('success', 'Table unmerged successfully.');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+    }
+
+    public function unmergeAllTables(Request $request, int $tableId): RedirectResponse
+    {
+        try {
+            // Get the table to unmerge all its merged tables
+            $table = $this->tableRoomService->model->find($tableId);
+            if (!$table) {
+                return redirect()->back()->with('error', 'Table not found.');
+            }
+
+            // Unmerge all tables that are merged to this table
+            $mergedTables = $table->mergedTables;
+            foreach ($mergedTables as $mergedTable) {
+                $this->tableRoomService->unmergeTable($mergedTable->id);
+            }
+
+            $redirectUrl = route('table-rooms.index');
+            if ($request->has('locationId')) {
+                $redirectUrl .= '?locationId=' . $request->query('locationId');
+            }
+
+            return redirect($redirectUrl)->with('success', 'All merged tables unmerged successfully.');
         } catch (Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
         }
@@ -185,7 +220,7 @@ class TableRoomController extends Controller
                 ->exists();
 
             if ($cartWithItems) {
-                return redirect()->back()->with('error', 'Cannot set table to vacant. There are cart items associated with this table.');
+                return redirect()->back()->with('error', 'Cannot set table to available. There are cart items associated with this table.');
             }
 
             // Delete empty cart if exists
@@ -193,9 +228,9 @@ class TableRoomController extends Controller
                 ->whereDoesntHave('cartItems', fn($query) => $query->where('is_void', false))
                 ->delete();
 
-            // Update table status to vacant
+            // Update table status to available
             $table->update([
-                'status' => 'vacant',
+                'status' => TableRoomStatusType::AVAILABLE->value,
                 'number_of_pax' => null,
                 'time_in' => null,
             ]);
@@ -203,7 +238,7 @@ class TableRoomController extends Controller
             return redirect()->back()->with('success', 'Table has been set to Available successfully.');
 
         } catch (Exception $e) {
-            return redirect()->back()->with('error', 'Failed to set table to vacant: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to set table to Available: ' . $e->getMessage());
         }
     }
 

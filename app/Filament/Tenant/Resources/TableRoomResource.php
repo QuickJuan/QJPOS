@@ -75,7 +75,7 @@ class TableRoomResource extends Resource
                         Select::make('status')
                             ->label('Status')
                             ->options(TableRoomStatusType::filamentOptions())
-                            ->default(TableRoomStatusType::VACANT->value)
+                            ->default(TableRoomStatusType::AVAILABLE->value)
                             ->required(),
 
                         Select::make('with_timeframe')

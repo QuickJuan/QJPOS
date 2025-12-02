@@ -474,7 +474,7 @@ class CartService
             $tableRoom = $order->tableRoom;
             if ($tableRoom) {
                 $tableRoom->update([
-                    'status'        => TableRoomStatusType::VACANT->value,
+                    'status'        => TableRoomStatusType::AVAILABLE->value,
                     'time_in'       => null,
                     'customer_name' => null,
                     'number_of_pax' => null,
@@ -506,11 +506,11 @@ class CartService
             throw new Exception('No active order found for the source table.');
         }
 
-        // Verify target table exists and is vacant
+        // Verify target table exists and is available
         $targetTable = TableRoom::findOrFail($targetTableId);
 
-        if ($targetTable->status !== TableRoomStatusType::VACANT->value) {
-            throw new Exception('Target table must be vacant to transfer the order.');
+        if ($targetTable->status !== TableRoomStatusType::AVAILABLE->value) {
+            throw new Exception('Target table must be available to transfer the order.');
         }
 
         // Update the order's table_room_id
@@ -518,10 +518,10 @@ class CartService
             'table_room_id' => $targetTableId,
         ]);
 
-        // Update source table to vacant
+        // Update source table to available
         $sourceTable = TableRoom::findOrFail($sourceTableId);
         $sourceTable->update([
-            'status'        => TableRoomStatusType::VACANT->value,
+            'status'        => TableRoomStatusType::AVAILABLE->value,
             'time_in'       => null,
             'customer_name' => null,
             'number_of_pax' => null,
