@@ -469,7 +469,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { route } from "ziggy-js";
 import { useToast } from "primevue";
@@ -748,8 +748,8 @@ const handleTakeOrder = (data: any) => {
     }
 };
 
-const handleMergeTable = () => {
-    tableToMerge.value = selectedTable.value;
+const handleMergeTable = (table: any) => {
+    tableToMerge.value = table;
     showMergeModal.value = true;
     closeTableModal();
 };
@@ -994,9 +994,37 @@ const viewOrderDetails = (order: any) => {
     router.visit(`/resto?tableId=${order.table_room.id}`);
 };
 
+// Watch for changes in selectedLocationId and update URL
+watch(
+    () => selectedLocationId.value,
+    (newLocationId) => {
+        if (newLocationId) {
+            // Update URL without full page reload
+            const url = new URL(window.location);
+            url.searchParams.set("locationId", newLocationId.toString());
+            window.history.replaceState({}, "", url);
+        }
+    }
+);
+
 onMounted(() => {
-    // Auto-select first location if none selected
-    if (!selectedLocationId.value && locations.value.length > 0) {
+    // Get locationId from URL query parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const locationIdFromUrl = urlParams.get("locationId");
+
+    if (locationIdFromUrl) {
+        // Try to parse as number and check if it exists in locations
+        const locationId = parseInt(locationIdFromUrl, 10);
+        if (locations.value.some((loc) => loc.id === locationId)) {
+            selectedLocationId.value = locationId;
+        } else {
+            // If location doesn't exist, use first location
+            if (locations.value.length > 0) {
+                selectedLocationId.value = locations.value[0].id;
+            }
+        }
+    } else if (locations.value.length > 0) {
+        // Auto-select first location if none selected
         selectedLocationId.value = locations.value[0].id;
     }
 

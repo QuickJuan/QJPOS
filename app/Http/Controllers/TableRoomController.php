@@ -128,7 +128,38 @@ class TableRoomController extends Controller
         try {
             $this->tableRoomService->unmergeTable($tableId);
 
-            return redirect()->route('table-rooms.index')->with('success', 'Table unmerged successfully.');
+            $redirectUrl = route('table-rooms.index');
+            if ($request->has('locationId')) {
+                $redirectUrl .= '?locationId=' . $request->query('locationId');
+            }
+
+            return redirect($redirectUrl)->with('success', 'Table unmerged successfully.');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+    }
+
+    public function unmergeAllTables(Request $request, int $tableId): RedirectResponse
+    {
+        try {
+            // Get the table to unmerge all its merged tables
+            $table = $this->tableRoomService->model->find($tableId);
+            if (!$table) {
+                return redirect()->back()->with('error', 'Table not found.');
+            }
+
+            // Unmerge all tables that are merged to this table
+            $mergedTables = $table->mergedTables;
+            foreach ($mergedTables as $mergedTable) {
+                $this->tableRoomService->unmergeTable($mergedTable->id);
+            }
+
+            $redirectUrl = route('table-rooms.index');
+            if ($request->has('locationId')) {
+                $redirectUrl .= '?locationId=' . $request->query('locationId');
+            }
+
+            return redirect($redirectUrl)->with('success', 'All merged tables unmerged successfully.');
         } catch (Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
         }

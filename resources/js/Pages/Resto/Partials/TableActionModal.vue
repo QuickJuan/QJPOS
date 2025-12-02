@@ -79,7 +79,7 @@
                     icon="pi pi-plus"
                     class="w-full"
                     severity="success"
-                    @click="$emit('claimOrder')"
+                    @click="handleClaimOrder"
                     :disabled="!table"
                 />
 
@@ -90,7 +90,7 @@
                     icon="pi pi-arrow-right"
                     class="w-full"
                     severity="success"
-                    @click="$emit('transferNumber')"
+                    @click="handleTransferNumber"
                     :disabled="!table"
                 />
 
@@ -111,7 +111,7 @@
                 <!-- Vacant table (only if occupied and not merged) -->
                 <Button
                     v-if="
-                        table && table.status === 'occupied' && !table.merge_to
+                        table && table.status === 'occupied' && !table.mergeTo
                     "
                     label="Vacant Table"
                     icon="pi pi-undo"
@@ -120,30 +120,29 @@
                     @click="vacantTable"
                 />
 
-                <!-- Merge Table (only for vacant tables) -->
+                <!-- Merge Table (only for available tables) -->
                 <Button
                     v-if="
                         !isTakeoutOccupied &&
                         table &&
-                        table.status === 'vacant' &&
-                        !table.merge_to
+                        table.status === 'available' &&
+                        !table.mergeTo
                     "
                     label="Merge Table"
                     icon="pi pi-link"
                     class="w-full"
                     severity="secondary"
-                    @click="$emit('mergeTable')"
+                    @click="handleMergeTable"
                 />
 
                 <!-- Unmerge Table (this table from its parent) -->
-                <pre>{{ table }}</pre>
                 <Button
-                    v-if="table?.mergedTo"
+                    v-if="table?.mergeTo"
                     label="Unmerge from Parent Table"
                     icon="pi pi-arrow-up-right-and-arrow-down-left-from-center"
                     class="w-full"
                     severity="warning"
-                    @click="handleUnmergeFromTable(table.id)"
+                    @click="handleUnmergeFromTable"
                 />
 
                 <!-- Unmerge all merged tables from this table -->
@@ -175,14 +174,14 @@
                             ? 'danger'
                             : 'warning'
                     "
-                    @click="$emit('reserveTable')"
+                    @click="handleReserveTable"
                     :disabled="!table"
                 />
             </div>
 
-            <!-- Pax/Guest Input for Vacant Tables: show immediately -->
+            <!-- Pax/Guest Input for Available Tables: show immediately -->
             <div
-                v-if="table && table.status === 'vacant' && !table.merge_to"
+                v-if="table && table.status === 'available' && !table.mergeTo"
                 class="space-y-3 border-t pt-4"
             >
                 <h4 class="font-medium text-gray-900">Guest Count</h4>
@@ -258,7 +257,7 @@ const emit = defineEmits<{
     claimOrder: [];
     transferNumber: [];
     viewOrder: [];
-    mergeTable: [];
+    mergeTable: [table: any];
     reserveTable: [];
     unmergeTable: [];
     refundOrder: [];
@@ -270,6 +269,10 @@ const {
     unmergeFromTable,
     unmergeTables,
     viewOrder,
+    mergeTable,
+    claimOrder,
+    transferNumber,
+    reserveTable,
 } = useTable();
 
 const isTakeoutOccupied = computed(() => {
@@ -350,6 +353,26 @@ const handleUnmergeTables = () => {
 
 const handleViewOrder = () => {
     viewOrder(props.table);
+    handleClose();
+};
+
+const handleMergeTable = () => {
+    emit("mergeTable", props.table);
+    handleClose();
+};
+
+const handleClaimOrder = () => {
+    claimOrder(props.table.id);
+    handleClose();
+};
+
+const handleTransferNumber = () => {
+    transferNumber(props.table);
+    handleClose();
+};
+
+const handleReserveTable = () => {
+    reserveTable(props.table);
     handleClose();
 };
 </script>

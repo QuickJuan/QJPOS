@@ -171,6 +171,7 @@ Route::middleware([
                     Route::post('/tables/{tableId}/vacant', 'vacantTable')->name('vacant');
                     Route::put('/tables/{tableId}', 'update')->name('update');
                     Route::put('/tables/{tableId}/unmerge', 'unmergeTable')->name('unmerge');
+                    Route::put('/tables/{tableId}/unmerge-all', 'unmergeAllTables')->name('unmerge-all');
                     Route::put('/tables/{tableId}/merge', 'mergeTable')->name('merge');
                     Route::delete('/tables/{tableId}', 'destroy')->name('destroy');
                 });

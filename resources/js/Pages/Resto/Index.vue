@@ -61,24 +61,122 @@
         >
             <!-- Categories & Products Area -->
             <div
-                class="flex-1 flex items-center justify-center"
+                class="flex-1 flex items-center justify-center relative overflow-hidden"
                 v-if="!tableId"
             >
-                <div class="flex flex-col items-center justify-center">
-                    <img
-                        :src="props.generalSettings.company_logo"
-                        alt="Company Logo"
-                        class="w-32 h-32 object-contain mb-4 opacity-60"
-                    />
-                    <p class="text-lg text-gray-400 font-semibold mb-6">
+                <!-- Decorative Background -->
+                <div
+                    class="absolute inset-0 opacity-5 -z-10"
+                    :style="{
+                        backgroundImage: `url('${props.generalSettings.company_logo}')`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundAttachment: 'fixed',
+                    }"
+                ></div>
+
+                <!-- Gradient Overlay -->
+                <div
+                    class="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 -z-10"
+                ></div>
+
+                <!-- Content -->
+                <div
+                    class="flex flex-col items-center justify-center text-center px-4"
+                >
+                    <!-- Large Logo Background Circle -->
+                    <div class="relative mb-8">
+                        <div
+                            class="absolute inset-0 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-full blur-xl"
+                            style="width: 300px; height: 300px; margin: auto"
+                        ></div>
+                        <img
+                            :src="props.generalSettings.company_logo"
+                            alt="Company Logo"
+                            class="relative w-48 h-48 object-contain drop-shadow-lg"
+                        />
+                    </div>
+
+                    <!-- Title -->
+                    <h2
+                        class="text-4xl md:text-5xl font-bold text-gray-800 mb-3"
+                    >
+                        Ready to Order?
+                    </h2>
+
+                    <!-- Subtitle -->
+                    <p class="text-xl text-gray-600 font-medium mb-8 max-w-md">
                         Select a table to start ordering
                     </p>
+
+                    <!-- Button with Enhanced Styling -->
                     <button
                         @click="handleSelectTable"
-                        class="px-6 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary-600 transition-colors shadow-md"
+                        class="px-8 py-4 bg-gradient-to-r from-primary to-primary-600 text-white rounded-xl font-bold hover:shadow-2xl hover:scale-105 transition-all duration-300 shadow-lg border-0"
                     >
-                        Start Ordering
+                        <span class="flex items-center gap-2">
+                            <svg
+                                class="w-5 h-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                                ></path>
+                            </svg>
+                            Start Ordering
+                        </span>
                     </button>
+
+                    <!-- Decorative Elements -->
+                    <div class="mt-16 flex gap-8 text-gray-400">
+                        <div class="flex flex-col items-center">
+                            <svg
+                                class="w-8 h-8 mb-2 text-primary/40"
+                                fill="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
+                                ></path>
+                            </svg>
+                            <span class="text-sm font-medium"
+                                >Fast Service</span
+                            >
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <svg
+                                class="w-8 h-8 mb-2 text-primary/40"
+                                fill="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
+                                ></path>
+                            </svg>
+                            <span class="text-sm font-medium"
+                                >Easy Checkout</span
+                            >
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <svg
+                                class="w-8 h-8 mb-2 text-primary/40"
+                                fill="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
+                                ></path>
+                            </svg>
+                            <span class="text-sm font-medium"
+                                >Great Experience</span
+                            >
+                        </div>
+                    </div>
                 </div>
             </div>
             <CategoryProductSelection
@@ -240,7 +338,7 @@ const updateOrderType = (type: string) => {
 // Handle show receipt modal
 const handleSelectTable = () => {
     // Navigate to tables page with current cart context
-    router.visit(route("resto.tables"), {
+    router.visit(route("table-rooms.index"), {
         data: {
             from_cashier: true,
             current_cart_id: selectedCart.value?.id || props.cart?.id,

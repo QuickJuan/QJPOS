@@ -91,20 +91,22 @@ export const useTable = () => {
             return;
         }
 
+        // Get locationId from URL if available
+        const urlParams = new URLSearchParams(window.location.search);
+        const locationId = urlParams.get('locationId');
+        let requestUrl = route("table-rooms.unmerge", tableId);
+        if (locationId) {
+            requestUrl += `?locationId=${locationId}`;
+        }
+
         router.put(
-            route("table-rooms.unmerge", tableId),
+            requestUrl,
             {},
             {
                 preserveScroll: false,
                 preserveState: false,
                 onSuccess: (response) => {
-                    // toast.add({
-                    //     severity: "success",
-                    //     summary: "Success",
-                    //     detail: "Table unmerged successfully",
-                    //     life: 3000,
-                    // });
-                    // router.reload({ only: ["tables"] });
+                    // Success handled by controller redirect
                 },
                 onError: (errors) => {
                     const errorMessage = page.props.flash?.error || "Failed to unmerge table";
@@ -130,8 +132,16 @@ export const useTable = () => {
             return;
         }
 
+        // Get locationId from URL if available
+        const urlParams = new URLSearchParams(window.location.search);
+        const locationId = urlParams.get('locationId');
+        let requestUrl = route("table-rooms.unmerge-all", tableId);
+        if (locationId) {
+            requestUrl += `?locationId=${locationId}`;
+        }
+
         router.put(
-            route("table-rooms.unmerge-all", tableId),
+            requestUrl,
             {},
             {
                 preserveScroll: false,
@@ -170,7 +180,7 @@ export const useTable = () => {
         }
 
         // If table is merged to another, use the parent table id
-        const tableId = table.merge_to ? table.merge_to : table.id;
+        const tableId = table.mergedTo ? table.mergedTo : table.id;
 
         router.visit(
             route("resto.index", {
@@ -179,11 +189,97 @@ export const useTable = () => {
         );
     };
 
+    const mergeTable = (table: any) => {
+        // This will trigger the merge modal in the parent component
+        // The parent component listens for this and shows the merge modal
+        if (!table?.id) {
+            toast.add({
+                severity: "error",
+                summary: "Error",
+                detail: "Table ID is required",
+                life: 3000,
+            });
+            return;
+        }
+        // Emit event through window for parent to listen
+        window.dispatchEvent(new CustomEvent('table-merge-requested', { detail: { table } }));
+    };
+
+    const claimOrder = (tableId: number) => {
+        if (!tableId) {
+            toast.add({
+                severity: "error",
+                summary: "Error",
+                detail: "Table ID is required",
+                life: 3000,
+            });
+            return;
+        }
+
+        router.post(
+            route("resto.cart.claim-order", {
+                tableId: tableId,
+            }),
+            {},
+            {
+                onSuccess: () => {
+                    toast.add({
+                        severity: "success",
+                        summary: "Success",
+                        detail: "Order claimed successfully",
+                        life: 3000,
+                    });
+                    router.reload({ only: ["tables"] });
+                },
+                onError: (errors) => {
+                    toast.add({
+                        severity: "error",
+                        summary: "Error",
+                        detail: errors?.message || "Failed to claim order",
+                        life: 3000,
+                    });
+                },
+            }
+        );
+    };
+
+    const transferNumber = (table: any) => {
+        if (!table?.id) {
+            toast.add({
+                severity: "error",
+                summary: "Error",
+                detail: "Table ID is required",
+                life: 3000,
+            });
+            return;
+        }
+        // Emit event through window for parent to listen
+        window.dispatchEvent(new CustomEvent('table-transfer-requested', { detail: { table } }));
+    };
+
+    const reserveTable = (table: any) => {
+        if (!table?.id) {
+            toast.add({
+                severity: "error",
+                summary: "Error",
+                detail: "Table ID is required",
+                life: 3000,
+            });
+            return;
+        }
+        // Emit event through window for parent to listen
+        window.dispatchEvent(new CustomEvent('table-reserve-requested', { detail: { table } }));
+    };
+
     return {
         vacantTable,
         placeOrder,
         unmergeFromTable,
         unmergeTables,
         viewOrder,
+        mergeTable,
+        claimOrder,
+        transferNumber,
+        reserveTable,
     };
 };
