@@ -78,13 +78,44 @@
                     </div>
                 </div>
             </button>
+
+            <button
+                @click="handleViewTable"
+                class="w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center gap-3 bg-gray-100 text-secondary-700 hover:bg-gray-200"
+            >
+                <TableCellsIcon class="w-5 h-5" />
+                <div class="text-left">
+                    <div class="font-semibold">View Table</div>
+                    <div class="text-xs opacity-75">
+                        View table layout and status
+                    </div>
+                </div>
+            </button>
+
+            <button
+                @click="handleEndOfShift"
+                class="w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center gap-3 bg-red-100 text-red-700 hover:bg-red-200"
+            >
+                <PowerIcon class="w-5 h-5" />
+                <div class="text-left">
+                    <div class="font-semibold">End of Shift</div>
+                    <div class="text-xs opacity-75">Close cashier session</div>
+                </div>
+            </button>
         </div>
     </Dialog>
 </template>
 
 <script setup lang="ts">
 import { Dialog } from "primevue";
-import { BookmarkIcon, TagIcon, PlusIcon, PrinterIcon } from "@heroicons/vue/24/outline";
+import {
+    BookmarkIcon,
+    TagIcon,
+    PlusIcon,
+    PrinterIcon,
+    TableCellsIcon,
+    PowerIcon,
+} from "@heroicons/vue/24/outline";
 
 const props = defineProps<{
     visible: boolean;
@@ -97,6 +128,8 @@ const emit = defineEmits<{
     openDiscountModal: [];
     addModifier: [];
     printBill: [];
+    viewTable: [];
+    endOfShift: [];
     "update:visible": [value: boolean];
 }>();
 
@@ -117,6 +150,16 @@ const handleAddModifier = () => {
 
 const handlePrintBill = () => {
     emit("printBill");
+    emit("update:visible", false);
+};
+
+const handleViewTable = () => {
+    emit("viewTable");
+    emit("update:visible", false);
+};
+
+const handleEndOfShift = () => {
+    emit("endOfShift");
     emit("update:visible", false);
 };
 

@@ -3,6 +3,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Branch extends Model
 {
@@ -35,5 +36,10 @@ class Branch extends Model
     {
         return $this->belongsToMany(User::class, 'branch_user', 'branch_id', 'user_id')
             ->withTimestamps();
+    }
+
+    public function tableRooms(): HasMany
+    {
+        return $this->hasMany(TableRoom::class);
     }
 }

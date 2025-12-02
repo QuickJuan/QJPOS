@@ -112,9 +112,9 @@ Route::middleware([
                     Route::post('/attendance/toggle', 'toggle')->name('toggle');
                 });
 
-            // ROUTE FOR RETAIL CASHIER
-            Route::as('retail-cashier.')
-                ->prefix('/retail-cashier')
+            // ROUTE FOR RESTO CASHIER
+            Route::as('resto.')
+                ->prefix('/resto')
                 ->group(function () {
                     Route::controller(CashierSessionController::class)
                         ->group(function () {
@@ -135,7 +135,7 @@ Route::middleware([
                             Route::post('/cart/add', 'addToCart')->name('cart.add');
                             Route::put('/cart/{cartId}', 'updateCart')->name('cart.update');
                             Route::post('/cart/merge', 'mergeCart')->name('cart.merge');
-                            Route::put('/cart/item/place-order/{cartId}', 'placeOrder')->name('cart.place-order');
+                            Route::post('/cart/place-order', 'placeOrder')->name('cart.place-order');
                             Route::post('/cart/settle-bill/{cartId}', 'settleBill')->name('cart.settle-bill');
                             Route::post('/cart/claim-order/{tableId}', 'claimOrder')->name('cart.claim-order');
                             Route::put('/cart/update-bill-number/{cartId}', 'updateBillNumber')->name('cart.update-bill-number');
@@ -167,6 +167,7 @@ Route::middleware([
                     Route::post('/tables', 'store')->name('store');
                     Route::post('/tables/bulk-update-positions', 'bulkUpdatePositions')->name('bulk-update-positions');
                     Route::post('/tables/reserve', 'reserveTable')->name('reserve');
+                    Route::post('/tables/{tableId}/vacant', 'vacantTable')->name('vacant');
                     Route::put('/tables/{tableId}', 'update')->name('update');
                     Route::put('/tables/{tableId}/unmerge', 'unmergeTable')->name('unmerge');
                     Route::put('/tables/{tableId}/merge', 'mergeTable')->name('merge');
@@ -214,6 +215,15 @@ Route::middleware([
                 ->controller(\App\Http\Controllers\PrinterConfigController::class)
                 ->group(function () {
                     Route::get('/{type}', 'getConfig')->name('get-config');
+                });
+
+            // API ROUTES FOR TABLES
+            Route::as('api.tables.')
+                ->prefix('/api')
+                ->controller(\App\Http\Controllers\Api\TableController::class)
+                ->group(function () {
+                    Route::get('/branches/{branchId}/tables', 'getTablesByBranch')->name('branch-tables');
+                    Route::get('/tables/{tableId}/with-cart', 'getTableWithCart')->name('table-with-cart');
                 });
         });
 

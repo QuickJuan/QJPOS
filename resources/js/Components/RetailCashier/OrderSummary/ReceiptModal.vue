@@ -111,7 +111,7 @@ const handleKeydown = (event: KeyboardEvent) => {
 
 // Handle close modal
 const handleClose = () => {
-    router.visit(route("retail-cashier.tables"));
+    router.visit(route("resto.tables"));
     visible.value = false;
 };
 
@@ -182,7 +182,7 @@ const printReceipt = async () => {
 
         // Close modal and redirect to tables after successful printing
         visible.value = false;
-        router.visit(route("retail-cashier.tables"));
+        router.visit(route("resto.tables"));
     } catch (error) {
         console.error("Print error:", error);
         toast.add({

@@ -58,10 +58,11 @@ class CartController extends Controller
                 return redirect()->back()->with('error', 'Source cart ID and target table ID are required.');
             }
 
-            $this->cartService->mergeCart($request, $sourceCartId, $targetTableId);
+            $mergedCart = $this->cartService->mergeCart($request, $sourceCartId, $targetTableId);
 
-            return redirect()->back()->with('success', 'Cart items merged successfully.');
+            return redirect()->back()->with('success', 'Cart items merged successfully and source cart is deleted.');
         } catch (Exception $e) {
+            \Log::error('Cart merge error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'There was an error merging cart items: ' . $e->getMessage());
         }
     }
@@ -148,16 +149,25 @@ class CartController extends Controller
         }
     }
 
-    public function placeOrder(Request $request, int $cartId): RedirectResponse
+    public function placeOrder(Request $request): RedirectResponse
     {
         try {
-            if (! $cartId) {
-                return redirect()->back()->with('error', 'Cart ID is empty.');
+
+            $payload = $request->validate([
+                'cart_id' => 'required|integer|exists:carts,id',
+                'table_id' => 'required|integer|exists:table_rooms,id',
+            ]);
+
+            $success = $this->cartService->placeOrder($payload);
+
+            if ($success === false) {
+                return redirect()->back()->with('error', 'There was an error placing order.');
             }
 
-            $this->cartService->placeOrder($request, $cartId);
+            return redirect()->route('resto.tables')
+                ->with('success', 'Order placed successfully, We will start preparing your order');
 
-            return redirect()->route('retail-cashier.tables')->with('success', 'Successfully Placed Order.');
+
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'There was an error placing order.');
         }

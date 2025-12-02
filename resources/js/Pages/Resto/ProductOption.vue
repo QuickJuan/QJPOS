@@ -254,7 +254,7 @@ tableId.value = params.get("tableId");
 const toast = useToast();
 const page = usePage<PageProps>();
 const goBack = () => {
-    router.visit(route("retail-cashier.index", { tableId: tableId.value }));
+    router.visit(route("resto.index", { tableId: tableId.value }));
 };
 
 const calculateTotal = () => {
@@ -278,7 +278,7 @@ const addToCart = () => {
     const orderType = params.get("orderType") || "dine-in";
 
     router.post(
-        route("retail-cashier.cart.add"),
+        route("resto.cart.add"),
         {
             product_id: props.product?.data?.id,
             product_packaging_id: productPackagingId.value,
@@ -292,9 +292,7 @@ const addToCart = () => {
         {
             onSuccess: () => {
                 // Navigate back to index
-                router.visit(
-                    route("retail-cashier.index", { tableId: tableId })
-                );
+                router.visit(route("resto.index", { tableId: tableId }));
                 toast.add({
                     severity: "success",
                     summary: "Success",

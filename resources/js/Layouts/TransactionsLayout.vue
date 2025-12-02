@@ -65,7 +65,7 @@ import { ArrowLeftIcon } from "@heroicons/vue/24/outline";
 import { computed } from "vue";
 
 const goBack = () => {
-    router.visit(route("retail-cashier.index"));
+    router.visit(route("resto.index"));
 };
 
 const page = usePage();

@@ -4,13 +4,13 @@
             <div class="flex justify-between text-sm">
                 <span class="text-secondary-600">Subtotal</span>
                 <span class="font-medium">
-                    {{ formatMoney(subTotal) }}
+                    {{ formatMoney(Number(subTotal || 0).toFixed(2)) }}
                 </span>
             </div>
             <div v-if="props.lessTaxTotal" class="flex justify-between text-sm">
                 <span class="text-secondary-600">Less Tax:</span>
                 <span class="font-medium">
-                    {{ formatMoney(lessTaxTotal.toFixed(2)) }}
+                    {{ formatMoney(Number(lessTaxTotal || 0).toFixed(2)) }}
                 </span>
             </div>
             <div
@@ -19,14 +19,14 @@
             >
                 <span class="text-secondary-600">Less Discount: </span>
                 <span class="font-medium">
-                    {{ formatMoney(lessDiscountTotal.toFixed(2)) }}
+                    {{ formatMoney(Number(lessDiscountTotal || 0).toFixed(2)) }}
                 </span>
             </div>
             <hr class="border-gray-300" />
             <div class="flex justify-between text-lg font-bold">
                 <span>Total</span>
                 <span>{{
-                    finalTotal ? formatMoney(finalTotal.toFixed(2)) : null
+                    formatMoney(Number(finalTotal || 0).toFixed(2))
                 }}</span>
             </div>
         </div>

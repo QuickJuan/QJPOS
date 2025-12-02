@@ -143,26 +143,29 @@ class CartService
         $cashierSession = $this->cashierSession->openSession()->first();
 
         if (!$cashierSession) {
+            info('no active cashier seeion');
             throw new Exception('No active cashier session found.');
         }
 
         // Find the source cart
         $sourceCart = Cart::find($sourceCartId);
         if (!$sourceCart) {
+            info('source caret not found');
             throw new Exception('Source cart not found.');
         }
 
         // Verify the source cart belongs to the current cashier session
         if ($sourceCart->cashier_session_id !== $cashierSession->id) {
+            info('unauthorized');
             throw new Exception('Unauthorized source cart access.');
         }
 
         // Find the target cart by table ID
-        $targetCart = Cart::where('table_id', $targetTableId)
-                         ->where('cashier_session_id', $cashierSession->id)
+        $targetCart = Cart::where('table_room_id', $targetTableId)
                          ->first();
 
         if (!$targetCart) {
+            warning('Target table cart not found');
             throw new Exception('Target table cart not found.');
         }
 
@@ -170,6 +173,7 @@ class CartService
         $sourceCartItems = $sourceCart->cartItems;
 
         if ($sourceCartItems->isEmpty()) {
+            warning('No Items to merge from the source cart');
             throw new Exception('No items to merge from source cart.');
         }
 
@@ -191,7 +195,9 @@ class CartService
         // Delete the source cart since it's now empty
         $sourceCart->delete();
 
-        return $targetCart->fresh(['cartItems']);
+        return $targetCart->fresh();
+
+        // return $targetCart->fresh(['cartItems']);
     }
 
     protected function recalculateCartTotals(Cart $cart): void
@@ -424,15 +430,26 @@ class CartService
         return $cartItem->delete();
     }
 
-    public function placeOrder(Request $request, int $cartId): int | RedirectResponse
+    public function placeOrder($payload): bool
     {
         // Get the current open cashier session
-        $cart = Cart::findOrFail($cartId);
+        $cart = Cart::findOrFail($payload['cart_id']);
 
-        return $cart->cartItems()->update([
-            'placed_order' => true,
-            'discount_id'  => $request->filled('discountId') ?? null,
-        ]);
+
+        if ($cart) {
+           $cartItems =  $cart->cartItems()->update([
+                'placed_order' => true,
+            ]);
+
+
+            return $cart->update([
+                'table_room_id' => $payload['table_id'],
+            ]);
+
+
+        }
+
+        return false;
     }
 
     public function claimOrder(int $tableId): mixed

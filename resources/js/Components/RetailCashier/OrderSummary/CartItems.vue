@@ -1,6 +1,19 @@
 <template>
     <div ref="cartContainer" class="flex-1 overflow-auto p-4">
-        <div v-if="orderItems.length === 0" class="text-center py-8">
+        <div v-if="!tableSelected" class="text-center py-8">
+            <ShoppingCartIcon class="w-12 h-12 text-gray-300 mx-auto mb-2" />
+            <p class="text-secondary-500">No table selected</p>
+            <p class="text-sm text-secondary-400">
+                Please select a table to start ordering.
+            </p>
+            <button
+                class="mt-4 px-4 py-2 bg-primary text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors"
+                @click="redirectToTablePage"
+            >
+                Start Order
+            </button>
+        </div>
+        <div v-else-if="orderItems.length === 0" class="text-center py-8">
             <ShoppingCartIcon class="w-12 h-12 text-gray-300 mx-auto mb-2" />
             <p class="text-secondary-500">No items in cart</p>
             <p class="text-sm text-secondary-400">Add items to get started</p>
@@ -245,9 +258,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick } from "vue";
+import { ref, watch, nextTick, computed } from "vue";
 import { ShoppingCartIcon, TrashIcon } from "@heroicons/vue/24/outline";
 import { formatMoney } from "@/Utils/FormatMoney";
+import { router } from "@inertiajs/vue3";
 
 const props = defineProps<{
     orderItems: any[];
@@ -260,6 +274,8 @@ const props = defineProps<{
         discountType: string;
         removeTax?: boolean;
     } | null;
+    tableInfo?: any;
+    tableId?: number | null;
 }>();
 
 const emit = defineEmits<{
@@ -268,6 +284,12 @@ const emit = defineEmits<{
     deleteItem: [item: any];
     showItemModifiers: [item: any];
 }>();
+
+const tableSelected = computed(() => !props.tableId);
+
+const redirectToTablePage = () => {
+    router.visit("/resto/tables");
+};
 
 // Helper functions for discount display
 const hasDiscount = (itemId: number) => {

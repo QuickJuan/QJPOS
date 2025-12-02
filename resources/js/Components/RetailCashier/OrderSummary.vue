@@ -7,6 +7,7 @@
             :table-info="tableInfo"
             :cart="cart"
             @select-table="$emit('selectTable')"
+            @table-changed="handleTableChanged"
         />
 
         <!-- Cart Items Area -->
@@ -60,6 +61,8 @@
             @add-modifier="handleAddModifier"
             @settle-bill="handleSettleBill"
             @print-bill="handlePrintBill"
+            @view-table="handleViewTable"
+            @end-of-shift="handleEndOfShift"
         />
 
         <!-- Edit Item Modal -->
@@ -275,33 +278,30 @@ const handleDelete = (orderItem: any) => {
 };
 
 const removeOrder = (orderItem: any) => {
-    router.delete(
-        route("retail-cashier.cart.delete", { cartItemId: orderItem.id }),
-        {
-            onSuccess: () => {
-                toast.add({
-                    severity: "success",
-                    summary: "Success",
-                    detail: page.props.flash.success,
-                    life: 3000,
-                });
-            },
-            onError: (errors) => {
-                toast.add({
-                    severity: "error",
-                    summary: "Error",
-                    detail: page.props.flash.error,
-                    life: 3000,
-                });
-            },
-        }
-    );
+    router.delete(route("resto.cart.delete", { cartItemId: orderItem.id }), {
+        onSuccess: () => {
+            toast.add({
+                severity: "success",
+                summary: "Success",
+                detail: page.props.flash.success,
+                life: 3000,
+            });
+        },
+        onError: (errors) => {
+            toast.add({
+                severity: "error",
+                summary: "Error",
+                detail: page.props.flash.error,
+                life: 3000,
+            });
+        },
+    });
 };
 
 const saveEdit = (editedItem: any) => {
     if (editedItem) {
         router.put(
-            route("retail-cashier.cart.update-item", editedItem.id),
+            route("resto.cart.update-item", editedItem.id),
             {
                 quantity: editedItem.quantity,
                 selected_options: editedItem.selected_options || [],
@@ -375,10 +375,9 @@ const handleCheckout = (data: any) => {
         return;
     }
 
-    router.put(
-        route("retail-cashier.cart.place-order", { cartId: data.cart_id }),
-        { discountId: data.discount_id }
-    );
+    router.put(route("resto.cart.place-order", { cartId: data.cart_id }), {
+        discountId: data.discount_id,
+    });
 };
 
 const handleSettleBill = (data: any) => {
@@ -393,7 +392,7 @@ const handleSettleBill = (data: any) => {
     }
 
     router.post(
-        route("retail-cashier.cart.settle-bill", { cartId: data.cart_id }),
+        route("resto.cart.settle-bill", { cartId: data.cart_id }),
         {
             amount_paid: data.amount_paid,
             total_amount: data.total_amount,
@@ -434,7 +433,7 @@ const handleModifierAdded = (modifierData: any) => {
     );
 
     router.put(
-        route("retail-cashier.cart.apply-modifier", {
+        route("resto.cart.apply-modifier", {
             cartItemIds: selectedItemIds,
         }),
         {
@@ -466,7 +465,7 @@ const handleModifierAdded = (modifierData: any) => {
 
 const handleRequiredReason = (data: any) => {
     router.put(
-        route("retail-cashier.cart.void-cart", {
+        route("resto.cart.void-cart", {
             cartItemId: data.orderItem.id,
         }),
         {
@@ -503,7 +502,7 @@ const handleAddDiscountToItem = (item: any) => {
 const handleClearDiscountFromItem = (item: any) => {
     // Clear discount from the item
     router.put(
-        route("retail-cashier.cart.clear-discount", { cartItemId: item.id }),
+        route("resto.cart.clear-discount", { cartItemId: item.id }),
         {},
         {
             onSuccess: () => {
@@ -553,7 +552,64 @@ const handlePrintBill = () => {
     emit("printBill");
 };
 
+const handleViewTable = () => {
+    router.visit(route("resto.tables"));
+};
+
+const handleEndOfShift = () => {
+    // Handle end of shift logic - could emit an event or show confirmation
+    confirm.require({
+        message: "Are you sure you want to end your shift?",
+        header: "End of Shift",
+        icon: "pi pi-exclamation-triangle",
+        rejectProps: {
+            label: "Cancel",
+            severity: "secondary",
+            outlined: true,
+        },
+        acceptProps: {
+            label: "End Shift",
+            severity: "danger",
+        },
+        accept: () => {
+            // Redirect to close session or handle shift end
+            router.visit(route("home"));
+        },
+    });
+};
+
 const handleRedirectToTables = () => {
-    router.visit(route("retail-cashier.tables"));
+    router.visit(route("resto.tables"));
+};
+
+// Update cashier state in localStorage
+const updateCashierStateInLocalStorage = (
+    tableId: number | null,
+    cartId?: number | null
+) => {
+    try {
+        const cashierStateKey = "quickjuan_cashier_state";
+        const existingState = localStorage.getItem(cashierStateKey);
+        let cashierState = existingState ? JSON.parse(existingState) : {};
+
+        // Update the tableId and optionally cartId in the cashier state
+        cashierState.tableId = tableId;
+        if (cartId) {
+            cashierState.cartId = cartId;
+        }
+        cashierState.lastUpdated = new Date().toISOString();
+
+        // Save back to localStorage
+        localStorage.setItem(cashierStateKey, JSON.stringify(cashierState));
+
+        console.log(
+            "Updated cashier state with tableId:",
+            tableId,
+            "cartId:",
+            cartId
+        );
+    } catch (error) {
+        console.error("Failed to update cashier state in localStorage:", error);
+    }
 };
 </script>

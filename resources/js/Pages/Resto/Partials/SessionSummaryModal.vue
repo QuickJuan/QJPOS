@@ -66,7 +66,9 @@
                 </div>
                 <div class="flex justify-between">
                     <span>Senior Discount:</span>
-                    <span>{{ formatMoney(props.sessionSummary?.senior_discount) }}</span>
+                    <span>{{
+                        formatMoney(props.sessionSummary?.senior_discount)
+                    }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span>PWD Discount:</span>
@@ -314,34 +316,38 @@ const runningTotal = computed(() => props.sessionSummary?.running_total ?? 0);
 
 const refundOrder = async (orderId: number) => {
     confirm.require({
-        message: 'Are you sure you want to refund this order?',
-        header: 'Refund Confirmation',
-        icon: 'pi pi-exclamation-triangle',
-        rejectClass: 'p-button-secondary p-button-outlined',
-        rejectLabel: 'Cancel',
-        acceptLabel: 'Refund',
+        message: "Are you sure you want to refund this order?",
+        header: "Refund Confirmation",
+        icon: "pi pi-exclamation-triangle",
+        rejectClass: "p-button-secondary p-button-outlined",
+        rejectLabel: "Cancel",
+        acceptLabel: "Refund",
         accept: async () => {
             try {
-                await axios.post(route('transactions.api.orders.refund', orderId), {
-                    supervisor_name: props.currentUser?.name || 'Supervisor',
-                    notes: 'Refund requested from session summary'
-                });
+                await axios.post(
+                    route("transactions.api.orders.refund", orderId),
+                    {
+                        supervisor_name:
+                            props.currentUser?.name || "Supervisor",
+                        notes: "Refund requested from session summary",
+                    }
+                );
                 toast.add({
-                    severity: 'success',
-                    summary: 'Success',
-                    detail: 'Order refunded successfully',
+                    severity: "success",
+                    summary: "Success",
+                    detail: "Order refunded successfully",
                     life: 3000,
                 });
                 // Optionally refetch summary or update UI
             } catch (error) {
                 toast.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to refund order',
+                    severity: "error",
+                    summary: "Error",
+                    detail: "Failed to refund order",
                     life: 3000,
                 });
             }
-        }
+        },
     });
 };
 
