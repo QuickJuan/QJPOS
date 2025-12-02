@@ -111,7 +111,7 @@
                                                 'bg-red-500',
                                             table.status === 'reserved' &&
                                                 'bg-yellow-500',
-                                            table.status === 'vacant' &&
+                                            table.status === 'available' &&
                                                 'bg-green-500',
                                             table.status === 'merged' &&
                                                 'bg-purple-500',
@@ -164,99 +164,232 @@
                             </div>
                         </div>
 
-                        <!-- Merged Tables -->
+                        <!-- Merged Tables (with recursive support) -->
                         <template
                             v-if="
                                 table.mergedTables &&
                                 table.mergedTables.length > 0
                             "
-                            v-for="mergedTable in table.mergedTables"
-                            :key="mergedTable.id"
                         >
-                            <div
-                                @click="openTableModal(mergedTable)"
-                                class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all cursor-pointer hover:scale-105 relative opacity-75"
-                                :class="
-                                    getTableStatusClasses(mergedTable.status)
-                                "
+                            <template
+                                v-for="mergedTable in table.mergedTables"
+                                :key="mergedTable.id"
                             >
-                                <!-- Status Badge -->
+                                <!-- Merged Table Card -->
                                 <div
-                                    class="flex items-center justify-between mb-3"
+                                    @click="openTableModal(mergedTable)"
+                                    class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all cursor-pointer hover:scale-105 relative opacity-75"
+                                    :class="
+                                        getTableStatusClasses(
+                                            mergedTable.status
+                                        )
+                                    "
                                 >
-                                    <div class="flex items-center gap-2">
-                                        <div
-                                            :class="[
-                                                'w-3 h-3 rounded-full',
-                                                mergedTable.status ===
-                                                    'occupied' && 'bg-red-500',
-                                                mergedTable.status ===
-                                                    'reserved' &&
-                                                    'bg-yellow-500',
-                                                mergedTable.status ===
-                                                    'vacant' && 'bg-green-500',
-                                                mergedTable.status ===
-                                                    'merged' && 'bg-purple-500',
-                                            ]"
-                                        ></div>
-                                        <span
-                                            class="text-xs font-medium text-gray-600 capitalize"
-                                        >
-                                            {{ mergedTable.status }}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <!-- Merged Indicator -->
-                                <div
-                                    class="flex flex-col items-center text-center mb-3"
-                                >
-                                    <h4 class="text-gray-900 text-xs">
-                                        {{ mergedTable.name }}
-                                    </h4>
-                                    <h3
-                                        class="w-fit bg-purple-100 text-purple-800 text-sm px-2 py-1 rounded-full font-medium flex items-center gap-1 mb-2"
-                                    >
-                                        <i class="pi pi-link text-lg"></i>
-                                        Merged to {{ table.name }}
-                                    </h3>
-                                </div>
-
-                                <!-- Table Info -->
-                                <div
-                                    class="text-center text-sm text-gray-600 space-y-1"
-                                >
-                                    <p
-                                        v-if="mergedTable.current_order"
-                                        class="text-blue-600 font-medium"
-                                    >
-                                        Order #{{
-                                            mergedTable.current_order.id
-                                        }}
-                                    </p>
+                                    <!-- Status Badge -->
                                     <div
-                                        v-if="
-                                            mergedTable.status === 'occupied' &&
-                                            mergedTable.number_of_pax
-                                        "
-                                        class="space-y-0.5"
+                                        class="flex items-center justify-between mb-3"
                                     >
-                                        <p class="text-gray-700 font-medium">
-                                            {{ mergedTable.number_of_pax }} pax
-                                        </p>
-                                        <p
-                                            v-if="mergedTable.time_in"
-                                            class="text-xs text-gray-500"
+                                        <div class="flex items-center gap-2">
+                                            <div
+                                                :class="[
+                                                    'w-3 h-3 rounded-full',
+                                                    mergedTable.status ===
+                                                        'occupied' &&
+                                                        'bg-red-500',
+                                                    mergedTable.status ===
+                                                        'reserved' &&
+                                                        'bg-yellow-500',
+                                                    mergedTable.status ===
+                                                        'available' &&
+                                                        'bg-green-500',
+                                                    mergedTable.status ===
+                                                        'merged' &&
+                                                        'bg-purple-500',
+                                                ]"
+                                            ></div>
+                                            <span
+                                                class="text-xs font-medium text-gray-600 capitalize"
+                                            >
+                                                {{ mergedTable.status }}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Merged Indicator -->
+                                    <div
+                                        class="flex flex-col items-center text-center mb-3"
+                                    >
+                                        <h4 class="text-gray-900 text-xs">
+                                            {{ mergedTable.name }}
+                                        </h4>
+                                        <h3
+                                            class="w-fit bg-purple-100 text-purple-800 text-sm px-2 py-1 rounded-full font-medium flex items-center gap-1 mb-2"
                                         >
-                                            {{
-                                                formatTimeOccupied(
-                                                    mergedTable.time_in
-                                                )
+                                            <i class="pi pi-link text-lg"></i>
+                                            Merged to {{ table.name }}
+                                        </h3>
+                                    </div>
+
+                                    <!-- Table Info -->
+                                    <div
+                                        class="text-center text-sm text-gray-600 space-y-1"
+                                    >
+                                        <p
+                                            v-if="mergedTable.current_order"
+                                            class="text-blue-600 font-medium"
+                                        >
+                                            Order #{{
+                                                mergedTable.current_order.id
                                             }}
                                         </p>
+                                        <div
+                                            v-if="
+                                                mergedTable.status ===
+                                                    'occupied' &&
+                                                mergedTable.number_of_pax
+                                            "
+                                            class="space-y-0.5"
+                                        >
+                                            <p
+                                                class="text-gray-700 font-medium"
+                                            >
+                                                {{ mergedTable.number_of_pax }}
+                                                pax
+                                            </p>
+                                            <p
+                                                v-if="mergedTable.time_in"
+                                                class="text-xs text-gray-500"
+                                            >
+                                                {{
+                                                    formatTimeOccupied(
+                                                        mergedTable.time_in
+                                                    )
+                                                }}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+
+                                <!-- Nested Merged Tables (recursive) -->
+                                <template
+                                    v-if="
+                                        mergedTable.mergedTables &&
+                                        mergedTable.mergedTables.length > 0
+                                    "
+                                    v-for="nestedMergedTable in mergedTable.mergedTables"
+                                    :key="nestedMergedTable.id"
+                                >
+                                    <div
+                                        @click="
+                                            openTableModal(nestedMergedTable)
+                                        "
+                                        class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all cursor-pointer hover:scale-105 relative opacity-50"
+                                        :class="
+                                            getTableStatusClasses(
+                                                nestedMergedTable.status
+                                            )
+                                        "
+                                    >
+                                        <!-- Status Badge -->
+                                        <div
+                                            class="flex items-center justify-between mb-3"
+                                        >
+                                            <div
+                                                class="flex items-center gap-2"
+                                            >
+                                                <div
+                                                    :class="[
+                                                        'w-3 h-3 rounded-full',
+                                                        nestedMergedTable.status ===
+                                                            'occupied' &&
+                                                            'bg-red-500',
+                                                        nestedMergedTable.status ===
+                                                            'reserved' &&
+                                                            'bg-yellow-500',
+                                                        nestedMergedTable.status ===
+                                                            'vacant' &&
+                                                            'bg-green-500',
+                                                        nestedMergedTable.status ===
+                                                            'merged' &&
+                                                            'bg-purple-500',
+                                                    ]"
+                                                ></div>
+                                                <span
+                                                    class="text-xs font-medium text-gray-600 capitalize"
+                                                >
+                                                    {{
+                                                        nestedMergedTable.status
+                                                    }}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Nested Merged Indicator -->
+                                        <div
+                                            class="flex flex-col items-center text-center mb-3"
+                                        >
+                                            <h4 class="text-gray-900 text-xs">
+                                                {{ nestedMergedTable.name }}
+                                            </h4>
+                                            <h3
+                                                class="w-fit bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium flex items-center gap-1 mb-2"
+                                            >
+                                                <i
+                                                    class="pi pi-link text-sm"
+                                                ></i>
+                                                Merged to
+                                                {{ mergedTable.name }}
+                                            </h3>
+                                        </div>
+
+                                        <!-- Table Info -->
+                                        <div
+                                            class="text-center text-xs text-gray-600 space-y-1"
+                                        >
+                                            <p
+                                                v-if="
+                                                    nestedMergedTable.current_order
+                                                "
+                                                class="text-blue-600 font-medium"
+                                            >
+                                                Order #{{
+                                                    nestedMergedTable
+                                                        .current_order.id
+                                                }}
+                                            </p>
+                                            <div
+                                                v-if="
+                                                    nestedMergedTable.status ===
+                                                        'occupied' &&
+                                                    nestedMergedTable.number_of_pax
+                                                "
+                                                class="space-y-0.5"
+                                            >
+                                                <p
+                                                    class="text-gray-700 font-medium"
+                                                >
+                                                    {{
+                                                        nestedMergedTable.number_of_pax
+                                                    }}
+                                                    pax
+                                                </p>
+                                                <p
+                                                    v-if="
+                                                        nestedMergedTable.time_in
+                                                    "
+                                                    class="text-xs text-gray-500"
+                                                >
+                                                    {{
+                                                        formatTimeOccupied(
+                                                            nestedMergedTable.time_in
+                                                        )
+                                                    }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </template>
                         </template>
                     </template>
                 </div>
@@ -415,7 +548,7 @@ const getTableStatusClasses = (status: string) => {
             return `${baseClasses} border-red-200 bg-red-50`;
         case "reserved":
             return `${baseClasses} border-yellow-200 bg-yellow-50`;
-        case "vacant":
+        case "available":
             return `${baseClasses} border-green-200 bg-green-50`;
         case "merged":
             return `${baseClasses} border-purple-200 bg-purple-50`;
@@ -424,19 +557,42 @@ const getTableStatusClasses = (status: string) => {
     }
 };
 
-const openTableModal = (table: any) => {
-    // If the clicked table is merged, show the main/parent table instead
-    // if (table.merge_to) {
-    //     // Find the parent table in filteredTables
-    //     const parentTable = filteredTables.value.find(
-    //         (t) => t.id === table.merge_to
-    //     );
-    //     selectedTable.value = parentTable || table;
-    // } else {
+const getRootTable = (table: any): any => {
+    // If table is merged to another, find the root parent
+    if (table.merge_to) {
+        // Look for the parent in all locations and their tables
+        for (const location of locations.value) {
+            // Check direct tables
+            const directParent = location.tableRooms?.find(
+                (t) => t.id === table.merge_to
+            );
+            if (directParent) {
+                return getRootTable(directParent);
+            }
 
-    // }
-    console.log("open table", table);
-    selectedTable.value = table;
+            // Check merged tables recursively
+            const searchMergedTables = (tables: any[]): any => {
+                for (const t of tables || []) {
+                    if (t.id === table.merge_to) {
+                        return getRootTable(t);
+                    }
+                    const found = searchMergedTables(t.mergedTables);
+                    if (found) return found;
+                }
+                return null;
+            };
+
+            const foundInMerged = searchMergedTables(location.tableRooms);
+            if (foundInMerged) return foundInMerged;
+        }
+    }
+    return table;
+};
+
+const openTableModal = (table: any) => {
+    // If the clicked table is merged, show the root parent table instead
+    const rootTable = getRootTable(table);
+    selectedTable.value = rootTable;
     showTableModal.value = true;
 };
 

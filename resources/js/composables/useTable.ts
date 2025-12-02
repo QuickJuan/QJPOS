@@ -80,8 +80,110 @@ export const useTable = () => {
             );
     };
 
+    const unmergeFromTable = (tableId: number) => {
+        if (!tableId) {
+            toast.add({
+                severity: "error",
+                summary: "Error",
+                detail: "Table ID is required",
+                life: 3000,
+            });
+            return;
+        }
+
+        router.put(
+            route("table-rooms.unmerge", tableId),
+            {},
+            {
+                preserveScroll: false,
+                preserveState: false,
+                onSuccess: (response) => {
+                    // toast.add({
+                    //     severity: "success",
+                    //     summary: "Success",
+                    //     detail: "Table unmerged successfully",
+                    //     life: 3000,
+                    // });
+                    // router.reload({ only: ["tables"] });
+                },
+                onError: (errors) => {
+                    const errorMessage = page.props.flash?.error || "Failed to unmerge table";
+                    toast.add({
+                        severity: "error",
+                        summary: "Error",
+                        detail: errorMessage,
+                        life: 3000,
+                    });
+                },
+            }
+        );
+    };
+
+    const unmergeTables = (tableId: number) => {
+        if (!tableId) {
+            toast.add({
+                severity: "error",
+                summary: "Error",
+                detail: "Table ID is required",
+                life: 3000,
+            });
+            return;
+        }
+
+        router.put(
+            route("table-rooms.unmerge-all", tableId),
+            {},
+            {
+                preserveScroll: false,
+                preserveState: false,
+                onSuccess: (response) => {
+                    toast.add({
+                        severity: "success",
+                        summary: "Success",
+                        detail: "All merged tables unmerged successfully",
+                        life: 3000,
+                    });
+                    router.reload({ only: ["tables"] });
+                },
+                onError: (errors) => {
+                    const errorMessage = page.props.flash?.error || "Failed to unmerge tables";
+                    toast.add({
+                        severity: "error",
+                        summary: "Error",
+                        detail: errorMessage,
+                        life: 3000,
+                    });
+                },
+            }
+        );
+    };
+
+    const viewOrder = (table: any) => {
+        if (!table?.id) {
+            toast.add({
+                severity: "error",
+                summary: "Error",
+                detail: "Table ID is required",
+                life: 3000,
+            });
+            return;
+        }
+
+        // If table is merged to another, use the parent table id
+        const tableId = table.merge_to ? table.merge_to : table.id;
+
+        router.visit(
+            route("resto.index", {
+                tableId: tableId,
+            })
+        );
+    };
+
     return {
         vacantTable,
         placeOrder,
+        unmergeFromTable,
+        unmergeTables,
+        viewOrder,
     };
 };

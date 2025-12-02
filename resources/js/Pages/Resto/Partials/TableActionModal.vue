@@ -16,15 +16,28 @@
             >
                 <p class="text-sm font-medium text-purple-900">
                     <i class="pi pi-info-circle mr-2"></i>
-                    This table has merged tables
+                    This table has {{ allNestedMergedTables.length }} merged
+                    {{
+                        allNestedMergedTables.length === 1 ? "table" : "tables"
+                    }}
                 </p>
-                <p
-                    v-for="mergedTable in table?.mergedTables"
-                    :key="mergedTable.id"
-                    class="text-xs text-purple-700 mt-1"
-                >
-                    • {{ mergedTable.name }}
-                </p>
+
+                <div class="mt-2 space-y-1">
+                    <p
+                        v-for="mergedTable in allNestedMergedTables"
+                        :key="mergedTable.id"
+                        class="text-xs text-purple-700"
+                    >
+                        <span class="inline-block mr-2">•</span>
+                        <span class="font-medium">{{ mergedTable.name }}</span>
+                        <span
+                            v-if="mergedTable.merge_to"
+                            class="text-purple-600 ml-1"
+                        >
+                            (merged to another table)
+                        </span>
+                    </p>
+                </div>
             </div>
 
             <!-- Table Info -->
@@ -36,7 +49,7 @@
                     <span
                         :class="[
                             'px-2 py-1 text-xs font-medium rounded-full capitalize',
-                            table?.status === 'vacant' &&
+                            table?.status === 'available' &&
                                 'bg-green-100 text-green-800',
                             table?.status === 'occupied' &&
                                 'bg-red-100 text-red-800',
@@ -92,12 +105,14 @@
                     icon="pi pi-eye"
                     class="w-full"
                     severity="info"
-                    @click="$emit('viewOrder')"
+                    @click="handleViewOrder"
                 />
 
-                <!-- Vacant table (only if occupied and there is no cart associated with it or no cart items) -->
+                <!-- Vacant table (only if occupied and not merged) -->
                 <Button
-                    v-if="table && table.status === 'occupied'"
+                    v-if="
+                        table && table.status === 'occupied' && !table.merge_to
+                    "
                     label="Vacant Table"
                     icon="pi pi-undo"
                     class="w-full"
@@ -108,7 +123,10 @@
                 <!-- Merge Table (only for vacant tables) -->
                 <Button
                     v-if="
-                        !isTakeoutOccupied && table && table.status === 'vacant'
+                        !isTakeoutOccupied &&
+                        table &&
+                        table.status === 'vacant' &&
+                        !table.merge_to
                     "
                     label="Merge Table"
                     icon="pi pi-link"
@@ -117,14 +135,25 @@
                     @click="$emit('mergeTable')"
                 />
 
-                <!-- Unmerge Table (only for merged tables) -->
+                <!-- Unmerge Table (this table from its parent) -->
+                <pre>{{ table }}</pre>
                 <Button
-                    v-if="!isTakeoutOccupied && table.merge_to"
-                    label="Unmerge Table"
+                    v-if="table?.mergedTo"
+                    label="Unmerge from Parent Table"
                     icon="pi pi-arrow-up-right-and-arrow-down-left-from-center"
                     class="w-full"
                     severity="warning"
-                    @click="$emit('unmergeTable')"
+                    @click="handleUnmergeFromTable(table.id)"
+                />
+
+                <!-- Unmerge all merged tables from this table -->
+                <Button
+                    v-if="table?.mergedTables && table.mergedTables.length > 0"
+                    label="Unmerge All Tables"
+                    icon="pi pi-arrow-up-right-and-arrow-down-left-from-center"
+                    class="w-full"
+                    severity="warning"
+                    @click="handleUnmergeTables"
                 />
 
                 <!-- Reserve/Unreserve -->
@@ -153,7 +182,7 @@
 
             <!-- Pax/Guest Input for Vacant Tables: show immediately -->
             <div
-                v-if="table && table.status === 'vacant'"
+                v-if="table && table.status === 'vacant' && !table.merge_to"
                 class="space-y-3 border-t pt-4"
             >
                 <h4 class="font-medium text-gray-900">Guest Count</h4>
@@ -216,6 +245,7 @@ import Dialog from "primevue/dialog";
 import Button from "primevue/button";
 import TextField from "@/Components/Form/TextField.vue";
 import { useTable } from "@/composables/useTable";
+import TableManagementLayout from "@/Layouts/TableManagementLayout.vue";
 
 const props = defineProps<{
     show: boolean;
@@ -234,7 +264,13 @@ const emit = defineEmits<{
     refundOrder: [];
 }>();
 
-const { vacantTable: vacantTableAction, takeOrder } = useTable();
+const {
+    vacantTable: vacantTableAction,
+    takeOrder,
+    unmergeFromTable,
+    unmergeTables,
+    viewOrder,
+} = useTable();
 
 const isTakeoutOccupied = computed(() => {
     return (
@@ -247,6 +283,20 @@ const isTakeoutOccupied = computed(() => {
 
 const hasMergedTables = computed(() => {
     return props.table?.mergedTables && props.table.mergedTables.length > 0;
+});
+
+const getAllMergedTables = (tables: any[] = [], result: any[] = []): any[] => {
+    for (const table of tables || []) {
+        result.push(table);
+        if (table.mergedTables && table.mergedTables.length > 0) {
+            getAllMergedTables(table.mergedTables, result);
+        }
+    }
+    return result;
+};
+
+const allNestedMergedTables = computed(() => {
+    return getAllMergedTables(props.table?.mergedTables);
 });
 
 const pax = ref(1);
@@ -279,6 +329,27 @@ const vacantTable = () => {
         return;
     }
     vacantTableAction(props.table.id);
+    handleClose();
+};
+
+const handleUnmergeFromTable = () => {
+    if (!props.table?.id) {
+        return;
+    }
+    unmergeFromTable(props.table.id);
+    handleClose();
+};
+
+const handleUnmergeTables = () => {
+    if (!props.table?.id) {
+        return;
+    }
+    unmergeTables(props.table.id);
+    handleClose();
+};
+
+const handleViewOrder = () => {
+    viewOrder(props.table);
     handleClose();
 };
 </script>

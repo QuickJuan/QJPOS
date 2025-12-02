@@ -83,9 +83,9 @@ class TableRoomService
             throw new Exception('Can only merge into occupied tables.');
         }
 
-        // Validate that the source table is vacant
-        if ($tableRoom->status !== 'vacant') {
-            throw new Exception('Can only merge vacant tables.');
+        // Validate that the source table is available
+        if ($tableRoom->status !== TableRoomStatusType::AVAILABLE->value) {
+            throw new Exception('Can only merge available tables.');
         }
 
         return $tableRoom->update([
@@ -167,7 +167,7 @@ class TableRoomService
 
         return $tableRoom->update([
             'merge_to' => null,
-            'status'   => TableRoomStatusType::VACANT->value,
+            'status'   => TableRoomStatusType::AVAILABLE->value,
         ]);
     }
 
@@ -177,6 +177,6 @@ class TableRoomService
     function removeMergedTables(Int $tableId): void
     {
         $this->model->where('merge_to', $tableId)
-            ->update(['merge_to' => null, 'status' => TableRoomStatusType::VACANT->value]);
+            ->update(['merge_to' => null, 'status' => TableRoomStatusType::AVAILABLE->value]);
     }
 }

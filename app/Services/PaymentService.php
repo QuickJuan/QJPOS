@@ -114,7 +114,7 @@ class PaymentService
                 && $cart->tableRoom->tableRoomLocation->location_type != LocationType::TAKEOUT->value) {
 
                 TableRoom::where('id', $cart->table_room_id)->update([
-                    'status'        => TableRoomStatusType::VACANT->value,
+                    'status'        => TableRoomStatusType::AVAILABLE->value,
                     'time_in'       => null,
                     'customer_name' => null,
                     'number_of_pax' => null,

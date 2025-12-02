@@ -128,7 +128,7 @@ class TableRoomController extends Controller
         try {
             $this->tableRoomService->unmergeTable($tableId);
 
-            return redirect()->route('resto.tables')->with('success', 'Table unmerged successfully.');
+            return redirect()->route('table-rooms.index')->with('success', 'Table unmerged successfully.');
         } catch (Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
         }
@@ -188,7 +188,7 @@ class TableRoomController extends Controller
                 ->exists();
 
             if ($cartWithItems) {
-                return redirect()->back()->with('error', 'Cannot set table to vacant. There are cart items associated with this table.');
+                return redirect()->back()->with('error', 'Cannot set table to available. There are cart items associated with this table.');
             }
 
             // Delete empty cart if exists
@@ -196,9 +196,9 @@ class TableRoomController extends Controller
                 ->whereDoesntHave('cartItems', fn($query) => $query->where('is_void', false))
                 ->delete();
 
-            // Update table status to vacant
+            // Update table status to available
             $table->update([
-                'status' => 'vacant',
+                'status' => TableRoomStatusType::AVAILABLE->value,
                 'number_of_pax' => null,
                 'time_in' => null,
             ]);
@@ -206,7 +206,7 @@ class TableRoomController extends Controller
             return redirect()->back()->with('success', 'Table has been set to Available successfully.');
 
         } catch (Exception $e) {
-            return redirect()->back()->with('error', 'Failed to set table to vacant: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to set table to Available: ' . $e->getMessage());
         }
     }
 
