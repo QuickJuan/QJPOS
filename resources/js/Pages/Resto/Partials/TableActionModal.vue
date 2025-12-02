@@ -9,6 +9,24 @@
         @update:visible="handleClose"
     >
         <div class="space-y-4">
+            <!-- Merged Table Info Badge -->
+            <div
+                v-if="hasMergedTables"
+                class="bg-purple-50 border border-purple-200 p-3 rounded-lg"
+            >
+                <p class="text-sm font-medium text-purple-900">
+                    <i class="pi pi-info-circle mr-2"></i>
+                    This table has merged tables
+                </p>
+                <p
+                    v-for="mergedTable in table?.mergedTables"
+                    :key="mergedTable.id"
+                    class="text-xs text-purple-700 mt-1"
+                >
+                    • {{ mergedTable.name }}
+                </p>
+            </div>
+
             <!-- Table Info -->
             <div class="bg-gray-50 p-4 rounded-lg">
                 <div class="flex items-center justify-between mb-2">
@@ -225,6 +243,10 @@ const isTakeoutOccupied = computed(() => {
         props.table.tableRoomLocation &&
         props.table.tableRoomLocation.location_type === "takeout"
     );
+});
+
+const hasMergedTables = computed(() => {
+    return props.table?.mergedTables && props.table.mergedTables.length > 0;
 });
 
 const pax = ref(1);

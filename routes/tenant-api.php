@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\TableController;
 use App\Http\Controllers\Api\ReceiptController;
 use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
@@ -35,6 +36,13 @@ Route::middleware([
             Route::get('/{receiptNumber}', 'getReceipt')->name('get');
             Route::get('/{receiptNumber}/items', 'getReceiptItems')->name('items');
             Route::get('/{receiptNumber}/download', 'downloadReceipt')->name('download');
+        });
+
+    Route::as('tables.')
+        ->prefix('/tables')
+        ->controller(TableController::class)
+        ->group(function () {
+            Route::get('/', 'list')->name('list');
         });
 
     // You can add more tenant-specific API routes here

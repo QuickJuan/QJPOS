@@ -10,6 +10,7 @@ use App\Models\TableRoomLocation;
 use App\Services\TableRoomService;
 use Illuminate\Http\RedirectResponse;
 use App\Http\Requests\TableRoomRequest;
+use App\Http\Resources\TableLocationResource;
 use App\Http\Requests\TableReservationRequest;
 
 class TableRoomController extends Controller
@@ -22,12 +23,14 @@ class TableRoomController extends Controller
 
     public function index(Request $request)
     {
+
         //get the active branch using user cashier id from session
-        $branchId = auth()->user()->cashier?->branch_id ?? null;
-        $tableRooms = $this->tableRoomService->list($branchId);
+        $cashierSession = $request->user()->cashierSession;
+
+        $tableRooms = $this->tableRoomService->list($cashierSession->branch_id);
 
         return Inertia::render('Resto/Tables', [
-            'tableRooms' => $tableRooms,
+            'tableRooms' => json_decode(json_encode(TableLocationResource::collection($tableRooms)), true),
         ]);
     }
 

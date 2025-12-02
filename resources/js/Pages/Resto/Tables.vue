@@ -60,19 +60,19 @@
                     class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2"
                 >
                     <div
-                        v-for="loc in locations"
+                        v-for="loc in tableRooms"
                         :key="loc.id"
-                        @click="selectedLocation = loc.id"
+                        @click="selectedLocationId = loc.id"
                         :class="[
                             'cursor-pointer px-2 py-1.5 rounded text-xs sm:text-sm font-semibold border flex flex-col sm:flex-row items-center justify-center gap-1 transition-colors',
-                            selectedLocation === loc.id
+                            selectedLocationId === loc.id
                                 ? 'bg-blue-600 text-white border-blue-600 shadow'
                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300',
                         ]"
                     >
                         <span class="truncate">{{ loc.name }}</span>
                         <span class="text-[10px] opacity-80">
-                            ({{ getTableCount(loc.id) }})
+                            ({{ loc?.tableRoomCount || 0 }})
                         </span>
                     </div>
                 </div>
@@ -93,97 +93,186 @@
                 <div
                     class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4"
                 >
-                    <div
-                        v-for="table in sortedTables"
-                        :key="table.id"
-                        @click="openTableModal(table)"
-                        class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all cursor-pointer hover:scale-105 relative"
-                        :class="getTableStatusClasses(table.status)"
-                    >
-                        <!-- Status Badge -->
-                        <div class="flex items-center justify-between mb-3">
-                            <div class="flex items-center gap-2">
-                                <div
-                                    :class="[
-                                        'w-3 h-3 rounded-full',
-                                        table.status === 'occupied' &&
-                                            'bg-red-500',
-                                        table.status === 'reserved' &&
-                                            'bg-yellow-500',
-                                        table.status === 'vacant' &&
-                                            'bg-green-500',
-                                        table.status === 'merged' &&
-                                            'bg-purple-500',
-                                    ]"
-                                ></div>
-                                <span
-                                    class="text-xs font-medium text-gray-600 capitalize"
-                                >
-                                    {{ table.status }}
-                                </span>
-                            </div>
-                        </div>
-
-                        <!-- Table Name -->
+                    <!-- Parent Tables -->
+                    <template v-for="table in filteredTables" :key="table.id">
+                        <!-- Parent Table -->
                         <div
-                            class="flex flex-col items-center text-center mb-3"
+                            @click="openTableModal(table)"
+                            class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all cursor-pointer hover:scale-105 relative"
+                            :class="getTableStatusClasses(table.status)"
                         >
-                            <!-- Merged indicator -->
-                            <div
-                                v-if="table.merge_to"
-                                class="w-fit bg-purple-100 text-purple-800 text-sm px-2 py-1 rounded-full font-medium flex items-center gap-1"
-                            >
-                                <i class="pi pi-link text-xs"></i>
-                                Merged to {{ table.merged_to.name }}
+                            <!-- Status Badge -->
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2">
+                                    <div
+                                        :class="[
+                                            'w-3 h-3 rounded-full',
+                                            table.status === 'occupied' &&
+                                                'bg-red-500',
+                                            table.status === 'reserved' &&
+                                                'bg-yellow-500',
+                                            table.status === 'vacant' &&
+                                                'bg-green-500',
+                                            table.status === 'merged' &&
+                                                'bg-purple-500',
+                                        ]"
+                                    ></div>
+                                    <span
+                                        class="text-xs font-medium text-gray-600 capitalize"
+                                    >
+                                        {{ table.status }}
+                                    </span>
+                                </div>
                             </div>
-                            <h3
-                                v-else
-                                class="font-semibold text-gray-900 text-lg"
-                            >
-                                {{ table.name }}
-                            </h3>
-                        </div>
 
-                        <!-- Table Info -->
-                        <div
-                            class="text-center text-sm text-gray-600 space-y-1"
-                        >
-                            <p
-                                v-if="table.current_order"
-                                class="text-blue-600 font-medium"
-                            >
-                                Order #{{ table.current_order.id }}
-                            </p>
+                            <!-- Table Name -->
                             <div
-                                v-if="
-                                    table.status === 'occupied' &&
-                                    table.number_of_pax
-                                "
-                                class="space-y-0.5"
+                                class="flex flex-col items-center text-center mb-3"
                             >
-                                <p class="text-gray-700 font-medium">
-                                    {{ table.number_of_pax }} pax
-                                </p>
+                                <h3 class="font-semibold text-gray-900 text-lg">
+                                    {{ table.name }}
+                                </h3>
+                            </div>
+
+                            <!-- Table Info -->
+                            <div
+                                class="text-center text-sm text-gray-600 space-y-1"
+                            >
                                 <p
-                                    v-if="table.time_in"
-                                    class="text-xs text-gray-500"
+                                    v-if="table.current_order"
+                                    class="text-blue-600 font-medium"
                                 >
-                                    {{ formatTimeOccupied(table.time_in) }}
+                                    Order #{{ table.current_order.id }}
                                 </p>
+                                <div
+                                    v-if="
+                                        table.status === 'occupied' &&
+                                        table.number_of_pax
+                                    "
+                                    class="space-y-0.5"
+                                >
+                                    <p class="text-gray-700 font-medium">
+                                        {{ table.number_of_pax }} pax
+                                    </p>
+                                    <p
+                                        v-if="table.time_in"
+                                        class="text-xs text-gray-500"
+                                    >
+                                        {{ formatTimeOccupied(table.time_in) }}
+                                    </p>
+                                </div>
                             </div>
                         </div>
-                    </div>
+
+                        <!-- Merged Tables -->
+                        <template
+                            v-if="
+                                table.mergedTables &&
+                                table.mergedTables.length > 0
+                            "
+                            v-for="mergedTable in table.mergedTables"
+                            :key="mergedTable.id"
+                        >
+                            <div
+                                @click="openTableModal(mergedTable)"
+                                class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all cursor-pointer hover:scale-105 relative opacity-75"
+                                :class="
+                                    getTableStatusClasses(mergedTable.status)
+                                "
+                            >
+                                <!-- Status Badge -->
+                                <div
+                                    class="flex items-center justify-between mb-3"
+                                >
+                                    <div class="flex items-center gap-2">
+                                        <div
+                                            :class="[
+                                                'w-3 h-3 rounded-full',
+                                                mergedTable.status ===
+                                                    'occupied' && 'bg-red-500',
+                                                mergedTable.status ===
+                                                    'reserved' &&
+                                                    'bg-yellow-500',
+                                                mergedTable.status ===
+                                                    'vacant' && 'bg-green-500',
+                                                mergedTable.status ===
+                                                    'merged' && 'bg-purple-500',
+                                            ]"
+                                        ></div>
+                                        <span
+                                            class="text-xs font-medium text-gray-600 capitalize"
+                                        >
+                                            {{ mergedTable.status }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Merged Indicator -->
+                                <div
+                                    class="flex flex-col items-center text-center mb-3"
+                                >
+                                    <h4 class="text-gray-900 text-xs">
+                                        {{ mergedTable.name }}
+                                    </h4>
+                                    <h3
+                                        class="w-fit bg-purple-100 text-purple-800 text-sm px-2 py-1 rounded-full font-medium flex items-center gap-1 mb-2"
+                                    >
+                                        <i class="pi pi-link text-lg"></i>
+                                        Merged to {{ table.name }}
+                                    </h3>
+                                </div>
+
+                                <!-- Table Info -->
+                                <div
+                                    class="text-center text-sm text-gray-600 space-y-1"
+                                >
+                                    <p
+                                        v-if="mergedTable.current_order"
+                                        class="text-blue-600 font-medium"
+                                    >
+                                        Order #{{
+                                            mergedTable.current_order.id
+                                        }}
+                                    </p>
+                                    <div
+                                        v-if="
+                                            mergedTable.status === 'occupied' &&
+                                            mergedTable.number_of_pax
+                                        "
+                                        class="space-y-0.5"
+                                    >
+                                        <p class="text-gray-700 font-medium">
+                                            {{ mergedTable.number_of_pax }} pax
+                                        </p>
+                                        <p
+                                            v-if="mergedTable.time_in"
+                                            class="text-xs text-gray-500"
+                                        >
+                                            {{
+                                                formatTimeOccupied(
+                                                    mergedTable.time_in
+                                                )
+                                            }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </template>
                 </div>
 
                 <!-- Empty State -->
-                <div v-if="sortedTables.length === 0" class="text-center py-12">
+                <div
+                    v-if="filteredTables.length === 0"
+                    class="text-center py-12"
+                >
                     <i class="pi pi-table text-4xl text-gray-300 mb-4"></i>
                     <h3 class="text-lg font-medium text-gray-900 mb-2">
                         No tables found
                     </h3>
                     <p class="text-gray-600">
                         {{
-                            selectedLocation
+                            selectedLocationId
                                 ? "No tables in this location yet."
                                 : "No tables available."
                         }}
@@ -264,16 +353,17 @@ import { useCashier } from "@/composables/useCashier";
 
 // Props
 const props = defineProps<{
-    tables: any[];
-    locations: any[];
+    tableRooms: any[];
     currentUser: any;
 }>();
 
 // Reactive State
 const page = usePage<PageProps>();
-const tables = computed(() => props.tables || []);
-const locations = ref(props.locations || []);
-const selectedLocation = ref<number | null>(null);
+const locations = computed(() => {
+    // Extract locations from tableRooms array
+    return props.tableRooms || [];
+});
+const selectedLocationId = ref<number | null>(null);
 const showTableModal = ref(false);
 const selectedTable = ref<any>(null);
 const showMergeModal = ref(false);
@@ -297,26 +387,12 @@ const toggleSidebar = () => {
 };
 
 // Computeds
-const filteredTables = computed(() =>
-    selectedLocation.value === null
-        ? tables.value
-        : tables.value.filter(
-              (t) => t.table_room_location_id === selectedLocation.value
-          )
-);
+const currentLocation = computed(() => {
+    if (selectedLocationId.value === null) return null;
+    return locations.value.find((loc) => loc.id === selectedLocationId.value);
+});
 
-const sortedTables = computed(() =>
-    [...filteredTables.value].sort((a, b) => {
-        // Sort by sort_number first, then by name
-        const aSort = a.sort_number || 0;
-        const bSort = b.sort_number || 0;
-        if (aSort !== bSort) return aSort - bSort;
-        return a.name.localeCompare(b.name);
-    })
-);
-
-const getTableCount = (locationId: number) =>
-    tables.value.filter((t) => t.table_room_location_id === locationId).length;
+const filteredTables = computed(() => currentLocation.value?.tableRooms || []);
 
 const availableMergeTargets = computed(() =>
     filteredTables.value.filter((t) => t.status === "occupied")
@@ -327,12 +403,8 @@ const availableTransferTargets = computed(() => {
 
     // Show only vacant tables from the same location as the source table
     // Filter out the source table itself
-    return tables.value.filter(
-        (t) =>
-            t.status === "vacant" &&
-            t.id !== selectedTable.value?.id &&
-            t.table_room_location_id ===
-                selectedTable.value?.table_room_location_id
+    return filteredTables.value.filter(
+        (t) => t.status === "vacant" && t.id !== selectedTable.value?.id
     );
 });
 
@@ -353,6 +425,17 @@ const getTableStatusClasses = (status: string) => {
 };
 
 const openTableModal = (table: any) => {
+    // If the clicked table is merged, show the main/parent table instead
+    // if (table.merge_to) {
+    //     // Find the parent table in filteredTables
+    //     const parentTable = filteredTables.value.find(
+    //         (t) => t.id === table.merge_to
+    //     );
+    //     selectedTable.value = parentTable || table;
+    // } else {
+
+    // }
+    console.log("open table", table);
     selectedTable.value = table;
     showTableModal.value = true;
 };
@@ -757,8 +840,8 @@ const viewOrderDetails = (order: any) => {
 
 onMounted(() => {
     // Auto-select first location if none selected
-    if (!selectedLocation.value && locations.value.length > 0) {
-        selectedLocation.value = locations.value[0].id;
+    if (!selectedLocationId.value && locations.value.length > 0) {
+        selectedLocationId.value = locations.value[0].id;
     }
 
     if (page.props.flash.success) {

@@ -1,11 +1,12 @@
 <?php
 namespace App\Services;
 
-use App\Enums\TableRoomStatusType;
-use App\Models\TableRoom;
-use Carbon\Carbon;
 use Exception;
+use Carbon\Carbon;
+use App\Models\TableRoom;
 use Illuminate\Http\Request;
+use App\Models\TableRoomLocation;
+use App\Enums\TableRoomStatusType;
 use Illuminate\Support\Facades\Auth;
 
 class TableRoomService
@@ -131,6 +132,31 @@ class TableRoomService
         return $tableReservation;
     }
 
+
+
+    public function list(Int $branchId)
+    {
+
+        $tableRoomLocations = TableRoomLocation::with(['tableRooms' => function ($query) use ($branchId) {
+            $query->where('branch_id', $branchId)
+                    ->whereNull('merge_to')
+                    ->orderBy('name')
+                    ->with(['mergedTables', 'cart']);
+        }])
+        ->orderBy('name')
+        ->get();
+
+        return $tableRoomLocations;
+    }
+
+    public function mergedTable(Int $mainTableId, Int $mergingTableId): ?TableRoom
+    {
+        return $this->model->where('id', $mergingTableId)
+            ->where('merge_to', $mainTableId)
+            ->first();
+    }
+
+
     public function unmergeTable(int $tableId): bool
     {
         $tableRoom = $this->model->findOrFail($tableId);
@@ -146,11 +172,11 @@ class TableRoomService
     }
 
 
-    public function list(Int $branchId): \Illuminate\Database\Eloquent\Collection
+
+
+    function removeMergedTables(Int $tableId): void
     {
-        return $this->model->with(['tableRoomLocation'])
-            ->where('merge_to', null)
-            ->where('branch_id', $branchId)
-            ->orderBy('table_room_locations.name')->get();
+        $this->model->where('merge_to', $tableId)
+            ->update(['merge_to' => null, 'status' => TableRoomStatusType::VACANT->value]);
     }
 }

@@ -119,7 +119,7 @@ Route::middleware([
                     Route::controller(CashierSessionController::class)
                         ->group(function () {
                             Route::get('/', 'index')->name('index');
-                            Route::get('/tables', 'tables')->name('tables');
+                            // Route::get('/tables', 'tables')->name('tables');
                             Route::get('/preview', 'preview')->name('preview');
                             Route::get('/product/{product}/options', 'productOptions')->name('product.options');
                             Route::get('/{categorySlug?}', 'index')->name('category');
@@ -163,6 +163,7 @@ Route::middleware([
                 ->prefix('/table-rooms')
                 ->controller(TableRoomController::class)
                 ->group(function () {
+                    Route::get('/', 'index')->name('index');
                     Route::get('/list', 'list')->name('list');
                     Route::post('/tables', 'store')->name('store');
                     Route::post('/tables/bulk-update-positions', 'bulkUpdatePositions')->name('bulk-update-positions');

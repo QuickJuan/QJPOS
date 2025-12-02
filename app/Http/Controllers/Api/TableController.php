@@ -6,11 +6,19 @@ use App\Models\Branch;
 use App\Models\TableRoom;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use App\Services\TableRoomService;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\TableListingResource;
+use App\Http\Resources\TableLocationResource;
 
 class TableController extends Controller
 {
+
+
+    public function __construct(
+        protected readonly TableRoomService $tableRoomService
+    ) {
+    }
     /**
      * Get tables for a specific branch
      */
@@ -87,10 +95,8 @@ class TableController extends Controller
 
     public function list(Request $request): JsonResponse
     {
-        $tables = TableRoom::with(['tableRoomLocation', 'mergeTo'])
-            ->activeBranch();
-
-
-        return response()->json(TableListingResource::collection($tables));
+        $branchId = $request->input('branchId');
+        $tableRoomLocations = $this->tableRoomService->list($branchId);
+        return response()->json(TableLocationResource::collection($tableRoomLocations));
     }
 }

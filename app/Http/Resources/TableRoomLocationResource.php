@@ -17,6 +17,7 @@ class TableRoomLocationResource extends JsonResource
             'id'             => $this->id,
             'name'           => $this->name,
             'service_charge' => $this->service_charge,
+            'location_type'  => $this->location_type,
             'tableRooms'     => TableRoomResource::collection($this->whenLoaded('tableRooms')),
         ];
     }
