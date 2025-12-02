@@ -110,7 +110,7 @@
                 <!-- Vacant table (only if occupied and not merged) -->
                 <Button
                     v-if="
-                        table && table.status === 'occupied' && !table.mergeTo
+                        table && table.status === 'occupied' && !table.mergedTo
                     "
                     label="Vacant Table"
                     icon="pi pi-undo"
