@@ -57,35 +57,35 @@
             <div class="p-3 bg-white shadow lg:sticky lg:top-0">
                 <!-- Location Tabs Grid -->
                 <div
-                    class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2"
+                    class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"
                 >
-                    <div
+                    <button
                         v-for="loc in tableRooms"
                         :key="loc.id"
                         @click="selectedLocationId = loc.id"
                         :class="[
-                            'cursor-pointer px-2 py-1.5 rounded text-xs sm:text-sm font-semibold border flex flex-col sm:flex-row items-center justify-center gap-1 transition-colors',
+                            'h-16 cursor-pointer px-2 py-1.5 rounded text-xs sm:text-sm font-semibold border flex flex-col sm:flex-row items-center justify-center gap-1 transition-colors',
                             selectedLocationId === loc.id
                                 ? 'bg-blue-600 text-white border-blue-600 shadow'
                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300',
                         ]"
                     >
                         <span class="truncate">{{ loc.name }}</span>
-                        <span class="text-[10px] opacity-80">
+                        <span class="text-base opacity-80">
                             ({{ loc?.tableRoomCount || 0 }})
                         </span>
-                    </div>
+                    </button>
                 </div>
 
                 <!-- Back Button (Desktop only) -->
-                <div class="hidden lg:flex justify-end mt-3">
+                <!-- <div class="hidden lg:flex justify-end mt-3 h-16">
                     <button
                         @click="goBackToCashier"
                         class="px-3 py-1 rounded bg-gray-600 text-white text-sm font-semibold hover:bg-gray-700"
                     >
                         ← Back to Cashier
                     </button>
-                </div>
+                </div> -->
             </div>
 
             <!-- Tables Grid -->

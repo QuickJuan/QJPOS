@@ -7,6 +7,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\Request;
 use App\Models\TableRoomLocation;
+use App\Enums\TableRoomStatusType;
 use App\Services\TableRoomService;
 use Illuminate\Http\RedirectResponse;
 use App\Http\Requests\TableRoomRequest;

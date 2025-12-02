@@ -80,6 +80,48 @@ export const useTable = () => {
             );
     };
 
+    const takeOrder = (tableId: number, data: { pax: number; guest_name: string }) => {
+        if (!tableId || !data.pax || !data.guest_name) {
+            toast.add({
+                severity: "error",
+                summary: "Error",
+                detail: "Table ID, number of guests, and guest name are required",
+                life: 3000,
+            });
+            return;
+        }
+
+        router.post(
+            route("resto.cart.create-order"),
+            {
+                table_id: tableId,
+                pax: data.pax,
+                guest_name: data.guest_name,
+            },
+            {
+                preserveScroll: false,
+                preserveState: false,
+                onSuccess: (response) => {
+                    toast.add({
+                        severity: "success",
+                        summary: "Success",
+                        detail: "Order started successfully",
+                        life: 3000,
+                    });
+                    router.reload({ only: ["tables", "cart"] });
+                },
+                onError: (errors) => {
+                    toast.add({
+                        severity: "error",
+                        summary: "Error",
+                        detail: errors?.message || "Failed to take order",
+                        life: 3000,
+                    });
+                },
+            }
+        );
+    };
+
     const unmergeFromTable = (tableId: number) => {
         if (!tableId) {
             toast.add({
@@ -274,6 +316,7 @@ export const useTable = () => {
     return {
         vacantTable,
         placeOrder,
+        takeOrder,
         unmergeFromTable,
         unmergeTables,
         viewOrder,

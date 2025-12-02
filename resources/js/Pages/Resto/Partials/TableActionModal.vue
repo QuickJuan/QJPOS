@@ -2,8 +2,12 @@
     <Dialog
         :visible="show"
         modal
-        :header="`${table?.name || ''}`"
-        :style="{ width: '400px' }"
+        :header="`${
+            table?.mergedTo
+                ? 'Merged to ' + table.mergedToTable
+                : table?.name || ''
+        }`"
+        :style="{ width: '800px' }"
         :closable="true"
         @hide="handleClose"
         @update:visible="handleClose"
@@ -30,12 +34,6 @@
                     >
                         <span class="inline-block mr-2">•</span>
                         <span class="font-medium">{{ mergedTable.name }}</span>
-                        <span
-                            v-if="mergedTable.merge_to"
-                            class="text-purple-600 ml-1"
-                        >
-                            (merged to another table)
-                        </span>
                     </p>
                 </div>
             </div>
@@ -46,6 +44,7 @@
                     <span class="text-sm font-medium text-gray-700">
                         Status:
                     </span>
+
                     <span
                         :class="[
                             'px-2 py-1 text-xs font-medium rounded-full capitalize',
@@ -62,22 +61,22 @@
                         {{ table?.status ?? "" }}
                     </span>
                 </div>
-                <div class="text-sm text-gray-600">
-                    <p>{{ table?.chairs }} chairs</p>
-                    <p v-if="table?.current_order">
-                        Current Order: #{{ table.current_order.id }}
-                    </p>
+                <div
+                    class="flex text-sm text-gray-600 justify-between space-y-1"
+                >
+                    <p v-if="table?.mergedTo">Original #</p>
+                    <p v-if="table?.mergedTo">{{ table.name }}</p>
                 </div>
             </div>
 
             <!-- Action Buttons -->
-            <div class="space-y-3">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <!-- Order Claim -->
                 <Button
                     v-if="isTakeoutOccupied"
                     label="Order Claim"
                     icon="pi pi-plus"
-                    class="w-full"
+                    class="w-full h-12"
                     severity="success"
                     @click="handleClaimOrder"
                     :disabled="!table"
@@ -88,7 +87,7 @@
                     v-if="isTakeoutOccupied"
                     label="Transfer Number"
                     icon="pi pi-arrow-right"
-                    class="w-full"
+                    class="w-full h-12"
                     severity="success"
                     @click="handleTransferNumber"
                     :disabled="!table"
@@ -103,7 +102,7 @@
                     "
                     label="View Order"
                     icon="pi pi-eye"
-                    class="w-full"
+                    class="w-full h-12"
                     severity="info"
                     @click="handleViewOrder"
                 />
@@ -115,7 +114,7 @@
                     "
                     label="Vacant Table"
                     icon="pi pi-undo"
-                    class="w-full"
+                    class="w-full h-12"
                     severity="warning"
                     @click="vacantTable"
                 />
@@ -126,21 +125,22 @@
                         !isTakeoutOccupied &&
                         table &&
                         table.status === 'available' &&
-                        !table.mergeTo
+                        !table.mergedTo
                     "
                     label="Merge Table"
                     icon="pi pi-link"
-                    class="w-full"
+                    class="w-full h-12"
                     severity="secondary"
                     @click="handleMergeTable"
                 />
 
                 <!-- Unmerge Table (this table from its parent) -->
+
                 <Button
-                    v-if="table?.mergeTo"
+                    v-if="table?.mergedTo"
                     label="Unmerge from Parent Table"
                     icon="pi pi-arrow-up-right-and-arrow-down-left-from-center"
-                    class="w-full"
+                    class="w-full h-12"
                     severity="warning"
                     @click="handleUnmergeFromTable"
                 />
@@ -150,7 +150,7 @@
                     v-if="table?.mergedTables && table.mergedTables.length > 0"
                     label="Unmerge All Tables"
                     icon="pi pi-arrow-up-right-and-arrow-down-left-from-center"
-                    class="w-full"
+                    class="w-full h-12"
                     severity="warning"
                     @click="handleUnmergeTables"
                 />
@@ -168,7 +168,7 @@
                             ? 'pi pi-times'
                             : 'pi pi-clock'
                     "
-                    class="w-full"
+                    class="w-full h-12"
                     :severity="
                         table && table.status === 'reserved'
                             ? 'danger'
@@ -182,7 +182,7 @@
             <!-- Pax/Guest Input for Available Tables: show immediately -->
             <div
                 v-if="table && table.status === 'available' && !table.mergeTo"
-                class="space-y-3 border-t pt-4"
+                class="space-y-3 border-t pt-4 space-y-8"
             >
                 <h4 class="font-medium text-gray-900">Guest Count</h4>
                 <div class="flex flex-wrap gap-2 mb-2">
@@ -190,14 +190,14 @@
                         v-for="n in [1, 2, 3, 4, 6, 8, 9, 0]"
                         :key="n"
                         type="button"
-                        class="px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-800 font-semibold hover:bg-primary hover:text-white transition-colors"
-                        :class="{ 'bg-primary text-white': pax === n }"
+                        class="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-800 font-semibold hover:bg-primary hover:text-white transition-colors"
+                        :class="{ 'bg-primary text-red-500': pax === n }"
                         @click="pax = n"
                     >
                         {{ n }}
                     </button>
                 </div>
-                <div>
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
                     <TextField
                         label="Number of Pax"
                         v-model="pax"
@@ -207,19 +207,18 @@
                         placeholder="Enter number of guests"
                         type="number"
                     />
-                </div>
-                <div>
                     <TextField
                         label="Guest Name"
                         v-model="guestName"
                         :min="1"
                         :max="table ? table.chairs : 10"
-                        class="w-full"
+                        class="w-full md:col-span-3"
                         placeholder="Enter guest name"
                         @keyup.enter="confirmTakeOrder"
                     />
                 </div>
-                <div class="flex gap-2">
+
+                <div class="flex gap-4">
                     <Button
                         label="Cancel"
                         severity="secondary"
