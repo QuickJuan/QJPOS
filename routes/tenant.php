@@ -142,6 +142,7 @@ Route::middleware([
                             Route::post('/order/transfer/{tableId}', 'transferOrder')->name('order.transfer');
                             Route::put('/cart/item/discount/', 'applyDiscountToCartItem')->name('cart.apply-discount');
                             Route::put('/cart/item/modifier/', 'applyModifierToCartItem')->name('cart.apply-modifier');
+                            Route::put('/cart/item/modifier/remove', 'removeModifierFromCartItem')->name('cart.remove-modifier');
                             Route::put('/cart/item/{cartItemId}', 'updateCartItem')->name('cart.update-item');
                             Route::put('/cart/item/clear-discount/{cartItemId}', 'clearDiscountToCartItem')->name('cart.clear-discount');
                             Route::put('/cart/item/void/{cartItemId}', 'voidCartItem')->name('cart.void-cart');
@@ -204,7 +205,7 @@ Route::middleware([
                 ->prefix('/printer-config')
                 ->controller(\App\Http\Controllers\PrinterConfigController::class)
                 ->group(function () {
-                    Route::get('/', 'index')->name('index');
+                    Route::get('/{tableId?}', 'index')->name('index');
                     Route::post('/', 'store')->name('store');
                     Route::put('/{printerConfig}', 'update')->name('update');
                     Route::delete('/{printerConfig}', 'destroy')->name('destroy');

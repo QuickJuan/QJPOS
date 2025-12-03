@@ -19,6 +19,7 @@ class Product extends Model implements HasMedia
         'description',
         'category_id',
         'brand_id',
+        'preparation_location_id',
         'product_type',
         'is_active',
         'with_expiration',
@@ -108,5 +109,10 @@ class Product extends Model implements HasMedia
     public function modifiers(): BelongsToMany
     {
         return $this->belongsToMany(Modifier::class, 'modifier_product', 'product_id', 'modifier_id')->withTimestamps();
+    }
+
+    public function preparationLocation(): BelongsTo
+    {
+        return $this->belongsTo(PreparationLocation::class);
     }
 }

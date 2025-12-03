@@ -63,6 +63,7 @@
             @add-modifier="handleAddModifier"
             @print-bill="handlePrintBill"
             @view-table="handleViewTable"
+            @printer-config="handlePrinterConfig"
             @end-of-shift="handleEndOfShift"
         />
 
@@ -120,7 +121,7 @@ import SettleBillModal from "./SettleBillModal.vue";
 import ReceiptModal from "./ReceiptModal.vue";
 import BillModal from "./BillModal.vue";
 import { useBillNumber } from "@/composables/useBillNumber";
-import { usePage } from "@inertiajs/vue3";
+import { usePage, router } from "@inertiajs/vue3";
 import { ConfirmPopup, useConfirm } from "primevue";
 import axios from "axios";
 import { route } from "ziggy-js";
@@ -132,7 +133,7 @@ const props = defineProps<{
     locationType: string;
     orderItems: any[];
     selectedOrderType: string;
-    selectedItemsForDiscount: number[];
+    selectedItemsForDiscount?: number[];
     totalAmount: number;
     appliedDiscount: any;
     subTotal: number;
@@ -161,6 +162,7 @@ const emit = defineEmits<{
     settleBill: [data: any];
     printBill: [];
     viewTable: [];
+    printerConfig: [];
     endOfShift: [];
 }>();
 
@@ -315,6 +317,11 @@ const handlePrintBill = () => {
 // Handle view table
 const handleViewTable = () => {
     emit("viewTable");
+};
+
+// Handle printer configuration
+const handlePrinterConfig = () => {
+    router.visit(route("printer-config.index", { tableId: props.tableId }));
 };
 
 // Handle end of shift

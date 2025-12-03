@@ -128,9 +128,20 @@ class CartController extends Controller
         try {
             $this->cartService->applyModifierToCartItem($request);
 
-            return redirect()->back()->with('success', 'Discount applied to cart item successfully.');
+            return redirect()->back()->with('success', 'Modifier applied to cart item successfully.');
         } catch (Exception $e) {
-            return redirect()->back()->with('error', 'There was an error applying discount to cart item.');
+            return redirect()->back()->with('error', 'There was an error applying modifier to cart item.');
+        }
+    }
+
+    public function removeModifierFromCartItem(Request $request): RedirectResponse
+    {
+        try {
+            $this->cartService->removeModifierFromCartItem($request);
+
+            return redirect()->back()->with('success', 'Modifier removed from cart item successfully.');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'There was an error removing modifier from cart item.');
         }
     }
 

@@ -15,11 +15,10 @@
             <!-- Cart Items -->
             <CartItems
                 :order-items="orderItems"
-                :selected-items-for-discount="selectedItemsForDiscount"
-                @toggle-item-for-discount="toggleItemForDiscount"
                 @edit-item="handleEdit"
                 @delete-item="handleDelete"
                 @show-item-modifiers="handleShowItemModifiers"
+                @remove-modifier="handleRemoveModifier"
             />
 
             <!-- Order Totals -->
@@ -538,6 +537,34 @@ const handleShowItemModifiers = (item: any) => {
     selectedItemForModifiers.value = item;
     selectedItemModifiers.value = item.meta_data || [];
     showItemModifiersModal.value = true;
+};
+
+const handleRemoveModifier = (item: any, modifierIndex: number) => {
+    router.put(
+        route("resto.cart.remove-modifier"),
+        {
+            cartItemId: item.id,
+            modifierIndex: modifierIndex,
+        },
+        {
+            onSuccess: () => {
+                toast.add({
+                    severity: "success",
+                    summary: "Success",
+                    detail: "Modifier removed successfully",
+                    life: 3000,
+                });
+            },
+            onError: (errors) => {
+                toast.add({
+                    severity: "error",
+                    summary: "Error",
+                    detail: "Failed to remove modifier",
+                    life: 3000,
+                });
+            },
+        }
+    );
 };
 
 watch(
