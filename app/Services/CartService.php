@@ -1,6 +1,8 @@
 <?php
+
 namespace App\Services;
 
+use Exception;
 use App\Enums\TableRoomLocation\LocationType;
 use App\Enums\TableRoomStatusType;
 use App\Models\Branch;
@@ -13,7 +15,6 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductPackaging;
 use App\Models\TableRoom;
-use Exception;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -449,58 +450,66 @@ class CartService
 
     public function deleteCartItem(int $cartItemId): mixed
     {
-        $cashierSession = $this->cashierSession->openSession()->first();
 
-        if (! $cashierSession) {
-            throw new Exception('No active cashier session found.');
-        }
-
-        $cart = Cart::authCashier()->cashierOpenSession($cashierSession->id)->first();
-
-        if (! $cart) {
-            throw new Exception('Cart not found.');
-        }
 
         $cartItem = CartItem::findOrFail($cartItemId);
-
         if (! $cartItem) {
-            throw new Exception('Cart item not found.');
+            throw new Exception('Cart item is empty.');
         }
-
         return $cartItem->delete();
     }
 
+
     public function placeOrder($payload): mixed
     {
-        // Get the current open cashier session
-        $cart = Cart::findOrFail($payload['cart_id']);
-        $orderNumber = null;
+        try {
+            return DB::transaction(function () use ($payload) {
+                // Get the current open cashier session
+                $cart = Cart::findOrFail($payload['cart_id']);
+                $orderNumber = null;
 
-        $branchId = $cart->branch_id ?? $cart->cashierSession->branch_id ?? null;
-        if ($branchId) {
-            // Update the bill number for the cart
-            $orderNumber = $this->branchService->getNextOrderNumber($branchId);
+                $branchId = $cart->branch_id ?? $cart->cashierSession->branch_id ?? null;
+                if ($branchId) {
+                    // Update the bill number for the cart
+                    $orderNumber = $this->branchService->getNextOrderNumber($branchId);
+                }
+
+                if ($cart) {
+                    $cartItems = $cart->cartItems()
+                        ->where('placed_order', false)
+                        ->where('batch_number', null)
+                        ->update([
+                            'placed_order' => true,
+                            'batch_number' => $orderNumber,
+                        ]);
+
+                    $cart->update([
+                        'table_room_id' => $payload['table_id'],
+                    ]);
+
+                    $cartItems = CartItem::where('cart_id', $cart->id)
+                        ->where('batch_number', $orderNumber)
+                        ->get();
+
+                    $preparationItems = PreparationItemCollectionResource::collection($cartItems);
+
+                    return [
+                        'orderNumber' => $orderNumber,
+                        'cart'         => $cart->fresh(),
+                        'cartItems'    => $preparationItems,
+                        'tableRoom'   => $cart->tableRoom,
+                        'success'      => true,
+                    ];
+                }
+
+                return [
+                    'success' => false,
+                ];
+            });
+        } catch (\Exception $e) {
+            // Transaction automatically rolls back on exception
+            throw new Exception('Failed to place order: ' . $e->getMessage());
         }
-
-        if ($cart) {
-           $cartItems =  $cart->cartItems()
-                ->where('placed_order', false)
-                ->where('batch_number', null)
-                ->update([
-                    'placed_order' => true,
-                    'batch_number'  => $orderNumber,
-                ]);
-
-
-            $cart->update([
-                'table_room_id' => $payload['table_id'],
-            ]);
-
-            return $cart->tableRoom;
-
-        }
-
-        return null;
     }
 
     public function claimOrder(int $tableId): mixed
