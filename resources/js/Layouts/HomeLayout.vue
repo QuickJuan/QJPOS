@@ -6,7 +6,7 @@ import { route } from "ziggy-js";
 
 const page = usePage();
 const toast = useToast();
-const activeBranch = computed(() => page.props.active_branch);
+const activeBranch = computed(() => page.props.activeBranch);
 const user = computed(() => page.props.auth.user);
 
 const logout = () => {

@@ -82,6 +82,7 @@
             :table-info="tableInfo"
             :bill-footer="billFooter"
             :receipt-number="receiptNumber"
+            :order-receipt-data="orderReceiptData"
             @settle-bill="handleSettleBill"
         />
 
@@ -122,8 +123,7 @@ import ReceiptModal from "./ReceiptModal.vue";
 import BillModal from "./BillModal.vue";
 import { useBillNumber } from "@/composables/useBillNumber";
 import { usePage, router } from "@inertiajs/vue3";
-import { ConfirmPopup, useConfirm } from "primevue";
-import axios from "axios";
+import { ConfirmPopup } from "primevue";
 import { route } from "ziggy-js";
 import { useTable } from "@/composables/useTable";
 
@@ -145,6 +145,7 @@ const props = defineProps<{
     receiptFooter: any;
     billNumber: string;
     receiptNumber: string;
+    orderReceiptData?: any;
     generalSettings: {
         company_name: string;
         company_address: string;
@@ -168,15 +169,7 @@ const emit = defineEmits<{
 
 // Use applied discount from props
 const appliedDiscount = computed(() => props.appliedDiscount);
-
-// Check if there are items that can be placed (have placed_order false)
-const hasItemsToPlace = computed(() => {
-    return props.orderItems.some((item) => item.placed_order === false);
-});
-
 const { placeOrder } = useTable();
-// Use confirm
-const confirm = useConfirm();
 
 // UsePage
 const page = usePage();

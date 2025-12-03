@@ -1,18 +1,18 @@
 <?php
 namespace App\Http\Controllers;
 
-use Exception;
-use App\Models\Cart;
-use Inertia\Inertia;
-use Inertia\Response;
-use Illuminate\Http\Request;
-use App\Models\TableRoomLocation;
 use App\Enums\TableRoomStatusType;
-use App\Services\TableRoomService;
-use Illuminate\Http\RedirectResponse;
+use App\Http\Requests\TableReservationRequest;
 use App\Http\Requests\TableRoomRequest;
 use App\Http\Resources\TableLocationResource;
-use App\Http\Requests\TableReservationRequest;
+use App\Models\Cart;
+use App\Models\TableRoomLocation;
+use App\Services\TableRoomService;
+use Exception;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class TableRoomController extends Controller
 {
@@ -21,11 +21,9 @@ class TableRoomController extends Controller
         $this->tableRoomService = $tableRoomService;
     }
 
-
     public function index(Request $request)
     {
-
-        //get the active branch using user cashier id from session
+        // Get the active branch using user cashier id from session
         $cashierSession = $request->user()->cashierSession;
 
         $tableRooms = $this->tableRoomService->list($cashierSession->branch_id);
@@ -145,7 +143,7 @@ class TableRoomController extends Controller
         try {
             // Get the table to unmerge all its merged tables
             $table = $this->tableRoomService->model->find($tableId);
-            if (!$table) {
+            if (! $table) {
                 return redirect()->back()->with('error', 'Table not found.');
             }
 
@@ -210,7 +208,7 @@ class TableRoomController extends Controller
         try {
             $table = $this->tableRoomService->model->find($tableId);
 
-            if (!$table) {
+            if (! $table) {
                 return redirect()->back()->with('error', 'Table not found.');
             }
 
@@ -230,9 +228,9 @@ class TableRoomController extends Controller
 
             // Update table status to available
             $table->update([
-                'status' => TableRoomStatusType::AVAILABLE->value,
+                'status'        => TableRoomStatusType::AVAILABLE->value,
                 'number_of_pax' => null,
-                'time_in' => null,
+                'time_in'       => null,
             ]);
 
             return redirect()->back()->with('success', 'Table has been set to Available successfully.');
@@ -241,7 +239,5 @@ class TableRoomController extends Controller
             return redirect()->back()->with('error', 'Failed to set table to Available: ' . $e->getMessage());
         }
     }
-
-
 
 }

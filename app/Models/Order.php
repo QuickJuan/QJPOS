@@ -17,6 +17,7 @@ class Order extends Model
         'discount_id',
         'coupon_id',
         'coupon_code',
+        'invoice_no',
         'total_amount',
         'total_discount',
         'item_discount',

@@ -59,26 +59,13 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * Get active branch from current user's cashier session
+     * Get active branch from session
      */
     private function getActiveBranch(Request $request): ?array
     {
-        if (!$request->user()) {
-            return null;
-        }
+        $activeBranch = $request->session()->get('active_branch');
 
-        // Get the current user's active cashier session
-        $cashierSession = CashierSession::with('branch')
-            ->where('cashier_id', $request->user()->id)
-            ->whereNull('closing_time')
-            ->latest('started_time')
-            ->first();
-
-        if (!$cashierSession || !$cashierSession->branch) {
-            return null;
-        }
-
-        return $cashierSession->branch->toArray();
+        return $activeBranch ? $activeBranch->toArray() : null;
     }
 
     /**

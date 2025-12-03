@@ -160,6 +160,7 @@ const props = defineProps<{
     tableInfo: any;
     billFooter: any;
     receiptNumber: string;
+    orderReceiptData?: any;
 }>();
 
 const emit = defineEmits<{
@@ -256,6 +257,7 @@ const handleSettleBill = () => {
             }
         );
     });
+    console.log("Ilog nga to ya", props.orderReceiptData);
     receiptData.value = {
         receiptNumber: props.receiptNumber,
         date: new Date().toISOString(),
