@@ -1,14 +1,15 @@
 <?php
 namespace App\Http\Controllers;
 
-use App\Http\Requests\ApplyDiscountToCartItemRequest;
-use App\Http\Requests\CartRequest;
-use App\Services\CartService;
-use App\Services\CashierSessionService;
-use App\Services\PaymentService;
 use Exception;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use App\Services\CartService;
+use App\Services\PaymentService;
+use App\Http\Requests\CartRequest;
+use Illuminate\Http\RedirectResponse;
+use App\Services\CashierSessionService;
+use App\Http\Requests\PlaceOrderRequest;
+use App\Http\Requests\ApplyDiscountToCartItemRequest;
 
 class CartController extends Controller
 {
@@ -149,22 +150,24 @@ class CartController extends Controller
         }
     }
 
-    public function placeOrder(Request $request): RedirectResponse
+    public function placeOrder(PlaceOrderRequest $request): RedirectResponse
     {
         try {
 
-            $payload = $request->validate([
-                'cart_id' => 'required|integer|exists:carts,id',
-                'table_id' => 'required|integer|exists:table_rooms,id',
-            ]);
+            $payload = [
+                'cart_id'  => $request->input('cart_id'),
+                'table_id' => $request->input('table_id'),
+            ];
 
-            $success = $this->cartService->placeOrder($payload);
+            $table = $this->cartService->placeOrder($payload);
 
-            if ($success === false) {
+            if ($table === null) {
                 return redirect()->back()->with('error', 'There was an error placing order.');
             }
 
-            return redirect()->route('table-rooms.index')
+            $locationId = $table->table_room_location_id;
+
+            return redirect()->route('table-rooms.index', ['locationId' => $locationId])
                 ->with('success', 'Order placed successfully, We will start preparing your order');
 
 
