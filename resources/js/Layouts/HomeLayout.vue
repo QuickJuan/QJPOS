@@ -62,12 +62,12 @@ const logout = () => {
                                 <h1 class="text-xl font-bold text-gray-900">
                                     QJ<span class="text-primary">POS</span>
                                 </h1>
-                                <p class="text-xs text-gray-500">
+                                <!-- <p class="text-xs text-gray-500">
                                     {{
                                         activeBranch?.name ||
                                         "No Branch Selected"
                                     }}
-                                </p>
+                                </p> -->
                             </div>
                         </div>
 

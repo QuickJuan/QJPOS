@@ -100,4 +100,22 @@ class User extends Authenticatable
         return $this->hasOne(CashierSession::class, 'cashier_id')->latestOfMany();
 
     }
+
+    public function hasOpenSessionToAnotherBranch(Branch $branch): bool
+    {
+        return $this->cashierSessions()
+            ->where('branch_id', '!=', $branch->id)
+            ->whereNull('closing_time')
+            ->exists();
+    }
+
+    public function getBranchWithOpenSession(Branch $branch): ?Branch
+    {
+        $session = $this->cashierSessions()
+            ->where('branch_id', '!=', $branch->id)
+            ->whereNull('closing_time')
+            ->first();
+
+        return $session ? $session->branch : null;
+    }
 }

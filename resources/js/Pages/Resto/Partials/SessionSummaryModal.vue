@@ -239,6 +239,7 @@ import { computed, ref } from "vue";
 import axios from "axios";
 import { route } from "ziggy-js";
 import { useConfirm, useToast } from "primevue";
+import { thermalPrinter } from "@/Services/ThermalPrinterService";
 
 const props = defineProps<{
     showSessionSummaryModal: boolean;
@@ -263,37 +264,55 @@ const handleClose = () => {
 
 const printArea = ref<HTMLElement | null>(null);
 
-const printReport = () => {
-    const contentEl = printArea.value;
-    if (!contentEl) {
-        window.print();
-        return;
+const printReport = async () => {
+    try {
+        // Load receipt printer config (assuming session summary uses receipt printer)
+        await thermalPrinter.loadPrinterConfig('receipt');
+
+        // Connect to printer if not already connected
+        if (!thermalPrinter.isConnected()) {
+            const connected = await thermalPrinter.connectToPrinterType('receipt');
+            if (!connected) {
+                toast.add({
+                    severity: "error",
+                    summary: "Printer Error",
+                    detail: "Failed to connect to printer. Please check printer configuration.",
+                    life: 5000,
+                });
+                return;
+            }
+        }
+
+        // Print session summary
+        await thermalPrinter.printSessionSummary(
+            props.sessionSummary,
+            props.merchantName || "QUICKJUAN POS",
+            currentBranch?.address || "",
+            currentCashier || "",
+            currentBranch?.tin || "",
+            currentBranch?.registration_number || ""
+        );
+
+        // Show success message
+        toast.add({
+            severity: "success",
+            summary: "Print Success",
+            detail: "Session summary printed successfully",
+            life: 3000,
+        });
+
+        // Close the session after successful printing
+        emit('confirmClose');
+
+    } catch (error) {
+        console.error('Failed to print session summary:', error);
+        toast.add({
+            severity: "error",
+            summary: "Print Error",
+            detail: "Failed to print session summary. Please try again.",
+            life: 5000,
+        });
     }
-
-    const w = (window as any).open("", "_blank", "width=600,height=800");
-    if (!w) {
-        window.print();
-        return;
-    }
-
-    const styles = Array.from(
-        document.querySelectorAll('link[rel="stylesheet"], style')
-    )
-        .map((n) => n.outerHTML)
-        .join("\n");
-
-    w.document.write(
-        `<!doctype html><html><head><meta charset="utf-8"><title>Session Summary</title>${styles}</head><body>`
-    );
-    w.document.write(contentEl.innerHTML);
-    w.document.write("</body></html>");
-    w.document.close();
-    w.focus();
-    setTimeout(() => {
-        w.print();
-        // keep window open so user can choose to close; optionally close automatically
-        // w.close();
-    }, 500);
 };
 
 const reportDate = computed(() => new Date().toLocaleDateString());
@@ -351,6 +370,6 @@ const refundOrder = async (orderId: number) => {
     });
 };
 
-const currentBranch = page.props.active_branch;
+const currentBranch = page.props.active_branch as any;
 const currentCashier = (page.props.auth as any)?.user?.name;
 </script>
