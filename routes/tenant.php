@@ -126,12 +126,13 @@ Route::middleware([
                             Route::post('/session/start', 'startSession')->name('session.start');
                             Route::post('/session/close', 'closeSession')->name('session.close');
                             Route::get('/api/session-summary', 'getSessionSummary')->name('api.session-summary');
-                            Route::post('/cart/create-order', 'createOrder')->name('cart.create-order');
+
                             Route::put('/update-bill-no/{branchId}', 'updateBillNo')->name('update-bill-no');
                         });
 
                     Route::controller(CartController::class)
                         ->group(function () {
+                            Route::post('/cart/create-order', 'create')->name('cart.create-order');
                             Route::post('/cart/add', 'addToCart')->name('cart.add');
                             Route::put('/cart/{cartId}', 'updateCart')->name('cart.update');
                             Route::post('/cart/merge', 'mergeCart')->name('cart.merge');

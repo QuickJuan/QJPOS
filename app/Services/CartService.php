@@ -3,21 +3,22 @@
 namespace App\Services;
 
 use Exception;
-use App\Enums\TableRoomLocation\LocationType;
-use App\Enums\TableRoomStatusType;
-use App\Models\Branch;
 use App\Models\Cart;
-use App\Models\CartItem;
-use App\Models\CashierSession;
-use App\Models\Discount;
 use App\Models\Order;
-use App\Models\OrderItem;
+use App\Models\Branch;
 use App\Models\Product;
-use App\Models\ProductPackaging;
+use App\Models\CartItem;
+use App\Models\Discount;
+use App\Models\OrderItem;
 use App\Models\TableRoom;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use App\Models\CashierSession;
+use App\Models\ProductPackaging;
+use App\Enums\TableRoomStatusType;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\RedirectResponse;
+use App\Enums\TableRoomLocation\LocationType;
 
 class CartService
 {
@@ -30,6 +31,38 @@ class CartService
         $this->discountService = $discountService;
         $this->branchService   = $branchService;
         $this->taxRate         = config('sales.tax_rate');
+    }
+
+
+    public function createCart($payload)
+    {
+        //DB transaction to maintain consistency
+        try {
+            return DB::transaction(function () use ($payload) {
+                $table = TableRoom::find($payload['table_id']);
+                if (! $table) {
+                    throw new Exception('Table not found.');
+                }
+
+                //find if ther is a cart that is associated with the table
+                $cart = Cart::firstOrCreate([
+                    'cashier_id'         => Auth::id(),
+                    'table_room_id'      => $table->id,
+                ]);
+
+                $table->update([
+                    'status'  => TableRoomStatusType::OCCUPIED->value,
+                    'time_in' => now(),
+                ]);
+
+                return $cart;
+            });
+
+        }
+        catch (Exception $e) {
+            throw new Exception('Failed to create cart: ' . $e->getMessage());
+        }
+
     }
 
     public function addToCart(Request $request)
@@ -475,7 +508,8 @@ class CartService
                 }
 
                 if ($cart) {
-                    $cartItems = $cart->cartItems()
+                    // Update cart items to placed_order
+                    $cart->cartItems()
                         ->where('placed_order', false)
                         ->where('batch_number', null)
                         ->update([
@@ -487,17 +521,17 @@ class CartService
                         'table_room_id' => $payload['table_id'],
                     ]);
 
+                    // Get only necessary columns to prevent memory exhaustion
                     $cartItems = CartItem::where('cart_id', $cart->id)
                         ->where('batch_number', $orderNumber)
+                        ->select('id', 'cart_id', 'product_id', 'quantity', 'price', 'order_type', 'notes', 'meta_data', 'placed_order', 'batch_number')
                         ->get();
-
-                    $preparationItems = PreparationItemCollectionResource::collection($cartItems);
 
                     return [
                         'orderNumber' => $orderNumber,
-                        'cart'         => $cart->fresh(),
-                        'cartItems'    => $preparationItems,
-                        'tableRoom'   => $cart->tableRoom,
+                        'cart'         => $cart->fresh(['tableRoom']),
+                        'cartItems'    => $cartItems,
+                        'tableRoom'    => $cart->tableRoom,
                         'success'      => true,
                     ];
                 }

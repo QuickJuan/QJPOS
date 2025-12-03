@@ -2,10 +2,9 @@
 
 namespace App\Http\Requests;
 
-use App\Rules\CartHasUnplacedItems;
 use Illuminate\Foundation\Http\FormRequest;
 
-class PlaceOrderRequest extends FormRequest
+class CreateTableCartRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -23,8 +22,9 @@ class PlaceOrderRequest extends FormRequest
     public function rules(): array
     {
         return [
-              'cart_id' => ['required', 'integer', 'exists:carts,id', new CartHasUnplacedItems()],
-              'table_id' => 'required|integer|exists:table_rooms,id',
+                'table_id' => 'required|integer|exists:table_rooms,id',
+                'pax' => 'nullable|integer|min:1',
+                'guest_name' => 'nullable|string|max:75',
         ];
     }
 }

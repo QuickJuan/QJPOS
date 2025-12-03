@@ -10,6 +10,7 @@ use App\Http\Requests\CartRequest;
 use Illuminate\Http\RedirectResponse;
 use App\Services\CashierSessionService;
 use App\Http\Requests\PlaceOrderRequest;
+use App\Http\Requests\CreateTableCartRequest;
 use App\Http\Requests\ApplyDiscountToCartItemRequest;
 
 class CartController extends Controller
@@ -22,6 +23,20 @@ class CartController extends Controller
         $this->cartService           = $cartService;
         $this->cashierSessionService = $cashierSessionService;
         $this->paymentService        = $paymentService;
+    }
+
+
+    public function create(CreateTableCartRequest $request)
+    {
+        try {
+            $cart = $this->cartService->createCart($request);
+            //redrect to cashier ordering page
+            return redirect()->route('resto.index', ['tableId' => $cart->table_room_id]);
+            // return redirect()->back()->with('success', 'Cart created successfully.');
+        } catch (Exception $e) {
+            \Log::error('Cart creation error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'There was an error creating cart.');
+        }
     }
 
     public function addToCart(CartRequest $request): RedirectResponse
@@ -161,28 +176,37 @@ class CartController extends Controller
         }
     }
 
-    public function placeOrder(PlaceOrderRequest $request): RedirectResponse
+    public function placeOrder(PlaceOrderRequest $request): JsonResponse
     {
         try {
-
             $payload = [
                 'cart_id'  => $request->input('cart_id'),
                 'table_id' => $request->input('table_id'),
             ];
 
-            $table = $this->cartService->placeOrder($payload);
+            $response = $this->cartService->placeOrder($payload);
 
-            if ($table === null) {
-                return redirect()->back()->with('error', 'There was an error placing order.');
+            info('Place Order Response: ' . print_r($response, true));
+
+            if (!$response["success"]) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'There was an error placing order.',
+                ], 400);
             }
 
-            $locationId = $table->table_room_location_id;
-
-            return redirect()->route('table-rooms.index', ['locationId' => $locationId])
-                ->with('success', 'Order placed successfully, We will start preparing your order');
+            return response()->json([
+                'success' => true,
+                'message' => 'Order placed successfully, We will start preparing your order',
+                'data' => $response,
+            ], 200);
 
         } catch (Exception $e) {
-            return redirect()->back()->with('error', 'There was an error placing order.');
+            \Log::error('Place order error: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'There was an error placing order.',
+                'error'   => $e->getMessage(),
+            ], 500);
         }
     }
 
