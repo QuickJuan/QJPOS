@@ -358,14 +358,53 @@ class CartService
 
             $modifier['specialInstructions'] = $request['specialInstructions'];
 
+            // Check if cart item already has existing modifiers
+            $existingMetaData = $cartItem->meta_data ?? [];
+
+            // Append the new modifier to existing meta_data
+            $existingMetaData[] = [
+                'modifier' => $modifier,
+            ];
+
             $cartItem->update([
-                'meta_data' => [
-                    [
-                        'modifier' => $modifier,
-                    ],
-                ],
+                'meta_data' => $existingMetaData,
             ]);
         });
+    }
+
+    public function removeModifierFromCartItem(Request $request): mixed
+    {
+        $cashierSession = $this->cashierSession->openSession()->first();
+
+        if (! $cashierSession) {
+            throw new Exception('No active cashier session found.');
+        }
+
+        $cart = Cart::authCashier()->cashierOpenSession($cashierSession->id)->first();
+
+        if (! $cart) {
+            throw new Exception('Cart not found.');
+        }
+
+        $cartItem = CartItem::findOrFail($request->cartItemId);
+
+        if (! $cartItem) {
+            throw new Exception('Cart item not found.');
+        }
+
+        // Get current meta_data and remove the specific modifier
+        $currentMetaData = $cartItem->meta_data ?? [];
+        $modifierIndex = $request->modifierIndex;
+
+        if (isset($currentMetaData[$modifierIndex])) {
+            unset($currentMetaData[$modifierIndex]);
+            // Re-index the array
+            $currentMetaData = array_values($currentMetaData);
+        }
+
+        return $cartItem->update([
+            'meta_data' => $currentMetaData,
+        ]);
     }
 
     public function clearDiscountToCartItem(int $cartItemId): mixed

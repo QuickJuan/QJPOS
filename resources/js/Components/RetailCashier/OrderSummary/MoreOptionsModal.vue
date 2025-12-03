@@ -93,6 +93,19 @@
             </button>
 
             <button
+                @click="handlePrinterConfig"
+                class="w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center gap-3 bg-gray-100 text-secondary-700 hover:bg-gray-200"
+            >
+                <CogIcon class="w-5 h-5" />
+                <div class="text-left">
+                    <div class="font-semibold">Printer Configuration</div>
+                    <div class="text-xs opacity-75">
+                        Configure thermal printers
+                    </div>
+                </div>
+            </button>
+
+            <button
                 @click="handleEndOfShift"
                 class="w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center gap-3 bg-red-100 text-red-700 hover:bg-red-200"
             >
@@ -115,12 +128,13 @@ import {
     PrinterIcon,
     TableCellsIcon,
     PowerIcon,
+    CogIcon,
 } from "@heroicons/vue/24/outline";
 
 const props = defineProps<{
     visible: boolean;
     orderItems: any[];
-    selectedItemsForDiscount: number[];
+    selectedItemsForDiscount?: number[];
 }>();
 
 const emit = defineEmits<{
@@ -129,6 +143,7 @@ const emit = defineEmits<{
     addModifier: [];
     printBill: [];
     viewTable: [];
+    printerConfig: [];
     endOfShift: [];
     "update:visible": [value: boolean];
 }>();
@@ -155,6 +170,11 @@ const handlePrintBill = () => {
 
 const handleViewTable = () => {
     emit("viewTable");
+    emit("update:visible", false);
+};
+
+const handlePrinterConfig = () => {
+    emit("printerConfig");
     emit("update:visible", false);
 };
 

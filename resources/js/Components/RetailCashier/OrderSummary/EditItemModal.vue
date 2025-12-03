@@ -6,10 +6,40 @@
         :header="`Edit ${selectedOrderItem?.name || ''}`"
         :style="{ width: '25rem' }"
     >
+        <div class="flex flex-col gap-1 mb-8">
+            <span class="font-semibold text-secondary-800">
+                Modifiers:
+            </span>
+            <!-- Modifiers -->
+            <div v-if="hasModifiers(selectedOrderItem)">
+                <div
+                    v-for="(modifierData, index) in selectedOrderItem.meta_data"
+                    :key="index"
+                    class="text-xs text-gray-700 space-y-1 ml-3"
+                >
+                    <!-- Modifier Options -->
+                    <div
+                        v-for="(value, key) in getModifierOptions(modifierData)"
+                        :key="key"
+                    >
+                        <strong class="capitalize">
+                            {{ formatModifierKey(String(key)) }}:
+                        </strong>
+                        {{ formatModifierValue(value) }}
+                    </div>
+
+                    <!-- Special Instructions -->
+                    <div v-if="getSpecialInstructions(modifierData)">
+                        <strong>Instructions:</strong>
+                        {{ getSpecialInstructions(modifierData) }}
+                    </div>
+                </div>
+            </div>
+        </div>
         <div class="flex flex-col gap-4 mb-4">
-            <label for="quantity" class="font-semibold w-24 text-secondary-800"
-                >Quantity</label
-            >
+            <label for="quantity" class="font-semibold w-24 text-secondary-800">
+                Quantity
+            </label>
             <InputNumber
                 v-model="editableItem.quantity"
                 showButtons
@@ -106,9 +136,50 @@ watch(
     { immediate: true }
 );
 
+const hasModifiers = (item: any) => {
+    return (
+        item.meta_data &&
+        Array.isArray(item.meta_data) &&
+        item.meta_data.length > 0
+    );
+};
+
+// Helper methods for improved modifiers display
+const getSpecialInstructions = (modifierData: any) => {
+    return modifierData?.modifier?.specialInstructions || "";
+};
+
+const hasModifierOptions = (modifierData: any) => {
+    const modifier = modifierData?.modifier;
+    return modifier && Object.keys(modifier).length > 1;
+};
+
+const getModifierOptions = (modifierData: any) => {
+    const modifier = modifierData?.modifier || {};
+    const options: any = {};
+
+    Object.entries(modifier).forEach(([key, value]) => {
+        if (key !== "specialInstructions") {
+            options[key] = value;
+        }
+    });
+
+    return options;
+};
+
+const formatModifierKey = (key: string | number) => {
+    return String(key).replace(/([A-Z])/g, " $1");
+};
+
+const formatModifierValue = (value: any) => {
+    if (Array.isArray(value)) {
+        return value.map((item) => item.name || item).join(", ");
+    }
+    return String(value);
+};
+
 const saveEdit = () => {
     emit("save", editableItem.value);
     emit("update:visible", false);
 };
 </script>
-

@@ -31,7 +31,8 @@
                         <input
                             type="checkbox"
                             :checked="
-                                selectedItemsForDiscount.includes(item.id)
+                                selectedItemsForDiscount?.includes(item.id) ||
+                                false
                             "
                             @change="
                             (e) =>
@@ -77,7 +78,7 @@
                                                           .join(", ")
                                                     : ""
                                             }}
-                                            <button
+                                            <!-- <button
                                                 v-if="hasModifiers(item)"
                                                 @click.stop="
                                                     showItemModifiers(item)
@@ -85,7 +86,7 @@
                                                 class="text-xs text-blue-600 font-medium ml-1 hover:text-blue-800 underline cursor-pointer"
                                             >
                                                 (with modifier)
-                                            </button>
+                                            </button> -->
                                         </h4>
                                         <!-- Order Type Badge -->
                                         <span
@@ -240,6 +241,72 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Modifiers -->
+                            <div v-if="hasModifiers(item)" class="mt-2">
+                                <div class="text-xs text-gray-600 mb-1">
+                                    Modifiers:
+                                </div>
+                                <div
+                                    v-for="(
+                                        modifierData, index
+                                    ) in item.meta_data"
+                                    :key="index"
+                                    class="text-xs text-gray-700 space-y-1 ml-3 flex gap-2 items-center"
+                                >
+                                    <div>
+                                        <!-- Modifier Options -->
+                                        <div
+                                            v-for="(
+                                                value, key
+                                            ) in getModifierOptions(
+                                                modifierData
+                                            )"
+                                            :key="key"
+                                        >
+                                            <strong class="capitalize">
+                                                {{
+                                                    formatModifierKey(
+                                                        String(key)
+                                                    )
+                                                }}:
+                                            </strong>
+                                            {{ formatModifierValue(value) }}
+                                        </div>
+
+                                        <!-- Special Instructions -->
+                                        <div
+                                            v-if="
+                                                getSpecialInstructions(
+                                                    modifierData
+                                                )
+                                            "
+                                        >
+                                            <strong>Instructions:</strong>
+                                            {{
+                                                getSpecialInstructions(
+                                                    modifierData
+                                                )
+                                            }}
+                                        </div>
+                                    </div>
+
+                                    <!-- Remove Modifier Button -->
+                                    <button
+                                        @click.stop="
+                                            $emit(
+                                                'remove-modifier',
+                                                item,
+                                                index
+                                            )
+                                        "
+                                        class="p-0.5 text-red-400 hover:text-red-600"
+                                        title="Remove modifier"
+                                    >
+                                        <XMarkIcon class="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Delete Button -->
@@ -262,10 +329,11 @@ import { ref, watch, nextTick, computed } from "vue";
 import { ShoppingCartIcon, TrashIcon } from "@heroicons/vue/24/outline";
 import { formatMoney } from "@/Utils/FormatMoney";
 import { router } from "@inertiajs/vue3";
+import XMarkIcon from "@/Components/icons/XMarkIcon.vue";
 
 const props = defineProps<{
     orderItems: any[];
-    selectedItemsForDiscount: number[];
+    selectedItemsForDiscount?: number[];
     appliedDiscount?: {
         discountId: string;
         discountName: string;
@@ -279,10 +347,11 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-    toggleItemForDiscount: [itemId: number, checked: boolean];
+    toggleItemForDiscount?: [itemId: number, checked: boolean];
     editItem: [item: any];
     deleteItem: [item: any];
     showItemModifiers: [item: any];
+    "remove-modifier": [item: any, modifierIndex: number];
 }>();
 
 const tableSelected = computed(() => !props.tableId);
@@ -302,6 +371,40 @@ const hasModifiers = (item: any) => {
         Array.isArray(item.meta_data) &&
         item.meta_data.length > 0
     );
+};
+
+// Helper methods for improved modifiers display
+const getSpecialInstructions = (modifierData: any) => {
+    return modifierData?.modifier?.specialInstructions || "";
+};
+
+const hasModifierOptions = (modifierData: any) => {
+    const modifier = modifierData?.modifier;
+    return modifier && Object.keys(modifier).length > 1;
+};
+
+const getModifierOptions = (modifierData: any) => {
+    const modifier = modifierData?.modifier || {};
+    const options: any = {};
+
+    Object.entries(modifier).forEach(([key, value]) => {
+        if (key !== "specialInstructions") {
+            options[key] = value;
+        }
+    });
+
+    return options;
+};
+
+const formatModifierKey = (key: string | number) => {
+    return String(key).replace(/([A-Z])/g, " $1");
+};
+
+const formatModifierValue = (value: any) => {
+    if (Array.isArray(value)) {
+        return value.map((item) => item.name || item).join(", ");
+    }
+    return String(value);
 };
 
 const showItemModifiers = (item: any) => {

@@ -30,11 +30,11 @@ class ViewProduct extends ViewRecord
             ->schema([
                 Section::make('Product Details')
                     ->schema([
-                        TextEntry::make('branch.name'),
-
                         TextEntry::make('category.name'),
 
                         TextEntry::make('brand.name'),
+
+                        TextEntry::make('preparationLocation.description'),
 
                         TextEntry::make('uuid')
                             ->label('UUID'),

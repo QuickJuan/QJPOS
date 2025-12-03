@@ -14,72 +14,42 @@
                         :key="modifier.id"
                         class="border border-gray-200 rounded-lg p-3"
                     >
-                        <div class="flex items-start gap-3">
-                            <Checkbox
-                                v-model="selectedModifiers"
-                                :value="modifier.id"
-                                class="mt-0.5"
-                            />
-                            <div class="flex-1">
-                                <div
-                                    class="flex items-center justify-between mb-2"
-                                >
-                                    <h4 class="font-medium text-gray-900">
-                                        {{ modifier.name }}
-                                    </h4>
-                                </div>
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="font-medium text-gray-900">
+                                    {{ modifier.name }}
+                                </h4>
+                            </div>
 
-                                <!-- Modifier Options as PrimeVue Radio Buttons -->
+                            <!-- Modifier Options as PrimeVue Radio Buttons -->
+                            <div
+                                v-if="
+                                    modifier.list &&
+                                    parseModifierList(modifier.list).length > 0
+                                "
+                                class="flex items-center gap-3"
+                            >
                                 <div
-                                    v-if="
-                                        modifier.list &&
-                                        parseModifierList(modifier.list)
-                                            .length > 0
-                                    "
-                                    class="flex items-center gap-3"
+                                    v-for="option in parseModifierList(modifier.list)"
+                                    :key="option.name"
+                                    class="flex items-center"
                                 >
-                                    <div
-                                        v-for="option in parseModifierList(
-                                            modifier.list
-                                        )"
-                                        :key="option.name"
-                                        class="flex items-center"
-                                    >
-                                        <RadioButton
-                                            :name="`modifier-${modifier.id}`"
-                                            :value="option.name"
-                                            v-model="
-                                                selectedModifierValues[
-                                                    modifier.id
-                                                ]
-                                            "
-                                            @change="
-                                                selectModifierOption(
-                                                    modifier.name,
-                                                    option
-                                                )
-                                            "
-                                            :disabled="
-                                                !selectedModifiers.includes(
-                                                    modifier.id
-                                                )
-                                            "
-                                            class="mr-2"
-                                        />
-                                        <label
-                                            class="text-sm text-gray-700 cursor-pointer"
+                                    <RadioButton
+                                        :name="`modifier-${modifier.id}`"
+                                        :value="option.name"
+                                        v-model="selectedModifierValues[modifier.id]"
+                                        @change="selectModifierOption(modifier.name, option)"
+                                        class="mr-2"
+                                    />
+                                    <label class="text-sm text-gray-700 cursor-pointer">
+                                        {{ option.name }}
+                                        <span
+                                            v-if="option.price"
+                                            class="text-green-600 font-medium ml-1"
                                         >
-                                            {{ option.name }}
-                                            <span
-                                                v-if="option.price"
-                                                class="text-green-600 font-medium ml-1"
-                                            >
-                                                (+{{
-                                                    formatMoney(option.price)
-                                                }})
-                                            </span>
-                                        </label>
-                                    </div>
+                                            (+{{ formatMoney(option.price) }})
+                                        </span>
+                                    </label>
                                 </div>
                             </div>
                         </div>
