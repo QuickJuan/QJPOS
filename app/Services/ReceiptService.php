@@ -3,7 +3,6 @@ namespace App\Services;
 
 use App\Models\Order;
 
-
 class ReceiptService
 {
 
@@ -11,11 +10,12 @@ class ReceiptService
     {
     }
 
-    public function getReceipt(int $receiptNumber): ?Order
+    public function getReceipt(int $receiptNumber, int $cashierSessionId): ?Order
     {
-        $order =  $this->order
+        $order = $this->order
             ->with(['orderItems', 'orderItems.product', 'cashierSession.branch', 'customer'])
             ->where('invoice_no', $receiptNumber)
+            ->where('cashier_session_id', $cashierSessionId)
             ->first();
 
         return $order;

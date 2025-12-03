@@ -126,6 +126,7 @@ import DiscountModal from "./OrderSummary/DiscountModal.vue";
 import RequiredReasonModal from "./OrderSummary/RequiredReasonModal.vue";
 import AddModifierModal from "./OrderSummary/AddModifierModal.vue";
 import ItemModifiersModal from "./OrderSummary/ItemModifiersModal.vue";
+import axios from "axios";
 
 const props = defineProps<{
     cart: any;
@@ -390,36 +391,39 @@ const handleSettleBill = (data: any) => {
         return;
     }
 
-    router.post(
-        route("resto.cart.settle-bill", { cartId: data.cart_id }),
-        {
+    axios
+        .post(route("resto.cart.settle-bill", { cartId: data.cart_id }), {
             amount_paid: data.amount_paid,
             total_amount: data.total_amount,
             location_type: selectedOrderType.value,
             branch_id: page.props?.active_branch?.id,
-        },
-        {
-            onSuccess: () => {
-                toast.add({
-                    severity: "success",
-                    summary: "Success",
-                    detail: "Bill settled successfully!",
-                    life: 3000,
-                });
+        })
+        .then((response) => {
+            toast.add({
+                severity: "success",
+                summary: "Success",
+                detail: response.data.message,
+                life: 3000,
+            });
 
-                // Emit event to show receipt modal
-                emit("showReceipt", data);
-            },
-            onError: (errors) => {
-                toast.add({
-                    severity: "error",
-                    summary: "Error",
-                    detail: page.props.flash.error || "Failed to settle bill",
-                    life: 3000,
-                });
-            },
-        }
-    );
+            console.log("response", response.data);
+            const order = response.data.data;
+            // const getReceipt = axios.get(`/api/receipts/${response.se}/${}`, { cartId: data.cart_id }));
+
+            // Emit event to show receipt modal using the returned order
+            emit("showReceipt", response.data.data);
+        })
+        .catch((error) => {
+            toast.add({
+                severity: "error",
+                summary: "Error",
+                detail:
+                    error.response?.data?.message || "Failed to settle bill",
+                life: 3000,
+            });
+
+            console.error(error);
+        });
 };
 
 const handleAddModifier = () => {

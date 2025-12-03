@@ -16,6 +16,7 @@ class OrderItem extends Model
         'discount_amount',
         'vatable_sales',
         'vat_exempt_sales',
+        'zero_rated_sales',
         'vat_amount',
         'non_vat_sales',
         'less_tax',

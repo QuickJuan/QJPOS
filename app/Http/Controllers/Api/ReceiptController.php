@@ -19,12 +19,12 @@ class ReceiptController extends Controller
     }
 
     /**
-     * Get receipt information by receipt number
+     * Get receipt information by receipt number and cashier session ID
      */
-    public function getReceipt(string $receiptNumber): JsonResponse
+    public function getReceipt(int $receiptNumber, int $cashierSessionId): JsonResponse
     {
 
-        $order = $this->receiptService->getReceipt($receiptNumber);
+        $order = $this->receiptService->getReceipt($receiptNumber, $cashierSessionId);
 
         if (!$order) {
             return response()->json([

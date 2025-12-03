@@ -1,10 +1,10 @@
 <?php
 
-declare(strict_types=1);
+declare (strict_types = 1);
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\TableController;
 use App\Http\Controllers\Api\ReceiptController;
+use App\Http\Controllers\Api\TableController;
+use Illuminate\Support\Facades\Route;
 use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 
@@ -24,28 +24,28 @@ Route::middleware([
     InitializeTenancyBySubdomain::class,
     PreventAccessFromCentralDomains::class,
 ])
-->prefix('api')
-->as('api.')
-->group(function () {
+    ->prefix('api')
+    ->as('api.')
+    ->group(function () {
 
-    // Receipt API Routes
-    Route::as('receipts.')
-        ->prefix('/receipts')
-        ->controller(ReceiptController::class)
-        ->group(function () {
-            Route::get('/{receiptNumber}', 'getReceipt')->name('get');
-            Route::get('/{receiptNumber}/items', 'getReceiptItems')->name('items');
-            Route::get('/{receiptNumber}/download', 'downloadReceipt')->name('download');
-        });
+        // Receipt API Routes
+        Route::as('receipts.')
+            ->prefix('/receipts')
+            ->controller(ReceiptController::class)
+            ->group(function () {
+                Route::get('/{receiptNumber}/items', 'getReceiptItems')->name('items');
+                Route::get('/{receiptNumber}/download', 'downloadReceipt')->name('download');
+                Route::get('/{receiptNumber}/{cashierSessionId}', 'getReceipt')->name('get');
+            });
 
-    Route::as('tables.')
-        ->prefix('/tables')
-        ->controller(TableController::class)
-        ->group(function () {
-            Route::get('/', 'list')->name('list');
-        });
+        Route::as('tables.')
+            ->prefix('/tables')
+            ->controller(TableController::class)
+            ->group(function () {
+                Route::get('/', 'list')->name('list');
+            });
 
-    // You can add more tenant-specific API routes here
-    // Route::apiResource('products', ProductController::class);
-    // Route::apiResource('categories', CategoryController::class);
-});
+        // You can add more tenant-specific API routes here
+        // Route::apiResource('products', ProductController::class);
+        // Route::apiResource('categories', CategoryController::class);
+    });

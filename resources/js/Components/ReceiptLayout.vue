@@ -137,6 +137,14 @@
                 <span>Subtotal:</span>
                 <span>{{ formatMoney(subtotal) }}</span>
             </div>
+            <div class="flex justify-between" v-if="lessTax">
+                <span>Less Tax:</span>
+                <span>-{{ formatMoney(lessTax) ?? 0 }}</span>
+            </div>
+            <div class="flex justify-between" v-if="lessDiscount">
+                <span>Less Discount:</span>
+                <span>-{{ formatMoney(lessDiscount) ?? 0 }}</span>
+            </div>
             <div
                 class="border-t border-dashed pt-1 flex justify-between font-bold"
             >
@@ -156,6 +164,10 @@
         <!-- Payment Info -->
         <div class="mb-3" v-if="taxInfo">
             <div class="flex justify-between">
+                <span>Vatable Amount:</span>
+                <span>{{ formatMoney(taxInfo.vatAmount) }}</span>
+            </div>
+            <div class="flex justify-between">
                 <span>VAT Sales:</span>
                 <span>{{ formatMoney(taxInfo.vatSales) ?? 0 }}</span>
             </div>
@@ -166,18 +178,6 @@
             <div class="flex justify-between">
                 <span>VAT Exempt Sales:</span>
                 <span>{{ formatMoney(taxInfo.vatExemptSales) }}</span>
-            </div>
-            <div class="flex justify-between">
-                <span>Total Vat Amount:</span>
-                <span>{{ formatMoney(taxInfo.vatAmount) }}</span>
-            </div>
-            <div class="flex justify-between" v-if="lessTax">
-                <span>Total Less Tax:</span>
-                <span>-{{ formatMoney(lessTax) ?? 0 }}</span>
-            </div>
-            <div class="flex justify-between" v-if="lessDiscount">
-                <span>Total Less Discount:</span>
-                <span>-{{ formatMoney(lessDiscount) ?? 0 }}</span>
             </div>
         </div>
 
