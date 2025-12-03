@@ -22,11 +22,12 @@ class CartService
 {
     protected float $taxRate;
 
-    public function __construct(public Cart $model, public CashierSession $cashierSession, public DiscountService $discountService)
+    public function __construct(public Cart $model, public CashierSession $cashierSession, public DiscountService $discountService, public BranchService $branchService)
     {
         $this->model           = $model;
         $this->cashierSession  = $cashierSession;
         $this->discountService = $discountService;
+        $this->branchService   = $branchService;
         $this->taxRate         = config('sales.tax_rate');
     }
 
@@ -473,12 +474,22 @@ class CartService
     {
         // Get the current open cashier session
         $cart = Cart::findOrFail($payload['cart_id']);
+        $orderNumber = null;
 
-        
+        $branchId = $cart->branch_id ?? $cart->cashierSession->branch_id ?? null;
+        if ($branchId) {
+            // Update the bill number for the cart
+            $orderNumber = $this->branchService->getNextOrderNumber($branchId);
+        }
+
         if ($cart) {
-           $cartItems =  $cart->cartItems()->update([
-                'placed_order' => true,
-            ]);
+           $cartItems =  $cart->cartItems()
+                ->where('placed_order', false)
+                ->where('batch_number', null)
+                ->update([
+                    'placed_order' => true,
+                    'batch_number'  => $orderNumber,
+                ]);
 
 
             $cart->update([
