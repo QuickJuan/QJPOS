@@ -5,6 +5,7 @@ use Exception;
 use Illuminate\Http\Request;
 use App\Services\CartService;
 use App\Services\PaymentService;
+use Illuminate\Http\JsonResponse;
 use App\Http\Requests\CartRequest;
 use Illuminate\Http\RedirectResponse;
 use App\Services\CashierSessionService;
@@ -17,8 +18,7 @@ class CartController extends Controller
         protected CartService $cartService,
         protected CashierSessionService $cashierSessionService,
         protected PaymentService $paymentService
-    )
-    {
+    ) {
         $this->cartService           = $cartService;
         $this->cashierSessionService = $cashierSessionService;
         $this->paymentService        = $paymentService;
@@ -37,7 +37,7 @@ class CartController extends Controller
     public function updateCart(Request $request, int $cartId): RedirectResponse
     {
         try {
-            if (!$cartId) {
+            if (! $cartId) {
                 return redirect()->back()->with('error', 'Cart ID is empty.');
             }
 
@@ -52,10 +52,10 @@ class CartController extends Controller
     public function mergeCart(Request $request): RedirectResponse
     {
         try {
-            $sourceCartId = $request->input('source_cart_id');
+            $sourceCartId  = $request->input('source_cart_id');
             $targetTableId = $request->input('target_table_id');
 
-            if (!$sourceCartId || !$targetTableId) {
+            if (! $sourceCartId || ! $targetTableId) {
                 return redirect()->back()->with('error', 'Source cart ID and target table ID are required.');
             }
 
@@ -181,24 +181,31 @@ class CartController extends Controller
             return redirect()->route('table-rooms.index', ['locationId' => $locationId])
                 ->with('success', 'Order placed successfully, We will start preparing your order');
 
-
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'There was an error placing order.');
         }
     }
 
-    public function settleBill(Request $request, int $cartId): RedirectResponse
+    public function settleBill(Request $request, int $cartId): JsonResponse | RedirectResponse
     {
         try {
             if (! $cartId) {
                 return redirect()->back()->with('error', 'Cart ID is empty.');
             }
 
-            $this->paymentService->settleBill($request, $cartId);
+            $order = $this->paymentService->settleBill($request, $cartId);
 
-            return redirect()->back()->with('success', 'Bill settled successfully.');
+            // return redirect()->back()->with('success', 'Bill settled successfully.');
+            return response()->json([
+                'message' => 'Bill settled successfully.',
+                'data'    => $order,
+            ], 200);
         } catch (Exception $e) {
-            return redirect()->back()->with('error', 'There was an error settling the bill.');
+            return response()->json([
+                'message' => 'There was an error settling the bill.',
+                'error'   => $e->getMessage(),
+            ], 500);
+            // return redirect()->back()->with('error', 'There was an error settling the bill.');
         }
     }
 
@@ -239,12 +246,12 @@ class CartController extends Controller
     public function updateBillNumber(Request $request, int $cartId): RedirectResponse
     {
         try {
-            if (!$cartId) {
+            if (! $cartId) {
                 return redirect()->back()->with('error', 'Cart ID is empty.');
             }
 
             $branchId = $request->input('branch_id') ?? session('active_branch')->id;
-            if (!$branchId) {
+            if (! $branchId) {
                 return redirect()->back()->with('error', 'Branch ID is required.');
             }
 
