@@ -2,6 +2,7 @@ import OrderItem from "./OrderItem";
 
 export default interface Order {
     id: number;
+    invoice_no?: string;
     cashier?: { name: string };
     table_room?: { customer_name: string; name?: string };
     customer?: { customer_name: string };

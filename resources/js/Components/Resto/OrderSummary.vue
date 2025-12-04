@@ -55,6 +55,7 @@
             :bill-number="billNumber"
             :receipt-number="receiptNumber"
             :general-settings="props.generalSettings"
+            :active-branch="props.activeBranch"
             @update-order-type="updateOrderType"
             @save-order="handleSaveOrder"
             @checkout="handleCheckout"
@@ -155,6 +156,7 @@ const props = defineProps<{
         company_phone: string;
         company_logo: string;
     };
+    activeBranch?: any;
 }>();
 
 const toast = useToast();

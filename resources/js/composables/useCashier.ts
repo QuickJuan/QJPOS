@@ -121,6 +121,24 @@ export const useCashier = () => {
     // Actions
     const setSelectedCart = (cartId: number | null) => {
         cashierState.value.selectedCartId = cartId;
+
+        // Also update the alternative localStorage key used by other components
+        try {
+            const cashierStateKey = "quickjuan_cashier_state";
+            const existingState = localStorage.getItem(cashierStateKey);
+            let state = existingState ? JSON.parse(existingState) : {};
+
+            if (cartId) {
+                state.cartId = cartId;
+            } else {
+                delete state.cartId;
+            }
+            state.lastUpdated = new Date().toISOString();
+
+            localStorage.setItem(cashierStateKey, JSON.stringify(state));
+        } catch (error) {
+            console.error("Failed to update quickjuan_cashier_state:", error);
+        }
     };
 
     const addCart = (cart: Cart) => {

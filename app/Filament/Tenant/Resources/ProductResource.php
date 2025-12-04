@@ -1,6 +1,7 @@
 <?php
 namespace App\Filament\Tenant\Resources;
 
+use App\Enums\VatType;
 use App\Filament\Imports\ProductImporter;
 use App\Filament\Tenant\Resources\ProductResource\Pages;
 use App\Filament\Tenant\Resources\ProductResource\RelationManagers;
@@ -118,6 +119,34 @@ class ProductResource extends Resource
                     ->numeric()
                     ->label('Price')
                     ->hidden(fn(Get $get) => $get('multiple_packaging') === true),
+
+                Select::make('vat_type')
+                    ->label('VAT Type')
+                    ->options([
+                        VatType::VAT->value => VatType::VAT->getLabel(),
+                        VatType::NON_VAT->value => VatType::NON_VAT->getLabel(),
+                    ])
+                    ->native(false)
+                    ->searchable()
+                    ->placeholder('Select VAT Type')
+                    ->live(onBlur: true),
+
+                Toggle::make('vat_inclusive')
+                    ->label('VAT Inclusive')
+                    ->default(false)
+                    ->hidden(fn(Get $get) => $get('vat_type') !== VatType::VAT->value)
+                    ->helperText('Check if VAT is included in the price'),
+
+                TextInput::make('vat_rate')
+                    ->label('VAT Rate (%)')
+                    ->numeric()
+                    ->minValue(0)
+                    ->maxValue(100)
+                    ->step(0.01)
+                    ->default(0)
+                    ->suffix('%')
+                    ->hidden(fn(Get $get) => $get('vat_type') !== VatType::VAT->value)
+                    ->helperText('Enter the VAT rate as a percentage'),
 
                 TextInput::make('unit_measure')
                     ->label('Unit of Measure')

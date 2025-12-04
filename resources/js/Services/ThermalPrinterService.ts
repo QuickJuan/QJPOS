@@ -3,6 +3,7 @@ import axios from 'axios';
 
 interface BillData {
     storeName: string;
+    branchName?: string;
     storeAddress: string;
     storePhone?: string;
     billNumber: string;
@@ -40,6 +41,7 @@ interface BillData {
         amountPaid: number | string;
         change?: number | string;
     };
+    receiptHeader?: any;
     billFooter?: {
         footer_notes?: string;
     };
@@ -48,6 +50,7 @@ interface BillData {
 
 interface ReceiptData {
     storeName: string;
+    branchName?: string;
     storeAddress: string;
     storePhone?: string;
     orderNumber: string;
@@ -78,6 +81,7 @@ interface ReceiptData {
         amountPaid: number | string;
         change?: number | string;
     };
+    receiptHeader?: any;
     receiptFooter?: {
         footer_notes?: string;
     };
@@ -376,6 +380,23 @@ class ThermalPrinterService {
             this.addTextWithSize(commands, receiptData.storeName, companyNameSize);
             commands.push(...this.ESC_POS.LINE_FEED);
 
+            // Branch name (if provided)
+            if (receiptData.branchName) {
+                commands.push(...this.ESC_POS.BOLD_OFF);
+                commands.push(...this.stringToBytes(receiptData.branchName));
+                commands.push(...this.ESC_POS.LINE_FEED);
+                commands.push(...this.ESC_POS.BOLD_ON);
+            }
+
+            // Receipt Headers (from branch configuration)
+            if (receiptData.receiptHeader && Array.isArray(receiptData.receiptHeader)) {
+                commands.push(...this.ESC_POS.BOLD_OFF);
+                receiptData.receiptHeader.forEach((header: string) => {
+                    commands.push(...this.stringToBytes(header));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                });
+            }
+
             // Store address and phone - small size
             commands.push(...this.ESC_POS.BOLD_OFF);
             commands.push(...this.stringToBytes(receiptData.storeAddress));
@@ -565,7 +586,17 @@ class ThermalPrinterService {
             commands.push(...this.ESC_POS.ALIGN_CENTER);
             const footerNotes = receiptData.receiptFooter?.footer_notes || 'Thank you for dining with us! Please settle your bill at the counter.';
             commands.push(...this.stringToBytes(footerNotes));
-            commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            // Receipt Footers (from branch configuration - displayed at bottom)
+            if (receiptData.receiptFooter && receiptData.receiptFooter.footer_text && Array.isArray(receiptData.receiptFooter.footer_text)) {
+                receiptData.receiptFooter.footer_text.forEach((footer: string) => {
+                    commands.push(...this.stringToBytes(footer));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                });
+            }
+
+            commands.push(...this.ESC_POS.LINE_FEED);
 
             if (receiptData.footerMessage) {
                 commands.push(...this.stringToBytes(receiptData.footerMessage));
@@ -799,6 +830,23 @@ class ThermalPrinterService {
             this.addTextWithSize(commands, billData.storeName, companyNameSize);
             commands.push(...this.ESC_POS.LINE_FEED);
 
+            // Branch name (if provided)
+            if (billData.branchName) {
+                commands.push(...this.ESC_POS.BOLD_OFF);
+                commands.push(...this.stringToBytes(billData.branchName));
+                commands.push(...this.ESC_POS.LINE_FEED);
+                commands.push(...this.ESC_POS.BOLD_ON);
+            }
+
+            // Receipt Headers (from branch configuration)
+            if (billData.receiptHeader && Array.isArray(billData.receiptHeader)) {
+                commands.push(...this.ESC_POS.BOLD_OFF);
+                billData.receiptHeader.forEach((header: string) => {
+                    commands.push(...this.stringToBytes(header));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                });
+            }
+
             // Store address and phone - normal size
             commands.push(...this.ESC_POS.BOLD_OFF);
             commands.push(...this.stringToBytes(billData.storeAddress));
@@ -840,7 +888,7 @@ class ThermalPrinterService {
             commands.push(...this.stringToBytes(separatorLine));
             commands.push(...this.ESC_POS.LINE_FEED);
 
-            // ORDER ITEMS header - centered with configurable font size
+            // GROUP ITEMS header - centered
             // commands.push(...this.ESC_POS.ALIGN_CENTER);
             // commands.push(...this.ESC_POS.BOLD_ON);
             // const headerSize = this.currentConfig?.font_sizes?.headers || 'small';
