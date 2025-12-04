@@ -57,12 +57,7 @@
                                 <span
                                     class="text-lg font-semibold text-gray-900"
                                 >
-                                    ₱{{
-                                        parseFloat(
-                                            props.product.data?.average_cost ||
-                                                "0"
-                                        ).toFixed(2)
-                                    }}
+                                    {{ getPrice(props.product.data) }}
                                 </span>
                             </div>
                         </div>
@@ -90,9 +85,11 @@
                                     :image="option.optionImage"
                                     shape="circle"
                                 />
-                                <span class="font-bold whitespace-nowrap">
-                                    {{ option.option_name }}
-                                </span>
+                                <div class="flex flex-col">
+                                    <span class="font-bold whitespace-nowrap">
+                                        {{ option.option_name }}
+                                    </span>
+                                </div>
                             </Tab>
                         </TabList>
                         <TabPanels>
@@ -102,6 +99,22 @@
                                 :header="option.name"
                                 :value="option.id"
                             >
+                                <p class="text-base font-medium text-gray-600">
+                                    Select exactly
+                                    {{ option?.max_quantity }} item(s)
+                                </p>
+                                <div
+                                    v-if="
+                                        option.max_quantity > 0 &&
+                                        getTotalSelected(option.id) <
+                                            option.max_quantity
+                                    "
+                                    class="mb-4 p-3 bg-red-100 border border-red-300 rounded-lg text-red-700 text-center"
+                                >
+                                    Please select exactly
+                                    {{ option.max_quantity }} items for this
+                                    option.
+                                </div>
                                 <div
                                     class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4"
                                 >
@@ -109,29 +122,14 @@
                                         v-for="item in option.optionItems"
                                         :key="item.id"
                                         :class="[
-                                            'relative border-2 rounded-xl p-6 cursor-pointer transition-all duration-200 hover:shadow-lg',
-                                            selectedOptions[option.id]?.id ===
-                                            item.id
-                                                ? 'border-indigo-500 bg-indigo-50 shadow-md'
+                                            'relative border-2 rounded-xl p-6 transition-all duration-200 hover:shadow-lg flex flex-col h-full',
+                                            option.max_quantity > 0 &&
+                                            getTotalSelected(option.id) <
+                                                option.max_quantity
+                                                ? 'border-red-500'
                                                 : 'border-gray-200 hover:border-indigo-300',
                                         ]"
-                                        @click="
-                                            selectedOptions[option.id] = item
-                                        "
                                     >
-                                        <!-- Selection Indicator -->
-                                        <div
-                                            v-if="
-                                                selectedOptions[option.id]
-                                                    ?.id === item.id
-                                            "
-                                            class="absolute top-3 right-3 w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center"
-                                        >
-                                            <CheckIcon
-                                                class="w-4 h-4 text-white"
-                                            />
-                                        </div>
-
                                         <!-- Option Image -->
                                         <div
                                             class="h-32 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg mb-4"
@@ -173,13 +171,23 @@
                                                 class="font-semibold text-gray-900 mb-2 text-lg"
                                             >
                                                 {{ item?.product?.name }}
+                                                <span
+                                                    v-if="
+                                                        item.product_packaging
+                                                    "
+                                                >
+                                                    ({{
+                                                        item.product_packaging
+                                                            ?.name
+                                                    }})
+                                                </span>
                                             </h5>
                                             <div
                                                 v-if="
                                                     item.price &&
                                                     parseFloat(item.price) > 0
                                                 "
-                                                class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800"
+                                                class="inline-flex items-center px-3 py-1 mb-5 rounded-full text-sm font-medium bg-green-100 text-green-800"
                                             >
                                                 +{{
                                                     formatMoney(
@@ -189,6 +197,46 @@
                                                     )
                                                 }}
                                             </div>
+                                        </div>
+                                        <div
+                                            class="flex justify-center mt-auto"
+                                        >
+                                            <InputNumber
+                                                :modelValue="
+                                                    selectedOptions[
+                                                        option.id
+                                                    ]?.[item.id] || 0
+                                                "
+                                                @update:modelValue="
+                                                    updateQuantity(
+                                                        option,
+                                                        item.id,
+                                                        $event
+                                                    )
+                                                "
+                                                showButtons
+                                                buttonLayout="horizontal"
+                                                :min="0"
+                                                :max="
+                                                    option.max_quantity > 0 &&
+                                                    getTotalSelected(
+                                                        option.id
+                                                    ) >= option.max_quantity
+                                                        ? selectedOptions[
+                                                              option.id
+                                                          ]?.[item.id] || 0
+                                                        : 99
+                                                "
+                                                inputClass="text-center w-20"
+                                                buttonClass="p-button-outlined p-button-sm"
+                                            >
+                                                <template #incrementicon>
+                                                    <span class="pi pi-plus" />
+                                                </template>
+                                                <template #decrementicon>
+                                                    <span class="pi pi-minus" />
+                                                </template>
+                                            </InputNumber>
                                         </div>
                                     </div>
                                 </div>
@@ -218,11 +266,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { ref, watch } from "vue";
 import { route } from "ziggy-js";
 import { router, usePage } from "@inertiajs/vue3";
 import {
     Avatar,
+    InputNumber,
     Tab,
     TabList,
     TabPanel,
@@ -242,7 +291,7 @@ const props = defineProps<{
     product: Product;
 }>();
 
-const selectedOptions = ref<Record<string, any>>({});
+const selectedOptions = ref<Record<string, Record<string, number>>>({});
 const params = new URLSearchParams(window.location.search);
 const productPackagingId = ref(null);
 const tableId = ref(null);
@@ -250,6 +299,31 @@ const selectedTab = ref(null);
 
 productPackagingId.value = params.get("packagingId");
 tableId.value = params.get("tableId");
+
+const updateQuantity = (option: any, itemId: string, value: number) => {
+    const optionId = option.id;
+    if (!selectedOptions.value[optionId]) {
+        selectedOptions.value[optionId] = {};
+    }
+    const currentQty = selectedOptions.value[optionId][itemId] || 0;
+    const currentTotal = getTotalSelected(optionId);
+    if (
+        value > currentQty &&
+        option.max_quantity > 0 &&
+        currentTotal >= option.max_quantity
+    ) {
+        return; // prevent increase when at max
+    }
+    selectedOptions.value[optionId][itemId] = value;
+};
+
+const getTotalSelected = (optionId: string) => {
+    const optionSelections = selectedOptions.value[optionId] || {};
+    return Object.values(optionSelections).reduce(
+        (sum: number, qty: number) => sum + qty,
+        0
+    );
+};
 
 const toast = useToast();
 const page = usePage<PageProps>();
@@ -262,10 +336,13 @@ const calculateTotal = () => {
 
     let total = parseFloat(props.product.data.average_cost || "0");
 
-    Object.values(selectedOptions.value).forEach((optionItem: any) => {
-        if (optionItem && optionItem.price) {
-            total += parseFloat(optionItem.price);
-        }
+    props.product.data.options.forEach((option) => {
+        option.optionItems.forEach((item) => {
+            const qty = selectedOptions.value[option.id]?.[item.id] || 0;
+            if (qty > 0 && item.price) {
+                total += qty * parseFloat(item.price);
+            }
+        });
     });
 
     return total;
@@ -277,12 +354,44 @@ const addToCart = () => {
     const tableId = params.get("tableId");
     const orderType = params.get("orderType") || "dine-in";
 
+    // Filter selected options to only include items with quantity > 0 and include full option data
+    const filteredOptions = [];
+    Object.keys(selectedOptions.value).forEach((optionId) => {
+        const option = props.product.data.options.find((o) => o.id == optionId);
+
+        if (option) {
+            const items = [];
+            Object.keys(selectedOptions.value[optionId]).forEach((itemId) => {
+                const qty = selectedOptions.value[optionId][itemId];
+                if (qty > 0) {
+                    const item = option.optionItems.find((i) => i.id == itemId);
+                    items.push({
+                        ...item,
+                        quantity: qty,
+                    });
+                }
+            });
+
+            if (items.length > 0) {
+                filteredOptions.push({
+                    id: optionId,
+                    option_name: option.option_name,
+                    max_quantity: option.max_quantity,
+                    product_id: option.product_id,
+                    product_packaging_id: option.product_packaging_id,
+                    price: option.price,
+                    items: items,
+                });
+            }
+        }
+    });
+
     router.post(
         route("resto.cart.add"),
         {
             product_id: props.product?.data?.id,
             product_packaging_id: productPackagingId.value,
-            selected_options: selectedOptions.value,
+            selected_options: filteredOptions,
             quantity: 1,
             total_price: calculateTotal(),
             table_id: tableId,
@@ -311,11 +420,65 @@ const addToCart = () => {
     );
 };
 
+const getLowestPriceForProductPackagings = (data: any) => {
+    const prices = data
+        .filter((item: any) => item.price !== undefined)
+        .map((item: any) => item.price);
+
+    const lowestPrice = prices.length ? Math.min(...prices) : null;
+
+    return lowestPrice;
+};
+
+const getPrice = (product: any) => {
+    let price = 0;
+    if (product.multiple_packaging) {
+        if (product.product_packagings.length > 0) {
+            price = formatMoney(
+                getLowestPriceForProductPackagings(product.product_packagings)
+            );
+        } else {
+            formatMoney(parseFloat(product.price || "0").toFixed(2));
+        }
+    } else {
+        price = formatMoney(product.price);
+    }
+
+    return price;
+};
+
 watch(
     () => props.product.data?.options,
     (options) => {
         if (options && options.length > 0) {
             selectedTab.value = options[0].id;
+            options.forEach((option) => {
+                selectedOptions.value[option.id] = {};
+
+                // Find the options that has is_default set to true
+                const defaultProduct = option.products.find(
+                    (p) => p.pivot.is_default
+                );
+
+                if (defaultProduct) {
+                    const defaultItem = option.optionItems.find(
+                        (item) => item.option_id == defaultProduct.pivot.option_id
+                    );
+                    
+                    console.log("option", option);
+                    console.log("defaultProduct", defaultProduct);
+                    console.log("optionItems", option.optionItems);
+                    console.log("defaultItem", defaultItem);
+
+                    if (defaultItem) {
+                        selectedOptions.value[option.id][defaultItem.id] =
+                            defaultItem.quantity;
+                    }
+                } else if (option.optionItems.length > 0) {
+                    selectedOptions.value[option.id][option.optionItems[0].id] =
+                        option.max_quantity;
+                }
+            });
         }
     },
     { immediate: true }

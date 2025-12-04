@@ -19,6 +19,7 @@ class OptionItemResource extends JsonResource
             'product_id'           => $this->product_id,
             'product_packaging_id' => $this->product_packaging_id,
             'price'                => $this->price,
+            'quantity'             => $this->quantity,
             'option'               => $this->whenLoaded('option'),
             'product'              => $this->whenLoaded('product'),
         ];

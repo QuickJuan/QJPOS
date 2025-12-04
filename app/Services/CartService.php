@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Services;
 
 use Exception;
@@ -9,7 +8,6 @@ use App\Models\Branch;
 use App\Models\Product;
 use App\Models\CartItem;
 use App\Models\Discount;
-use App\Models\OrderItem;
 use App\Models\TableRoom;
 use Illuminate\Http\Request;
 use App\Models\CashierSession;
@@ -17,8 +15,6 @@ use App\Models\ProductPackaging;
 use App\Enums\TableRoomStatusType;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\RedirectResponse;
-use App\Enums\TableRoomLocation\LocationType;
 
 class CartService
 {
@@ -33,7 +29,6 @@ class CartService
         $this->taxRate         = config('sales.tax_rate');
     }
 
-
     public function createCart($payload)
     {
         //DB transaction to maintain consistency
@@ -46,8 +41,8 @@ class CartService
 
                 //find if ther is a cart that is associated with the table
                 $cart = Cart::firstOrCreate([
-                    'cashier_id'         => Auth::id(),
-                    'table_room_id'      => $table->id,
+                    'cashier_id'    => Auth::id(),
+                    'table_room_id' => $table->id,
                 ]);
 
                 $table->update([
@@ -58,8 +53,7 @@ class CartService
                 return $cart;
             });
 
-        }
-        catch (Exception $e) {
+        } catch (Exception $e) {
             throw new Exception('Failed to create cart: ' . $e->getMessage());
         }
 
@@ -112,24 +106,26 @@ class CartService
             ]);
 
         if ($withParent) {
-            foreach ($newSelectedOptions as $option) {
-                try {
-                    $cartItem->children()
-                        ->create([
-                            'parent_id'            => $cartItem->id,
-                            'cart_id'              => $cartItem->cart_id,
-                            'product_id'           => $option['product_id'],
-                            'product_packaging_id' => $option['product_packaging_id'] ?? null,
-                            'quantity'             => 1,
-                            'price'                => $option['price'],
-                            'amount'               => $option['price'],
-                            'order_type'           => $orderType,
-                            'sub_total'            => $option['price'],
+            foreach ($newSelectedOptions as $selectedOption) {
+                foreach ($selectedOption['items'] as $item) {
+                    try {
+                        $cartItem->children()
+                            ->create([
+                                'parent_id'            => $cartItem->id,
+                                'cart_id'              => $cartItem->cart_id,
+                                'product_id'           => $item['product_id'],
+                                'product_packaging_id' => $item['product_packaging_id'] ?? null,
+                                'quantity'             => $item['quantity'],
+                                'price'                => $item['price'],
+                                'amount'               => $item['price'] * $item['quantity'],
+                                'order_type'           => $orderType,
+                                'sub_total'            => $item['price'] * $item['quantity'],
+                            ]);
+                    } catch (\Throwable $e) {
+                        info('Failed on option:', [
+                            'message' => $e->getMessage(),
                         ]);
-                } catch (\Throwable $e) {
-                    info('Failed on option:', [
-                        'message' => $e->getMessage(),
-                    ]);
+                    }
                 }
             }
         }
@@ -160,7 +156,7 @@ class CartService
         $updateData = $request->only(['table_id', 'order_type', 'customer_name', 'customer_phone']);
 
         // Remove null values to avoid overwriting existing data with null
-        $updateData = array_filter($updateData, function($value) {
+        $updateData = array_filter($updateData, function ($value) {
             return $value !== null;
         });
 
@@ -177,14 +173,14 @@ class CartService
     {
         $cashierSession = $this->cashierSession->openSession()->first();
 
-        if (!$cashierSession) {
+        if (! $cashierSession) {
             info('no active cashier seeion');
             throw new Exception('No active cashier session found.');
         }
 
         // Find the source cart
         $sourceCart = Cart::find($sourceCartId);
-        if (!$sourceCart) {
+        if (! $sourceCart) {
             info('source caret not found');
             throw new Exception('Source cart not found.');
         }
@@ -197,9 +193,9 @@ class CartService
 
         // Find the target cart by table ID
         $targetCart = Cart::where('table_room_id', $targetTableId)
-                         ->first();
+            ->first();
 
-        if (!$targetCart) {
+        if (! $targetCart) {
             warning('Target table cart not found');
             throw new Exception('Target table cart not found.');
         }
@@ -239,7 +235,7 @@ class CartService
     {
         $cartItems = $cart->cartItems()->whereNull('parent_id')->get();
 
-        $subTotal = 0;
+        $subTotal      = 0;
         $totalDiscount = 0;
 
         foreach ($cartItems as $item) {
@@ -250,9 +246,9 @@ class CartService
         $totalAmount = $subTotal - $totalDiscount;
 
         $cart->update([
-            'sub_total' => $subTotal,
+            'sub_total'       => $subTotal,
             'discount_amount' => $totalDiscount,
-            'total_amount' => $totalAmount,
+            'total_amount'    => $totalAmount,
         ]);
     }
 
@@ -429,7 +425,7 @@ class CartService
 
         // Get current meta_data and remove the specific modifier
         $currentMetaData = $cartItem->meta_data ?? [];
-        $modifierIndex = $request->modifierIndex;
+        $modifierIndex   = $request->modifierIndex;
 
         if (isset($currentMetaData[$modifierIndex])) {
             unset($currentMetaData[$modifierIndex]);
@@ -484,7 +480,6 @@ class CartService
     public function deleteCartItem(int $cartItemId): mixed
     {
 
-
         $cartItem = CartItem::findOrFail($cartItemId);
         if (! $cartItem) {
             throw new Exception('Cart item is empty.');
@@ -492,13 +487,12 @@ class CartService
         return $cartItem->delete();
     }
 
-
     public function placeOrder($payload): mixed
     {
         try {
             return DB::transaction(function () use ($payload) {
                 // Get the current open cashier session
-                $cart = Cart::findOrFail($payload['cart_id']);
+                $cart        = Cart::findOrFail($payload['cart_id']);
                 $orderNumber = null;
 
                 $branchId = $cart->branch_id ?? $cart->cashierSession->branch_id ?? null;
@@ -529,10 +523,10 @@ class CartService
 
                     return [
                         'orderNumber' => $orderNumber,
-                        'cart'         => $cart->fresh(['tableRoom']),
-                        'cartItems'    => $cartItems,
-                        'tableRoom'    => $cart->tableRoom,
-                        'success'      => true,
+                        'cart'        => $cart->fresh(['tableRoom']),
+                        'cartItems'   => $cartItems,
+                        'tableRoom'   => $cart->tableRoom,
+                        'success'     => true,
                     ];
                 }
 
@@ -635,7 +629,7 @@ class CartService
     public function updateBillNumber(int $cartId, int $branchId): void
     {
         $branch = Branch::find($branchId);
-        if (!$branch) {
+        if (! $branch) {
             throw new Exception('Branch not found.');
         }
 
@@ -645,7 +639,7 @@ class CartService
 
         // Update the cart with the new bill number
         $cart = Cart::find($cartId);
-        if (!$cart) {
+        if (! $cart) {
             throw new Exception('Cart not found.');
         }
 

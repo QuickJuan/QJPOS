@@ -39,7 +39,8 @@ class CartController extends Controller
         }
     }
 
-    public function addToCart(CartRequest $request): RedirectResponse
+    // public function addToCart(CartRequest $request): RedirectResponse
+    public function addToCart(Request $request): RedirectResponse
     {
         try {
             $this->cartService->addToCart($request);

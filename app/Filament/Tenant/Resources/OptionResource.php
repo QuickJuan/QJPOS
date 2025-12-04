@@ -31,41 +31,42 @@ class OptionResource extends Resource
                     ->required()
                     ->maxLength(255),
 
-                // Repeater::make('productsPivot')
-                //     ->label('Products')
-                //     ->schema([
-                //         Select::make('product_id')
-                //             ->label('Product')
-                //             ->options(\App\Models\Product::pluck('name', 'id'))
-                //             ->required()
-                //             ->searchable()
-                //             ->preload()
-                //             ->disableOptionsWhenSelectedInSiblingRepeaterItems(),
+                Repeater::make('productsPivot')
+                    ->label('')
+                    ->schema([
+                        Select::make('product_id')
+                            ->label('Product')
+                            ->options(\App\Models\Product::pluck('name', 'id'))
+                            ->required()
+                            ->searchable()
+                            ->preload()
+                            ->disableOptionsWhenSelectedInSiblingRepeaterItems(),
 
-                //         TextInput::make('max_quantity')
-                //             ->label('Max Quantity')
-                //             ->numeric()
-                //             ->minValue(1)
-                //             ->default(1)
-                //             ->required()
-                //             ->helperText('Maximum quantity that can be selected for this option'),
+                        TextInput::make('max_quantity')
+                            ->label('Max Quantity')
+                            ->numeric()
+                            ->minValue(1)
+                            ->default(1)
+                            ->required()
+                            ->helperText('Maximum quantity that can be selected for this option'),
 
-                //         Toggle::make('is_default')
-                //             ->label('Is Default')
-                //             ->default(false)
-                //             ->helperText('Set as default option for this product'),
-                //     ])
-                //     ->columns(3)
-                //     ->reorderable(false)
-                //     ->collapsible()
-                //     ->itemLabel(fn (array $state): ?string => \App\Models\Product::find($state['product_id'])?->name ?? null)
-                //     ->addActionLabel('Add Product')
-                //     ->mutateRelationshipDataBeforeCreateUsing(function (array $data): array {
-                //         return $data;
-                //     })
-                //     ->mutateRelationshipDataBeforeFillUsing(function (array $data): array {
-                //         return $data;
-                //     }),
+                        Toggle::make('is_default')
+                            ->label('Is Default')
+                            ->default(false)
+                            ->helperText('Set as default option for this product'),
+                    ])
+                    ->columnSpanFull()
+                    ->columns(3)
+                    ->reorderable(false)
+                    ->collapsible()
+                    ->itemLabel(fn (array $state): ?string => \App\Models\Product::find($state['product_id'])?->name ?? null)
+                    ->addActionLabel('Add Product')
+                    ->mutateRelationshipDataBeforeCreateUsing(function (array $data): array {
+                        return $data;
+                    })
+                    ->mutateRelationshipDataBeforeFillUsing(function (array $data): array {
+                        return $data;
+                    }),
 
                 // SpatieMediaLibraryFileUpload::make('featured_image')
                 //     ->collection('featured_image')

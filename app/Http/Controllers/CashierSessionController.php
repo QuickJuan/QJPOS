@@ -116,7 +116,7 @@ class CashierSessionController extends Controller
 
     public function productOptions(int $productId): Response
     {
-        $product = Product::with(['options.optionItems.product.media'])->findOrFail($productId);
+        $product = Product::with(['options.products', 'options.optionItems.productPackaging', 'options.optionItems.product.media', 'options.optionItems.product.productPackagings'])->findOrFail($productId);
 
         return Inertia::render('Resto/ProductOption', [
             'product' => ProductResource::make($product),

@@ -11,6 +11,7 @@ class OptionItem extends Model
         'product_id',
         'product_packaging_id',
         'price',
+        'quantity'
     ];
 
     public function option(): BelongsTo
