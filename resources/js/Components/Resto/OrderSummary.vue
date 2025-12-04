@@ -15,10 +15,12 @@
             <!-- Cart Items -->
             <CartItems
                 :order-items="orderItems"
+                :selected-items-for-discount="selectedItemsForDiscount"
                 @edit-item="handleEdit"
                 @delete-item="handleDelete"
                 @show-item-modifiers="handleShowItemModifiers"
                 @remove-modifier="handleRemoveModifier"
+                @toggle-item-for-discount="toggleItemForDiscount"
             />
 
             <!-- Order Totals -->
@@ -80,6 +82,7 @@
             :selected-items="selectedItemsForModal"
             :tax-rate="taxRate"
             :available-discounts="props.availableDiscounts"
+            @apply="handleApplyDiscount"
         />
 
         <!-- Required Reason Modal -->
@@ -493,6 +496,10 @@ const handleRequiredReason = (data: any) => {
             },
         }
     );
+};
+
+const handleApplyDiscount = (discountData: any) => {
+    appliedDiscount.value = discountData;
 };
 
 const handleAddDiscountToItem = (item: any) => {
