@@ -127,6 +127,7 @@ import { ConfirmPopup, useConfirm } from "primevue";
 import axios from "axios";
 import { route } from "ziggy-js";
 import { useTable } from "@/composables/useTable";
+import { thermalPrinter } from "@/Services/ThermalPrinterService";
 
 const props = defineProps<{
     cart: any;
@@ -341,6 +342,50 @@ const handlePlaceOrder = async () => {
             detail: response.message || "Order Submitted Successfully",
             life: 3000,
         });
+
+        // Print the placed order items to thermal printer
+        if (
+            response.data?.placedOrderItems &&
+            response.data.placedOrderItems.length > 0
+        ) {
+            try {
+                if (!thermalPrinter.isConnected()) {
+                    const connected = await thermalPrinter.connectToPrinterType(
+                        "kitchen"
+                    );
+                    if (!connected) {
+                        console.warn("Printer not connected, skipping print");
+                    } else {
+                        await thermalPrinter.printPlacedOrder(
+                            response.data.orderNumber,
+                            response.data.tableRoom?.name || "Table",
+                            response.data.placedOrderItems
+                        );
+                    }
+                } else {
+                    await thermalPrinter.printPlacedOrder(
+                        response.data.orderNumber,
+                        response.data.tableRoom?.name || "Table",
+                        response.data.placedOrderItems
+                    );
+                }
+            } catch (printError) {
+                console.error("Failed to print order:", printError);
+                // Don't block the redirect if print fails
+            }
+        }
+
+        //redirect to table-rooms index with locationId after delay to show toast
+        setTimeout(() => {
+            let locationId = response.data?.tableRoom?.table_room_location_id;
+            if (locationId) {
+                router.visit(
+                    route("table-rooms.index", { locationId: locationId })
+                );
+            } else {
+                router.visit(route("table-rooms.index"));
+            }
+        }, 1500);
     } else {
         toast.add({
             severity: "error",

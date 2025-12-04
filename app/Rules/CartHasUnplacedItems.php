@@ -27,7 +27,7 @@ class CartHasUnplacedItems implements ValidationRule
             ->exists();
 
         if (!$unplacedItems) {
-            $fail('The cart has no items to place order.');
+            $fail('There is no new item to place in the selected cart.');
         }
     }
 }

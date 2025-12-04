@@ -1244,6 +1244,145 @@ class ThermalPrinterService {
     }
 
     /**
+     * Print placed order items grouped by order type
+     * Used for kitchen/bar printers to show new orders
+     */
+    public async printPlacedOrder(orderNumber: number, tableName: string, orderGroups: Array<{
+        orderType: string;
+        items: Array<{
+            id: number;
+            description: string;
+            packaging: string;
+            qty: number | string;
+            modifiers: Array<{ name: string; value: string }>;
+            notes: string;
+        }>;
+        totalItems: number;
+    }>): Promise<void> {
+        if (!this.isConnected()) {
+            throw new Error('Printer not connected. Please connect first.');
+        }
+
+        try {
+            const commands: number[] = [];
+
+            // Initialize printer
+            commands.push(...this.ESC_POS.INIT);
+
+            // Set character encoding to UTF-8
+            commands.push(...this.ESC_POS.SET_UTF8);
+
+            // Header - Table name and order number (centered and bold)
+            commands.push(...this.ESC_POS.ALIGN_CENTER);
+            commands.push(...this.ESC_POS.BOLD_ON);
+            this.addTextWithSize(commands, tableName, 'large');
+            commands.push(...this.ESC_POS.BOLD_OFF);
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            // Order number
+            commands.push(...this.ESC_POS.BOLD_ON);
+            commands.push(...this.stringToBytes(`Order #${orderNumber}`));
+            commands.push(...this.ESC_POS.BOLD_OFF);
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            // Timestamp
+            const currentTime = new Date().toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            });
+            commands.push(...this.stringToBytes(currentTime));
+            commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+
+            const separatorWidth = this.currentConfig?.character_width || 47;
+            const separatorLine = '-'.repeat(separatorWidth);
+
+            // Process each order type group
+            orderGroups.forEach((group, groupIndex) => {
+                // Order type header - large, bold, centered
+                commands.push(...this.ESC_POS.ALIGN_CENTER);
+                commands.push(...this.ESC_POS.BOLD_ON);
+                this.addTextWithSize(commands, this.getOrderTypeLabel(group.orderType), 'large');
+                commands.push(...this.ESC_POS.BOLD_OFF);
+                commands.push(...this.ESC_POS.LINE_FEED);
+
+                // Separator
+                commands.push(...this.ESC_POS.ALIGN_LEFT);
+                commands.push(...this.stringToBytes(separatorLine));
+                commands.push(...this.ESC_POS.LINE_FEED);
+
+                // Print items in this group
+                group.items.forEach(item => {
+                    // Item description - quantity and name
+                    const qty = typeof item.qty === 'string' ? item.qty : item.qty;
+                    const itemLine = `${qty}x ${item.description}`;
+                    commands.push(...this.stringToBytes(itemLine));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+
+                    // Packaging info if available
+                    if (item.packaging) {
+                        commands.push(...this.stringToBytes(`  Pkg: ${item.packaging}`));
+                        commands.push(...this.ESC_POS.LINE_FEED);
+                    }
+
+                    // Modifiers (options/add-ons)
+                    if (item.modifiers && item.modifiers.length > 0) {
+                        item.modifiers.forEach(modifier => {
+                            const modLine = `  + ${modifier.name}`;
+                            if (modifier.value) {
+                                commands.push(...this.stringToBytes(`${modLine}: ${modifier.value}`));
+                            } else {
+                                commands.push(...this.stringToBytes(modLine));
+                            }
+                            commands.push(...this.ESC_POS.LINE_FEED);
+                        });
+                    }
+
+                    // Notes (special instructions)
+                    if (item.notes) {
+                        commands.push(...this.stringToBytes(`  Note: ${item.notes}`));
+                        commands.push(...this.ESC_POS.LINE_FEED);
+                    }
+
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                });
+
+                // Separator between groups
+                if (groupIndex < orderGroups.length - 1) {
+                    commands.push(...this.stringToBytes(separatorLine));
+                    commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+                }
+            });
+
+            // Footer separator and total items count
+            commands.push(...this.stringToBytes(separatorLine));
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            const totalItems = orderGroups.reduce((sum, group) => sum + group.totalItems, 0);
+            commands.push(...this.ESC_POS.ALIGN_CENTER);
+            commands.push(...this.stringToBytes(`Total Items: ${totalItems}`));
+            commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+
+            // Add spacing before cut to prevent cutting off last content
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            // Cut if auto_cut is enabled
+            if (this.currentConfig?.auto_cut !== false) {
+                commands.push(...this.ESC_POS.FULL_CUT);
+            }
+
+            const data = new Uint8Array(commands);
+            await this.sendToPrinter(data);
+        } catch (error) {
+            console.error('Failed to print placed order:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Connect to a specific printer type (kitchen, bar, receipt)
      */
     public async connectToPrinterType(type: 'kitchen' | 'bar' | 'receipt'): Promise<boolean> {

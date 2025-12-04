@@ -15,6 +15,7 @@ use App\Models\ProductPackaging;
 use App\Enums\TableRoomStatusType;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Resources\PreparationItemCollectionResource;
 
 class CartService
 {
@@ -521,10 +522,12 @@ class CartService
                         ->select('id', 'cart_id', 'product_id', 'quantity', 'price', 'order_type', 'notes', 'meta_data', 'placed_order', 'batch_number')
                         ->get();
 
+                    $newOrderItems = new PreparationItemCollectionResource($cartItems);
+
                     return [
                         'orderNumber' => $orderNumber,
                         'cart'        => $cart->fresh(['tableRoom']),
-                        'cartItems'   => $cartItems,
+                        'placedOrderItems'  => $newOrderItems,
                         'tableRoom'   => $cart->tableRoom,
                         'success'     => true,
                     ];
