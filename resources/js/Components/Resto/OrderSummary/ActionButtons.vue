@@ -338,7 +338,7 @@ const handlePlaceOrder = async () => {
         toast.add({
             severity: "success",
             summary: "Success",
-            detail: response.message || "Order placed successfully",
+            detail: response.message || "Order Submitted Successfully",
             life: 3000,
         });
     } else {

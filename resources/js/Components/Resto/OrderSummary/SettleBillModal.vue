@@ -6,8 +6,12 @@
         :style="{ width: '500px' }"
         :breakpoints="{ '960px': '75vw', '640px': '90vw' }"
         @update:visible="handleClose"
+        @show="focusAmount"
     >
-        <form @submit.prevent="handleSettleBill" class="space-y-6">
+        <form
+            @submit.prevent="!showingSwal && handleSettleBill()"
+            class="space-y-6"
+        >
             <!-- Total Amount Section -->
             <div
                 class="bg-gradient-to-r from-primary-50 to-primary-100 p-6 rounded-lg border border-primary-200"
@@ -26,14 +30,16 @@
                     Amount Tendered
                 </label>
                 <div class="flex gap-2">
-                    <input
+                    <TextField
+                        ref="amountInputRef"
                         id="amount_paid"
-                        v-model.number="amountPaid"
+                        v-model="amountPaid"
                         type="number"
-                        inputmode="decimal"
-                        required
                         placeholder="0.00"
-                        class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent text-lg"
+                        pattern="[0-9]*\.?[0-9]{0,2}"
+                        inputmode="decimal"
+                        class="flex-1"
+                        input-class="text-2xl py-4"
                     />
                     <button
                         type="button"
@@ -101,9 +107,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, nextTick } from "vue";
 import { Dialog } from "primevue";
 import { useToast } from "primevue";
+import Swal from "sweetalert2";
+import { router } from "@inertiajs/vue3";
+import { route } from "ziggy-js";
 import { formatMoney } from "@/Utils/FormatMoney";
 import TextField from "@/Components/Form/TextField.vue";
 import { usePage } from "@inertiajs/vue3";
@@ -140,6 +149,23 @@ const appliedDiscount = computed(() => props.appliedDiscount);
 
 // Settle bill form data
 const amountPaid = ref(0);
+
+// Ref for amount input
+const amountInputRef = ref<HTMLInputElement | null>(null);
+
+// Track if Swal is showing to prevent form submission
+const showingSwal = ref(false);
+
+// Focus input on modal open
+const focusAmount = async () => {
+    await nextTick();
+    const inputElement = amountInputRef.value?.$el?.querySelector(
+        "input"
+    ) as HTMLInputElement;
+    if (inputElement) {
+        inputElement.focus();
+    }
+};
 
 // Preset amounts for quick selection
 const presetAmounts = [100, 200, 500, 1000];
@@ -221,8 +247,29 @@ const handleSettleBill = async () => {
                 detail: response.message || "Bill settled successfully",
                 life: 3000,
             });
+            //show swal to show the change of the customer
             emit("update:visible", false);
-            amountPaid.value = 0;
+            showingSwal.value = true;
+            Swal.fire({
+                title: formatMoney(amountPaid.value - props.totalAmount),
+                text: "Change to return to customer",
+                icon: "success",
+                confirmButtonText: "OK",
+                didOpen: () => {
+                    // Focus the OK button when Swal opens
+                    const confirmButton = document.querySelector(
+                        ".swal2-confirm"
+                    ) as HTMLButtonElement;
+                    if (confirmButton) {
+                        confirmButton.focus();
+                    }
+                },
+            }).then(() => {
+                showingSwal.value = false;
+                amountPaid.value = 0;
+                // Redirect to table-rooms index
+                router.visit(route("table-rooms.index"));
+            });
         } else {
             toast.add({
                 severity: "error",
