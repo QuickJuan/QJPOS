@@ -1,17 +1,16 @@
 <?php
 namespace App\Filament\Tenant\Resources\OptionResource\RelationManagers;
 
-use Filament\Tables;
-use App\Models\Option;
 use App\Models\Product;
-use Filament\Forms\Form;
-use Filament\Forms\Get;
-use Filament\Tables\Table;
 use App\Models\ProductPackaging;
 use Filament\Forms\Components\Select;
-use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Tables;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
 
 class OptionItemsRelationManager extends RelationManager
 {
@@ -40,7 +39,7 @@ class OptionItemsRelationManager extends RelationManager
                     ->options(function (Get $get) {
                         $productId = $get('product_id');
 
-                        if (!$productId) {
+                        if (! $productId) {
                             return [];
                         }
 
@@ -53,7 +52,7 @@ class OptionItemsRelationManager extends RelationManager
                     ->visible(function (Get $get) {
                         $productId = $get('product_id');
 
-                        if (!$productId) {
+                        if (! $productId) {
                             return false;
                         }
 
@@ -63,7 +62,7 @@ class OptionItemsRelationManager extends RelationManager
                     ->required(function (Get $get) {
                         $productId = $get('product_id');
 
-                        if (!$productId) {
+                        if (! $productId) {
                             return false;
                         }
 
@@ -73,7 +72,7 @@ class OptionItemsRelationManager extends RelationManager
                     ->dehydrated(function (Get $get) {
                         $productId = $get('product_id');
 
-                        if (!$productId) {
+                        if (! $productId) {
                             return false;
                         }
 
@@ -89,6 +88,12 @@ class OptionItemsRelationManager extends RelationManager
                     ->default(0)
                     ->prefix('₱')
                     ->helperText('Additional price for this option item'),
+
+                TextInput::make('quantity')
+                    ->numeric()
+                    ->required()
+                    ->minValue(0)
+                    ->default(0)
             ]);
     }
 
@@ -112,6 +117,10 @@ class OptionItemsRelationManager extends RelationManager
                 TextColumn::make('price')
                     ->label('Additional Price')
                     ->money('PHP')
+                    ->sortable()
+                    ->searchable(),
+
+                TextColumn::make('quantity')
                     ->sortable()
                     ->searchable(),
             ])
