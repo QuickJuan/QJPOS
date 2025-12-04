@@ -1,5 +1,4 @@
 import axios, { AxiosError, AxiosResponse } from 'axios';
-import { useToast } from 'primevue';
 
 /**
  * Format validation errors from server response
@@ -27,104 +26,53 @@ export const formatValidationErrors = (errors: any): string => {
 };
 
 /**
- * Show error toast with formatted message
- * @param title - Toast title/summary
- * @param errors - Error object or message string
- * @param duration - Toast duration in ms (default: 3000)
- */
-export const showErrorToast = (
-    title: string,
-    errors: any,
-    duration: number = 3000
-) => {
-    try {
-        const toast = useToast();
-        const errorMessage = typeof errors === 'string'
-            ? errors
-            : formatValidationErrors(errors);
-
-        toast.add({
-            severity: "error",
-            summary: title,
-            detail: errorMessage,
-            life: duration,
-        });
-    } catch (e) {
-        // Toast not available, log to console
-        console.error(`${title}:`, typeof errors === 'string' ? errors : formatValidationErrors(errors));
-    }
-};
-
-/**
- * Show success toast
- * @param title - Toast title/summary
- * @param message - Success message
- * @param duration - Toast duration in ms (default: 3000)
- */
-export const showSuccessToast = (
-    title: string,
-    message: string,
-    duration: number = 3000
-) => {
-    try {
-        const toast = useToast();
-        toast.add({
-            severity: "success",
-            summary: title,
-            detail: message,
-            life: duration,
-        });
-    } catch (e) {
-        // Toast not available, log to console
-        console.log(`${title}: ${message}`);
-    }
-};
-
-/**
  * Generic POST request with error handling
  * @param url - API endpoint URL
  * @param data - Request payload
  * @param options - Additional options (showToast, successCallback, errorCallback)
  */
+/**
+ * Generic POST request with error handling
+ * @param url - API endpoint URL
+ * @param data - Request payload
+ * @param options - Additional options (successCallback, errorCallback)
+ */
 export const httpPost = async <T = any>(
     url: string,
     data: any = {},
     options?: {
-        showToast?: boolean;
-        successTitle?: string;
-        errorTitle?: string;
         successCallback?: (response: T) => void;
         errorCallback?: (error: any) => void;
     }
 ): Promise<{ success: boolean; data?: T; error?: string }> => {
     try {
-        const response = await axios.post<T>(url, data);
+        const response = await axios.post<T>(url, data, {
+            validateStatus: () => true,
+        });
 
-        if (options?.showToast) {
-            showSuccessToast(
-                options.successTitle || 'Success',
-                'Operation completed successfully'
-            );
+        if (response.status >= 200 && response.status < 300) {
+            if (options?.successCallback) {
+                options.successCallback(response.data);
+            }
+            return { success: true, data: response.data };
+        } else {
+            let errorMessage = 'An error occurred.';
+            if (response.data?.errors) {
+                errorMessage = formatValidationErrors(response.data.errors);
+            } else if (response.data?.message) {
+                errorMessage = response.data.message;
+            }
+
+            if (options?.errorCallback) {
+                options.errorCallback(response.data);
+            }
+
+            return { success: false, error: errorMessage };
         }
-
-        if (options?.successCallback) {
-            options.successCallback(response.data);
-        }
-
-        return { success: true, data: response.data };
     } catch (error: any) {
         let errorMessage = 'An error occurred.';
-
-        if (error.response?.data?.errors) {
-            errorMessage = formatValidationErrors(error.response.data.errors);
-        } else if (error.response?.data?.message) {
-            errorMessage = error.response.data.message;
-        } else if (error.message) {
+        if (error.message) {
             errorMessage = error.message;
-        }
-
-        if (options?.showToast) {
-            showErrorToast(options.errorTitle || 'Error', errorMessage);
         }
 
         if (options?.errorCallback) {
@@ -138,39 +86,43 @@ export const httpPost = async <T = any>(
 /**
  * Generic GET request with error handling
  * @param url - API endpoint URL
- * @param options - Additional options (showToast, successCallback, errorCallback)
+ * @param options - Additional options (successCallback, errorCallback)
  */
 export const httpGet = async <T = any>(
     url: string,
     options?: {
-        showToast?: boolean;
-        successTitle?: string;
-        errorTitle?: string;
         successCallback?: (response: T) => void;
         errorCallback?: (error: any) => void;
     }
 ): Promise<{ success: boolean; data?: T; error?: string }> => {
     try {
-        const response = await axios.get<T>(url);
+        const response = await axios.get<T>(url, {
+            validateStatus: () => true,
+        });
 
-        if (options?.successCallback) {
-            options.successCallback(response.data);
+        if (response.status >= 200 && response.status < 300) {
+            if (options?.successCallback) {
+                options.successCallback(response.data);
+            }
+            return { success: true, data: response.data };
+        } else {
+            let errorMessage = 'An error occurred.';
+            if (response.data?.errors) {
+                errorMessage = formatValidationErrors(response.data.errors);
+            } else if (response.data?.message) {
+                errorMessage = response.data.message;
+            }
+
+            if (options?.errorCallback) {
+                options.errorCallback(response.data);
+            }
+
+            return { success: false, error: errorMessage };
         }
-
-        return { success: true, data: response.data };
     } catch (error: any) {
         let errorMessage = 'An error occurred.';
-
-        if (error.response?.data?.errors) {
-            errorMessage = formatValidationErrors(error.response.data.errors);
-        } else if (error.response?.data?.message) {
-            errorMessage = error.response.data.message;
-        } else if (error.message) {
+        if (error.message) {
             errorMessage = error.message;
-        }
-
-        if (options?.showToast) {
-            showErrorToast(options.errorTitle || 'Error', errorMessage);
         }
 
         if (options?.errorCallback) {
@@ -185,47 +137,44 @@ export const httpGet = async <T = any>(
  * Generic PUT request with error handling
  * @param url - API endpoint URL
  * @param data - Request payload
- * @param options - Additional options (showToast, successCallback, errorCallback)
+ * @param options - Additional options (successCallback, errorCallback)
  */
 export const httpPut = async <T = any>(
     url: string,
     data: any = {},
     options?: {
-        showToast?: boolean;
-        successTitle?: string;
-        errorTitle?: string;
         successCallback?: (response: T) => void;
         errorCallback?: (error: any) => void;
     }
 ): Promise<{ success: boolean; data?: T; error?: string }> => {
     try {
-        const response = await axios.put<T>(url, data);
+        const response = await axios.put<T>(url, data, {
+            validateStatus: () => true,
+        });
 
-        if (options?.showToast) {
-            showSuccessToast(
-                options.successTitle || 'Success',
-                'Operation completed successfully'
-            );
+        if (response.status >= 200 && response.status < 300) {
+            if (options?.successCallback) {
+                options.successCallback(response.data);
+            }
+            return { success: true, data: response.data };
+        } else {
+            let errorMessage = 'An error occurred.';
+            if (response.data?.errors) {
+                errorMessage = formatValidationErrors(response.data.errors);
+            } else if (response.data?.message) {
+                errorMessage = response.data.message;
+            }
+
+            if (options?.errorCallback) {
+                options.errorCallback(response.data);
+            }
+
+            return { success: false, error: errorMessage };
         }
-
-        if (options?.successCallback) {
-            options.successCallback(response.data);
-        }
-
-        return { success: true, data: response.data };
     } catch (error: any) {
         let errorMessage = 'An error occurred.';
-
-        if (error.response?.data?.errors) {
-            errorMessage = formatValidationErrors(error.response.data.errors);
-        } else if (error.response?.data?.message) {
-            errorMessage = error.response.data.message;
-        } else if (error.message) {
+        if (error.message) {
             errorMessage = error.message;
-        }
-
-        if (options?.showToast) {
-            showErrorToast(options.errorTitle || 'Error', errorMessage);
         }
 
         if (options?.errorCallback) {
@@ -240,47 +189,44 @@ export const httpPut = async <T = any>(
  * Generic PATCH request with error handling
  * @param url - API endpoint URL
  * @param data - Request payload
- * @param options - Additional options (showToast, successCallback, errorCallback)
+ * @param options - Additional options (successCallback, errorCallback)
  */
 export const httpPatch = async <T = any>(
     url: string,
     data: any = {},
     options?: {
-        showToast?: boolean;
-        successTitle?: string;
-        errorTitle?: string;
         successCallback?: (response: T) => void;
         errorCallback?: (error: any) => void;
     }
 ): Promise<{ success: boolean; data?: T; error?: string }> => {
     try {
-        const response = await axios.patch<T>(url, data);
+        const response = await axios.patch<T>(url, data, {
+            validateStatus: () => true,
+        });
 
-        if (options?.showToast) {
-            showSuccessToast(
-                options.successTitle || 'Success',
-                'Operation completed successfully'
-            );
+        if (response.status >= 200 && response.status < 300) {
+            if (options?.successCallback) {
+                options.successCallback(response.data);
+            }
+            return { success: true, data: response.data };
+        } else {
+            let errorMessage = 'An error occurred.';
+            if (response.data?.errors) {
+                errorMessage = formatValidationErrors(response.data.errors);
+            } else if (response.data?.message) {
+                errorMessage = response.data.message;
+            }
+
+            if (options?.errorCallback) {
+                options.errorCallback(response.data);
+            }
+
+            return { success: false, error: errorMessage };
         }
-
-        if (options?.successCallback) {
-            options.successCallback(response.data);
-        }
-
-        return { success: true, data: response.data };
     } catch (error: any) {
         let errorMessage = 'An error occurred.';
-
-        if (error.response?.data?.errors) {
-            errorMessage = formatValidationErrors(error.response.data.errors);
-        } else if (error.response?.data?.message) {
-            errorMessage = error.response.data.message;
-        } else if (error.message) {
+        if (error.message) {
             errorMessage = error.message;
-        }
-
-        if (options?.showToast) {
-            showErrorToast(options.errorTitle || 'Error', errorMessage);
         }
 
         if (options?.errorCallback) {
@@ -294,46 +240,43 @@ export const httpPatch = async <T = any>(
 /**
  * Generic DELETE request with error handling
  * @param url - API endpoint URL
- * @param options - Additional options (showToast, successCallback, errorCallback)
+ * @param options - Additional options (successCallback, errorCallback)
  */
 export const httpDelete = async <T = any>(
     url: string,
     options?: {
-        showToast?: boolean;
-        successTitle?: string;
-        errorTitle?: string;
         successCallback?: (response: T) => void;
         errorCallback?: (error: any) => void;
     }
 ): Promise<{ success: boolean; data?: T; error?: string }> => {
     try {
-        const response = await axios.delete<T>(url);
+        const response = await axios.delete<T>(url, {
+            validateStatus: () => true,
+        });
 
-        if (options?.showToast) {
-            showSuccessToast(
-                options.successTitle || 'Success',
-                'Operation completed successfully'
-            );
+        if (response.status >= 200 && response.status < 300) {
+            if (options?.successCallback) {
+                options.successCallback(response.data);
+            }
+            return { success: true, data: response.data };
+        } else {
+            let errorMessage = 'An error occurred.';
+            if (response.data?.errors) {
+                errorMessage = formatValidationErrors(response.data.errors);
+            } else if (response.data?.message) {
+                errorMessage = response.data.message;
+            }
+
+            if (options?.errorCallback) {
+                options.errorCallback(response.data);
+            }
+
+            return { success: false, error: errorMessage };
         }
-
-        if (options?.successCallback) {
-            options.successCallback(response.data);
-        }
-
-        return { success: true, data: response.data };
     } catch (error: any) {
         let errorMessage = 'An error occurred.';
-
-        if (error.response?.data?.errors) {
-            errorMessage = formatValidationErrors(error.response.data.errors);
-        } else if (error.response?.data?.message) {
-            errorMessage = error.response.data.message;
-        } else if (error.message) {
+        if (error.message) {
             errorMessage = error.message;
-        }
-
-        if (options?.showToast) {
-            showErrorToast(options.errorTitle || 'Error', errorMessage);
         }
 
         if (options?.errorCallback) {

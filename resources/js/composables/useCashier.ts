@@ -1,5 +1,7 @@
 import { ref, computed, watch } from "vue";
 import type { Ref } from "vue";
+import { httpPost } from "@/Utils/axiosHelper";
+import { route } from "ziggy-js";
 
 export interface CartItem {
     id: number;
@@ -204,6 +206,48 @@ export const useCashier = () => {
         );
     };
 
+    // Settle payment for a cart
+    const settlePayment = async (paymentData: {
+        cart_id: number;
+        amount_paid: number;
+        total_amount: number;
+    }) => {
+        try {
+            const response = await httpPost(
+                route("resto.cart.settle-bill"),
+                {
+                    cart_id: paymentData.cart_id,
+                    amount_paid: paymentData.amount_paid,
+                    total_amount: paymentData.total_amount,
+                }
+            );
+
+            if (response.success) {
+                // Remove the settled cart from open carts
+                removeCart(paymentData.cart_id);
+
+                return {
+                    success: true,
+                    message: "Payment settled successfully",
+                    data: response.data,
+                };
+            } else {
+                return {
+                    success: false,
+                    message: response.error || "Failed to settle payment",
+                    data: null,
+                };
+            }
+        } catch (error) {
+            console.error("Error settling payment:", error);
+            return {
+                success: false,
+                message: "Error settling payment",
+                data: null,
+            };
+        }
+    };
+
     // Initialize from server data if provided
     const initializeFromServerData = (serverCarts: Cart[], currentCart?: Cart) => {
         if (serverCarts && Array.isArray(serverCarts)) {
@@ -239,6 +283,7 @@ export const useCashier = () => {
         // Utilities
         getCartByTableId,
         getCartsByOrderType,
+        settlePayment,
         initializeFromServerData,
 
         // Raw state access

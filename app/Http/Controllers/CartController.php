@@ -10,6 +10,7 @@ use App\Http\Requests\CartRequest;
 use Illuminate\Http\RedirectResponse;
 use App\Services\CashierSessionService;
 use App\Http\Requests\PlaceOrderRequest;
+use App\Http\Requests\SettleBillRequest;
 use App\Http\Requests\CreateTableCartRequest;
 use App\Http\Requests\ApplyDiscountToCartItemRequest;
 
@@ -210,14 +211,11 @@ class CartController extends Controller
         }
     }
 
-    public function settleBill(Request $request, int $cartId): JsonResponse | RedirectResponse
+    public function settleBill(SettleBillRequest $request): JsonResponse | RedirectResponse
     {
         try {
-            if (! $cartId) {
-                return redirect()->back()->with('error', 'Cart ID is empty.');
-            }
 
-            $order = $this->paymentService->settleBill($request, $cartId);
+            $order = $this->paymentService->settleBill($request->validated());
 
             // return redirect()->back()->with('success', 'Bill settled successfully.');
             return response()->json([
