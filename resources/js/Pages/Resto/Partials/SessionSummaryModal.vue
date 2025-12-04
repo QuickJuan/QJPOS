@@ -142,12 +142,6 @@
                 <div class="border-t my-2"></div>
 
                 <div class="flex justify-between">
-                    <span>Cancelled Tax:</span>
-                    <span>
-                        {{ props.sessionSummary?.cancelled_tax || 0 }}
-                    </span>
-                </div>
-                <div class="flex justify-between">
                     <span>Cancelled Amount:</span>
                     <span>
                         {{

@@ -261,7 +261,6 @@ class CashierSessionService
         $seniorDiscountTotal  = 0;
         $pwdDiscountTotal     = 0;
         $cancelledAmount      = $orders->where('status', Status::REFUND->value)->sum('total_due');
-        $cancelledTax         = $orders->where('status', Status::REFUND->value)->sum('item_discount');
 
         foreach ($orders as $order) {
             // Calculate order total from orderItems
@@ -313,7 +312,6 @@ class CashierSessionService
             'transactions_count' => $transactionsCount,
             'sku_count'          => $itemsSettled,
             'total_quantity'     => $totalQuantity,
-            'cancelled_tax'      => $cancelledTax,
             'cancelled_amount'   => $cancelledAmount,
             'regular_discount'   => $regularDiscountTotal,
             'senior_discount'    => $seniorDiscountTotal,
