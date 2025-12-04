@@ -23,17 +23,16 @@
             <!-- Amount Paid Section -->
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-3">
-                    Amount Paid
+                    Amount Tendered
                 </label>
                 <div class="flex gap-2">
                     <input
                         id="amount_paid"
                         v-model.number="amountPaid"
-                        type="text"
+                        type="number"
                         inputmode="decimal"
                         required
                         placeholder="0.00"
-                        @input="handleAmountInput"
                         class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600 focus:border-transparent text-lg"
                     />
                     <button
@@ -75,44 +74,6 @@
                 </button>
             </div>
 
-            <!-- Change Section -->
-            <div
-                v-if="amountPaid > 0"
-                class="bg-green-50 p-4 rounded-lg border border-green-200"
-            >
-                <div class="space-y-2">
-                    <div class="flex justify-between text-sm text-gray-600">
-                        <span>Amount Paid:</span>
-                        <span class="font-semibold">{{
-                            formatMoney(amountPaid)
-                        }}</span>
-                    </div>
-                    <div class="flex justify-between text-sm text-gray-600">
-                        <span>Total Amount:</span>
-                        <span class="font-semibold">{{
-                            formatMoney(totalAmount)
-                        }}</span>
-                    </div>
-                    <div
-                        class="border-t border-green-200 pt-2 flex justify-between"
-                    >
-                        <span class="font-semibold text-green-700"
-                            >Change:</span
-                        >
-                        <span
-                            :class="[
-                                'font-bold text-lg',
-                                changeAmount >= 0
-                                    ? 'text-green-600'
-                                    : 'text-red-600',
-                            ]"
-                        >
-                            {{ formatMoney(changeAmount) }}
-                        </span>
-                    </div>
-                </div>
-            </div>
-
             <!-- Action Buttons -->
             <div class="flex gap-3 pt-6">
                 <button
@@ -142,9 +103,11 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { Dialog } from "primevue";
+import { useToast } from "primevue";
 import { formatMoney } from "@/Utils/FormatMoney";
 import TextField from "@/Components/Form/TextField.vue";
 import { usePage } from "@inertiajs/vue3";
+import { useCashier } from "@/composables/useCashier";
 
 const props = defineProps<{
     visible: boolean;
@@ -163,9 +126,14 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-    settleBill: [data: any];
     "update:visible": [value: boolean];
 }>();
+
+// Get cashier composable
+const { settlePayment } = useCashier();
+
+// Get toast
+const toast = useToast();
 
 // Use applied discount from props
 const appliedDiscount = computed(() => props.appliedDiscount);
@@ -208,28 +176,7 @@ const addAmountPaid = (amount: number) => {
 
 // Set exact amount
 const setExactAmount = (amount: number) => {
-    amountPaid.value = parseFloat(amount.toFixed(2));
-};
-
-// Handle manual input
-const handleAmountInput = (event: Event) => {
-    const input = event.target as HTMLInputElement;
-    let value = input.value;
-
-    // Remove any non-numeric characters except decimal point
-    value = value.replace(/[^0-9.]/g, "");
-
-    // Prevent multiple decimal points
-    const parts = value.split(".");
-    if (parts.length > 2) {
-        value = parts[0] + "." + parts.slice(1).join("");
-    }
-
-    // Update the input
-    input.value = value;
-
-    // Update the model
-    amountPaid.value = value === "" ? 0 : parseFloat(value);
+    amountPaid.value = Number(parseFloat(amount.toFixed(2)));
 };
 
 // Clear amount
@@ -238,56 +185,62 @@ const clearAmount = () => {
 };
 
 // Handle settle bill form submission
-const handleSettleBill = () => {
-    const taxInfo = computed(() => {
-        return props.orderItems.reduce(
-            (acc: any, item: any) => {
-                acc.vatableSales += Number(item.vatable_sales) || 0;
-                acc.nonVatableSales += Number(item.non_vat_sales) || 0;
-                acc.vatExemptSales += Number(item.vat_exempt_sales) || 0;
-                acc.vatAmount += Number(item.vat_amount) || 0;
-                return acc;
-            },
-            {
-                vatableSales: 0,
-                nonVatableSales: 0,
-                vatExemptSales: 0,
-                vatAmount: 0,
-            }
-        );
-    });
-    receiptData.value = {
-        receiptNumber: props.receiptNumber,
-        date: new Date().toISOString(),
-        tableNumber: props.tableInfo,
-        cashierName: page.props.auth?.user?.name ?? "",
-        orderType: props.selectedOrderType,
-        orderItems: props.orderItems,
-        subtotal: parseFloat(props.subTotal.toFixed(2)),
-        lessTax: parseFloat(props.lessTaxTotal.toFixed(2)),
-        lessDiscount: parseFloat(props.lessDiscountTotal.toFixed(2)),
-        discountName: appliedDiscount.value?.discountName || null,
-        discountType: appliedDiscount.value?.discountType || null,
-        totalAmount: parseFloat(props.total.toFixed(2)),
-        taxInfo: taxInfo.value,
-        paymentInfo: {
-            amount_paid: parseFloat(amountPaid.value.toString()) || 0,
-            change:
-                (parseFloat(amountPaid.value.toString()) || 0) -
-                (parseFloat(props.totalAmount.toString()) || 0),
-            method: "Cash",
-        },
-    };
+const handleSettleBill = async () => {
+    try {
+        // Validate required data
+        if (!props.cart?.id) {
+            toast.add({
+                severity: "error",
+                summary: "Error",
+                detail: "Cart ID is missing. Please try again.",
+                life: 3000,
+            });
+            return;
+        }
 
-    emit("settleBill", {
-        cart_id: props.cart.id,
-        amount_paid: amountPaid.value,
-        total_amount: props.totalAmount,
-        receipt_data: receiptData.value,
-    });
+        if (amountPaid.value <= 0) {
+            toast.add({
+                severity: "error",
+                summary: "Error",
+                detail: "Please enter a valid amount",
+                life: 3000,
+            });
+            return;
+        }
 
-    emit("update:visible", false);
-    amountPaid.value = 0;
+        const response = await settlePayment({
+            cart_id: props.cart.id,
+            amount_paid: amountPaid.value,
+            total_amount: props.totalAmount,
+        });
+
+        if (response.success) {
+            toast.add({
+                severity: "success",
+                summary: "Success",
+                detail: response.message || "Bill settled successfully",
+                life: 3000,
+            });
+            emit("update:visible", false);
+            amountPaid.value = 0;
+        } else {
+            toast.add({
+                severity: "error",
+                summary: "Error",
+                detail: response.message || "Failed to settle bill",
+                life: 3000,
+            });
+        }
+    } catch (error) {
+        console.error("Settlement error:", error);
+        toast.add({
+            severity: "error",
+            summary: "Error",
+            detail:
+                error instanceof Error ? error.message : "An error occurred",
+            life: 3000,
+        });
+    }
 };
 
 const handleClose = () => {
