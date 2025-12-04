@@ -92,6 +92,7 @@
             :order-items="orderItems"
             :receipt-footer="receiptFooter"
             :general-settings="generalSettings"
+            :active-branch="activeBranch"
         />
 
         <BillModal
@@ -153,6 +154,7 @@ const props = defineProps<{
         company_phone: string;
         company_logo: string;
     };
+    activeBranch?: any;
 }>();
 
 const emit = defineEmits<{

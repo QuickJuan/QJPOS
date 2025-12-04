@@ -282,6 +282,7 @@ const locationType = ref(null);
 const selectedOrderItem = ref<any>(null);
 const selectedOrderType = ref<any>("dine-in");
 const showOrderSummary = ref(false);
+const previousTableId = ref<string | null>(null); // Track table changes to preserve order type
 const receiptData = ref({
     receiptNumber: "",
     date: "",
@@ -312,6 +313,7 @@ const {
     setTableInfo,
     setCashierSession,
     initializeFromServerData,
+    locationType: storedLocationType,
 } = useCashier();
 
 const orderItems = computed(() => {
@@ -331,8 +333,13 @@ const toggleSidebar = () => {
 };
 
 // Update order type
+// Update order type and sync with cashier state
 const updateOrderType = (type: string) => {
     selectedOrderType.value = type;
+    // Also update it in locationType if we have a table
+    if (tableId.value) {
+        setTableInfo(tableId.value, type);
+    }
 };
 
 // Handle show receipt modal
@@ -421,14 +428,28 @@ onMounted(() => {
     const params = new URLSearchParams(window.location.search);
     const urlTableId = params.get("tableId");
     const urlLocationType = params.get("locationType");
+
     tableId.value = urlTableId;
     locationType.value = urlLocationType;
-    selectedOrderType.value = urlLocationType;
+
+    // Only reset selectedOrderType if we've switched to a different table
+    if (urlTableId && urlTableId !== previousTableId.value) {
+        selectedOrderType.value = urlLocationType;
+        previousTableId.value = urlTableId;
+    } else if (!previousTableId.value && urlTableId) {
+        // First time setting table - use stored locationType if available, otherwise URL
+        selectedOrderType.value = storedLocationType.value || urlLocationType;
+        previousTableId.value = urlTableId;
+    } else if (
+        previousTableId.value === urlTableId &&
+        storedLocationType.value
+    ) {
+        // Same table, use stored locationType to preserve user's choice
+        selectedOrderType.value = storedLocationType.value;
+    }
 
     // Update cashier state with table info
-    setTableInfo(urlTableId, urlLocationType);
-
-    // If no tableId in URL and we have a pending cashiering session, redirect to tables page
+    setTableInfo(urlTableId, urlLocationType); // If no tableId in URL and we have a pending cashiering session, redirect to tables page
     // if (!urlTableId && props.pendingCashiering) {
     //     nextTick(() => {
     //         router.visit(route("resto.tables"));

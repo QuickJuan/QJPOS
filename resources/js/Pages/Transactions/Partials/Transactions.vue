@@ -48,11 +48,11 @@
                                 <span
                                     class="font-semibold text-gray-900 text-base xl:text-lg"
                                 >
-                                    {{ order?.or_number }}
+                                    {{ order?.invoice_no }}
                                 </span>
                             </p>
                             <span class="text-xs md:text-sm text-gray-400">
-                                {{ formatDate(order.created_at) }}
+                                {{ formatDateTime(order.created_at) }}
                             </span>
                         </div>
                         <p
@@ -115,6 +115,7 @@ import Order from "@/Types/Order/Order";
 import OrderResponse from "@/Types/Order/OrderResponse";
 import { formatDate } from "@/Utils/FormatDate";
 import { computed, ref } from "vue";
+import moment from "moment";
 
 const props = defineProps<{
     orders: OrderResponse;
@@ -133,6 +134,10 @@ const orderListingSubtitle = (order: Order) => {
     return `${
         order?.customer?.customer_name || order?.table_room?.name || "Walk-in"
     }`;
+};
+
+const formatDateTime = (dateString: string) => {
+    return moment(dateString).format("MMM. DD, YYYY h:mm A");
 };
 
 const hasOrders = computed(
