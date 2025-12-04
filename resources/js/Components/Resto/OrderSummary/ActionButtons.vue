@@ -18,7 +18,7 @@
 
                 <!-- Place Order Button - Show whenever there are items to place -->
                 <button
-                    @click="placeOrder(props.tableId, props.cart?.id)"
+                    @click="handlePlaceOrder"
                     class="px-4 py-2.5 bg-success-600 text-white rounded-lg font-semibold hover:bg-success-700 transition-colors text-sm whitespace-nowrap"
                 >
                     Place Order
@@ -109,6 +109,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from "vue";
+import { useToast } from "primevue";
 import { ChevronDownIcon } from "@heroicons/vue/24/outline";
 import {
     HomeIcon,
@@ -175,6 +176,7 @@ const hasItemsToPlace = computed(() => {
 });
 
 const { placeOrder } = useTable();
+const toast = useToast();
 // Use confirm
 const confirm = useConfirm();
 
@@ -326,5 +328,26 @@ const handlePrinterConfig = () => {
 // Handle end of shift
 const handleEndOfShift = () => {
     emit("endOfShift");
+};
+
+// Handle place order with response handling
+const handlePlaceOrder = async () => {
+    const response = await placeOrder(props.tableId, props.cart?.id);
+
+    if (response.success) {
+        toast.add({
+            severity: "success",
+            summary: "Success",
+            detail: response.message || "Order placed successfully",
+            life: 3000,
+        });
+    } else {
+        toast.add({
+            severity: "error",
+            summary: "Error",
+            detail: response.message || "Failed to place order",
+            life: 3000,
+        });
+    }
 };
 </script>

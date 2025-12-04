@@ -45,37 +45,18 @@ export const useTable = () => {
     };
 
     const placeOrder = async (tableId: number, cartId: number) => {
-        if (!tableId || !cartId) {
-            showErrorToast("Error", "Table ID and Cart ID are required");
-            return;
-        }
-
         const response = await httpPost(
             route("resto.cart.place-order"),
             {
                 cart_id: cartId,
                 table_id: tableId,
-            },
-            {
-                successCallback: (data: any) => {
-                    // Get locationId from response data
-                    const locationId = data?.tableRoom?.table_room_location_id;
-
-                    console.log("response data:", data);
-                    showSuccessToast("Success", data.message || "Order placed successfully");
-
-                    // // Redirect to table rooms with locationId
-                    // setTimeout(() => {
-                    //     router.visit(
-                    //         route("table-rooms.index", { locationId: locationId })
-                    //     );
-                    // }, 500);
-                },
             }
         );
-
-        if (!response.success) {
-            showErrorToast("Error", response.error || "Failed to place order");
+        console.log('place order response ', response);
+        if (response.success) {
+            return { success: true, message: "Order placed successfully", data: response.data };
+        } else {
+            return { success: false, message: response.error || "Failed to place order", data: null };
         }
     };
 
