@@ -37,17 +37,22 @@ export const showErrorToast = (
     errors: any,
     duration: number = 3000
 ) => {
-    const toast = useToast();
-    const errorMessage = typeof errors === 'string'
-        ? errors
-        : formatValidationErrors(errors);
+    try {
+        const toast = useToast();
+        const errorMessage = typeof errors === 'string'
+            ? errors
+            : formatValidationErrors(errors);
 
-    toast.add({
-        severity: "error",
-        summary: title,
-        detail: errorMessage,
-        life: duration,
-    });
+        toast.add({
+            severity: "error",
+            summary: title,
+            detail: errorMessage,
+            life: duration,
+        });
+    } catch (e) {
+        // Toast not available, log to console
+        console.error(`${title}:`, typeof errors === 'string' ? errors : formatValidationErrors(errors));
+    }
 };
 
 /**
@@ -61,13 +66,18 @@ export const showSuccessToast = (
     message: string,
     duration: number = 3000
 ) => {
-    const toast = useToast();
-    toast.add({
-        severity: "success",
-        summary: title,
-        detail: message,
-        life: duration,
-    });
+    try {
+        const toast = useToast();
+        toast.add({
+            severity: "success",
+            summary: title,
+            detail: message,
+            life: duration,
+        });
+    } catch (e) {
+        // Toast not available, log to console
+        console.log(`${title}: ${message}`);
+    }
 };
 
 /**
@@ -76,7 +86,7 @@ export const showSuccessToast = (
  * @param data - Request payload
  * @param options - Additional options (showToast, successCallback, errorCallback)
  */
-export const post = async <T = any>(
+export const httpPost = async <T = any>(
     url: string,
     data: any = {},
     options?: {
@@ -130,7 +140,7 @@ export const post = async <T = any>(
  * @param url - API endpoint URL
  * @param options - Additional options (showToast, successCallback, errorCallback)
  */
-export const get = async <T = any>(
+export const httpGet = async <T = any>(
     url: string,
     options?: {
         showToast?: boolean;
@@ -177,7 +187,7 @@ export const get = async <T = any>(
  * @param data - Request payload
  * @param options - Additional options (showToast, successCallback, errorCallback)
  */
-export const put = async <T = any>(
+export const httpPut = async <T = any>(
     url: string,
     data: any = {},
     options?: {
@@ -227,11 +237,66 @@ export const put = async <T = any>(
 };
 
 /**
+ * Generic PATCH request with error handling
+ * @param url - API endpoint URL
+ * @param data - Request payload
+ * @param options - Additional options (showToast, successCallback, errorCallback)
+ */
+export const httpPatch = async <T = any>(
+    url: string,
+    data: any = {},
+    options?: {
+        showToast?: boolean;
+        successTitle?: string;
+        errorTitle?: string;
+        successCallback?: (response: T) => void;
+        errorCallback?: (error: any) => void;
+    }
+): Promise<{ success: boolean; data?: T; error?: string }> => {
+    try {
+        const response = await axios.patch<T>(url, data);
+
+        if (options?.showToast) {
+            showSuccessToast(
+                options.successTitle || 'Success',
+                'Operation completed successfully'
+            );
+        }
+
+        if (options?.successCallback) {
+            options.successCallback(response.data);
+        }
+
+        return { success: true, data: response.data };
+    } catch (error: any) {
+        let errorMessage = 'An error occurred.';
+
+        if (error.response?.data?.errors) {
+            errorMessage = formatValidationErrors(error.response.data.errors);
+        } else if (error.response?.data?.message) {
+            errorMessage = error.response.data.message;
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+
+        if (options?.showToast) {
+            showErrorToast(options.errorTitle || 'Error', errorMessage);
+        }
+
+        if (options?.errorCallback) {
+            options.errorCallback(error);
+        }
+
+        return { success: false, error: errorMessage };
+    }
+};
+
+/**
  * Generic DELETE request with error handling
  * @param url - API endpoint URL
  * @param options - Additional options (showToast, successCallback, errorCallback)
  */
-export const httpReq = async <T = any>(
+export const httpDelete = async <T = any>(
     url: string,
     options?: {
         showToast?: boolean;

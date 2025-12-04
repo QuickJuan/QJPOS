@@ -2,7 +2,7 @@ import { router } from "@inertiajs/vue3";
 import { useToast } from "primevue";
 import { route } from "ziggy-js";
 import { usePage } from "@inertiajs/vue3";
-import { post, showErrorToast, showSuccessToast } from "@/Utils/axiosHelper";
+import { httpPost, showErrorToast, showSuccessToast } from "@/Utils/axiosHelper";
 
 const page = usePage();
 
@@ -50,7 +50,7 @@ export const useTable = () => {
             return;
         }
 
-        const response = await post(
+        const response = await httpPost(
             route("resto.cart.place-order"),
             {
                 cart_id: cartId,
@@ -61,12 +61,15 @@ export const useTable = () => {
                     // Get locationId from response data
                     const locationId = data?.tableRoom?.table_room_location_id;
 
-                    // Redirect to table rooms with locationId
-                    setTimeout(() => {
-                        router.visit(
-                            route("table-rooms.index", { locationId: locationId })
-                        );
-                    }, 500);
+                    console.log("response data:", data);
+                    showSuccessToast("Success", data.message || "Order placed successfully");
+
+                    // // Redirect to table rooms with locationId
+                    // setTimeout(() => {
+                    //     router.visit(
+                    //         route("table-rooms.index", { locationId: locationId })
+                    //     );
+                    // }, 500);
                 },
             }
         );
