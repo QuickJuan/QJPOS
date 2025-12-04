@@ -188,8 +188,6 @@ class CartController extends Controller
 
             $response = $this->cartService->placeOrder($payload);
 
-            info('Place Order Response: ' . print_r($response, true));
-
             if (!$response["success"]) {
                 return response()->json([
                     'success' => false,
@@ -197,11 +195,7 @@ class CartController extends Controller
                 ], 400);
             }
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Order placed successfully, We will start preparing your order',
-                'data' => $response,
-            ], 200);
+            return response()->json($response, 200);
 
         } catch (Exception $e) {
             \Log::error('Place order error: ' . $e->getMessage());

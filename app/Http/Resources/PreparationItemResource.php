@@ -22,7 +22,7 @@ class PreparationItemResource extends JsonResource
 
         return [
             'id' => $this->id,
-            'description' => $this->product?->description ?? $this->productPackaging->name ?? $this->description,
+            'description' => $this->product?->name ?? $this->productPackaging->name ?? $this->description,
             'packaging' => $packaging ?? '',
             'qty' => $this->quantity,
             'modifiers' => $this->meta_data?->modifiers ?? [],
