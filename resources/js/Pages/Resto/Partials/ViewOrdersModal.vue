@@ -138,7 +138,11 @@
                                         v-if="item.discount > 0"
                                         class="text-xs text-secondary-500 line-through"
                                     >
-                                        ₱{{ formatCurrency(item.price * item.quantity) }}
+                                        ₱{{
+                                            formatCurrency(
+                                                item.price * item.quantity
+                                            )
+                                        }}
                                     </p>
                                     <p
                                         :class="[
@@ -200,7 +204,7 @@
 
 <script setup lang="ts">
 import Dialog from "primevue/dialog";
-import ItemModifiersModal from "@/Components/RetailCashier/OrderSummary/ItemModifiersModal.vue";
+import ItemModifiersModal from "@/Components/Resto/OrderSummary/ItemModifiersModal.vue";
 import { ref } from "vue";
 
 const props = defineProps<{

@@ -47,26 +47,29 @@
             </div>
 
             <!-- Preset Amounts -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-3">
-                    Quick Amount Selection (Click to Add)
-                </label>
-                <div class="grid grid-cols-4 gap-2">
-                    <button
-                        v-for="preset in presetAmounts"
-                        :key="preset"
-                        type="button"
-                        @click="addAmountPaid(preset)"
-                        class="py-3 px-2 rounded-lg font-semibold text-sm transition-all duration-200 bg-gray-100 text-gray-700 hover:bg-primary-600 hover:text-white active:scale-95"
-                    >
-                        +{{ formatMoney(preset) }}
-                    </button>
+            <div class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-3">
+                        Quick Amount Selection (Click to Add)
+                    </label>
+                    <div class="grid grid-cols-4 gap-2">
+                        <button
+                            v-for="preset in presetAmounts"
+                            :key="preset"
+                            type="button"
+                            @click="addAmountPaid(preset)"
+                            class="py-3 px-2 rounded-lg font-semibold text-sm transition-all duration-200 bg-gray-100 text-gray-700 hover:bg-primary-600 hover:text-white active:scale-95"
+                        >
+                            +{{ formatMoney(preset) }}
+                        </button>
+                    </div>
                 </div>
+
                 <button
                     v-if="totalAmount > 0"
                     type="button"
                     @click="setExactAmount(totalAmount)"
-                    class="w-full mt-2 py-2 px-4 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-medium text-sm transition-colors"
+                    class="w-full h-12 mt-2 py-2 px-4 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-medium text-sm transition-colors"
                 >
                     Exact Amount ({{ formatMoney(totalAmount) }})
                 </button>
