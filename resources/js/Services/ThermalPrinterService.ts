@@ -104,30 +104,33 @@ interface BluetoothPrintService {
 }
 
 interface SessionSummaryData {
-    session_number: string;
-    or_number: string;
-    bill_number_start: string;
-    bill_number_end: string;
-    gross_sales: number;
-    regular_discount: number;
-    senior_discount: number;
-    pwd_discount: number;
-    net_sales: number;
-    non_vat_sales: number;
-    vat_sales: number;
-    vat_amount: number;
-    less_tax: number;
-    cancelled_count: number;
-    cancelled_amount: number;
-    transactions_count: number;
-    sku_count: number;
-    total_quantity: number;
-    previous_reading: number;
-    running_total: number;
-    expected_cash: number;
-    cash_denomination: number;
-    counter_id_start?: string;
-    counter_id_end?: string;
+    session_number: string | null;
+    or_number_start: string | null;
+    or_number_end: string | null;
+    bill_number_start: string | null;
+    bill_number_end: string | null;
+    gross_sales: number | null;
+    regular_discount: number | null;
+    senior_discount: number | null;
+    pwd_discount: number | null;
+    net_sales: number | null;
+    non_vat_sales: number | null;
+    vat_sales: number | null;
+    vat_amount: number | null;
+    less_tax: number | null;
+    cancelled_count: number | null;
+    cancelled_amount: number | null;
+    transactions_count: number | null;
+    sku_count: number | null;
+    total_quantity: number | null;
+    previous_reading: number | null;
+    running_total: number | null;
+    beginning_cash: number | null;
+    closing_cash: number | null;
+    cash_denomination: number | null;
+    cash_denomination_details?: Record<string, number> | null;
+    counter_id_start?: string | null;
+    counter_id_end?: string | null;
 }
 
 interface PrinterConfig {
@@ -931,7 +934,7 @@ class ThermalPrinterService {
 
                     // Less tax (if any)
                     if (item.less_tax !== undefined && item.less_tax !== null && item.less_tax !== '') {
-                        const lessTaxValue = typeof item.less_tax === 'string' ? parseFloat(item.less_tax) : item.less_tax  ;
+                        const lessTaxValue = typeof item.less_tax === 'string' ? parseFloat(item.less_tax) : item.less_tax;
                         if (lessTaxValue !== 0) {
                             const taxLine = this.formatDeductionLine('Less Tax:', lessTaxValue);
                             commands.push(...this.stringToBytes(`  ${taxLine}`));
@@ -1135,38 +1138,40 @@ class ThermalPrinterService {
             // Left align for details
             commands.push(...this.ESC_POS.ALIGN_LEFT);
 
-            // Session details
-            commands.push(...this.stringToBytes(this.formatInfoLine('Session Number:', sessionSummary.session_number)));
-            commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatInfoLine('OR Number:', sessionSummary.or_number)));
-            commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatInfoLine('Bill Number Start:', sessionSummary.bill_number_start)));
-            commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatInfoLine('Bill Number End:', sessionSummary.bill_number_end)));
-            commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
-
             // Sales summary
-            commands.push(...this.stringToBytes(this.formatTotalLine('Gross Sales:', sessionSummary.gross_sales)));
+            commands.push(...this.stringToBytes(this.formatTotalLine('Gross Sales:', sessionSummary.gross_sales || 0)));
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatTotalLine('Regular Discount:', sessionSummary.regular_discount)));
+            commands.push(...this.stringToBytes(this.formatTotalLine('Regular Discount:', sessionSummary.regular_discount || 0)));
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatTotalLine('Senior Discount:', sessionSummary.senior_discount)));
+            commands.push(...this.stringToBytes(this.formatTotalLine('Senior Discount:', sessionSummary.senior_discount || 0)));
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatTotalLine('PWD Discount:', sessionSummary.pwd_discount)));
+            commands.push(...this.stringToBytes(this.formatTotalLine('PWD Discount:', sessionSummary.pwd_discount || 0)));
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.stringToBytes(this.formatTotalLine('Less Tax:', sessionSummary.less_tax || 0)));
             commands.push(...this.ESC_POS.LINE_FEED);
             commands.push(...this.ESC_POS.BOLD_ON);
-            commands.push(...this.stringToBytes(this.formatTotalLine('Net Sales:', sessionSummary.net_sales)));
+            commands.push(...this.stringToBytes(this.formatTotalLine('Net Sales:', sessionSummary.net_sales || 0)));
             commands.push(...this.ESC_POS.BOLD_OFF);
             commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
             // VAT breakdown
-            commands.push(...this.stringToBytes(this.formatTotalLine('Non-VAT Sales:', sessionSummary.non_vat_sales)));
+            commands.push(...this.stringToBytes(this.formatTotalLine('VAT Sales:', sessionSummary.vat_sales || 0)));
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatTotalLine('VAT Sales:', sessionSummary.vat_sales)));
+            commands.push(...this.stringToBytes(this.formatTotalLine('Non-VAT Sales:', sessionSummary.non_vat_sales || 0)));
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatTotalLine('VAT:', sessionSummary.vat_amount)));
+            commands.push(...this.stringToBytes(this.formatTotalLine('VAT:', sessionSummary.vat_amount || 0)));
+            commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+
+            // Session details
+            commands.push(...this.stringToBytes(this.formatInfoLine('Session Number:', sessionSummary.session_number || '')));
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatTotalLine('Less Tax:', sessionSummary.less_tax)));
+            commands.push(...this.stringToBytes(this.formatInfoLine('OR Number Start:', sessionSummary.or_number_start || '')));
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.stringToBytes(this.formatInfoLine('OR Number End:', sessionSummary.or_number_end || '')));
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.stringToBytes(this.formatInfoLine('Bill Number Start:', sessionSummary.bill_number_start || '')));
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.stringToBytes(this.formatInfoLine('Bill Number End:', sessionSummary.bill_number_end || '')));
             commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
             // Counter IDs
@@ -1178,34 +1183,50 @@ class ThermalPrinterService {
             }
 
             // Cancellation info
-            commands.push(...this.stringToBytes(this.formatTotalLine('Cancelled Tax:', sessionSummary.cancelled_count)));
-            commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatTotalLine('Cancelled Amount:', sessionSummary.cancelled_amount)));
+            commands.push(...this.stringToBytes(this.formatTotalLine('Cancelled Amount:', sessionSummary.cancelled_amount || 0)));
             commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
             // Transaction summary
-            commands.push(...this.stringToBytes(this.formatTotalLine('No of Transactions:', sessionSummary.transactions_count)));
+            commands.push(...this.stringToBytes(this.formatTotalLine('No of Transactions:', sessionSummary.transactions_count || 0)));
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatTotalLine('Number of SKU:', sessionSummary.sku_count)));
+            commands.push(...this.stringToBytes(this.formatTotalLine('Number of SKU:', sessionSummary.sku_count || 0)));
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatTotalLine('Total Quantity:', sessionSummary.total_quantity)));
+            commands.push(...this.stringToBytes(this.formatTotalLine('Total Quantity:', sessionSummary.total_quantity || 0)));
             commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
             // Reading summary
-            commands.push(...this.stringToBytes(this.formatTotalLine('Previous Reading:', sessionSummary.previous_reading)));
+            commands.push(...this.stringToBytes(this.formatTotalLine('Previous Reading:', sessionSummary.previous_reading || 0)));
             commands.push(...this.ESC_POS.LINE_FEED);
             commands.push(...this.ESC_POS.BOLD_ON);
-            commands.push(...this.stringToBytes(this.formatTotalLine('Net Sales:', sessionSummary.net_sales)));
+            commands.push(...this.stringToBytes(this.formatTotalLine('Net Sales:', sessionSummary.net_sales || 0)));
             commands.push(...this.ESC_POS.BOLD_OFF);
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatTotalLine('Running Total:', sessionSummary.running_total)));
+            commands.push(...this.stringToBytes(this.formatTotalLine('Running Total:', sessionSummary.running_total || 0)));
             commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
             // Cash summary
-            commands.push(...this.stringToBytes(this.formatTotalLine('Expected Cash:', sessionSummary.expected_cash)));
+            commands.push(...this.stringToBytes(this.formatTotalLine('Beginning Cash:', sessionSummary.beginning_cash || 0)));
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatTotalLine('Cash Denomination:', sessionSummary.cash_denomination)));
-            commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+            commands.push(...this.stringToBytes(this.formatTotalLine('Closing Cash:', sessionSummary.closing_cash || 0)));
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.stringToBytes(this.formatTotalLine('Cash Denomination:', sessionSummary.cash_denomination || 0)));
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            // Cash denomination details
+            if (sessionSummary.cash_denomination_details) {
+                commands.push(...this.stringToBytes('Cash Breakdown:'));
+                commands.push(...this.ESC_POS.LINE_FEED);
+                Object.entries(sessionSummary.cash_denomination_details).forEach(([denom, count]) => {
+                    const numDenom = parseFloat(denom);
+                    const numCount = count as number;
+                    if (numCount > 0) {
+                        const line = `${this.formatNumberWithComma(numDenom.toFixed(2))} x ${numCount} = ${this.formatNumberWithComma((numDenom * numCount).toFixed(2))}`;
+                        commands.push(...this.stringToBytes(`  ${line}`));
+                        commands.push(...this.ESC_POS.LINE_FEED);
+                    }
+                });
+                commands.push(...this.ESC_POS.LINE_FEED);
+            }
 
             // End marker
             commands.push(...this.ESC_POS.ALIGN_CENTER);

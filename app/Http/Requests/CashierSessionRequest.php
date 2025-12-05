@@ -21,10 +21,10 @@ class CashierSessionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'beginning_cash'    => 'sometimes|required|numeric|min:0',
-            'cash_denomination' => 'sometimes|required|array',
-            'closing_cash'      => 'sometimes|required|numeric|min:0',
-            'table_id'          => 'sometimes|nullable|exists:table_rooms,id',
+            'beginning_cash'            => 'sometimes|required|numeric|min:0',
+            'cash_denomination_details' => 'sometimes|required|array',
+            'closing_cash'              => 'sometimes|required|numeric|min:0',
+            'table_id'                  => 'sometimes|nullable|exists:table_rooms,id',
         ];
     }
 }
