@@ -115,10 +115,9 @@ class DiscountService
         ];
     }
 
-    public function getDiscounts()
+    public function getAvailableDiscounts()
     {
-        return DiscountResource::collection(
-            Discount::all()
-        );
+        return Discount::select('id', 'discount_name', 'type', 'amount', 'discount_type', 'remove_tax', 'require_customer_info')
+            ->get();
     }
 }

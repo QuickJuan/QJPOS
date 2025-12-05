@@ -59,25 +59,8 @@
                                         <h4
                                             class="font-medium text-secondary-900 text-sm leading-tight flex-1"
                                         >
-                                            {{ item.name }}
-                                            {{
-                                                item.selected_options &&
-                                                Object.keys(
-                                                    item.selected_options
-                                                ).length > 0
-                                                    ? " - " +
-                                                      Object.values(
-                                                          item.selected_options
-                                                      )
-                                                          .map(
-                                                              (opt: any) =>
-                                                                  opt.product
-                                                                      ?.name ||
-                                                                  opt.name
-                                                          )
-                                                          .join(", ")
-                                                    : ""
-                                            }}
+                                            {{ item.description }}
+
                                             <!-- <button
                                                 v-if="hasModifiers(item)"
                                                 @click.stop="
@@ -112,17 +95,17 @@
                                             ({{
                                                 item.product_packaging.qty +
                                                 item.product_packaging
-                                                    .unit_measure
+                                                    ?.unit_measure
                                             }})
                                         </span>
                                         <span
                                             v-if="
-                                                item.product.unit_measure &&
+                                                item.product?.unit_measure &&
                                                 !item.product.multiple_packaging
                                             "
                                             class="text-xs px-2 py-0.5 rounded-full font-medium ml-2 flex-shrink-0 bg-green-100 text-green-800"
                                         >
-                                            {{ item.product.unit_measure }}
+                                            {{ item.product?.unit_measure }}
                                         </span>
                                     </div>
                                     <div

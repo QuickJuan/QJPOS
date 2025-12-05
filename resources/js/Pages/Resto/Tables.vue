@@ -123,6 +123,16 @@
                                         {{ table.status }}
                                     </span>
                                 </div>
+                                <div class="space-y-0.5">
+                                    <p class="text-gray-700 font-medium">
+                                        {{
+                                            table.status === "occupied"
+                                                ? table.numberOfPax
+                                                : table.chairs
+                                        }}
+                                        pax
+                                    </p>
+                                </div>
                             </div>
 
                             <!-- Table Name -->
@@ -138,27 +148,15 @@
                             <div
                                 class="text-center text-sm text-gray-600 space-y-1"
                             >
-                                <p
-                                    v-if="table.current_order"
-                                    class="text-blue-600 font-medium"
-                                >
-                                    Order #{{ table.current_order.id }}
-                                </p>
                                 <div
                                     v-if="
                                         table.status === 'occupied' &&
-                                        table.number_of_pax
+                                        table.numberOfPax
                                     "
                                     class="space-y-0.5"
                                 >
                                     <p class="text-gray-700 font-medium">
-                                        {{ table.number_of_pax }} pax
-                                    </p>
-                                    <p
-                                        v-if="table.time_in"
-                                        class="text-xs text-gray-500"
-                                    >
-                                        {{ formatTimeOccupied(table.time_in) }}
+                                        {{ table.numberOfPax }} pax
                                     </p>
                                 </div>
                             </div>

@@ -1,85 +1,49 @@
 <?php
 namespace App\Http\Controllers;
 
-use App\Http\Requests\CashierSessionRequest;
-use App\Http\Resources\CategoryResource;
-use App\Http\Resources\ProductResource;
-use App\Models\Category;
-use App\Models\Modifier;
-use App\Models\Product;
-use App\Models\TableRoom;
-use App\Models\TableRoomLocation;
-use App\Services\CashierSessionService;
-use App\Services\DiscountService;
-use App\Services\GeneralSettingsService;
 use Exception;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Models\Product;
+use App\Models\Category;
+use App\Models\Modifier;
+use App\Models\TableRoom;
+use Illuminate\Http\Request;
+use App\Services\CartService;
+use App\Models\TableRoomLocation;
+use App\Services\DiscountService;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\RedirectResponse;
+use App\Http\Resources\ProductResource;
+use App\Services\CashierSessionService;
+use App\Http\Resources\CategoryResource;
+use App\Services\GeneralSettingsService;
+use App\Http\Requests\CashierSessionRequest;
+use App\Services\ProductCategoryService;
 
 class CashierSessionController extends Controller
 {
     public function __construct(
         protected CashierSessionService $cashierSessionService,
-        protected DiscountService $discountService
-    ) {
-        $this->cashierSessionService = $cashierSessionService;
-        $this->discountService       = $discountService;
-    }
+        protected ProductCategoryService $productCategoryService
+    ) {}
 
-    public function index(Request $request, ?string $categorySlug = null): Response
+    public function index(Request $request): Response
     {
-        // Check if the current auth user has pending cashiering.
-        $pendingCashiering = $this->cashierSessionService->model->openSession()->with('cashier')->first();
+        // Get categories with active products
+        $categories = $this->productCategoryService->getCategoriesWithProductsAsResources();
+        if ($request->has('tableId')) {
+            $tableId      = $request->input('tableId');
+            $currentTable = TableRoom::find($tableId);
+        } else {
+            $currentTable = null;
+        }
 
-        // Get categories with products directly (will be cached in browser)
-        $categoriesQuery = Category::with(['products' => fn($query) => $query->where('is_active', true)->with('productPackagings', 'options')])->get();
-        $categories      = CategoryResource::collection($categoriesQuery);
-        $taxRate         = config('sales.tax_rate');
-
-        // Get available discounts
-        $discounts = $this->discountService->getDiscounts();
-
-        // Get available modifiers
-        $modifiers = Modifier::withMappedData();
-
-        // Get cart and cart items for current session
-        $cartData     = $this->cashierSessionService->getCartData($request, $pendingCashiering);
-        $cart         = $cartData['cart'];
-        $cartItems    = $cartData['cartItems'];
-        $currentTable = $cartData['currentTable'];
-
-        // Calculate totals
-        $totals = $this->cashierSessionService->calculateTotals($cart, $cartItems);
-
-        $billNumber    = $this->cashierSessionService->getBillNo(session('active_branch')->id);
-        $receiptNumber = $this->cashierSessionService->getReceiptNo(session('active_branch')->id);
-
-        // Get the General Settings
-        $generalSettings = app(GeneralSettingsService::class)->getCompanySettings();
-
-        // Prepare view data
-        $viewData = $this->cashierSessionService->prepareViewData(
-            $categories,
-            $pendingCashiering,
-            $cart,
-            $cartItems,
-            $discounts,
-            $modifiers,
-            $currentTable,
-            $taxRate,
-            $totals,
-            $billNumber,
-            $receiptNumber,
-            $generalSettings
-        );
-
-        // Add selected category slug to view data
-        $viewData['selectedCategorySlug'] = $categorySlug;
-
-        return Inertia::render('Resto/Index', $viewData);
+        // Cart is now provided by HandleInertiaRequests middleware via shared props
+        return Inertia::render('Resto/Index', [
+            'currentTable' => $currentTable,
+            'categories' => $categories,
+        ]);
     }
 
     public function preview(Request $request): Response

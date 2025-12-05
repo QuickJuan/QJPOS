@@ -33,7 +33,7 @@ class CartItemResource extends JsonResource
                         'id' => $item->id,
                         'orderType' => $orderType,
                         'cart_id' => $item->cart_id,
-                        'name' => $item->product?->name ?? 'Unknown Product',
+                        'name' => $item->description ?? $item->product?->name ?? '',
                         'description' => $item->product?->description ?? $item->product?->name,
                         'quantity' => $item->quantity,
                         'price' => $item->price,
@@ -73,8 +73,8 @@ class CartItemResource extends JsonResource
         return $subItems->map(function ($subItem) {
             return [
                 'id' => $subItem->id,
-                'name' => $subItem->product?->name ?? 'Unknown Product',
-                'description' => $subItem->product?->description ?? $subItem->product?->name,
+                'name' => $subItem->description ?? $subItem->product?->name ?? '',
+                'description' => $subItem->description ?? $subItem->product?->name,
                 'quantity' => $subItem->quantity,
                 'price' => $subItem->price,
                 'amount' => $subItem->amount,
