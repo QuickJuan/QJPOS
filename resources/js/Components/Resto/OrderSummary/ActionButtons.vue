@@ -342,17 +342,18 @@ const handlePlaceOrder = async () => {
         toast.add({
             severity: "success",
             summary: "Success",
-            detail: response.message || "Order Submitted Successfully",
+            detail: response.message,
             life: 3000,
         });
 
         // Print the placed order items to thermal printer
         if (
-            response.data?.placedOrderItems &&
-            response.data.placedOrderItems.length > 0
+            response?.placedOrderItems &&
+            response.placedOrderItems.length > 0
         ) {
             try {
                 if (!thermalPrinter.isConnected()) {
+                    alert("Connecting to kitchen printer...");
                     const connected = await thermalPrinter.connectToPrinterType(
                         "kitchen"
                     );
@@ -360,16 +361,17 @@ const handlePlaceOrder = async () => {
                         console.warn("Printer not connected, skipping print");
                     } else {
                         await thermalPrinter.printPlacedOrder(
-                            response.data.orderNumber,
-                            response.data.tableRoom?.name || "Table",
-                            response.data.placedOrderItems
+                            response.orderNumber,
+                            response.tableRoom?.name || "Table",
+                            response.placedOrderItems
                         );
                     }
                 } else {
+                    alert("Printing to kitchen printer...");
                     await thermalPrinter.printPlacedOrder(
-                        response.data.orderNumber,
-                        response.data.tableRoom?.name || "Table",
-                        response.data.placedOrderItems
+                        response.orderNumber,
+                        response.tableRoom?.name || "Table",
+                        response.placedOrderItems
                     );
                 }
             } catch (printError) {
