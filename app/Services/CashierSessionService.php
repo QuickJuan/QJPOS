@@ -56,18 +56,19 @@ class CashierSessionService
 
     public function closeSession(Request $request)
     {
-        $session = $this->model
-            ->openSession()
-            ->first();
+        $session = $this->model->openSession()->first();
 
         if (! $session) {
             throw new Exception('No open session found');
         }
 
+        $cashDenomination = $session->beginning_cash - $request->closing_cash;
+
         $closeSession = $session->update([
-            'closing_time'      => now(),
-            'closing_cash'      => $request->closing_cash,
-            'cash_denomination' => $request->cash_denomination,
+            'closing_time'              => now(),
+            'closing_cash'              => $request->closing_cash,
+            'cash_denomination_details' => $request->cash_denomination_details,
+            'cash_denomination'         => $cashDenomination,
         ]);
 
         return $closeSession;
@@ -250,6 +251,7 @@ class CashierSessionService
         $totalSales           = 0;
         $itemsSettled         = 0;
         $guestsServed         = 0;
+        $grossSales           = 0;
         $netSales             = 0;
         $totalLessTax         = 0;
         $transactionsCount    = $orders->count();
@@ -270,7 +272,8 @@ class CashierSessionService
             $vatableSales += $order->orderItems->sum('vatable_sales');
             $nonVatableSales += $order->orderItems->sum('non_vat_sales');
             $vatAmount += $order->orderItems->sum('vat_amount');
-            $netSales += $order->orderItems->sum('amount');
+            $grossSales += $order->orderItems->sum('amount');
+            $netSales += $order->orderItems->sum('sub_total');
 
             $seniorDiscountTotal += $seniorDiscount ? $order->orderItems
                 ->where('discount_id', $seniorDiscount->id)
@@ -303,32 +306,35 @@ class CashierSessionService
         }
 
         return [
-            'orders'             => $orderSummaries,
-            'total_sales'        => $totalSales,
-            'gross_sales'        => $totalSales,
-            'net_sales'          => $netSales,
-            'items_settled'      => $itemsSettled,
-            'guests_served'      => $guestsServed,
-            'transactions_count' => $transactionsCount,
-            'sku_count'          => $itemsSettled,
-            'total_quantity'     => $totalQuantity,
-            'cancelled_amount'   => $cancelledAmount,
-            'regular_discount'   => $regularDiscountTotal,
-            'senior_discount'    => $seniorDiscountTotal,
-            'pwd_discount'       => $pwdDiscountTotal,
-            'non_vat_sales'      => $nonVatableSales,
-            'vat_sales'          => $vatableSales,
-            'vat_amount'         => $vatAmount,
-            'less_tax'           => $totalLessTax,
-            'previous_reading'   => 0,
-            'running_total'      => $totalSales,
-            'session_number'     => str_pad($session->id, 4, '0', STR_PAD_LEFT),
-            'expected_cash'      => $session->beginning_cash ?? 0,
-            'cash_denomination'  => $session->closing_cash ?? 0,
-            'or_number_start'    => $orders->first()->invoice_no ?? null,
-            'or_number_end'      => $orders->last()->invoice_no ?? null,
-            'bill_number_start'  => $orders->first()->bill_no ?? null,
-            'bill_number_end'    => $orders->last()->bill_no ?? null,
+            'orders'                    => $orderSummaries,
+            'total_sales'               => $totalSales,
+            'gross_sales'               => $grossSales,
+            'net_sales'                 => $netSales,
+            'items_settled'             => $itemsSettled,
+            'guests_served'             => $guestsServed,
+            'transactions_count'        => $transactionsCount,
+            'sku_count'                 => $itemsSettled,
+            'total_quantity'            => $totalQuantity,
+            'cancelled_amount'          => $cancelledAmount,
+            'regular_discount'          => $regularDiscountTotal,
+            'senior_discount'           => $seniorDiscountTotal,
+            'pwd_discount'              => $pwdDiscountTotal,
+            'non_vat_sales'             => $nonVatableSales,
+            'vat_sales'                 => $vatableSales,
+            'vat_amount'                => $vatAmount,
+            'less_tax'                  => $totalLessTax,
+            'previous_reading'          => 0,
+            'running_total'             => $totalSales,
+            'session_number'            => str_pad($session->id, 4, '0', STR_PAD_LEFT),
+            'beginning_cash'            => $session->beginning_cash ?? 0,
+            'closing_cash'              => $session->closing_cash ?? 0,
+            'expected_cash'             => ($session->beginning_cash ?? 0) + $totalSales,
+            'cash_denomination'         => $session->cash_denomination,
+            'cash_denomination_details' => $session->cash_denomination_details,
+            'or_number_start'           => $orders->first()->invoice_no ?? null,
+            'or_number_end'             => $orders->last()->invoice_no ?? null,
+            'bill_number_start'         => $orders->first()->bill_no ?? null,
+            'bill_number_end'           => $orders->last()->bill_no ?? null,
         ];
     }
 }

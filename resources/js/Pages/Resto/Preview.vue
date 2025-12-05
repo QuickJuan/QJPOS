@@ -106,6 +106,18 @@
             :open-session="props.openSession"
             :general-settings="props.generalSettings"
             @close-modal="showCloseDialog = false"
+            @confirm-close-session="confirmCloseSession"
+        />
+
+        <!-- Session Summary Modal -->
+        <SessionSummaryModal
+            :show-session-summary-modal="showSessionSummaryModal"
+            :open-session="props.openSession"
+            :session-summary="sessionSummaryData"
+            :current-user="page.props.auth.user"
+            :general-settings="props.generalSettings"
+            @close-modal="showSessionSummaryModal = false"
+            @confirm-close="showSessionSummaryModal = false"
         />
     </HomeLayout>
 </template>
@@ -114,6 +126,7 @@
 import { ref } from "vue";
 import { route } from "ziggy-js";
 import { router } from "@inertiajs/vue3";
+import axios from "axios";
 import CashieringSession from "@/Types/CashieringSession";
 import Branch from "@/Types/Branch";
 import { usePage } from "@inertiajs/vue3";
@@ -122,6 +135,7 @@ import { useConfirm, useToast } from "primevue";
 import PageProps from "@/Types/PageProps";
 import HomeLayout from "@/Layouts/HomeLayout.vue";
 import CloseSessionModal from "./Partials/CloseSessionModal.vue";
+import SessionSummaryModal from "./Partials/SessionSummaryModal.vue";
 
 const props = defineProps<{
     activeBranch: Branch;
@@ -135,6 +149,8 @@ const toast = useToast();
 
 const beginningCash = ref("");
 const showCloseDialog = ref(false);
+const showSessionSummaryModal = ref(false);
+const sessionSummaryData = ref(null);
 
 const continueSession = () => {
     router.visit(route("resto.index"));
@@ -145,16 +161,26 @@ const confirmCloseSessionModal = (event: any) => {
 };
 
 const confirmCloseSession = (data: any) => {
-    console.log(data);
     router.post(
         route("resto.session.close"),
         {
-            cash_denomination: data.denominationData,
+            cash_denomination_details: data.denominationData,
             closing_cash: data.totalCashCounted,
         },
         {
             onSuccess: () => {
                 showCloseDialog.value = false;
+                // Fetch session summary after successful close
+                axios
+                    .get(route("resto.api.session-summary"))
+                    .then((response) => {
+                        sessionSummaryData.value = response.data;
+                        showSessionSummaryModal.value = true;
+                    })
+                    .catch((error) => {
+                        console.error("Failed to fetch session summary", error);
+                    });
+
                 toast.add({
                     severity: "success",
                     summary: "Success",
@@ -176,7 +202,12 @@ const confirmCloseSession = (data: any) => {
 
 const startSession = () => {
     if (!beginningCash.value || parseFloat(beginningCash.value) < 0) {
-        alert("Please enter a valid beginning cash amount");
+        toast.add({
+            severity: "error",
+            summary: "Error",
+            detail: "Please enter a valid beginning cash amount",
+            life: 3000,
+        });
         return;
     }
 
@@ -188,14 +219,17 @@ const startSession = () => {
         },
         {
             onSuccess: () => {
-                // Refresh the page to show the new session
-                window.location.reload();
+                //
             },
             onError: (errors) => {
-                alert(
-                    "Failed to start session: " +
-                        (errors.beginning_cash || "Unknown error")
-                );
+                toast.add({
+                    severity: "error",
+                    summary: "Error",
+                    detail:
+                        "Failed to start session: " +
+                        (errors.beginning_cash || "Unknown error"),
+                    life: 3000,
+                });
             },
         }
     );

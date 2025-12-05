@@ -139,10 +139,15 @@ class CashierSessionController extends Controller
 
     public function getSessionSummary(Request $request)
     {
-        $openSession = $this->cashierSessionService->model->openSession()->with('cashier')->first();
+        $session = $this->cashierSessionService->model->openSession()->with('cashier')->first();
 
-        if ($openSession) {
-            $sessionSummary = $this->cashierSessionService->getSessionSummary($openSession);
+        if (! $session) {
+            // If no open session, get the latest session (just closed)
+            $session = $this->cashierSessionService->model->where('cashier_id', Auth::id())->latest()->first();
+        }
+
+        if ($session) {
+            $sessionSummary = $this->cashierSessionService->getSessionSummary($session);
             return response()->json($sessionSummary);
         }
 

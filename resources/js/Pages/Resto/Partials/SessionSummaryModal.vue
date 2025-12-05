@@ -53,29 +53,6 @@
 
             <div class="text-left text-xs">
                 <div class="flex justify-between">
-                    <span>Session Number:</span>
-                    <span>{{ props.sessionSummary?.session_number }}</span>
-                </div>
-                <div class="flex justify-between">
-                    <span>OR Number Start:</span>
-                    <span>{{ props.sessionSummary?.or_number_start }}</span>
-                </div>
-                <div class="flex justify-between">
-                    <span>OR Number End:</span>
-                    <span>{{ props.sessionSummary?.or_number_end }}</span>
-                </div>
-                <div class="flex justify-between">
-                    <span>Bill Number Start:</span>
-                    <span>{{ props.sessionSummary?.bill_number_start }}</span>
-                </div>
-                <div class="flex justify-between">
-                    <span>Bill Number End:</span>
-                    <span>{{ props.sessionSummary?.bill_number_end }}</span>
-                </div>
-            </div>
-
-            <div class="text-left text-xs">
-                <div class="flex justify-between">
                     <span>Gross Sales:</span>
                     <span>{{ formatMoney(grossSales) }}</span>
                 </div>
@@ -93,6 +70,12 @@
                     <span>PWD Discount:</span>
                     <span>{{ formatMoney(pwdDiscount) }}</span>
                 </div>
+                <div class="flex justify-between">
+                    <span>Less Tax:</span>
+                    <span>
+                        {{ formatMoney(props.sessionSummary?.less_tax || 0) }}
+                    </span>
+                </div>
                 <div class="flex justify-between font-bold border-t pt-1 mt-1">
                     <span>Net Sales:</span>
                     <span>
@@ -102,15 +85,15 @@
 
                 <div class="mt-2"></div>
                 <div class="flex justify-between">
-                    <span>Non-VAT Sales:</span>
-                    <span>
-                        {{ formatMoney(props.sessionSummary?.non_vat_sales) }}
-                    </span>
-                </div>
-                <div class="flex justify-between">
                     <span>VAT Sales:</span>
                     <span>
                         {{ formatMoney(props.sessionSummary?.vat_sales) }}
+                    </span>
+                </div>
+                <div class="flex justify-between">
+                    <span>Non-VAT Sales:</span>
+                    <span>
+                        {{ formatMoney(props.sessionSummary?.non_vat_sales) }}
                     </span>
                 </div>
                 <div class="flex justify-between">
@@ -119,11 +102,32 @@
                         {{ formatMoney(props.sessionSummary?.vat_amount) }}
                     </span>
                 </div>
-                <div class="flex justify-between">
-                    <span>Less Tax:</span>
-                    <span>
-                        {{ formatMoney(props.sessionSummary?.less_tax || 0) }}
-                    </span>
+
+                <div class="border-t my-2"></div>
+
+                <div class="text-left text-xs">
+                    <div class="flex justify-between">
+                        <span>Session Number:</span>
+                        <span>{{ props.sessionSummary?.session_number }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>OR Number Start:</span>
+                        <span>{{ props.sessionSummary?.or_number_start }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>OR Number End:</span>
+                        <span>{{ props.sessionSummary?.or_number_end }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Bill Number Start:</span>
+                        <span>{{
+                            props.sessionSummary?.bill_number_start
+                        }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Bill Number End:</span>
+                        <span>{{ props.sessionSummary?.bill_number_end }}</span>
+                    </div>
                 </div>
 
                 <div class="border-t my-2"></div>
@@ -195,12 +199,21 @@
                 <div class="border-t my-2"></div>
 
                 <div class="flex justify-between">
-                    <span>Expected Cash:</span>
+                    <span>Beginning Cash:</span>
                     <span>
                         {{
                             formatMoney(
-                                props.sessionSummary?.expected_cash || 0
+                                props.sessionSummary?.beginning_cash || 0
                             )
+                        }}
+                    </span>
+                </div>
+
+                <div class="flex justify-between">
+                    <span>Closing Cash:</span>
+                    <span>
+                        {{
+                            formatMoney(props.sessionSummary?.closing_cash || 0)
                         }}
                     </span>
                 </div>
@@ -214,6 +227,28 @@
                             )
                         }}
                     </span>
+                </div>
+
+                <!-- Cash Denomination Details -->
+                <div
+                    v-if="props.sessionSummary?.cash_denomination_details"
+                    class="mt-2"
+                >
+                    <div class="text-xs font-semibold mb-1">
+                        Cash Breakdown:
+                    </div>
+                    <div
+                        v-for="[denom, count] in Object.entries(
+                            props.sessionSummary.cash_denomination_details
+                        )"
+                        :key="denom"
+                        class="flex justify-between text-xs ml-2"
+                    >
+                        <span>{{ formatMoney(denom) }} x {{ count }}:</span>
+                        <span>
+                            {{ formatMoney(parseFloat(denom) * Number(count)) }}
+                        </span>
+                    </div>
                 </div>
 
                 <div class="border-t my-2"></div>

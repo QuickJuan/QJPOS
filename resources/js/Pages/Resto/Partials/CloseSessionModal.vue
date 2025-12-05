@@ -27,24 +27,6 @@
                             }}
                         </p>
                     </div>
-                    <div>
-                        <p class="text-sm text-gray-600">Total Sales</p>
-                        <p class="text-xl font-bold text-green-600">
-                            {{
-                                formatMoney(
-                                    (
-                                        props.openSession?.total_sales || 0
-                                    ).toFixed(2)
-                                )
-                            }}
-                        </p>
-                    </div>
-                    <div class="col-span-2 border-t pt-4">
-                        <p class="text-sm text-gray-600">Expected Cash</p>
-                        <p class="text-2xl font-bold text-blue-600">
-                            {{ formatMoney(expectedCash.toFixed(2)) }}
-                        </p>
-                    </div>
                 </div>
             </div>
 
@@ -53,21 +35,32 @@
                 <h4 class="text-lg font-semibold text-gray-900 mb-4">
                     Cash Count
                 </h4>
-                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
                     <div
-                        v-for="(count, denom) in cashDenominations"
+                        class="grid grid-cols-3 gap-2 font-semibold text-sm mb-2 text-center"
+                    >
+                        <span>Quantity</span>
+                        <span>Money Value</span>
+                        <span>Total</span>
+                    </div>
+                    <div
+                        v-for="[denom, count] in Object.entries(
+                            cashDenominations
+                        ).sort(([a], [b]) => parseFloat(b) - parseFloat(a))"
                         :key="denom"
-                        class="space-y-2"
+                        class="grid grid-cols-3 gap-2 items-center"
                     >
                         <TextField
-                            :label="`${formatMoney(denom)}`"
                             v-model.number="cashDenominations[denom]"
                             type="number"
                             min="0"
                             :placeholder="`Count of ₱${denom}`"
+                            class="w-full"
                         />
-                        <p class="text-xs text-gray-500">
-                            Total:
+                        <p class="text-sm text-gray-900 text-center">
+                            {{ formatMoney(denom) }}
+                        </p>
+                        <p class="text-sm text-gray-900 text-center">
                             {{
                                 formatMoney(
                                     (parseFloat(denom) * count).toFixed(2)
@@ -107,17 +100,6 @@
             </div>
         </template>
     </Dialog>
-
-    <SessionSummaryModal
-        :showSessionSummaryModal="showSessionSummaryModal"
-        :openSession="openSession"
-        :sessionSummary="sessionSummaryData"
-        :currentUser="currentUser"
-        :totalCashCounted="totalCashCounted"
-        :general-settings="props.generalSettings"
-        @closeModal="showSessionSummaryModal = false"
-        @confirmClose="handleFinalConfirm"
-    />
 </template>
 
 <script setup lang="ts">
@@ -126,9 +108,6 @@ import CashieringSession from "@/Types/CashieringSession";
 import { formatMoney } from "@/Utils/FormatMoney";
 import { Button, Dialog } from "primevue";
 import { computed, ref } from "vue";
-import SessionSummaryModal from "./SessionSummaryModal.vue";
-import axios from "axios";
-import { route } from "ziggy-js";
 import { useToast } from "primevue";
 
 const props = defineProps<{
@@ -139,11 +118,13 @@ const props = defineProps<{
     generalSettings: any;
 }>();
 
-const emit = defineEmits(["confirmCloseSession", "closeModal", "sessionClosed"]);
+const emit = defineEmits([
+    "confirmCloseSession",
+    "closeModal",
+    "sessionClosed",
+]);
 
 const toast = useToast();
-const showSessionSummaryModal = ref(false);
-const sessionSummaryData = ref(null);
 
 const expectedCash = computed(() => {
     if (!props.openSession) return 0;
@@ -154,16 +135,17 @@ const expectedCash = computed(() => {
 });
 
 const cashDenominations = ref({
-    "0.25": 0,
-    "1": 0,
-    "5": 0,
-    "10": 0,
-    "20": 0,
-    "50": 0,
-    "100": 0,
-    "200": 0,
-    "500": 0,
     "1000": 0,
+    "500": 0,
+    "200": 0,
+    "100": 0,
+    "50": 0,
+    "20": 0,
+    "10": 0,
+    "5": 0,
+    "1": 0,
+    "0.25": 0,
+    "0.5": 0,
 });
 
 const totalCashCounted = computed(() => {
@@ -178,17 +160,7 @@ const cashDifference = computed(() => {
     return totalCashCounted.value - expectedCash.value;
 });
 
-const handleConfirmCloseSession = async () => {
-    try {
-        const response = await axios.get(route("resto.api.session-summary"));
-        sessionSummaryData.value = response.data;
-        showSessionSummaryModal.value = true;
-    } catch (error) {
-        console.error("Failed to fetch session summary", error);
-    }
-};
-
-const handleFinalConfirm = () => {
+const handleConfirmCloseSession = () => {
     const denominationData = Object.entries(cashDenominations.value).reduce(
         (acc, [denom, count]) => {
             if (count > 0) {
@@ -203,7 +175,6 @@ const handleFinalConfirm = () => {
         denominationData: denominationData,
         totalCashCounted: totalCashCounted.value,
     });
-    showSessionSummaryModal.value = false;
 };
 
 const handleClose = () => {
