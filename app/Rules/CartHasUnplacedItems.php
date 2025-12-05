@@ -15,6 +15,7 @@ class CartHasUnplacedItems implements ValidationRule
      */
    public function validate(string $attribute, mixed $value, Closure $fail): void
     {
+        info('val ' . $value);
         $cart = Cart::find($value);
 
         if (!$cart) {

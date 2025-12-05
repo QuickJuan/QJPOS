@@ -208,32 +208,7 @@ class TableRoomController extends Controller
     public function vacantTable(int $tableId): RedirectResponse
     {
         try {
-            $table = $this->tableRoomService->model->find($tableId);
-
-            if (!$table) {
-                return redirect()->back()->with('error', 'Table not found.');
-            }
-
-            // Check if there's a cart with active (non-void) items
-            $cartWithItems = Cart::where('table_room_id', $tableId)
-                ->whereHas('cartItems', fn($query) => $query->where('is_void', false))
-                ->exists();
-
-            if ($cartWithItems) {
-                return redirect()->back()->with('error', 'Cannot set table to available. There are cart items associated with this table.');
-            }
-
-            // Delete empty cart if exists
-            Cart::where('table_room_id', $tableId)
-                ->whereDoesntHave('cartItems', fn($query) => $query->where('is_void', false))
-                ->delete();
-
-            // Update table status to available
-            $table->update([
-                'status' => TableRoomStatusType::AVAILABLE->value,
-                'number_of_pax' => null,
-                'time_in' => null,
-            ]);
+            $this->tableRoomService->vacantTable($tableId);
 
             return redirect()->back()->with('success', 'Table has been set to Available successfully.');
 
@@ -241,7 +216,4 @@ class TableRoomController extends Controller
             return redirect()->back()->with('error', 'Failed to set table to Available: ' . $e->getMessage());
         }
     }
-
-
-
 }

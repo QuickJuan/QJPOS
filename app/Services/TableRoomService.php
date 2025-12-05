@@ -3,6 +3,7 @@ namespace App\Services;
 
 use Exception;
 use Carbon\Carbon;
+use App\Models\Cart;
 use App\Models\TableRoom;
 use Illuminate\Http\Request;
 use App\Models\TableRoomLocation;
@@ -178,5 +179,35 @@ class TableRoomService
     {
         $this->model->where('merge_to', $tableId)
             ->update(['merge_to' => null, 'status' => TableRoomStatusType::AVAILABLE->value]);
+    }
+
+    public function vacantTable(int $tableId): bool
+    {
+        $table = $this->model->findOrFail($tableId);
+
+        if (!$table) {
+            throw new Exception('Table not found.');
+        }
+
+        // Check if there's a cart with active (non-void) items
+        $cartWithItems = Cart::where('table_room_id', $tableId)
+            ->whereHas('cartItems', fn($query) => $query->where('is_void', false))
+            ->exists();
+
+        if ($cartWithItems) {
+            throw new Exception('Cannot set table to available. There are cart items associated with this table.');
+        }
+
+        // Delete empty cart if exists
+        Cart::where('table_room_id', $tableId)
+            ->whereDoesntHave('cartItems', fn($query) => $query->where('is_void', false))
+            ->delete();
+
+        // Update table status to available
+        return $table->update([
+            'status' => TableRoomStatusType::AVAILABLE->value,
+            'number_of_pax' => null,
+            'time_in' => null,
+        ]);
     }
 }

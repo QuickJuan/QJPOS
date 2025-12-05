@@ -26,12 +26,12 @@
                     class="bg-white rounded-xl cursor-pointer hover:shadow-xl transition-all duration-200 border-2 border-gray-200 hover:border-primary-500 group flex flex-col overflow-hidden"
                 >
                     <!-- Category Image -->
-                    <div class="relative aspect-square bg-gray-50">
+                    <div class="relative bg-gray-50 h-36">
                         <img
                             v-if="category.featured_image_url"
                             :src="category.featured_image_url"
                             :alt="category.name"
-                            class="w-auto h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                            class="w-auto h-full object-contain group-hover:scale-110 transition-transform duration-300"
                         />
 
                         <div
@@ -47,18 +47,13 @@
 
                     <!-- Category Name -->
                     <div
-                        class="p-4 sm:p-5 lg:p-6 bg-white border-t border-gray-100"
+                        class="flex items-center p-2 bg-white border-t border-gray-100 justify-center"
                     >
                         <h3
-                            class="font-bold text-base sm:text-lg lg:text-xl text-center text-secondary-800 mb-2 min-h-[3rem] flex items-center justify-center"
+                            class="font-bold text-base sm:text-lg text-secondary-800"
                         >
                             {{ category.name }}
                         </h3>
-                        <!-- <p
-                            class="text-sm sm:text-base text-gray-500 text-center"
-                        >
-                            {{ category.products?.length || 0 }} items
-                        </p> -->
                     </div>
                 </div>
             </div>
@@ -85,7 +80,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { router } from "@inertiajs/vue3";
 import { route } from "ziggy-js";
 import Category from "@/Types/Category";
@@ -96,6 +91,7 @@ import FoodIcon from "@/Components/icons/CashierIcons/FoodIcon.vue";
 import DessertIcon from "@/Components/icons/CashierIcons/DessertIcon.vue";
 import ShoppingBagIcon from "@/Components/icons/CashierIcons/ShoppingBagIcon.vue";
 import { useProduct } from "@/composables/useProduct";
+import { useProductStore } from "@/stores/productStore";
 
 const props = defineProps<{
     categories: { data: Category[] } | Category[];
@@ -106,7 +102,8 @@ const props = defineProps<{
     selectedOrderType?: string;
 }>();
 
-// Initialize product composable
+// Initialize stores and composables
+const productStore = useProductStore();
 const {
     addToCart,
     showPackagingModal,
@@ -115,56 +112,58 @@ const {
     handlePackagingCancel,
 } = useProduct();
 
+// Local state for selected category
+const selectedCategorySlug = ref(props.selectedCategorySlug);
+
+// Load categories into store on mount
+const getCategoriesData = (): Category[] => {
+    if (Array.isArray(props.categories)) {
+        return props.categories;
+    } else if (
+        props.categories &&
+        typeof props.categories === "object" &&
+        "data" in props.categories &&
+        Array.isArray(props.categories.data)
+    ) {
+        return props.categories.data;
+    }
+    return [];
+};
+
+const categoriesData = getCategoriesData();
+if (categoriesData.length > 0 && !productStore.isCategoryLoaded()) {
+    productStore.loadCategories(categoriesData);
+}
+
 const activeCategories = computed(() => {
-    const getCategoriesData = (): Category[] => {
-        if (Array.isArray(props.categories)) {
-            return props.categories;
-        } else if (
-            props.categories &&
-            typeof props.categories === "object" &&
-            "data" in props.categories &&
-            Array.isArray(props.categories.data)
-        ) {
-            return props.categories.data;
-        }
-        return [];
-    };
-
-    const categoriesData = getCategoriesData();
-
     if (props.cachedCategories.length > 0) {
         return props.cachedCategories;
     }
 
-    const filtered = categoriesData.filter(
+    const filtered = productStore.getCategories.filter(
         (category) => category && category.id && category.name
     );
 
     return filtered;
 });
 
-// Compute selected category ID from slug in URL
+// Compute selected category ID from slug
 const selectedCategoryId = computed(() => {
-    if (!props.selectedCategorySlug) {
+    if (!selectedCategorySlug.value) {
         return null;
     }
     const category = activeCategories.value.find(
-        (cat) => cat.slug === props.selectedCategorySlug
+        (cat) => cat.slug === selectedCategorySlug.value
     );
     return category?.id || null;
 });
 
-// Get all products from all categories
-const allProducts = computed(() => {
-    return activeCategories.value.flatMap(
-        (category) => category.products || []
-    );
-});
-
-// Filter products based on selected category
+// Get filtered products based on selected category
 const filteredProducts = computed(() => {
     if (selectedCategoryId.value === null) {
-        return allProducts.value;
+        return activeCategories.value.flatMap(
+            (category) => category.products || []
+        );
     }
     const selectedCategory = activeCategories.value.find(
         (cat) => cat.id === selectedCategoryId.value
@@ -183,49 +182,14 @@ const selectedCategoryName = computed(() => {
     return category?.name || "Unknown Category";
 });
 
-// Handle category selection
+// Handle category selection - NO backend fetch, just update local state
 const handleCategorySelection = (category: Category) => {
-    // Get current query params
-    const params = new URLSearchParams(window.location.search);
-    const queryParams: any = {};
-
-    if (params.get("tableId")) {
-        queryParams.tableId = params.get("tableId");
-    }
-    if (params.get("locationType")) {
-        queryParams.locationType = params.get("locationType");
-    }
-    if (params.get("orderType")) {
-        queryParams.orderType = params.get("orderType");
-    }
-
-    // Navigate to category URL
-    router.visit(
-        route("resto.category", {
-            categorySlug: category.slug,
-            ...queryParams,
-        })
-    );
+    selectedCategorySlug.value = category.slug;
 };
 
-// Back to categories
+// Back to categories - NO backend fetch, just clear selection
 const backToCategories = () => {
-    // Get current query params
-    const params = new URLSearchParams(window.location.search);
-    const queryParams: any = {};
-
-    if (params.get("tableId")) {
-        queryParams.tableId = params.get("tableId");
-    }
-    if (params.get("locationType")) {
-        queryParams.locationType = params.get("locationType");
-    }
-    if (params.get("orderType")) {
-        queryParams.orderType = params.get("orderType");
-    }
-
-    // Navigate back to main cashier page
-    router.visit(route("resto.index", queryParams));
+    selectedCategorySlug.value = null;
 };
 
 // Handle adding product to cart
