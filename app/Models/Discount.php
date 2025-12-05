@@ -1,8 +1,9 @@
 <?php
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Discount extends Model
 {
@@ -41,5 +42,10 @@ class Discount extends Model
             'created_at',
             'updated_at',
         ]);
+    }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
     }
 }

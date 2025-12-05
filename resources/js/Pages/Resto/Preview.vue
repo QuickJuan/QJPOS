@@ -104,7 +104,7 @@
             :show-close-dialog="showCloseDialog"
             :session-summary="props.sessionSummary"
             :open-session="props.openSession"
-            @confirm-close-session="confirmCloseSession"
+            :general-settings="props.generalSettings"
             @close-modal="showCloseDialog = false"
         />
     </HomeLayout>
@@ -127,6 +127,7 @@ const props = defineProps<{
     activeBranch: Branch;
     openSession: CashieringSession | null;
     sessionSummary: any;
+    generalSettings: any;
 }>();
 
 const page = usePage<PageProps>();

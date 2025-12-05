@@ -1,23 +1,23 @@
 <?php
 namespace App\Http\Controllers;
 
-use Exception;
-use Inertia\Inertia;
-use Inertia\Response;
-use App\Models\Product;
+use App\Http\Requests\CashierSessionRequest;
+use App\Http\Resources\CategoryResource;
+use App\Http\Resources\ProductResource;
 use App\Models\Category;
 use App\Models\Modifier;
+use App\Models\Product;
 use App\Models\TableRoom;
-use Illuminate\Http\Request;
 use App\Models\TableRoomLocation;
-use App\Services\DiscountService;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\RedirectResponse;
-use App\Http\Resources\ProductResource;
 use App\Services\CashierSessionService;
-use App\Http\Resources\CategoryResource;
+use App\Services\DiscountService;
 use App\Services\GeneralSettingsService;
-use App\Http\Requests\CashierSessionRequest;
+use Exception;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class CashierSessionController extends Controller
 {
@@ -52,7 +52,7 @@ class CashierSessionController extends Controller
         $currentTable = $cartData['currentTable'];
 
         // Calculate totals
-        $totals        = $this->cashierSessionService->calculateTotals($cart, $cartItems);
+        $totals = $this->cashierSessionService->calculateTotals($cart, $cartItems);
 
         $billNumber    = $this->cashierSessionService->getBillNo(session('active_branch')->id);
         $receiptNumber = $this->cashierSessionService->getReceiptNo(session('active_branch')->id);
@@ -84,7 +84,8 @@ class CashierSessionController extends Controller
 
     public function preview(Request $request): Response
     {
-        $activeBranch = session('active_branch');
+        $activeBranch    = session('active_branch');
+        $generalSettings = app(GeneralSettingsService::class)->getCompanySettings();
 
         // Check if the current auth user has an open cashier session (closing_time is null)
         $openSession = $this->cashierSessionService->model
@@ -96,10 +97,12 @@ class CashierSessionController extends Controller
             $sessionSummary = $this->cashierSessionService->getSessionSummary($openSession);
         }
 
+
         return Inertia::render('Resto/Preview', [
-            'activeBranch'   => $activeBranch,
-            'openSession'    => $openSession,
-            'sessionSummary' => $sessionSummary ?? null,
+            'activeBranch'    => $activeBranch,
+            'openSession'     => $openSession,
+            'sessionSummary'  => $sessionSummary ?? null,
+            'generalSettings' => $generalSettings,
         ]);
     }
 

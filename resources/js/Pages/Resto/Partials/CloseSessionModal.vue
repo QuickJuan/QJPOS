@@ -114,6 +114,7 @@
         :sessionSummary="sessionSummaryData"
         :currentUser="currentUser"
         :totalCashCounted="totalCashCounted"
+        :general-settings="props.generalSettings"
         @closeModal="showSessionSummaryModal = false"
         @confirmClose="handleFinalConfirm"
     />
@@ -128,16 +129,19 @@ import { computed, ref } from "vue";
 import SessionSummaryModal from "./SessionSummaryModal.vue";
 import axios from "axios";
 import { route } from "ziggy-js";
+import { useToast } from "primevue";
 
 const props = defineProps<{
     showCloseDialog: boolean;
     openSession: CashieringSession | null;
     sessionSummary?: any;
     currentUser?: any;
+    generalSettings: any;
 }>();
 
-const emit = defineEmits(["confirmCloseSession", "closeModal"]);
+const emit = defineEmits(["confirmCloseSession", "closeModal", "sessionClosed"]);
 
+const toast = useToast();
 const showSessionSummaryModal = ref(false);
 const sessionSummaryData = ref(null);
 

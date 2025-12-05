@@ -3,7 +3,7 @@
         v-model:visible="props.showSessionSummaryModal"
         modal
         header=""
-        :style="{ width: '22rem' }"
+        :style="{ width: '42rem' }"
         class="bg-white"
         @hide="handleClose"
         @update:visible="handleClose"
@@ -12,9 +12,23 @@
             class="bg-white p-4 rounded border font-mono text-xs text-center"
             ref="printArea"
         >
-            <div class="mb-2 flex flex-col items-center gap-3">
+            <!-- Header -->
+            <div class="mb-2 flex flex-col items-center gap-2">
+                <div v-if="props.generalSettings?.company_logo">
+                    <img
+                        :src="props.generalSettings?.company_logo"
+                        :alt="props.generalSettings?.company_name"
+                        class="w-16 h-auto mx-auto mb-2"
+                    />
+                </div>
                 <p class="font-bold text-sm">
-                    {{ props.merchantName || "QUICKJUAN POS" }}
+                    {{ props.generalSettings?.company_name || "QUICKJUAN POS" }}
+                </p>
+                <p class="text-xs">
+                    {{ props.generalSettings?.company_address }}
+                </p>
+                <p class="text-xs">
+                    {{ props.generalSettings?.company_phone }}
                 </p>
                 <p class="text-xs">
                     {{ currentBranch?.address || "" }}
@@ -31,8 +45,9 @@
                 </p>
             </div>
 
-            <div class="border-t my-2"></div>
+            <div class="border-t my-4"></div>
 
+            <!-- Body / Content -->
             <div class="text-center font-bold">X Reading Report</div>
             <div class="text-center text-xs mb-2">{{ reportDate }}</div>
 
@@ -42,8 +57,12 @@
                     <span>{{ props.sessionSummary?.session_number }}</span>
                 </div>
                 <div class="flex justify-between">
-                    <span>OR Number:</span>
-                    <span>{{ props.sessionSummary?.or_number }}</span>
+                    <span>OR Number Start:</span>
+                    <span>{{ props.sessionSummary?.or_number_start }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span>OR Number End:</span>
+                    <span>{{ props.sessionSummary?.or_number_end }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span>Bill Number Start:</span>
@@ -122,12 +141,6 @@
 
                 <div class="border-t my-2"></div>
 
-                <div class="flex justify-between">
-                    <span>Cancelled Tax:</span>
-                    <span>
-                        {{ props.sessionSummary?.cancelled_count || 0 }}
-                    </span>
-                </div>
                 <div class="flex justify-between">
                     <span>Cancelled Amount:</span>
                     <span>
@@ -210,19 +223,28 @@
         </div>
 
         <template #footer>
-            <div class="flex justify-end gap-3">
+            <div class="flex justify-between gap-3">
                 <Button
                     type="button"
                     label="Close"
                     severity="secondary"
+                    outlined
                     @click="emit('closeModal')"
                 />
-                <Button
-                    type="button"
-                    label="Print"
-                    @click="printReport"
-                    class="p-button-primary"
-                />
+                <div class="flex gap-3">
+                    <Button
+                        type="button"
+                        label="Confirm Close"
+                        @click="emit('confirmClose')"
+                        class="bg-green-600 hover:bg-green-700 text-white border-green-600"
+                    />
+                    <Button
+                        type="button"
+                        label="Print & Close"
+                        @click="printReport"
+                        class="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+                    />
+                </div>
             </div>
         </template>
     </Dialog>
@@ -247,10 +269,9 @@ const props = defineProps<{
     sessionSummary?: any;
     currentUser?: any;
     totalCashCounted?: number;
-    merchantName?: string;
-    merchantAddress?: string;
     operatorName?: string;
     merchantTin?: string;
+    generalSettings?: any;
 }>();
 
 const emit = defineEmits(["closeModal", "confirmClose"]);
@@ -267,11 +288,13 @@ const printArea = ref<HTMLElement | null>(null);
 const printReport = async () => {
     try {
         // Load receipt printer config (assuming session summary uses receipt printer)
-        await thermalPrinter.loadPrinterConfig('receipt');
+        await thermalPrinter.loadPrinterConfig("receipt");
 
         // Connect to printer if not already connected
         if (!thermalPrinter.isConnected()) {
-            const connected = await thermalPrinter.connectToPrinterType('receipt');
+            const connected = await thermalPrinter.connectToPrinterType(
+                "receipt"
+            );
             if (!connected) {
                 toast.add({
                     severity: "error",
@@ -286,7 +309,7 @@ const printReport = async () => {
         // Print session summary
         await thermalPrinter.printSessionSummary(
             props.sessionSummary,
-            props.merchantName || "QUICKJUAN POS",
+            props.generalSettings?.company_name || "QUICKJUAN POS",
             currentBranch?.address || "",
             currentCashier || "",
             currentBranch?.tin || "",
@@ -302,10 +325,9 @@ const printReport = async () => {
         });
 
         // Close the session after successful printing
-        emit('confirmClose');
-
+        emit("confirmClose");
     } catch (error) {
-        console.error('Failed to print session summary:', error);
+        console.error("Failed to print session summary:", error);
         toast.add({
             severity: "error",
             summary: "Print Error",
