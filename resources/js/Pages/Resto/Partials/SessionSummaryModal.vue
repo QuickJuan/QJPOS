@@ -175,26 +175,16 @@
 
                 <div class="border-t my-2"></div>
 
-                <div class="flex justify-between">
-                    <span>Previous Reading:</span>
-                    <span>
-                        {{
-                            formatMoney(
-                                props.sessionSummary?.previous_reading || 0
-                            )
-                        }}
-                    </span>
-                </div>
-                <div class="flex justify-between font-bold">
+                <!-- <div class="flex justify-between font-bold">
                     <span>Net Sales:</span>
-                    <span>{{
-                        formatMoney(props.sessionSummary?.net_sales)
-                    }}</span>
+                    <span>
+                        {{ formatMoney(props.sessionSummary?.net_sales) }}
+                    </span>
                 </div>
                 <div class="flex justify-between">
                     <span>Running Total:</span>
                     <span>{{ formatMoney(runningTotal) }}</span>
-                </div>
+                </div> -->
 
                 <div class="border-t my-2"></div>
 
@@ -224,6 +214,18 @@
                         {{
                             formatMoney(
                                 props.sessionSummary?.cash_denomination || 0
+                            )
+                        }}
+                    </span>
+                </div>
+
+                <div class="flex justify-between">
+                    <span>Variance:</span>
+                    <span>
+                        {{ props.sessionSummary?.variance > 0 ? '+' : '-' }}
+                        {{
+                            formatMoney(
+                                props.sessionSummary?.variance || 0
                             )
                         }}
                     </span>

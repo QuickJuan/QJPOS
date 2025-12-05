@@ -128,6 +128,7 @@ interface SessionSummaryData {
     beginning_cash: number | null;
     closing_cash: number | null;
     cash_denomination: number | null;
+    variance: number | null;
     cash_denomination_details?: Record<string, number> | null;
     counter_id_start?: string | null;
     counter_id_end?: string | null;
@@ -1195,14 +1196,14 @@ class ThermalPrinterService {
             commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
             // Reading summary
-            commands.push(...this.stringToBytes(this.formatTotalLine('Previous Reading:', sessionSummary.previous_reading || 0)));
-            commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.ESC_POS.BOLD_ON);
-            commands.push(...this.stringToBytes(this.formatTotalLine('Net Sales:', sessionSummary.net_sales || 0)));
-            commands.push(...this.ESC_POS.BOLD_OFF);
-            commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatTotalLine('Running Total:', sessionSummary.running_total || 0)));
-            commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+            // commands.push(...this.stringToBytes(this.formatTotalLine('Previous Reading:', sessionSummary.previous_reading || 0)));
+            // commands.push(...this.ESC_POS.LINE_FEED);
+            // commands.push(...this.ESC_POS.BOLD_ON);
+            // commands.push(...this.stringToBytes(this.formatTotalLine('Net Sales:', sessionSummary.net_sales || 0)));
+            // commands.push(...this.ESC_POS.BOLD_OFF);
+            // commands.push(...this.ESC_POS.LINE_FEED);
+            // commands.push(...this.stringToBytes(this.formatTotalLine('Running Total:', sessionSummary.running_total || 0)));
+            // commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
             // Cash summary
             commands.push(...this.stringToBytes(this.formatTotalLine('Beginning Cash:', sessionSummary.beginning_cash || 0)));
@@ -1210,6 +1211,14 @@ class ThermalPrinterService {
             commands.push(...this.stringToBytes(this.formatTotalLine('Closing Cash:', sessionSummary.closing_cash || 0)));
             commands.push(...this.ESC_POS.LINE_FEED);
             commands.push(...this.stringToBytes(this.formatTotalLine('Cash Denomination:', sessionSummary.cash_denomination || 0)));
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            const variance = sessionSummary.variance ?? 0;
+            const varianceLabel =
+                variance > 0 ? `+${variance}` :
+                    variance < 0 ? `${variance}` :
+                        `0`;
+            commands.push(...this.stringToBytes(this.formatTotalLine('Variance:', varianceLabel || 0)));
             commands.push(...this.ESC_POS.LINE_FEED);
 
             // Cash denomination details
@@ -1220,7 +1229,7 @@ class ThermalPrinterService {
                     const numDenom = parseFloat(denom);
                     const numCount = count as number;
                     if (numCount > 0) {
-                        const line = `${this.formatNumberWithComma(numDenom.toFixed(2))} x ${numCount} = ${this.formatNumberWithComma((numDenom * numCount).toFixed(2))}`;
+                        const line = `${numCount} x ${this.formatNumberWithComma(numDenom.toFixed(2))} = ${this.formatNumberWithComma((numDenom * numCount).toFixed(2))}`;
                         commands.push(...this.stringToBytes(`  ${line}`));
                         commands.push(...this.ESC_POS.LINE_FEED);
                     }

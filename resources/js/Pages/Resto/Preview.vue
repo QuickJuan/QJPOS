@@ -165,7 +165,7 @@ const confirmCloseSession = (data: any) => {
         route("resto.session.close"),
         {
             cash_denomination_details: data.denominationData,
-            closing_cash: data.totalCashCounted,
+            cash_denomination: data.totalCashCounted,
         },
         {
             onSuccess: () => {
