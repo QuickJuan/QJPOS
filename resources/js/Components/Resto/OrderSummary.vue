@@ -56,7 +56,6 @@
             :receipt-number="receiptNumber"
             :general-settings="props.generalSettings"
             :active-branch="props.activeBranch"
-            @update-order-type="updateOrderType"
             @save-order="handleSaveOrder"
             @checkout="handleCheckout"
             @open-discount-modal="openDiscountModal"
@@ -65,6 +64,9 @@
             @print-bill="handlePrintBill"
             @view-table="handleViewTable"
             @end-of-shift="handleEndOfShift"
+            @update-order-type="(type: string) => {
+                selectedOrderType = type;
+            }"
         />
 
         <!-- Edit Item Modal -->
@@ -170,8 +172,15 @@ const emit = defineEmits<{
     redirectToTables: [];
 }>();
 
-// State
-const selectedOrderType = ref("dine-in");
+// // State - Initialize from URL query parameter
+// const getInitialOrderType = () => {
+//     const urlParams = new URLSearchParams(window.location.search);
+//     let orderType = urlParams.get("orderType");
+//     alert("orderType from URL: eto intial " + orderType);
+//     return orderType;
+// };
+
+const selectedOrderType = ref("");
 const tableInfo = ref(props.currentTable);
 
 const showEditModal = ref(false);
@@ -242,12 +251,6 @@ const selectedItemsForModal = computed(() =>
         selectedItemsForDiscount.value.includes(item.id)
     )
 );
-
-// Methods
-const updateOrderType = (type: string) => {
-    emit("selectedOrderType", type);
-    selectedOrderType.value = type;
-};
 
 const handleEdit = (orderItem: any) => {
     selectedOrderItem.value = orderItem;
@@ -400,7 +403,7 @@ const handleSettleBill = (data: any) => {
         .post(route("resto.cart.settle-bill", { cartId: data.cart_id }), {
             amount_paid: data.amount_paid,
             total_amount: data.total_amount,
-            location_type: selectedOrderType.value,
+            location_type: props.locationType,
             branch_id: page.props?.active_branch?.id,
         })
         .then((response) => {

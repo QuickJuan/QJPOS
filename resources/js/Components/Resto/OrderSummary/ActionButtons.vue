@@ -46,6 +46,7 @@
         </div>
 
         <!-- Order Type Selection Modal -->
+
         <OrderTypeSelectionModal
             v-model:visible="showOrderTypeModal"
             :selected-order-type="selectedOrderType"
@@ -109,7 +110,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useToast } from "primevue";
 import { ChevronDownIcon } from "@heroicons/vue/24/outline";
 import {
@@ -254,18 +255,18 @@ const orderTypes = [
     },
 ];
 
-// Get selected order type data
 const selectedOrderTypeData = computed(() => {
     return (
-        orderTypes.find((type) => type.value === props.selectedOrderType) ||
-        orderTypes[0]
+        orderTypes.find(
+            (orderType) => orderType.value === props.selectedOrderType
+        ) || orderTypes[0]
     );
 });
 
 // Select order type and close modal
 const selectOrderType = (type: string) => {
-    emit("updateOrderType", type);
     showOrderTypeModal.value = false;
+    emit("updateOrderType", type);
 };
 
 // Handle save order from more options modal

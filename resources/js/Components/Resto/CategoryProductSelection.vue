@@ -195,6 +195,9 @@ const handleCategorySelection = (category: Category) => {
     if (params.get("locationType")) {
         queryParams.locationType = params.get("locationType");
     }
+    if (params.get("orderType")) {
+        queryParams.orderType = params.get("orderType");
+    }
 
     // Navigate to category URL
     router.visit(
@@ -216,6 +219,9 @@ const backToCategories = () => {
     }
     if (params.get("locationType")) {
         queryParams.locationType = params.get("locationType");
+    }
+    if (params.get("orderType")) {
+        queryParams.orderType = params.get("orderType");
     }
 
     // Navigate back to main cashier page
