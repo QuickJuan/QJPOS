@@ -52,12 +52,7 @@ export const useTable = () => {
                 table_id: tableId,
             }
         );
-        console.log('place order response ', response);
-        if (response.success) {
-            return { success: true, message: "Order placed successfully", data: response.data };
-        } else {
-            return { success: false, message: response.error || "Failed to place order", data: null };
-        }
+        return response;
     };
 
     const takeOrder = async (tableId: number, data: { pax: number; guest_name: string }) => {
