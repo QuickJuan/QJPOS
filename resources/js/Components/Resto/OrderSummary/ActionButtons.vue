@@ -353,7 +353,6 @@ const handlePlaceOrder = async () => {
         ) {
             try {
                 if (!thermalPrinter.isConnected()) {
-                    alert("Connecting to kitchen printer...");
                     const connected = await thermalPrinter.connectToPrinterType(
                         "kitchen"
                     );
@@ -367,7 +366,6 @@ const handlePlaceOrder = async () => {
                         );
                     }
                 } else {
-                    alert("Printing to kitchen printer...");
                     await thermalPrinter.printPlacedOrder(
                         response.orderNumber,
                         response.tableRoom?.name || "Table",
