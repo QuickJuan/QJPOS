@@ -60,35 +60,17 @@ export const useTable = () => {
         }
     };
 
-    const takeOrder = (tableId: number, data: { pax: number; guest_name: string }) => {
+    const takeOrder = async (tableId: number, data: { pax: number; guest_name: string }) => {
         if (!tableId ) {
-            toast.add({
-                severity: "error",
-                summary: "Error",
-                detail: "Please select table",
-                life: 3000,
-            });
-            return;
+            return { success: false, message: "Please select table", data: null };
         }
 
-        router.post(
+        return await httpPost(
             route("resto.cart.create-order"),
             {
                 table_id: tableId,
                 pax: data.pax,
                 guest_name: data.guest_name || 'Guest',
-            },
-            {
-                preserveScroll: false,
-                preserveState: false,
-                onError: (errors) => {
-                    toast.add({
-                        severity: "error",
-                        summary: "Error",
-                        detail: errors?.message || "Failed to take order",
-                        life: 3000,
-                    });
-                },
             }
         );
     };

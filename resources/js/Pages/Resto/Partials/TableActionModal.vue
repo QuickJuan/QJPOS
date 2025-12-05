@@ -243,7 +243,13 @@ import Dialog from "primevue/dialog";
 import Button from "primevue/button";
 import TextField from "@/Components/Form/TextField.vue";
 import { useTable } from "@/composables/useTable";
+import { useCashier } from "@/composables/useCashier";
 import TableManagementLayout from "@/Layouts/TableManagementLayout.vue";
+import { useToast } from "primevue";
+import { router } from "@inertiajs/vue3";
+import { route } from "ziggy-js";
+
+const toast = useToast();
 
 const props = defineProps<{
     show: boolean;
@@ -318,14 +324,42 @@ const handleClose = () => {
     emit("close");
 };
 
-const confirmTakeOrder = () => {
-    takeOrder(props.table.id, {
+const confirmTakeOrder = async () => {
+    const response = await takeOrder(props.table.id, {
         pax: pax.value,
         guest_name: guestName.value.trim(),
     });
-    handleClose();
-};
 
+    console.log("Take order response:", response);
+
+    if (response.success) {
+        const { setSelectedCart } = useCashier();
+        if (response.data?.id) {
+            setSelectedCart(response.data?.id);
+        }
+        // alert("cart table id " + response.data?.table_room_id);
+        //redirect to cashier ordering page
+        router.visit(
+            route("resto.index", {
+                tableId: response.data?.table_room_id,
+                locationType: "dine-in",
+            })
+        );
+
+        handleClose();
+    }
+
+    if (!response.success) {
+        // show toast message about the error
+
+        toast.add({
+            severity: "error",
+            summary: "Error",
+            detail: response.message || "Failed to take order",
+            life: 3000,
+        });
+    }
+};
 const vacantTable = () => {
     if (!props.table?.id) {
         return;

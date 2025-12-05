@@ -44,7 +44,7 @@ export const httpPost = async <T = any>(
         successCallback?: (response: T) => void;
         errorCallback?: (error: any) => void;
     }
-): Promise<{ success: boolean; data?: T; error?: string }> => {
+): Promise<any> => {
     try {
         const response = await axios.post<T>(url, data, {
             validateStatus: () => true,
@@ -53,6 +53,10 @@ export const httpPost = async <T = any>(
         if (response.status >= 200 && response.status < 300) {
             if (options?.successCallback) {
                 options.successCallback(response.data);
+            }
+            // If response already has success property, return it directly
+            if (response.data?.success !== undefined) {
+                return response.data;
             }
             return { success: true, data: response.data };
         } else {

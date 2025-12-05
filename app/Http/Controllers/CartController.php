@@ -32,11 +32,21 @@ class CartController extends Controller
         try {
             $cart = $this->cartService->createCart($request);
             //redrect to cashier ordering page
-            return redirect()->route('resto.index', ['tableId' => $cart->table_room_id]);
+            // return redirect()->route('resto.index', ['tableId' => $cart->table_room_id]);
+            return response()->json([
+                'success' => true,
+                'message' => 'Cart created successfully.',
+                'data'    => $cart,
+            ], 201);
             // return redirect()->back()->with('success', 'Cart created successfully.');
         } catch (Exception $e) {
             \Log::error('Cart creation error: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'There was an error creating cart.');
+            // return redirect()->back()->with('error', 'There was an error creating cart.');
+            return response()->json([
+                'success' => false,
+                'message' => 'There was an error creating cart.',
+                'error'   => $e->getMessage(),
+            ]);
         }
     }
 
