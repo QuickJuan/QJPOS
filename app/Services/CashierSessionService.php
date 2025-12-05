@@ -62,13 +62,13 @@ class CashierSessionService
             throw new Exception('No open session found');
         }
 
-        $cashDenomination = $session->beginning_cash - $request->closing_cash;
+        $closingCash = $session->beginning_cash + $request->cash_denomination;
 
         $closeSession = $session->update([
             'closing_time'              => now(),
-            'closing_cash'              => $request->closing_cash,
+            'closing_cash'              => $closingCash,
             'cash_denomination_details' => $request->cash_denomination_details,
-            'cash_denomination'         => $cashDenomination,
+            'cash_denomination'         => $request->cash_denomination,
         ]);
 
         return $closeSession;
@@ -323,13 +323,12 @@ class CashierSessionService
             'vat_sales'                 => $vatableSales,
             'vat_amount'                => $vatAmount,
             'less_tax'                  => $totalLessTax,
-            'previous_reading'          => 0,
             'running_total'             => $totalSales,
             'session_number'            => str_pad($session->id, 4, '0', STR_PAD_LEFT),
             'beginning_cash'            => $session->beginning_cash ?? 0,
             'closing_cash'              => $session->closing_cash ?? 0,
-            'expected_cash'             => ($session->beginning_cash ?? 0) + $totalSales,
             'cash_denomination'         => $session->cash_denomination,
+            'variance'                  => $session->closing_cash - $netSales,
             'cash_denomination_details' => $session->cash_denomination_details,
             'or_number_start'           => $orders->first()->invoice_no ?? null,
             'or_number_end'             => $orders->last()->invoice_no ?? null,
