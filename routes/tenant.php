@@ -2,21 +2,19 @@
 
 declare (strict_types = 1);
 
-use App\Models\User;
-use Inertia\Inertia;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
-use App\Http\Controllers\HomeController;
-use App\Http\Controllers\TableRoomController;
-use App\Http\Controllers\AttendanceController;
-use App\Http\Controllers\Api\ReceiptController;
 use App\Http\Controllers\CashierSessionController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\TableManagementController;
+use App\Http\Controllers\TableRoomController;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
+use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
-use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 
 /*
 |--------------------------------------------------------------------------
@@ -76,6 +74,12 @@ Route::middleware([
             'tenant' => tenant(),
         ]);
     })->name('landing');
+
+    Route::get('/test-landing', function () {
+        return Inertia::render('TestLanding', [
+            'tenant' => tenant(),
+        ]);
+    })->name('test-landing');
 
     // ROUTES FOR AUTHENTICATED USER
     Route::middleware(['auth:sanctum'])
@@ -231,13 +235,10 @@ Route::middleware([
                 });
         });
 
-        // // Web Receipt Route (for browser viewing)
-        // Route::get('/receipt/{receiptNumber}', function($receiptNumber) {
-        //     return Inertia::render('Receipt', [
-        //         'receiptNumber' => $receiptNumber,
-        //     ]);
-        // })->name('receipt.view');
+    // // Web Receipt Route (for browser viewing)
+    // Route::get('/receipt/{receiptNumber}', function($receiptNumber) {
+    //     return Inertia::render('Receipt', [
+    //         'receiptNumber' => $receiptNumber,
+    //     ]);
+    // })->name('receipt.view');
 });
-
-
-
