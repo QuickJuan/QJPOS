@@ -97,7 +97,8 @@ class CartService
 
         $cartItem = $cart->cartItems()
             ->create([
-                'product_id'           => $request['product_id'],
+                'product_id'           => $product->id,
+                'description'          => $product->name,
                 'product_packaging_id' => $request['product_packaging_id'] ?? null,
                 'quantity'             => $quantity,
                 'price'                => $price,
@@ -647,5 +648,12 @@ class CartService
         }
 
         $cart->update(['bill_no' => $newBillNumber]);
+    }
+
+    public function getCartByTable(int $tableId): ?Cart
+    {
+        return $this->model->where('table_room_id', $tableId)
+            ->with(['cartItems', 'tableRoom'])
+            ->first();
     }
 }

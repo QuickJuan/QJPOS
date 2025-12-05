@@ -1,7 +1,9 @@
 <?php
 namespace App\Http\Middleware;
 
+use App\Models\Cart;
 use App\Models\CashierSession;
+use App\Services\CartService;
 use App\Services\DiscountService;
 use App\Services\GeneralSettingsService;
 use Illuminate\Http\Request;
@@ -55,6 +57,10 @@ class HandleInertiaRequests extends Middleware
             'bill_footer' => fn() => $activeBranch['receipt_footer'] ?? [],
             // Company Information
             'company_info' => fn() => $this->getCompanyInfo(),
+            //get the available discounts
+            'available_discounts' => fn() => app(DiscountService::class)->getAvailableDiscounts(),
+            // Get cart by table ID from query parameter
+            'cart' => fn() => $this->getCartByTableId($request),
         ]);
     }
 
@@ -89,17 +95,39 @@ class HandleInertiaRequests extends Middleware
         try {
             $companySettings = app(GeneralSettingsService::class)->getCompanySettings();
             return [
-                'name' => $companySettings['company_name'] ?? '',
-                'address' => $companySettings['company_address'] ?? '',
-                'contact' => $companySettings['company_contact'] ?? '',
-
+                'company_name' => $companySettings['company_name'] ?? '',
+                'company_address' => $companySettings['company_address'] ?? '',
+                'company_phone' => $companySettings['company_phone'] ?? '',
+                'company_logo' => $companySettings['company_logo'] ?? '',
             ];
         } catch (\Exception $e) {
             return [
-                'name' => '',
-                'address' => '',
-                'contact' => '',
+                'company_name' => '',
+                'company_address' => '',
+                'company_phone' => '',
+                'company_logo' => '',
             ];
+        }
+    }
+
+    /**
+     * Get cart by table ID from query parameters
+     */
+    private function getCartByTableId(Request $request): ?array
+    {
+        $tableId = $request->query('tableId');
+        info('Fetching cart for table ID: ' . $tableId);
+        if (!$tableId) {
+            info('No table ID provided in request.');
+            return null;
+        }
+
+        try {
+            $cart = app(CartService::class)->getCartByTable((int)$tableId);
+            info('cart data: ' . print_r($cart, true));
+            return $cart ? $cart->toArray() : null;
+        } catch (\Exception $e) {
+            return null;
         }
     }
 }

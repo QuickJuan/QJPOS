@@ -68,7 +68,7 @@
                 <div
                     class="absolute inset-0 opacity-5 -z-10"
                     :style="{
-                        backgroundImage: `url('${props.generalSettings.company_logo}')`,
+                        backgroundImage: `url('${generalSettings.company_logo}')`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
                         backgroundAttachment: 'fixed',
@@ -91,7 +91,7 @@
                             style="width: 300px; height: 300px; margin: auto"
                         ></div>
                         <img
-                            :src="props.generalSettings.company_logo"
+                            :src="generalSettings.company_logo"
                             alt="Company Logo"
                             class="relative w-48 h-48 object-contain drop-shadow-lg"
                         />
@@ -203,28 +203,24 @@
                 ]"
             >
                 <OrderSummary
-                    :orderItems="orderItems"
                     :selected-order-item="selectedOrderItem"
                     :available-discounts="props.availableDiscounts"
                     :available-modifiers="props.availableModifiers"
                     :table-id="tableId"
                     :location-type="locationType"
-                    :cart="selectedCart || props.cart"
+                    :cart="sharedCart"
                     :current-table="props.currentTable"
-                    :sub-total="selectedCart?.sub_total || subTotal"
-                    :total="selectedCart?.total_amount || total"
-                    :less-tax-total="lessTaxTotal"
-                    :less-discount-total="lessDiscountTotal"
-                    :tax-rate="taxRate"
-                    :bill-footer="billFooter"
-                    :receipt-footer="receiptFooter"
+                    :sub-total="sharedCart?.sub_total || props.subTotal"
+                    :total="sharedCart?.total_amount || props.total"
+                    :less-tax-total="props.lessTaxTotal"
+                    :less-discount-total="props.lessDiscountTotal"
+                    :tax-rate="props.taxRate"
+                    :bill-footer="props.billFooter"
+                    :receipt-footer="props.receiptFooter"
                     :bill-number="props.billNumber"
                     :receipt-number="String(props.receiptNumber)"
-                    :general-settings="props.generalSettings"
-                    :open-carts="openCarts"
-                    :selected-cart-id="selectedCart?.id || null"
+                    :general-settings="generalSettings"
                     @show-receipt="handleShowReceipt"
-                    @switch-cart="setSelectedCart"
                     @select-table="handleSelectTable"
                 />
             </aside>
@@ -243,7 +239,6 @@ import OrderSummary from "@/Components/Resto/OrderSummary.vue";
 import CashieringLayout from "@/Layouts/CashieringLayout.vue";
 import CategoryProductSelection from "@/Components/Resto/CategoryProductSelection.vue";
 import { useCashierCache } from "@/composables/useCashierCache";
-import { useCashier } from "@/composables/useCashier";
 import { ShoppingCartIcon } from "@heroicons/vue/24/outline";
 
 const props = defineProps<{
@@ -266,16 +261,24 @@ const props = defineProps<{
     sessionSummary?: any;
     billNumber: string;
     receiptNumber: string;
-    generalSettings: {
-        company_name: string;
-        company_address: string;
-        company_phone: string;
-        company_logo: string;
-    };
 }>();
 
 const page = usePage<PageProps>();
 const toast = useToast();
+
+// Get company settings from shared data
+const generalSettings = computed(
+    () =>
+        page.props.company_info || {
+            company_name: "",
+            company_address: "",
+            company_phone: "",
+            company_logo: "",
+        }
+);
+
+// Get cart from shared data
+const sharedCart = computed(() => page.props.cart);
 const tableId = ref(null);
 const locationType = ref(null);
 const selectedOrderType = ref<string | null>(null);
@@ -300,21 +303,6 @@ const {
     loadDiscounts,
 } = useCashierCache();
 
-// Initialize cashier state
-const {
-    selectedCart,
-    openCarts,
-    hasOpenCarts,
-    cartCount,
-    addCart,
-    updateCart,
-    setSelectedCart,
-    setTableInfo,
-    setCashierSession,
-    initializeFromServerData,
-    locationType: storedLocationType,
-} = useCashier();
-
 const orderItems = computed(() => {
     // Use selected cart items if available, fallback to props
     return selectedCart.value?.items || props.cartItems || [];
@@ -337,7 +325,7 @@ const handleSelectTable = () => {
     router.visit(route("table-rooms.index"), {
         data: {
             from_cashier: true,
-            current_cart_id: selectedCart.value?.id || props.cart?.id,
+            current_cart_id: sharedCart.value?.id,
         },
     });
 };
@@ -403,16 +391,6 @@ onMounted(() => {
         loadDiscounts(props.availableDiscounts);
     }
 
-    // Initialize cashier state from server data
-    if (props.cart) {
-        addCart(props.cart);
-        setSelectedCart(props.cart.id);
-    }
-
-    if (props.pendingCashiering?.id) {
-        setCashierSession(props.pendingCashiering.id);
-    }
-
     // Get the tableId in URL if available
     const params = new URLSearchParams(window.location.search);
     const urlTableId = params.get("tableId");
@@ -420,13 +398,5 @@ onMounted(() => {
 
     tableId.value = urlTableId;
     locationType.value = urlLocationType;
-
-    // Update cashier state with table info
-    setTableInfo(urlTableId, urlLocationType); // If no tableId in URL and we have a pending cashiering session, redirect to tables page
-    // if (!urlTableId && props.pendingCashiering) {
-    //     nextTick(() => {
-    //         router.visit(route("resto.tables"));
-    //     });
-    // }
 });
 </script>

@@ -7,7 +7,6 @@
             :table-info="tableInfo"
             :cart="cart"
             @select-table="$emit('selectTable')"
-            @table-changed="handleTableChanged"
         />
 
         <!-- Cart Items Area -->
@@ -138,7 +137,6 @@ const props = defineProps<{
     cart: any;
     tableId: number;
     locationType: string;
-    orderItems: any[];
     selectedOrderItem: any;
     availableDiscounts: any[];
     availableModifiers: any[];
@@ -172,6 +170,11 @@ const emit = defineEmits<{
     redirectToTables: [];
 }>();
 
+// Get order items from cart
+const orderItems = computed(() => {
+    return props.cart?.cart_items || props.cart?.cartItems || [];
+});
+
 // // State - Initialize from URL query parameter
 // const getInitialOrderType = () => {
 //     const urlParams = new URLSearchParams(window.location.search);
@@ -181,7 +184,7 @@ const emit = defineEmits<{
 // };
 
 const selectedOrderType = ref("");
-const tableInfo = ref(props.currentTable);
+const tableInfo = computed(() => props.cart?.table_room || props.currentTable);
 
 const showEditModal = ref(false);
 const showDiscountModal = ref(false);
@@ -205,7 +208,7 @@ const appliedDiscount = ref<{
 
 // Computed values
 const subtotal = computed(() => {
-    const items = Array.isArray(props.orderItems) ? props.orderItems : [];
+    const items = Array.isArray(orderItems.value) ? orderItems.value : [];
     const total = items.reduce((sum, item) => {
         const hasOptions = item.selected_options?.length > 0;
 
@@ -230,7 +233,7 @@ const discountAmount = computed(() => {
 });
 
 const tax = computed(() => {
-    const items = Array.isArray(props.orderItems) ? props.orderItems : [];
+    const items = Array.isArray(orderItems.value) ? orderItems.value : [];
     return items.reduce((sum, item) => {
         const itemPrice = parseFloat(item.price || item.average_cost || "0");
         const quantity = item.quantity;
@@ -247,7 +250,7 @@ const taxAmount = computed(() => tax.value);
 const finalTotal = computed(() => total.value);
 
 const selectedItemsForModal = computed(() =>
-    props.orderItems.filter((item) =>
+    orderItems.value.filter((item) =>
         selectedItemsForDiscount.value.includes(item.id)
     )
 );
@@ -354,7 +357,7 @@ const openDiscountModal = () => {
 };
 
 const handleSaveOrder = () => {
-    if (props.orderItems.length === 0) {
+    if (orderItems.value.length === 0) {
         toast.add({
             severity: "warn",
             summary: "Warning",
@@ -373,7 +376,7 @@ const handleSaveOrder = () => {
 };
 
 const handleCheckout = (data: any) => {
-    if (props.orderItems.length === 0) {
+    if (orderItems.value.length === 0) {
         toast.add({
             severity: "warn",
             summary: "Warning",
@@ -389,7 +392,7 @@ const handleCheckout = (data: any) => {
 };
 
 const handleSettleBill = (data: any) => {
-    if (props.orderItems.length === 0) {
+    if (orderItems.value.length === 0) {
         toast.add({
             severity: "warn",
             summary: "Warning",

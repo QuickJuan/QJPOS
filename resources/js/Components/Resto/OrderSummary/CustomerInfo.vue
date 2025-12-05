@@ -35,6 +35,7 @@ import { UserIcon } from "@heroicons/vue/24/outline";
 import { ref, computed } from "vue";
 import { usePage } from "@inertiajs/vue3";
 import PageProps from "@/Types/PageProps";
+import table from "vendor/filament/tables/resources/js/components/table";
 
 const props = defineProps<{
     cart: any;
