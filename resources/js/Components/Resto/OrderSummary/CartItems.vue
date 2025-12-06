@@ -60,16 +60,6 @@
                                             class="font-medium text-secondary-900 text-sm leading-tight flex-1"
                                         >
                                             {{ item.description }}
-
-                                            <!-- <button
-                                                v-if="hasModifiers(item)"
-                                                @click.stop="
-                                                    showItemModifiers(item)
-                                                "
-                                                class="text-xs text-blue-600 font-medium ml-1 hover:text-blue-800 underline cursor-pointer"
-                                            >
-                                                (with modifier)
-                                            </button> -->
                                         </h4>
                                         <!-- Order Type Badge -->
                                         <span
@@ -240,54 +230,34 @@
                                     <div>
                                         <!-- Modifier Options -->
                                         <div
-                                            v-for="(
-                                                value, key
-                                            ) in getModifierOptions(
-                                                modifierData
-                                            )"
+                                            v-for="(value, key) in modifierData"
                                             :key="key"
+                                            class="flex items-center gap-2"
                                         >
-                                            <strong class="capitalize">
-                                                {{
-                                                    formatModifierKey(
-                                                        String(key)
+                                            <span class="text-xs text-gray-700">
+                                                {{ formatModifierValue(value) }}
+                                            </span>
+                                            <!-- Remove Modifier Button -->
+                                            <button
+                                                @click.stop="
+                                                    $emit(
+                                                        'remove-modifier',
+                                                        item,
+                                                        value
                                                     )
-                                                }}:
-                                            </strong>
-                                            {{ formatModifierValue(value) }}
-                                        </div>
-
-                                        <!-- Special Instructions -->
-                                        <div
-                                            v-if="
-                                                getSpecialInstructions(
-                                                    modifierData
-                                                )
-                                            "
-                                        >
-                                            <strong>Instructions:</strong>
-                                            {{
-                                                getSpecialInstructions(
-                                                    modifierData
-                                                )
-                                            }}
+                                                "
+                                                class="p-1 rounded-md text-red-400 hover:text-red-600 hover:bg-red-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-opacity-50"
+                                                title="Remove modifier"
+                                                :aria-label="`Remove ${formatModifierValue(
+                                                    value
+                                                )} modifier`"
+                                            >
+                                                <XMarkIcon
+                                                    class="w-3.5 h-3.5"
+                                                />
+                                            </button>
                                         </div>
                                     </div>
-
-                                    <!-- Remove Modifier Button -->
-                                    <button
-                                        @click.stop="
-                                            $emit(
-                                                'remove-modifier',
-                                                item,
-                                                index
-                                            )
-                                        "
-                                        class="p-0.5 text-red-400 hover:text-red-600"
-                                        title="Remove modifier"
-                                    >
-                                        <XMarkIcon class="w-4 h-4" />
-                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -351,8 +321,9 @@ const hasDiscount = (itemId: number) => {
 const hasModifiers = (item: any) => {
     return (
         item.meta_data &&
-        Array.isArray(item.meta_data) &&
-        item.meta_data.length > 0
+        item.meta_data.modifier &&
+        Array.isArray(item.meta_data.modifier) &&
+        item.meta_data.modifier.length > 0
     );
 };
 

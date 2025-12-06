@@ -565,12 +565,12 @@ const handleShowItemModifiers = (item: any) => {
     showItemModifiersModal.value = true;
 };
 
-const handleRemoveModifier = (item: any, modifierIndex: number) => {
+const handleRemoveModifier = (item: any, modifierValue: number) => {
     router.put(
         route("resto.cart.remove-modifier"),
         {
             cartItemId: item.id,
-            modifierIndex: modifierIndex,
+            modifierValue: modifierValue,
         },
         {
             onSuccess: () => {
