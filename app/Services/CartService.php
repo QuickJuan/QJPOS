@@ -1,21 +1,21 @@
 <?php
 namespace App\Services;
 
-use Exception;
-use App\Models\Cart;
-use App\Models\Order;
-use App\Models\Branch;
-use App\Models\Product;
-use App\Models\CartItem;
-use App\Models\Discount;
-use App\Models\TableRoom;
-use Illuminate\Http\Request;
-use App\Models\CashierSession;
-use App\Models\ProductPackaging;
 use App\Enums\TableRoomStatusType;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
 use App\Http\Resources\PreparationItemCollectionResource;
+use App\Models\Branch;
+use App\Models\Cart;
+use App\Models\CartItem;
+use App\Models\CashierSession;
+use App\Models\Discount;
+use App\Models\Order;
+use App\Models\Product;
+use App\Models\ProductPackaging;
+use App\Models\TableRoom;
+use Exception;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class CartService
 {
@@ -42,8 +42,9 @@ class CartService
 
                 //find if ther is a cart that is associated with the table
                 $cart = Cart::firstOrCreate([
-                    'cashier_id'    => Auth::id(),
-                    'table_room_id' => $table->id,
+                    'cashier_id'         => Auth::id(),
+                    'cashier_session_id' => $payload->user()->cashierSession->id,
+                    'table_room_id'      => $table->id,
                 ]);
 
                 $table->update([
@@ -364,6 +365,7 @@ class CartService
 
     public function applyModifierToCartItem(Request $request)
     {
+        // dd($request->all());
         $cashierSession = $this->cashierSession->openSession()->first();
 
         if (! $cashierSession) {
@@ -526,11 +528,11 @@ class CartService
                     $newOrderItems = new PreparationItemCollectionResource($cartItems);
 
                     return [
-                        'orderNumber' => $orderNumber,
-                        'cart'        => $cart->fresh(['tableRoom']),
-                        'placedOrderItems'  => $newOrderItems,
-                        'tableRoom'   => $cart->tableRoom,
-                        'success'     => true,
+                        'orderNumber'      => $orderNumber,
+                        'cart'             => $cart->fresh(['tableRoom']),
+                        'placedOrderItems' => $newOrderItems,
+                        'tableRoom'        => $cart->tableRoom,
+                        'success'          => true,
                     ];
                 }
 
