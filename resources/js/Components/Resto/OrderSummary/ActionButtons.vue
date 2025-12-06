@@ -93,7 +93,7 @@
             :order-items="orderItems"
             :receipt-footer="receiptFooter"
             :general-settings="generalSettings"
-            :active-branch="activeBranch"
+            :active-branch="page.props.active_branch"
         />
 
         <BillModal
@@ -155,7 +155,6 @@ const props = defineProps<{
         company_phone: string;
         company_logo: string;
     };
-    activeBranch?: any;
 }>();
 
 const emit = defineEmits<{
@@ -299,6 +298,7 @@ const handleSettleBill = (data: any) => {
 
 // Handle print bill
 const handlePrintBill = () => {
+    console.log("table info", props.tableInfo);
     // Populate bill data
     billData.value = {
         billNumber: props.billNumber,

@@ -204,24 +204,11 @@
             >
                 <OrderSummary
                     :selected-order-item="selectedOrderItem"
-                    :available-discounts="props.availableDiscounts"
-                    :available-modifiers="props.availableModifiers"
                     :table-id="tableId"
                     :location-type="locationType"
                     :cart="sharedCart"
                     :current-table="props.currentTable"
-                    :sub-total="sharedCart?.sub_total || props.subTotal"
-                    :total="sharedCart?.total_amount || props.total"
-                    :less-tax-total="props.lessTaxTotal"
-                    :less-discount-total="props.lessDiscountTotal"
-                    :tax-rate="props.taxRate"
-                    :bill-footer="props.billFooter"
-                    :receipt-footer="props.receiptFooter"
-                    :bill-number="props.billNumber"
-                    :receipt-number="String(props.receiptNumber)"
                     :general-settings="generalSettings"
-                    :open-session="props.pendingCashiering"
-                    :session-summary="props.sessionSummary"
                     @show-receipt="handleShowReceipt"
                     @select-table="handleSelectTable"
                     @change-order-type="handleOrderType"
@@ -246,24 +233,8 @@ import { ShoppingCartIcon } from "@heroicons/vue/24/outline";
 
 const props = defineProps<{
     categories: { data: Category[] } | Category[];
-    currentUser: any;
-    cart: any;
-    cartItems: any[];
-    availableDiscounts: any[];
-    availableModifiers: any[];
-    currentTable: any;
-    pendingCashiering: any;
-    subTotal: number;
-    total: number;
-    lessTaxTotal: number;
-    lessDiscountTotal: number;
-    taxRate: number;
-    billFooter: any;
-    receiptFooter: any;
     selectedCategorySlug?: string | null;
-    sessionSummary?: any;
-    billNumber: string;
-    receiptNumber: string;
+    currentTable: any;
 }>();
 
 const page = usePage<PageProps>();
@@ -287,7 +258,6 @@ const locationType = ref(null);
 const selectedOrderType = ref<string | null>(null);
 const selectedOrderItem = ref<any>(null);
 const showOrderSummary = ref(false);
-const previousTableId = ref<string | null>(null); // Track table changes to preserve order type
 const receiptData = ref({
     receiptNumber: "",
     date: "",
