@@ -19,6 +19,26 @@ export default {
             },
             colors: {
                 // QuickJuan POS Color Theme
+                prime: {
+                    main: "#003049",
+                    accent: "#669bbc",
+                    neutral: "#fdf0d5",
+                    base: "#ffffff",
+                    info: "#5688a8",
+                    success: "#22c55e",
+                    warning: "#f59696",
+                    error: "#c1121f",
+                },
+                pastel: {
+                    main: "#003049",
+                    accent: "#669bbc",
+                    neutral: "#fdf0d5",
+                    base: "#ffffff",
+                    info: "#5688a8",
+                    success: "#22c55e",
+                    warning: "#f59696",
+                    error: "#c1121f",
+                },
                 primary: {
                     50: "#f0f6fa",
                     100: "#dbeaf3",
