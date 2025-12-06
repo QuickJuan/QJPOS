@@ -83,7 +83,7 @@
             v-model:visible="showDiscountModal"
             :selected-items="selectedItemsForModal"
             :tax-rate="taxRate"
-            :available-discounts="props.availableDiscounts"
+            :available-discounts="page.props.available_discounts"
             @apply="handleApplyDiscount"
         />
 
@@ -109,6 +109,28 @@
             :modifiers="selectedItemModifiers"
         />
 
+        <!-- Close Session Modal -->
+        <CloseSessionModal
+            :show-close-dialog="showCloseSessionModal"
+            :open-session="openSession"
+            :session-summary="sessionSummary"
+            :current-user="page.props.auth.user"
+            :general-settings="props.generalSettings"
+            @close-modal="showCloseSessionModal = false"
+            @confirm-close-session="handleConfirmCloseSession"
+        />
+
+        <!-- Session Summary Modal -->
+        <SessionSummaryModal
+            :show-session-summary-modal="showSessionSummaryModal"
+            :open-session="openSession"
+            :session-summary="sessionSummaryData"
+            :current-user="page.props.auth.user"
+            :general-settings="props.generalSettings"
+            @close-modal="showSessionSummaryModal = false"
+            @confirm-close="handleConfirmSessionSummary"
+        />
+
         <Toast />
         <ConfirmPopup />
     </aside>
@@ -131,6 +153,8 @@ import DiscountModal from "./OrderSummary/DiscountModal.vue";
 import RequiredReasonModal from "./OrderSummary/RequiredReasonModal.vue";
 import AddModifierModal from "./OrderSummary/AddModifierModal.vue";
 import ItemModifiersModal from "./OrderSummary/ItemModifiersModal.vue";
+import CloseSessionModal from "@/Pages/Resto/Partials/CloseSessionModal.vue";
+import SessionSummaryModal from "@/Pages/Resto/Partials/SessionSummaryModal.vue";
 import axios from "axios";
 
 const props = defineProps<{
@@ -157,6 +181,8 @@ const props = defineProps<{
         company_logo: string;
     };
     activeBranch?: any;
+    openSession?: any;
+    sessionSummary?: any;
 }>();
 
 const toast = useToast();
@@ -191,10 +217,13 @@ const showDiscountModal = ref(false);
 const showRequiredReasonModal = ref(false);
 const showAddModifierModal = ref(false);
 const showItemModifiersModal = ref(false);
+const showCloseSessionModal = ref(false);
+const showSessionSummaryModal = ref(false);
 const selectedOrderItem = ref(props.selectedOrderItem);
 const selectedItemsForDiscount = ref<number[]>([]);
 const selectedItemForModifiers = ref<any>(null);
 const selectedItemModifiers = ref<any[]>([]);
+const sessionSummaryData = ref(null);
 
 // Discount state
 const appliedDiscount = ref<{
@@ -261,6 +290,16 @@ const selectedItemsForModal = computed(() =>
         selectedItemsForDiscount.value.includes(item.id)
     )
 );
+
+// Get current open session from props
+const openSession = computed(() => {
+    return props.openSession;
+});
+
+// Session summary from props
+const sessionSummary = computed(() => {
+    return props.sessionSummary;
+});
 
 const handleEdit = (orderItem: any) => {
     selectedOrderItem.value = orderItem;
@@ -611,8 +650,59 @@ const handleViewTable = () => {
 };
 
 const handleEndOfShift = () => {
-    // Handle end of shift logic - redirect to session preview to properly close session
-    router.visit(route("resto.preview") + "?auto_close=true");
+    // Handle end of shift logic - show close session modal
+    showCloseSessionModal.value = true;
+};
+
+const handleConfirmCloseSession = (data: any) => {
+    router.post(
+        route("resto.session.close"),
+        {
+            cash_denomination_details: data.denominationData,
+            cash_denomination: data.totalCashCounted,
+        },
+        {
+            onSuccess: () => {
+                showCloseSessionModal.value = false;
+                // Fetch session summary after successful close
+                axios
+                    .get(route("resto.api.session-summary"))
+                    .then((response) => {
+                        sessionSummaryData.value = response.data;
+                        showSessionSummaryModal.value = true;
+                        toast.add({
+                            severity: "success",
+                            summary: "Success",
+                            detail: "Session closed successfully",
+                            life: 3000,
+                        });
+                    })
+                    .catch((error) => {
+                        console.error("Failed to fetch session summary", error);
+                        toast.add({
+                            severity: "error",
+                            summary: "Error",
+                            detail: "Session closed but failed to load summary",
+                            life: 3000,
+                        });
+                    });
+            },
+            onError: (errors) => {
+                toast.add({
+                    severity: "error",
+                    summary: "Error",
+                    detail: errors.error || "Failed to close session",
+                    life: 3000,
+                });
+            },
+        }
+    );
+};
+
+const handleConfirmSessionSummary = () => {
+    showSessionSummaryModal.value = false;
+    // Redirect to home after confirming the session summary
+    router.visit(route("home"));
 };
 
 const handleRedirectToTables = () => {

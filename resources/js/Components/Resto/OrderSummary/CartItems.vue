@@ -131,7 +131,7 @@
                                                 Less Tax:
                                             </p>
                                             <p
-                                                v-if="item.discount > 0"
+                                                v-if="item.discount_amount > 0"
                                                 class="text-xs text-gray-600 font-medium"
                                             >
                                                 Less Discount:
@@ -154,10 +154,10 @@
 
                                             <!-- Discount -->
                                             <p
-                                                v-if="item.discount > 0"
+                                                v-if="item.discount_amount > 0"
                                                 class="text-xs text-gray-600 font-medium"
                                             >
-                                                {{ formatMoney(item.discount) }}
+                                                {{ formatMoney(item.discount_amount) }}
                                             </p>
                                         </div>
                                     </div>

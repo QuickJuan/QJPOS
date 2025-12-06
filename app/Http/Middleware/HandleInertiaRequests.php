@@ -61,6 +61,7 @@ class HandleInertiaRequests extends Middleware
             ...$this->getTenantSharedData($request),
             // Main site data
             ...$this->getMainSiteSharedData($request),
+            'tax_rate'            => config('sales.tax_rate'),
         ]);
     }
 
