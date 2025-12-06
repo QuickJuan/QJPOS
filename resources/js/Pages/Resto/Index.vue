@@ -222,6 +222,7 @@
                     :general-settings="generalSettings"
                     @show-receipt="handleShowReceipt"
                     @select-table="handleSelectTable"
+                    @change-order-type="handleOrderType"
                 />
             </aside>
         </div>
@@ -304,9 +305,19 @@ const {
 } = useCashierCache();
 
 const orderItems = computed(() => {
-    // Use selected cart items if available, fallback to props
-    return selectedCart.value?.items || props.cartItems || [];
+    // Use shared cart items
+    return sharedCart.value?.cart_items || sharedCart.value?.cartItems || [];
 });
+const cartCount = computed(() => {
+    return orderItems.value.reduce(
+        (total: number, item: any) => total + (item.quantity || 0),
+        0
+    );
+});
+// handle order type selection
+const handleOrderType = (type: string) => {
+    selectedOrderType.value = type;
+};
 
 // Toggle order summary sidebar
 const toggleOrderSummary = () => {

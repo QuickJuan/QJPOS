@@ -8,7 +8,7 @@
             :cart="cart"
             @select-table="$emit('selectTable')"
         />
-
+        {{ selectedOrderType }}
         <!-- Cart Items Area -->
         <div class="flex-1 flex flex-col min-h-0">
             <!-- Cart Items -->
@@ -163,7 +163,7 @@ const toast = useToast();
 const page = usePage<PageProps>();
 const confirm = useConfirm();
 const emit = defineEmits<{
-    selectedOrderType: [value: string];
+    changeOrderType: [value: string];
     showReceipt: [data: any];
     printBill: [];
     selectTable: [];
@@ -205,6 +205,13 @@ const appliedDiscount = ref<{
     discountType: string;
     removeTax?: boolean;
 } | null>(null);
+
+watch(
+    () => selectedOrderType.value,
+    (newVal) => {
+        emit("changeOrderType", newVal);
+    }
+);
 
 // Computed values
 const subtotal = computed(() => {
@@ -586,13 +593,14 @@ const handleRemoveModifier = (item: any, modifierIndex: number) => {
     );
 };
 
-watch(
-    () => props.locationType,
-    (val) => {
-        if (val) selectedOrderType.value = val;
-    },
-    { immediate: true }
-);
+// watch(
+//     () => props.locationType,
+//     (val) => {
+//         alert("nag change order type");
+//         if (val) selectedOrderType.value = val;
+//     },
+//     { immediate: true }
+// );
 
 const handlePrintBill = () => {
     emit("printBill");

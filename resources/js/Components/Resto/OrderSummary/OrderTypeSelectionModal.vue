@@ -55,7 +55,6 @@ const emit = defineEmits<{
 }>();
 
 const selectType = (type: string) => {
-    alert("selecting type: " + type);
     emit("updateOrderType", type);
     emit("update:visible", false);
 };
