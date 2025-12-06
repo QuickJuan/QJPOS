@@ -55,12 +55,12 @@ class HandleInertiaRequests extends Middleware
             'receipt_headers' => fn() => $activeBranch['receipt_headers'] ?? [],
             'receipt_footers' => fn() => $activeBranch['receipt_footer'] ?? [],
             'bill_footer' => fn() => $activeBranch['receipt_footer'] ?? [],
-            // Company Information
+            // Company Information (Main Site)
             'company_info' => fn() => $this->getCompanyInfo(),
-            //get the available discounts
-            'available_discounts' => fn() => app(DiscountService::class)->getAvailableDiscounts(),
-            // Get cart by table ID from query parameter
-            'cart' => fn() => $this->getCartByTableId($request),
+            // Tenant-specific data
+            ...$this->getTenantSharedData($request),
+            // Main site data
+            ...$this->getMainSiteSharedData($request),
         ]);
     }
 
@@ -116,18 +116,78 @@ class HandleInertiaRequests extends Middleware
     private function getCartByTableId(Request $request): ?array
     {
         $tableId = $request->query('tableId');
-        info('Fetching cart for table ID: ' . $tableId);
         if (!$tableId) {
-            info('No table ID provided in request.');
             return null;
         }
 
         try {
             $cart = app(CartService::class)->getCartByTable((int)$tableId);
-            info('cart data: ' . print_r($cart, true));
             return $cart ? $cart->toArray() : null;
         } catch (\Exception $e) {
             return null;
+        }
+    }
+
+    /**
+     * Get available discounts - only for tenant context
+     */
+    private function getAvailableDiscounts(Request $request): array
+    {
+        // Only fetch discounts if we're in a tenant context
+        if (!tenant()) {
+            return [];
+        }
+
+        try {
+            return app(DiscountService::class)->getAvailableDiscounts() ?? [];
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Get shared data for tenant context
+     * Add all tenant-specific services here
+     */
+    private function getTenantSharedData(Request $request): array
+    {
+        // If not in tenant context, return empty array
+        if (!tenant()) {
+            return [];
+        }
+
+        return [
+            // Tenant-specific services
+            'available_discounts' => fn() => $this->loadTenantDiscounts(),
+            'cart' => fn() => $this->getCartByTableId($request),
+        ];
+    }
+
+    /**
+     * Get shared data for main site
+     * Add all main-site-specific services here
+     */
+    private function getMainSiteSharedData(Request $request): array
+    {
+        // Only return main site data if NOT in tenant context
+        if (tenant()) {
+            return [];
+        }
+
+        return [
+            // Main site specific services can be added here
+        ];
+    }
+
+    /**
+     * Load available discounts for tenant
+     */
+    private function loadTenantDiscounts(): array
+    {
+        try {
+            return app(DiscountService::class)->getAvailableDiscounts() ?? [];
+        } catch (\Exception $e) {
+            return [];
         }
     }
 }
