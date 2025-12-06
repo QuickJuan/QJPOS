@@ -385,21 +385,37 @@ class CartService
         }
 
         return $cartItems->map(function ($cartItem) use ($request) {
-            $modifier = [];
+            $modifiers = [];
 
-            foreach ($request['modifierOptions'] as $key => $modifierOption) {
-                $modifier[$key] = $modifierOption;
+            foreach ($request['modifierOptions'] as $key => $options) {
+                foreach ($options as $option) {
+                    if (! empty($option['name'])) {
+                        $modifiers[] = $option['name'];
+                    }
+                }
             }
 
-            $modifier['specialInstructions'] = $request['specialInstructions'];
+            if (! empty($request['specialInstructions'])) {
+                $modifiers[] = $request['specialInstructions'];
+            }
+
+            $modifiers = array_values($modifiers);
 
             // Check if cart item already has existing modifiers
-            $existingMetaData = $cartItem->meta_data ?? [];
+            $existingMetaData  = $cartItem->meta_data ?? [];
+            $existingModifiers = $existingMetaData['modifier'] ?? [];
 
-            // Append the new modifier to existing meta_data
-            $existingMetaData[] = [
-                'modifier' => $modifier,
-            ];
+            // Merge existing modifiers with new modifiers
+            $allModifiers = array_merge($existingModifiers, $modifiers);
+
+            // Remove duplicates to avoid duplicate entries
+            $allModifiers = array_unique($allModifiers);
+
+            // Re-index the array
+            $allModifiers = array_values($allModifiers);
+
+            // Re-index the array
+            $existingMetaData['modifier'] = $allModifiers;
 
             $cartItem->update([
                 'meta_data' => $existingMetaData,
@@ -428,13 +444,17 @@ class CartService
         }
 
         // Get current meta_data and remove the specific modifier
-        $currentMetaData = $cartItem->meta_data ?? [];
-        $modifierIndex   = $request->modifierIndex;
+        $currentMetaData = $cartItem->meta_data;
+        $modifierValue   = $request->modifierValue;
 
-        if (isset($currentMetaData[$modifierIndex])) {
-            unset($currentMetaData[$modifierIndex]);
-            // Re-index the array
-            $currentMetaData = array_values($currentMetaData);
+        if (isset($currentMetaData['modifier']) && is_array($currentMetaData['modifier'])) {
+            $key = array_search($modifierValue, $currentMetaData['modifier']);
+
+            if ($key !== false) {
+                unset($currentMetaData['modifier'][$key]);
+                // Re-index the array to maintain consecutive numeric keys
+                $currentMetaData['modifier'] = array_values($currentMetaData['modifier']);
+            }
         }
 
         return $cartItem->update([
