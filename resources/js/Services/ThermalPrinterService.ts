@@ -708,10 +708,11 @@ class ThermalPrinterService {
     /**
      * Format info line for receipt details (Receipt #, Date, etc.)
      */
-    private formatInfoLine(label: string, value: string): string {
+    private formatInfoLine(label: string, value: string | null | undefined): string {
         const maxWidth = this.currentConfig?.character_width || 47;
-        const spaces = ' '.repeat(Math.max(1, maxWidth - label.length - value.length));
-        return `${label}${spaces}${value}`;
+        const valueStr = String(value || '');
+        const spaces = ' '.repeat(Math.max(1, maxWidth - label.length - valueStr.length));
+        return `${label}${spaces}${valueStr}`;
     }
 
     /**

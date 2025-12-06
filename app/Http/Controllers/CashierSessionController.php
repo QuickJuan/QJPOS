@@ -26,16 +26,7 @@ class CashierSessionController extends Controller
 
     public function index(Request $request): Response
     {
-        // Get categories with active products
-        $pendingCashiering = $this->cashierSessionService->model->openSession()->with('cashier')->first();
-
-        $availableModifiers = Modifier::withMappedData();
-        $cartData           = $this->cashierSessionService->getCartData($request, $pendingCashiering);
-        $cart               = $cartData['cart'];
-        $cartItems          = $cartData['cartItems'];
-        $totals             = $this->cashierSessionService->calculateTotals($cart, $cartItems);
         $categories         = $this->productCategoryService->getCategoriesWithProductsAsResources();
-
         if ($request->has('tableId')) {
             $tableId      = $request->input('tableId');
             $currentTable = TableRoom::find($tableId);
@@ -45,13 +36,8 @@ class CashierSessionController extends Controller
 
         // Cart is now provided by HandleInertiaRequests middleware via shared props
         return Inertia::render('Resto/Index', [
-            'total'              => $totals['total'],
-            'subTotal'           => $totals['subAmount'],
-            'lessTaxTotal'       => $totals['lessTaxTotal'],
-            'lessDiscountTotal'  => $totals['lessDiscountTotal'],
             'categories'         => $categories,
             'currentTable'       => $currentTable,
-            'availableModifiers' => $availableModifiers,
         ]);
     }
 

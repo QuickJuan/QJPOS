@@ -129,22 +129,6 @@ class HandleInertiaRequests extends Middleware
         }
     }
 
-    /**
-     * Get available discounts - only for tenant context
-     */
-    private function getAvailableDiscounts(Request $request): array
-    {
-        // Only fetch discounts if we're in a tenant context
-        if (!tenant()) {
-            return [];
-        }
-
-        try {
-            return app(DiscountService::class)->getAvailableDiscounts() ?? [];
-        } catch (\Exception $e) {
-            return [];
-        }
-    }
 
     /**
      * Get shared data for tenant context
@@ -157,11 +141,13 @@ class HandleInertiaRequests extends Middleware
             return [];
         }
 
-        return [
+        $sharedData = [
             // Tenant-specific services
-            'available_discounts' => fn() => $this->loadTenantDiscounts(),
-            'cart' => fn() => $this->getCartByTableId($request),
+            'available_discounts' =>  $this->loadTenantDiscounts(),
+            'cart' => $this->getCartByTableId($request)
         ];
+
+        return $sharedData;
     }
 
     /**

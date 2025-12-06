@@ -8,7 +8,7 @@
             :cart="cart"
             @select-table="$emit('selectTable')"
         />
-        {{ selectedOrderType }}
+
         <!-- Cart Items Area -->
         <div class="flex-1 flex flex-col min-h-0">
             <!-- Cart Items -->
@@ -26,10 +26,10 @@
             <OrderTotals
                 :order-subtotal="orderSubtotal"
                 :tax-amount="taxAmount"
-                :final-total="props.total"
-                :sub-total="props.subTotal"
-                :less-tax-total="lessTaxTotal"
-                :less-discount-total="lessDiscountTotal"
+                :final-total="orderItemTotalDue"
+                :sub-total="orderItemSubTotal"
+                :less-tax-total="orderItemLessTax"
+                :less-discount-total="orderItemLessDiscount"
                 :applied-discount="appliedDiscount"
             />
         </div>
@@ -44,17 +44,12 @@
             :cart="cart"
             :total-amount="finalTotal"
             :applied-discount="appliedDiscount"
-            :sub-total="props.subTotal"
-            :total="props.total"
-            :less-tax-total="props.lessTaxTotal"
-            :less-discount-total="props.lessDiscountTotal"
+            :sub-total="orderItemSubTotal"
+            :total="orderItemTotalDue"
+            :less-tax-total="orderItemLessTax"
+            :less-discount-total="orderItemLessDiscount"
             :table-info="tableInfo"
-            :bill-footer="billFooter"
-            :receipt-footer="receiptFooter"
-            :bill-number="billNumber"
-            :receipt-number="receiptNumber"
             :general-settings="props.generalSettings"
-            :active-branch="props.activeBranch"
             @save-order="handleSaveOrder"
             @checkout="handleCheckout"
             @open-discount-modal="openDiscountModal"
@@ -82,7 +77,7 @@
         <DiscountModal
             v-model:visible="showDiscountModal"
             :selected-items="selectedItemsForModal"
-            :tax-rate="taxRate"
+            :tax-rate="props.taxRate"
             :available-discounts="page.props.available_discounts"
             @apply="handleApplyDiscount"
         />
@@ -164,25 +159,14 @@ const props = defineProps<{
     selectedOrderItem: any;
     availableDiscounts: any[];
     availableModifiers: any[];
+    tax_rate: number;
     currentTable: any;
-    subTotal: number;
-    total: number;
-    lessTaxTotal: number;
-    lessDiscountTotal: number;
-    taxRate: number;
-    billFooter: any;
-    receiptFooter: any;
-    billNumber: string;
-    receiptNumber: string;
     generalSettings: {
         company_name: string;
         company_address: string;
         company_phone: string;
         company_logo: string;
     };
-    activeBranch?: any;
-    openSession?: any;
-    sessionSummary?: any;
 }>();
 
 const toast = useToast();
@@ -198,7 +182,36 @@ const emit = defineEmits<{
 
 // Get order items from cart
 const orderItems = computed(() => {
-    return props.cart?.cart_items || props.cart?.cartItems || [];
+    return props.cart?.cart_items || page.props.sharedCart?.cart_items || [];
+});
+
+const orderItemSubTotal = computed(() => {
+    return orderItems.value.reduce((sum, item) => {
+        const itemPrice = parseFloat(item.price || "0");
+        const quantity = item.quantity;
+        return sum + itemPrice * quantity;
+    }, 0);
+});
+
+const orderItemLessTax = computed(() => {
+    return orderItems.value.reduce((sum, item) => {
+        const lessTax = parseFloat(item.less_tax || "0");
+        return sum + lessTax;
+    }, 0);
+});
+
+const orderItemLessDiscount = computed(() => {
+    return orderItems.value.reduce((sum, item) => {
+        const lessDiscount = parseFloat(item.less_discount || "0");
+        return sum + lessDiscount;
+    }, 0);
+});
+
+const orderItemTotalDue = computed(() => {
+    return (
+        orderItemSubTotal.value -
+        (orderItemLessTax.value + orderItemLessDiscount.value)
+    );
 });
 
 // // State - Initialize from URL query parameter
