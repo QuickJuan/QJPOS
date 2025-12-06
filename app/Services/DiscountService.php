@@ -117,7 +117,13 @@ class DiscountService
 
     public function getAvailableDiscounts()
     {
-        return Discount::select('id', 'discount_name', 'type', 'amount', 'discount_type', 'remove_tax', 'require_customer_info')
-            ->get();
+        $query = Discount::select('id', 'discount_name', 'type', 'amount', 'discount_type', 'remove_tax', 'require_customer_info');
+
+        // If we're in a tenant context, scope to current tenant
+        if (tenant()) {
+            $query->whereTenantId(tenant()->id);
+        }
+
+        return $query->get();
     }
 }
