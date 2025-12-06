@@ -2,19 +2,20 @@
 
 declare (strict_types = 1);
 
-use App\Http\Controllers\AttendanceController;
+use Inertia\Inertia;
+use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
-use App\Http\Controllers\CashierSessionController;
 use App\Http\Controllers\HomeController;
-use App\Http\Controllers\TableManagementController;
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\TableRoomController;
-use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
+use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\CashierSessionController;
+use App\Http\Controllers\TableManagementController;
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
-use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
+use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 
 /*
 |--------------------------------------------------------------------------
@@ -74,6 +75,8 @@ Route::middleware([
             'tenant' => tenant(),
         ]);
     })->name('landing');
+
+    Route::get('/product/{slug}', [ProductController::class, 'show'])->name('product.show');
 
     Route::get('/test-landing', function () {
         return Inertia::render('TestLanding', [

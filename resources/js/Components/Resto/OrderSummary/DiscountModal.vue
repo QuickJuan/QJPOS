@@ -417,10 +417,9 @@ const selectedItemsSubtotal = computed(() => {
     }, 0);
 });
 
-const calculatedDiscountAmount = ref(0);
 const discountTotal = ref(null);
 const previewData = ref(null);
-const taxRate = ref(props.taxRate);
+const taxRate = ref(page.props.tax_rate);
 const lessTaxValue = ref<number[]>([]);
 const lessDiscountValue = ref<number[]>([]);
 

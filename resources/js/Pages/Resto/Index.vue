@@ -220,6 +220,8 @@
                     :bill-number="props.billNumber"
                     :receipt-number="String(props.receiptNumber)"
                     :general-settings="generalSettings"
+                    :open-session="props.pendingCashiering"
+                    :session-summary="props.sessionSummary"
                     @show-receipt="handleShowReceipt"
                     @select-table="handleSelectTable"
                     @change-order-type="handleOrderType"

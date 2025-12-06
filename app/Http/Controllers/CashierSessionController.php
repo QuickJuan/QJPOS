@@ -1,21 +1,21 @@
 <?php
 namespace App\Http\Controllers;
 
-use Exception;
-use Inertia\Inertia;
-use Inertia\Response;
-use App\Models\Product;
-use App\Models\Modifier;
-use App\Models\TableRoom;
-use Illuminate\Http\Request;
-use App\Models\TableRoomLocation;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\RedirectResponse;
+use App\Http\Requests\CashierSessionRequest;
 use App\Http\Resources\ProductResource;
+use App\Models\Modifier;
+use App\Models\Product;
+use App\Models\TableRoom;
+use App\Models\TableRoomLocation;
 use App\Services\CashierSessionService;
 use App\Services\GeneralSettingsService;
 use App\Services\ProductCategoryService;
-use App\Http\Requests\CashierSessionRequest;
+use Exception;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class CashierSessionController extends Controller
 {
@@ -27,8 +27,14 @@ class CashierSessionController extends Controller
     public function index(Request $request): Response
     {
         // Get categories with active products
-        $categories = $this->productCategoryService->getCategoriesWithProductsAsResources();
-        $modifiers = Modifier::withMappedData();
+        $pendingCashiering = $this->cashierSessionService->model->openSession()->with('cashier')->first();
+
+        $availableModifiers = Modifier::withMappedData();
+        $cartData           = $this->cashierSessionService->getCartData($request, $pendingCashiering);
+        $cart               = $cartData['cart'];
+        $cartItems          = $cartData['cartItems'];
+        $totals             = $this->cashierSessionService->calculateTotals($cart, $cartItems);
+        $categories         = $this->productCategoryService->getCategoriesWithProductsAsResources();
 
         if ($request->has('tableId')) {
             $tableId      = $request->input('tableId');
@@ -39,9 +45,13 @@ class CashierSessionController extends Controller
 
         // Cart is now provided by HandleInertiaRequests middleware via shared props
         return Inertia::render('Resto/Index', [
-            'currentTable'       => $currentTable,
+            'total'              => $totals['total'],
+            'subTotal'           => $totals['subAmount'],
+            'lessTaxTotal'       => $totals['lessTaxTotal'],
+            'lessDiscountTotal'  => $totals['lessDiscountTotal'],
             'categories'         => $categories,
-            'availableModifiers' => $modifiers,
+            'currentTable'       => $currentTable,
+            'availableModifiers' => $availableModifiers,
         ]);
     }
 

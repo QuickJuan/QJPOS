@@ -1,347 +1,125 @@
 <template>
-    <div class="min-h-screen flex flex-col">
-        <!-- Navigation Bar -->
-        <header
-            :class="[
-                'fixed top-0 left-0 w-full z-30 flex items-center justify-between px-6 py-4 transition-all duration-300',
-                isSticky
-                    ? 'bg-primary/80 shadow-lg backdrop-blur '
-                    : 'bg-transparent shadow-none',
-            ]"
-        >
-            <div class="flex items-center gap-2">
-                <QuickJuanIcon
-                    class="w-10 h-10 md:w-12 md:h-12"
-                    aria-label="QuickJuan POS Logo"
-                />
-                <span
-                    :class="
-                        isSticky
-                            ? 'text-2xl font-bold text-white tracking-tight hidden sm:inline'
-                            : 'text-2xl font-bold text-primary tracking-tight hidden sm:inline'
-                    "
-                    >QuickJuan POS</span
-                >
-            </div>
-            <!-- Mobile Burger Icon -->
-            <button
-                class="md:hidden flex items-center justify-center p-2 rounded focus:outline-none focus:ring-2 focus:ring-primary"
-                @click="mobileNavOpen = !mobileNavOpen"
-                aria-label="Open navigation menu"
-            >
-                <svg
-                    v-if="!mobileNavOpen"
-                    class="w-7 h-7 text-primary"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    viewBox="0 0 24 24"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M4 6h16M4 12h16M4 18h16"
-                    />
-                </svg>
-                <svg
-                    v-else
-                    class="w-7 h-7 text-primary"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    viewBox="0 0 24 24"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M6 18L18 6M6 6l12 12"
-                    />
-                </svg>
-            </button>
-            <!-- Desktop Nav -->
-            <nav class="hidden md:block">
-                <ul class="flex gap-6 text-lg font-semibold">
-                    <li>
-                        <Link
-                            href="/tenant/register"
-                            :class="
-                                isSticky
-                                    ? 'text-white hover:text-primary'
-                                    : 'text-primary hover:text-third'
-                            "
-                            class="transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                            >Try for FREE</Link
+    <GuestLayout>
+        <div class="flex flex-col bg-white">
+            <main class="flex-1">
+                <!-- Hero -->
+                <section class="py-20 md:py-32 bg-gradient-to-br from-primary/5 via-white to-secondary/5">
+                    <div class="container mx-auto px-6 md:px-12 lg:px-24">
+                        <div
+                            class="grid grid-cols-1 md:grid-cols-2 gap-10 items-center"
                         >
-                    </li>
-                    <li>
-                        <a
-                            href="#products"
-                            :class="
-                                isSticky
-                                    ? 'text-white hover:text-primary'
-                                    : 'text-primary hover:text-third'
-                            "
-                            class="transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                            >Products</a
-                        >
-                    </li>
-                    <li>
-                        <a
-                            href="#contact"
-                            :class="
-                                isSticky
-                                    ? 'text-white hover:text-primary'
-                                    : 'text-primary hover:text-third'
-                            "
-                            class="transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                            >Contact Us</a
-                        >
-                    </li>
-                    <li>
-                        <Link
-                            :href="
-                                $page.props.auth.user
-                                    ? route('home')
-                                    : route('login')
-                            "
-                            :class="
-                                isSticky
-                                    ? 'text-white hover:text-primary'
-                                    : 'text-primary hover:text-third'
-                            "
-                            class="transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                        >
-                            {{
-                                $page.props.auth.user
-                                    ? `Hi, ${$page.props.auth.user.name}`
-                                    : "Sign in"
-                            }}
-                        </Link>
-                    </li>
-                </ul>
-            </nav>
-            <!-- Mobile Nav Dropdown -->
-            <transition name="fade">
-                <nav
-                    v-if="mobileNavOpen"
-                    class="absolute top-full left-0 w-full bg-white/95 shadow-lg border-b border-third flex flex-col items-center py-4 md:hidden z-40"
-                >
-                    <ul
-                        class="flex flex-col gap-4 text-lg font-semibold w-full text-center"
-                    >
-                        <li>
-                            <Link
-                                :href="route('tenant-registration')"
-                                class="block py-2 text-secondary hover:text-primary transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                                @click="mobileNavOpen = false"
-                                >Try for FREE</Link
-                            >
-                        </li>
-                        <li>
-                            <a
-                                href="#products"
-                                class="block py-2 text-secondary hover:text-primary transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                                @click="mobileNavOpen = false"
-                                >Products</a
-                            >
-                        </li>
-                        <li>
-                            <a
-                                href="#contact"
-                                class="block py-2 text-secondary hover:text-primary transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                                @click="mobileNavOpen = false"
-                                >Contact Us</a
-                            >
-                        </li>
-                    </ul>
-                </nav>
-            </transition>
-        </header>
+                            <!-- Left: copy -->
+                            <div class="space-y-6">
+                                <h1
+                                    class="text-3xl md:text-5xl font-extrabold text-gray-900 leading-tight"
+                                >
+                                    The restaurant and retail
+                                    <span class="text-primary-400">
+                                        point of sale
+                                    </span>
+                                    at our service.
+                                </h1>
 
-        <main class="flex-grow flex flex-col">
-            <!-- Content -->
-            <div
-                class="relative z-10 flex flex-col items-center justify-end md:justify-center text-center px-6 py-8 md:py-0 w-full min-h-screen bg-gradient-to-t md:bg-gradient-to-r from-fourth/90 via-fourth/60 to-transparent"
-                style="padding-top: 6rem"
-                aria-labelledby="landing-title"
-            >
-                <!-- Video/Image Background: now only for hero/landing section -->
-                <div
-                    class="absolute inset-0 w-full h-full pointer-events-none z-0"
-                    aria-label="Restaurant video background"
-                >
-                    <transition name="fade" mode="out-in">
-                        <video
-                            v-if="showVideo && !isMobile"
-                            key="video"
-                            class="w-full h-full object-cover min-h-screen"
-                            autoplay
-                            muted
-                            loop
-                            playsinline
-                            preload="auto"
-                            :aria-label="videoTitle"
-                        >
-                            <source
-                                src="/videos/landingvideo.mov"
-                                type="video/mp4"
-                            />
-                            Your browser does not support the video tag.
-                        </video>
-                        <div v-else class="w-full h-full">
-                            <img
-                                key="image"
-                                :src="posImages[currentImage]"
-                                class="w-full h-full object-cover object-top"
-                                alt="POS Machine"
-                            />
+                                <p class="text-gray-600 max-w-xl">
+                                    The modern, multi-tenant Point of Sale
+                                    platform for retail, restaurants, and fast
+                                    food. Manage your business, inventory, and
+                                    sales with ease.
+                                </p>
+
+                                <div class="flex flex-wrap gap-4 mt-4">
+                                    <Link
+                                        :href="route('tenant-registration')"
+                                        class="inline-flex items-center px-5 py-3 bg-primary-400 hover:bg-primary-700 text-white rounded-lg shadow"
+                                    >
+                                        Start Free Trial
+                                    </Link>
+                                    <a
+                                        href="#features"
+                                        class="inline-flex items-center px-5 py-3 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50"
+                                    >
+                                        See Features
+                                    </a>
+                                </div>
+
+                                <div
+                                    class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6"
+                                >
+                                    <div class="bg-white rounded-lg shadow p-4 text-center">
+                                        <div
+                                            class="text-2xl font-semibold text-gray-900"
+                                        >
+                                            1,200+
+                                        </div>
+                                        <div class="text-gray-600">FNB clients</div>
+                                    </div>
+                                    <div class="bg-white rounded-lg shadow p-4 text-center">
+                                        <div
+                                            class="text-2xl font-semibold text-gray-900"
+                                        >
+                                            900+
+                                        </div>
+                                        <div class="text-gray-600">Drugstores</div>
+                                    </div>
+                                    <div class="bg-white rounded-lg shadow p-4 text-center">
+                                        <div
+                                            class="text-2xl font-semibold text-gray-900"
+                                        >
+                                            700+
+                                        </div>
+                                        <div class="text-gray-600">Kiosks</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right: mockup -->
+                            <div
+                                class="relative flex justify-center md:justify-end"
+                            >
+                                <div
+                                    class="w-[300px] sm:w-[420px] md:w-[520px] lg:w-[600px] transform -rotate-6 rounded-3xl overflow-hidden"
+                                >
+                                    <img
+                                        src="/images/quickjuan-pos.png"
+                                        alt="POS on iPad"
+                                        class="w-full h-auto block"
+                                    />
+                                </div>
+
+                                <img
+                                    src="/images/pos-reader.svg"
+                                    alt="Card reader"
+                                    class="absolute bottom-4 left-6 w-20 md:w-24 transform rotate-6 shadow-lg"
+                                />
+                            </div>
                         </div>
-                    </transition>
-                    <div class="absolute inset-0 bg-white bg-opacity-60"></div>
-
-                    <!-- Image navigation (mobile only) -->
-                    <div
-                        v-if="!showVideo && isMobile"
-                        class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20"
-                    >
-                        <button
-                            v-for="(img, idx) in posImages"
-                            :key="img"
-                            @click="currentImage = idx"
-                            :aria-label="'Show image ' + (idx + 1)"
-                            :class="[
-                                'w-4 h-4 rounded-full border-2 border-primary focus:outline-none focus:ring-2 focus:ring-primary',
-                                idx === currentImage
-                                    ? 'bg-primary'
-                                    : 'bg-fourth opacity-60',
-                            ]"
-                        ></button>
                     </div>
-                </div>
-                <!-- Hero Content -->
-                <div
-                    class="relative z-10 flex flex-col items-center justify-center w-full h-full"
-                >
-                    <h1
-                        id="landing-title"
-                        class="text-4xl sm:text-5xl md:text-6xl font-extrabold text-primary drop-shadow-lg mb-2 font-sans tracking-tight"
-                    >
-                        Welcome to
-                        <span class="text-secondary">QuickJuan POS</span>
-                    </h1>
-                    <p
-                        class="text-lg sm:text-xl md:text-2xl text-primary mb-4 max-w-2xl font-light drop-shadow"
-                    >
-                        The modern, multi-tenant Point of Sale platform for
-                        retail, restaurants, and fast food.
-                        <span class="font-semibold text-primary">
-                            Manage your business, inventory, and sales with
-                            ease.
-                        </span>
-                    </p>
-                    <Link
-                        :href="route('tenant-registration')"
-                        class="px-8 py-4 rounded-lg bg-primary text-white font-bold text-xl shadow-lg hover:bg-third hover:text-secondary transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 mb-4 inline-block"
-                    >
-                        Get Started Free
-                    </Link>
-                    <!-- Products Section (inline, inside hero/landing area) -->
-                    <ProductsSection />
-                </div>
-            </div>
+                </section>
 
-            <ProductPage />
-            <!-- How QuickJuan POS Helps Your Business Grow Section (now as component) -->
-            <HowQuickJuanHelps />
-            <!-- Why Choose QuickJuan Section -->
-            <WhyChooseQuickJuan />
-            <!-- Testimonials Section -->
-            <section class="relative w-full bg-fourth px-4 z-20">
-                <Testimonials />
-            </section>
-            <!-- Contact Us Section -->
-            <section id="contact" class="relative w-full bg-fourth px-4 z-20">
+                <!-- Floating Cards Section -->
+                <WhatOurClientsSay />
+                <QuickJuanCapabilities />
+                <HowQuickJuanHelps />
+                <WhyChooseQuickJuan />
                 <ContactUs />
-            </section>
+            </main>
 
-            <!-- Footer Section -->
-            <footer
-                class="w-full bg-primary text-white pt-10 pb-6 border-t border-third mt-0"
-            >
-                <div class="max-w-6xl mx-auto px-4 flex flex-col items-center">
-                    <!-- Office Hours -->
-                    <div class="text-center mb-6">
-                        <div class="text-lg font-semibold text-fourth">
-                            Office Hours
-                        </div>
-                        <div class="text-base text-secondary">
-                            Monday to Saturday, 8:00 AM – 7:00 PM
-                        </div>
-                    </div>
-                    <!-- Footer Menu -->
-                    <nav aria-label="Footer menu" class="mb-4">
-                        <ul
-                            class="flex flex-wrap justify-center gap-6 text-base font-medium"
-                        >
-                            <li>
-                                <a
-                                    href="/terms-and-conditions"
-                                    class="hover:text-third transition-colors"
-                                    >Terms and Conditions</a
-                                >
-                            </li>
-                            <li>
-                                <a
-                                    href="/privacy-policy"
-                                    class="hover:text-third transition-colors"
-                                    >Privacy Policy</a
-                                >
-                            </li>
-                            <li>
-                                <a
-                                    href="/customer-support"
-                                    class="hover:text-third transition-colors"
-                                    >Customer Support</a
-                                >
-                            </li>
-                            <li>
-                                <a
-                                    href="/faq"
-                                    class="hover:text-third transition-colors"
-                                    >FAQ</a
-                                >
-                            </li>
-                            <li>
-                                <a
-                                    href="/reviews"
-                                    class="hover:text-third transition-colors"
-                                    >Reviews</a
-                                >
-                            </li>
-                        </ul>
-                    </nav>
-                    <div class="text-sm text-secondary text-center">
-                        &copy; {{ new Date().getFullYear() }} QuickJuan POS. All
-                        rights reserved.
-                    </div>
-                </div>
-            </footer>
-        </main>
-    </div>
+            <Footer />
+        </div>
+    </GuestLayout>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue";
-import QuickJuanIcon from "@/Components/QuickJuanIcon.vue";
-import Testimonials from "@/Components/Testimonials.vue";
-import ContactUs from "@/Components/ContactUs.vue";
-import WhyChooseQuickJuan from "@/Components/WhyChooseQuickJuan.vue";
-import HowQuickJuanHelps from "@/Components/HowQuickJuanHelps.vue";
-import ProductsSection from "./Home/ProductsSection.vue";
-
-import ProductPage from "./Products/Index.vue";
 import { Link } from "@inertiajs/vue3";
 import { route } from "ziggy-js";
+import GuestLayout from "@/Layouts/GuestLayout.vue";
+import WhatOurClientsSay from "@/Components/Landing/WhatOurClientsSay.vue";
+import QuickJuanCapabilities from "@/Components/Landing/QuickJuanCapabilities.vue";
+import HowQuickJuanHelps from "@/Components/Landing/HowQuickJuanHelps.vue";
+import WhyChooseQuickJuan from "@/Components/Landing/WhyChooseQuickJuan.vue";
+import ContactUs from "@/Components/Landing/ContactUs.vue";
+import Footer from "@/Components/Footer.vue";
 
 // Animated client numbers for products
 const fnbClients = ref(0);
@@ -364,24 +142,8 @@ function animateClients(target: number, refVar: any, duration = 1200) {
     step();
 }
 
-const showVideo = ref(true);
-const posImages = [
-    "/images/resto.png",
-    "/images/resto.png",
-    "/images/resto.png",
-];
-const currentImage = ref(0);
-const videoId = "goNOzX5vg48";
-const videoSrc = computed(
-    () =>
-        `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${videoId}&modestbranding=1&showinfo=0&rel=0`
-);
-const videoTitle = "Restaurant Video Background";
-
 const isMobile = ref(false);
 const isSticky = ref(false);
-const navHovered = ref(false);
-const mobileNavOpen = ref(false);
 
 function checkMobile() {
     isMobile.value = window.innerWidth < 768;
@@ -403,17 +165,6 @@ onUnmounted(() => {
     window.removeEventListener("resize", checkMobile);
     window.removeEventListener("scroll", handleScroll);
 });
-
-function toggleMedia() {
-    showVideo.value = !showVideo.value;
-}
-
-function scrollToGetStarted() {
-    const el = document.getElementById("get-started");
-    if (el) {
-        el.scrollIntoView({ behavior: "smooth" });
-    }
-}
 </script>
 
 <style scoped>
@@ -428,5 +179,19 @@ function scrollToGetStarted() {
 header {
     left: 0;
     right: 0;
+}
+
+@keyframes float {
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-20px);
+    }
+}
+
+.float-card {
+    perspective: 1000px;
 }
 </style>
