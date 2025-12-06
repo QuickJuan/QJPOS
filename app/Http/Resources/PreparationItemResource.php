@@ -25,7 +25,7 @@ class PreparationItemResource extends JsonResource
             'description' => $this->product?->name ?? $this->productPackaging->name ?? $this->description,
             'packaging' => $packaging ?? '',
             'qty' => $this->quantity,
-            'modifiers' => $this->meta_data?->modifiers ?? [],
+            'modifiers' => $this->meta_data["modifier"] ?? [],
             'notes' => $this->notes,
             'orderType' => $this->order_type,
             'preparationLocation' => $this->product?->preparationLocation?->description ?? '',

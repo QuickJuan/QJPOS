@@ -379,16 +379,16 @@ const handlePlaceOrder = async () => {
         }
 
         //redirect to table-rooms index with locationId after delay to show toast
-        setTimeout(() => {
-            let locationId = response.data?.tableRoom?.table_room_location_id;
-            if (locationId) {
-                router.visit(
-                    route("table-rooms.index", { locationId: locationId })
-                );
-            } else {
-                router.visit(route("table-rooms.index"));
-            }
-        }, 1500);
+        // setTimeout(() => {
+        //     let locationId = response.data?.tableRoom?.table_room_location_id;
+        //     if (locationId) {
+        //         router.visit(
+        //             route("table-rooms.index", { locationId: locationId })
+        //         );
+        //     } else {
+        //         router.visit(route("table-rooms.index"));
+        //     }
+        // }, 1500);
     } else {
         toast.add({
             severity: "error",

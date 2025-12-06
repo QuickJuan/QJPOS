@@ -1332,7 +1332,7 @@ class ThermalPrinterService {
             description: string;
             packaging: string;
             qty: number | string;
-            modifiers: Array<{ name: string; value: string }>;
+            modifiers: Array<string>;
             notes: string;
         }>;
         totalItems: number;
@@ -1407,12 +1407,7 @@ class ThermalPrinterService {
                     // Modifiers (options/add-ons)
                     if (item.modifiers && item.modifiers.length > 0) {
                         item.modifiers.forEach(modifier => {
-                            const modLine = `  + ${modifier.name}`;
-                            if (modifier.value) {
-                                commands.push(...this.stringToBytes(`${modLine}: ${modifier.value}`));
-                            } else {
-                                commands.push(...this.stringToBytes(modLine));
-                            }
+                            commands.push(...this.stringToBytes(`  - ${modifier}`));
                             commands.push(...this.ESC_POS.LINE_FEED);
                         });
                     }

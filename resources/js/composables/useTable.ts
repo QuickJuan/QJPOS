@@ -52,7 +52,8 @@ export const useTable = () => {
                 table_id: tableId,
             }
         );
-        return response;
+        console.log("Place Order Response:", response);
+       return response;
     };
 
     const takeOrder = async (tableId: number, data: { pax: number; guest_name: string }) => {
