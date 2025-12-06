@@ -7,6 +7,7 @@ use App\Services\CartService;
 use App\Services\PaymentService;
 use Illuminate\Http\JsonResponse;
 use App\Http\Requests\CartRequest;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\RedirectResponse;
 use App\Services\CashierSessionService;
 use App\Http\Requests\PlaceOrderRequest;
@@ -40,7 +41,7 @@ class CartController extends Controller
             ], 201);
             // return redirect()->back()->with('success', 'Cart created successfully.');
         } catch (Exception $e) {
-            \Log::error('Cart creation error: ' . $e->getMessage());
+            Log::error('Cart creation error: ' . $e->getMessage());
             // return redirect()->back()->with('error', 'There was an error creating cart.');
             return response()->json([
                 'success' => false,

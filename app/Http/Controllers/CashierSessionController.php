@@ -5,21 +5,17 @@ use Exception;
 use Inertia\Inertia;
 use Inertia\Response;
 use App\Models\Product;
-use App\Models\Category;
 use App\Models\Modifier;
 use App\Models\TableRoom;
 use Illuminate\Http\Request;
-use App\Services\CartService;
 use App\Models\TableRoomLocation;
-use App\Services\DiscountService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\RedirectResponse;
 use App\Http\Resources\ProductResource;
 use App\Services\CashierSessionService;
-use App\Http\Resources\CategoryResource;
 use App\Services\GeneralSettingsService;
-use App\Http\Requests\CashierSessionRequest;
 use App\Services\ProductCategoryService;
+use App\Http\Requests\CashierSessionRequest;
 
 class CashierSessionController extends Controller
 {
@@ -32,6 +28,8 @@ class CashierSessionController extends Controller
     {
         // Get categories with active products
         $categories = $this->productCategoryService->getCategoriesWithProductsAsResources();
+        $modifiers = Modifier::withMappedData();
+
         if ($request->has('tableId')) {
             $tableId      = $request->input('tableId');
             $currentTable = TableRoom::find($tableId);
@@ -41,8 +39,9 @@ class CashierSessionController extends Controller
 
         // Cart is now provided by HandleInertiaRequests middleware via shared props
         return Inertia::render('Resto/Index', [
-            'currentTable' => $currentTable,
-            'categories' => $categories,
+            'currentTable'       => $currentTable,
+            'categories'         => $categories,
+            'availableModifiers' => $modifiers,
         ]);
     }
 

@@ -123,7 +123,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { route } from "ziggy-js";
 import { router } from "@inertiajs/vue3";
 import axios from "axios";
@@ -151,6 +151,14 @@ const beginningCash = ref("");
 const showCloseDialog = ref(false);
 const showSessionSummaryModal = ref(false);
 const sessionSummaryData = ref(null);
+
+// Check for auto_close query parameter and open modal automatically
+onMounted(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('auto_close') === 'true' && props.openSession) {
+        showCloseDialog.value = true;
+    }
+});
 
 const continueSession = () => {
     router.visit(route("resto.index"));

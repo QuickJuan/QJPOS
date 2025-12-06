@@ -603,25 +603,8 @@ const handleViewTable = () => {
 };
 
 const handleEndOfShift = () => {
-    // Handle end of shift logic - could emit an event or show confirmation
-    confirm.require({
-        message: "Are you sure you want to end your shift?",
-        header: "End of Shift",
-        icon: "pi pi-exclamation-triangle",
-        rejectProps: {
-            label: "Cancel",
-            severity: "secondary",
-            outlined: true,
-        },
-        acceptProps: {
-            label: "End Shift",
-            severity: "danger",
-        },
-        accept: () => {
-            // Redirect to close session or handle shift end
-            router.visit(route("home"));
-        },
-    });
+    // Handle end of shift logic - redirect to session preview to properly close session
+    router.visit(route("resto.preview") + "?auto_close=true");
 };
 
 const handleRedirectToTables = () => {
