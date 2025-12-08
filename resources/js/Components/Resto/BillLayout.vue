@@ -140,7 +140,7 @@
         </div>
 
         <div class="border-b border-dashed my-3"></div>
-        <pre>{{ lessTotalDiscount }}</pre>
+        <!-- <pre>{{ lessTotalDiscount }}</pre> -->
         <!-- Totals -->
         <div class="mt-3 mb-5">
             <!-- Subtotal -->

@@ -4,6 +4,7 @@ declare (strict_types = 1);
 
 use App\Http\Controllers\Api\ReceiptController;
 use App\Http\Controllers\Api\TableController;
+use App\Http\Controllers\CartController;
 use Illuminate\Support\Facades\Route;
 use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
@@ -27,6 +28,14 @@ Route::middleware([
     ->prefix('api')
     ->as('api.')
     ->group(function () {
+
+        // Cart API Routes
+        Route::as('carts.')
+            ->prefix('/carts')
+            ->controller(CartController::class)
+            ->group(function () {
+                Route::get('/{cartId}/print-bill', 'getPrintBillData')->name('print-bill');
+            });
 
         // Receipt API Routes
         Route::as('receipts.')

@@ -1,22 +1,22 @@
 <?php
 namespace App\Services;
 
-use Exception;
-use App\Models\Cart;
-use App\Models\Order;
-use App\Models\Branch;
-use App\Models\Product;
-use App\Models\CartItem;
-use App\Models\Discount;
-use App\Models\TableRoom;
-use Illuminate\Http\Request;
-use App\Models\CashierSession;
-use App\Models\ProductPackaging;
 use App\Enums\TableRoomStatusType;
-use Illuminate\Support\Facades\DB;
 use App\Http\Resources\CartResource;
-use Illuminate\Support\Facades\Auth;
 use App\Http\Resources\PreparationItemCollectionResource;
+use App\Models\Branch;
+use App\Models\Cart;
+use App\Models\CartItem;
+use App\Models\CashierSession;
+use App\Models\Discount;
+use App\Models\Order;
+use App\Models\Product;
+use App\Models\ProductPackaging;
+use App\Models\TableRoom;
+use Exception;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class CartService
 {
@@ -682,10 +682,19 @@ class CartService
 
     public function getCartByTableAsResource(int $tableId): ?CartResource
     {
-        $cart =  $this->model->where('table_room_id', $tableId)
+        $cart = $this->model->where('table_room_id', $tableId)
             ->with(['cartItems.product', 'cartItems.productPackaging', 'tableRoom'])
             ->first();
 
         return new CartResource($cart);
+    }
+
+    public function getPrintBillData(int $cartId)
+    {
+        $cart = $this->model
+            ->with(['cartItems', 'cartItems.product', 'cashierSession.branch', 'customer'])
+            ->find($cartId);
+
+        return $cart;
     }
 }
