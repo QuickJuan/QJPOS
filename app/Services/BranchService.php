@@ -38,9 +38,9 @@ class BranchService
     public function getNextBillNumber(int $branchId): int
     {
         $branch = $this->model->findOrFail($branchId);
-        $branch->increment('bill_number');
+        $branch->increment('bill_no');
 
-        return $branch->bill_number;
+        return $branch->bill_no;
     }
 
 }

@@ -295,14 +295,10 @@ class CartController extends Controller
         try {
             $cart = $this->cartService->getPrintBillData($cartId);
 
-            if (! $cart) {
-                return response()->json(['message' => 'Cart not found'], 404);
-            }
-
             return response()->json(new CartResource($cart), 200);
 
         } catch (Exception $e) {
-            return response()->json(['message' => 'Cart not found'], 400);
+            return response()->json(['message' => 'There was an error in fetching print bill data' . $e->getMessage()], 400);
         }
     }
 }

@@ -868,7 +868,7 @@ class ThermalPrinterService {
 
             // Table header - medium size and centered
             commands.push(...this.ESC_POS.ALIGN_CENTER);
-            this.addTextWithSize(commands, ` ${billData.tableInfo.name || 'N/A'}`, 'medium');
+            this.addTextWithSize(commands, ` ${billData.tableInfo || 'N/A'}`, 'medium');
             commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
             // Bill Info - left align

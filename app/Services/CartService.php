@@ -695,6 +695,21 @@ class CartService
             ->with(['cartItems', 'cartItems.product', 'cashierSession.branch', 'customer'])
             ->find($cartId);
 
-        return $cart;
+        if (! $cart) {
+            throw new Exception("Cart not foundsss.");
+        }
+
+        $branchId = $cart->branch_id ?? optional($cart->cashierSession)->branch_id ?? null;
+
+        if ($branchId) {
+            // Update the bill number for the cart
+            $billNumber = $this->branchService->getNextBillNumber($branchId);
+
+            // Update Bill No.
+            $cart->bill_no = $billNumber;
+            $cart->save();
+        }
+
+        return $cart->fresh();
     }
 }
