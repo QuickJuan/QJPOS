@@ -25,7 +25,6 @@ class CartItemResource extends JsonResource
             });
 
             $result[] = [
-                'cartId'    => $items->first()->cart_id ?? null,
                 'orderType' => $this->formatOrderType($orderType),
                 'cartItems' => $parentItems->map(function ($item) use ($orderType) {
                     return [
@@ -48,7 +47,7 @@ class CartItemResource extends JsonResource
                         'is_served'        => $item->is_served ?? false,
                         'placed_order'     => $item->placed_order ?? false,
                         'selectedOptions'  => $item->meta_data['selected_options'] ?? [],
-                        'modifiers'        => $item->meta_data['modifiers'] ?? [],
+                        'modifiers'        => $item->meta_data['modifier'] ?? [],
                         'sub_items'        => $this->getSubItems($item->id),
                         'notes'            => $item->notes,
                         'product'          => $item->product,
