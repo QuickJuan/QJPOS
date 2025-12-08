@@ -62,7 +62,7 @@
                 <div v-for="item in items" :key="item.id" class="my-3">
                     <template v-if="item.parent_id == null">
                         <div class="flex justify-between">
-                            <span class="flex-1">{{ item?.product?.name }}</span>
+                            <span class="flex-1">{{ item.description }}</span>
                         </div>
                         <div
                             v-if="item.quantity >= 1"
