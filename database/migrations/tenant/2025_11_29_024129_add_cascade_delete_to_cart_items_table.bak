@@ -12,6 +12,28 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Clean up orphaned records before adding foreign key constraints
+        
+        // Remove cart_items with non-existent product_packaging_id
+        DB::statement("
+            DELETE FROM cart_items 
+            WHERE product_packaging_id IS NOT NULL 
+            AND product_packaging_id NOT IN (SELECT id FROM product_packagings)
+        ");
+        
+        // Remove cart_items with non-existent product_id
+        DB::statement("
+            DELETE FROM cart_items 
+            WHERE product_id IS NOT NULL 
+            AND product_id NOT IN (SELECT id FROM products)
+        ");
+        
+        // Remove cart_items with non-existent cart_id
+        DB::statement("
+            DELETE FROM cart_items 
+            WHERE cart_id NOT IN (SELECT id FROM carts)
+        ");
+        
         // Check if constraints exist before adding them
         $constraintNames = DB::select("
             SELECT CONSTRAINT_NAME 
