@@ -460,40 +460,6 @@ const handleSettleBill = (data: any) => {
         });
         return;
     }
-
-    axios
-        .post(route("resto.cart.settle-bill", { cartId: data.cart_id }), {
-            amount_paid: data.amount_paid,
-            total_amount: data.total_amount,
-            location_type: props.locationType,
-            branch_id: page.props?.active_branch?.id,
-        })
-        .then((response) => {
-            toast.add({
-                severity: "success",
-                summary: "Success",
-                detail: response.data.message,
-                life: 3000,
-            });
-
-            console.log("response", response.data);
-            const order = response.data.data;
-            // const getReceipt = axios.get(`/api/receipts/${response.se}/${}`, { cartId: data.cart_id }));
-
-            // Emit event to show receipt modal using the returned order
-            emit("showReceipt", response.data.data);
-        })
-        .catch((error) => {
-            toast.add({
-                severity: "error",
-                summary: "Error",
-                detail:
-                    error.response?.data?.message || "Failed to settle bill",
-                life: 3000,
-            });
-
-            console.error(error);
-        });
 };
 
 const handleAddModifier = () => {
