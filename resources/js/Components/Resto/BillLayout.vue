@@ -17,7 +17,7 @@
             <p class="text-sm">{{ businessPhone }}</p>
             <div class="border-b border-dashed mt-2"></div>
             <h2 class="text-lg font-semibold mt-2">
-                Table #: {{ tableInfo.name }}
+                Table #: {{ tableInfo }}
             </h2>
         </div>
 
