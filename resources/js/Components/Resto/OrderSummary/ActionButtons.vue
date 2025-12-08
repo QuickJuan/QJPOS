@@ -219,14 +219,10 @@ const billData = ref({
     date: new Date().toISOString(),
     tableInfo: "",
     cashierName: "",
-    orderType: "",
     orderItems: [] as any[],
     subtotal: 0,
     lessTax: 0,
     lessDiscount: 0,
-    // discountName: null as string | null,
-    // discountType: null as string | null,
-    // removeTax: false,
     totalAmount: 0,
 });
 
@@ -302,6 +298,7 @@ const handlePrintBill = async () => {
         `/api/carts/${page.props.cart?.id}/print-bill`
     );
     const responseData = response.data;
+    console.log(responseData);
 
     // Populate bill data
     billData.value = {
@@ -309,14 +306,10 @@ const handlePrintBill = async () => {
         date: responseData.cart_date,
         tableInfo: responseData.table_number,
         cashierName: responseData.cashier?.name,
-        orderType: props.selectedOrderType,
-        orderItems: responseData.cart_items[0].cartItems,
+        orderItems: responseData.cart_items,
         subtotal: responseData.totals.subtotal,
         lessTax: responseData.totals.less_tax,
         lessDiscount: responseData.totals.less_discount,
-        // discountName: props.appliedDiscount?.discountName || null,
-        // discountType: props.appliedDiscount?.discountType || null,
-        // removeTax: props.appliedDiscount?.removeTax || false,
         totalAmount: parseFloat(props.total.toFixed(2)),
     };
 

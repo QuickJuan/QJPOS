@@ -85,12 +85,6 @@
                                         class="w-full h-auto block"
                                     />
                                 </div>
-
-                                <img
-                                    src="/images/pos-reader.svg"
-                                    alt="Card reader"
-                                    class="absolute bottom-4 left-6 w-20 md:w-24 transform rotate-6 shadow-lg"
-                                />
                             </div>
                         </div>
                     </div>
