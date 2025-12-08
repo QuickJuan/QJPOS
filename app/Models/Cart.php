@@ -23,6 +23,7 @@ class Cart extends Model
         'total_due',
         'amount_tendered',
         'session_id',
+        'bill_no',
         'notes',
         'meta_data',
     ];
@@ -34,14 +35,16 @@ class Cart extends Model
     // SCOPES
     public function scopeAuthCashier(Builder $query)
     {
-        $query->where('cashier_id', Auth::id());
+        return $query->where('cashier_id', Auth::id());
     }
 
-    public function scopeCashierOpenSession(Builder $query, $cashierSessionId)
+    public function scopeCashierOpenSession(Builder $query, int $cashierSessionId)
     {
         if ($cashierSessionId) {
-            $query->where('cashier_session_id', $cashierSessionId);
+            return $query->where('cashier_session_id', $cashierSessionId);
         }
+
+        return $query;
     }
 
     public function cashier(): BelongsTo

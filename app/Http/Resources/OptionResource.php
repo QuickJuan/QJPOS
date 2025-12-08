@@ -14,10 +14,13 @@ class OptionResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'          => $this->id,
-            'option_name' => $this->option_name,
-            'optionItems' => $this->whenLoaded('optionItems'),
-            'optionImage' => $this->getFirstMediaUrl('featured_image'),
+            'id'           => $this->id,
+            'option_name'  => $this->option_name,
+            'max_quantity' => $this->products->max('pivot.max_quantity'),
+            'is_default'   => (bool) $this->products->max('pivot.is_default'),
+            'products'     => $this->products,
+            'optionItems'  => $this->whenLoaded('optionItems'),
+            'optionImage'  => $this->getFirstMediaUrl('featured_image'),
         ];
     }
 }

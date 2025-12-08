@@ -1,6 +1,7 @@
 <template>
     <div class="flex flex-col">
         <div
+            v-if="!hideLabel"
             class="flex justify-between items-end text-gray-700 dark:text-gray-300"
         >
             <InputLabel :for="id">
@@ -50,6 +51,7 @@ const props = defineProps<{
     searchable?: boolean;
     modelValue: any;
     options: Array<any>;
+    hideLabel?: boolean;
 }>();
 
 const computedOptions = computed(() => [

@@ -1,17 +1,15 @@
 <?php
 namespace App\Http\Controllers;
 
-use App\Enums\Receipt\Type;
 use App\Http\Requests\CashierSessionRequest;
-use App\Http\Resources\CategoryResource;
 use App\Http\Resources\ProductResource;
-use App\Models\Category;
 use App\Models\Modifier;
 use App\Models\Product;
 use App\Models\TableRoom;
 use App\Models\TableRoomLocation;
 use App\Services\CashierSessionService;
-use App\Services\DiscountService;
+use App\Services\GeneralSettingsService;
+use App\Services\ProductCategoryService;
 use Exception;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,67 +21,30 @@ class CashierSessionController extends Controller
 {
     public function __construct(
         protected CashierSessionService $cashierSessionService,
-        protected DiscountService $discountService
-    ) {
-        $this->cashierSessionService = $cashierSessionService;
-        $this->discountService       = $discountService;
+        protected ProductCategoryService $productCategoryService
+    ) {}
+
+    public function index(Request $request): Response
+    {
+        $categories         = $this->productCategoryService->getCategoriesWithProductsAsResources();
+        if ($request->has('tableId')) {
+            $tableId      = $request->input('tableId');
+            $currentTable = TableRoom::find($tableId);
+        } else {
+            $currentTable = null;
+        }
+
+        // Cart is now provided by HandleInertiaRequests middleware via shared props
+        return Inertia::render('Resto/Index', [
+            'categories'         => $categories,
+            'currentTable'       => $currentTable,
+        ]);
     }
 
-    public function index(Request $request, ?string $categorySlug = null): Response
+    public function preview(Request $request): Response
     {
-        // Check if the current auth user has pending cashiering.
-        $pendingCashiering = $this->cashierSessionService->model->openSession()->with('cashier')->first();
-
-        // Get categories with products directly (will be cached in browser)
-        $categoriesQuery = Category::with(['products' => fn($query) => $query->where('is_active', true)->with('productPackagings', 'options')])->get();
-        $categories      = CategoryResource::collection($categoriesQuery);
-        $taxRate         = config('sales.tax_rate');
-
-        // Get available discounts
-        $discounts = $this->discountService->getDiscounts();
-
-        // Get available modifiers
-        $modifiers = Modifier::withMappedData();
-
-        // Get cart and cart items for current session
-        $cartData     = $this->cashierSessionService->getCartData($request, $pendingCashiering);
-        $cart         = $cartData['cart'];
-        $cartItems    = $cartData['cartItems'];
-        $currentTable = $cartData['currentTable'];
-
-        // Calculate totals
-        $totals        = $this->cashierSessionService->calculateTotals($cart, $cartItems);
-        $billFooter    = $this->cashierSessionService->getReceiptFooter(Type::BILL->value);
-        $receiptFooter = $this->cashierSessionService->getReceiptFooter(Type::RECEIPT->value);
-        $billNumber    = $this->cashierSessionService->getBillNo(session('active_branch')->id);
-        $receiptNumber = $this->cashierSessionService->getReceiptNo(session('active_branch')->id);
-
-        // Prepare view data
-        $viewData = $this->cashierSessionService->prepareViewData(
-            $categories,
-            $pendingCashiering,
-            $cart,
-            $cartItems,
-            $discounts,
-            $modifiers,
-            $currentTable,
-            $taxRate,
-            $totals,
-            $billFooter,
-            $receiptFooter,
-            $billNumber,
-            $receiptNumber,
-        );
-
-        // Add selected category slug to view data
-        $viewData['selectedCategorySlug'] = $categorySlug;
-
-        return Inertia::render('RetailCashier/Index', $viewData);
-    }
-
-    public function preview(): Response
-    {
-        $activeBranch = session('active_branch');
+        $activeBranch    = $request->user()->cashierSession->branch;
+        $generalSettings = app(GeneralSettingsService::class)->getCompanySettings();
 
         // Check if the current auth user has an open cashier session (closing_time is null)
         $openSession = $this->cashierSessionService->model
@@ -95,10 +56,12 @@ class CashierSessionController extends Controller
             $sessionSummary = $this->cashierSessionService->getSessionSummary($openSession);
         }
 
-        return Inertia::render('RetailCashier/Preview', [
-            'activeBranch'   => $activeBranch,
-            'openSession'    => $openSession,
-            'sessionSummary' => $sessionSummary ?? null,
+        // dd($sessionSummary);
+        return Inertia::render('Resto/Preview', [
+            'activeBranch'    => $activeBranch,
+            'openSession'     => $openSession,
+            'sessionSummary'  => $sessionSummary ?? null,
+            'generalSettings' => $generalSettings,
         ]);
     }
 
@@ -107,7 +70,7 @@ class CashierSessionController extends Controller
         try {
             $this->cashierSessionService->startSession($request);
 
-            return redirect()->route('retail-cashier.index')->with('success', 'New session successfully created');
+            return redirect()->route('resto.index')->with('success', 'New session successfully created');
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'There was an error while starting new session.');
         }
@@ -115,9 +78,9 @@ class CashierSessionController extends Controller
 
     public function productOptions(int $productId): Response
     {
-        $product = Product::with(['options.optionItems.product.media'])->findOrFail($productId);
+        $product = Product::with(['options.products', 'options.optionItems.productPackaging', 'options.optionItems.product.media', 'options.optionItems.product.productPackagings'])->findOrFail($productId);
 
-        return Inertia::render('RetailCashier/ProductOption', [
+        return Inertia::render('Resto/ProductOption', [
             'product' => ProductResource::make($product),
         ]);
     }
@@ -135,10 +98,15 @@ class CashierSessionController extends Controller
 
     public function getSessionSummary(Request $request)
     {
-        $openSession = $this->cashierSessionService->model->openSession()->with('cashier')->first();
+        $session = $this->cashierSessionService->model->openSession()->with('cashier')->first();
 
-        if ($openSession) {
-            $sessionSummary = $this->cashierSessionService->getSessionSummary($openSession);
+        if (! $session) {
+            // If no open session, get the latest session (just closed)
+            $session = $this->cashierSessionService->model->where('cashier_id', Auth::id())->latest()->first();
+        }
+
+        if ($session) {
+            $sessionSummary = $this->cashierSessionService->getSessionSummary($session);
             return response()->json($sessionSummary);
         }
 
@@ -204,7 +172,7 @@ class CashierSessionController extends Controller
                 'location_type' => $location->location_type,
             ]);
 
-        return Inertia::render('RetailCashier/Tables', [
+        return Inertia::render('Resto/Tables', [
             'tables'      => $tables,
             'locations'   => $locations,
             'currentUser' => Auth::user(),
@@ -216,7 +184,7 @@ class CashierSessionController extends Controller
         try {
             [$table, $cart] = $this->cashierSessionService->createOrder($request);
 
-            return redirect()->route('retail-cashier.index', ['tableId' => $request->table_id, 'locationType' => $table->tableRoomLocation->location_type])->with('success', 'Order started successfully');
+            return redirect()->route('resto.index', ['tableId' => $request->table_id, 'locationType' => $table->tableRoomLocation->location_type])->with('success', 'Order started successfully');
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'Failed to start order: ' . $e->getMessage());
         }

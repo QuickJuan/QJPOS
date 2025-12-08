@@ -100,7 +100,7 @@ const actions = [
     //     icon: AnalyticsIcon,
     // },
     {
-        route: "retail-cashier.preview",
+        route: "resto.preview",
         name: "Start Cashiering",
         description: "Process sales transactions and manage POS",
         icon: CashieringIcon,

@@ -18,23 +18,24 @@ class CashierSession extends Model
         'closing_cash',
         'total_sales',
         'check_by',
+        'cash_denomination_details',
         'cash_denomination',
         'meta_data',
         'notes',
     ];
 
     protected $casts = [
-        'business_date'     => 'datetime',
-        'started_time'      => 'datetime',
-        'closing_time'      => 'datetime',
-        'cash_denomination' => 'array',
-        'meta_data'         => 'array',
+        'business_date'             => 'datetime',
+        'started_time'              => 'datetime',
+        'closing_time'              => 'datetime',
+        'cash_denomination_details' => 'array',
+        'meta_data'                 => 'array',
     ];
 
     public function scopeOpenSession(Builder $query): void
     {
         $query->where('cashier_id', Auth::id())
-            ->where('branch_id', session('active_branch')['id'])
+        // ->where('branch_id', session('active_branch')['id'])
             ->whereNull('closing_time');
     }
 
@@ -56,5 +57,10 @@ class CashierSession extends Model
     public function orders()
     {
         return $this->hasMany(Order::class);
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
     }
 }

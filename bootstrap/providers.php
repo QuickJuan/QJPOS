@@ -2,6 +2,7 @@
 
 return [
     App\Providers\AppServiceProvider::class,
+    App\Providers\BackupServiceProvider::class,
     App\Providers\Filament\AdminPanelProvider::class,
     App\Providers\Filament\TenantPanelPanelProvider::class,
     App\Providers\Filament\TenantPanelProvider::class,

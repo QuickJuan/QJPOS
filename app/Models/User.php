@@ -2,14 +2,15 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Foundation\Auth\User as Authenticatable;
+use Laravel\Sanctum\HasApiTokens;
+use Laravel\Jetstream\HasProfilePhoto;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
-use Laravel\Jetstream\HasProfilePhoto;
-use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class User extends Authenticatable
 {
@@ -91,5 +92,30 @@ class User extends Authenticatable
     public function cashierSessions(): HasMany
     {
         return $this->hasMany(CashierSession::class, 'cashier_id');
+    }
+
+
+    public function cashierSession(): HasOne
+    {
+        return $this->hasOne(CashierSession::class, 'cashier_id')->latestOfMany();
+
+    }
+
+    public function hasOpenSessionToAnotherBranch(Branch $branch): bool
+    {
+        return $this->cashierSessions()
+            ->where('branch_id', '!=', $branch->id)
+            ->whereNull('closing_time')
+            ->exists();
+    }
+
+    public function getBranchWithOpenSession(Branch $branch): ?Branch
+    {
+        $session = $this->cashierSessions()
+            ->where('branch_id', '!=', $branch->id)
+            ->whereNull('closing_time')
+            ->first();
+
+        return $session ? $session->branch : null;
     }
 }

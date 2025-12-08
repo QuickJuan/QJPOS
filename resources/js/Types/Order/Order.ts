@@ -2,8 +2,14 @@ import OrderItem from "./OrderItem";
 
 export default interface Order {
     id: number;
+    invoice_no?: string;
     cashier?: { name: string };
     table_room?: { customer_name: string; name?: string };
+    customer?: { customer_name: string };
+    or_number?: string;
+    bill_number?: string;
+    payment_method: string;
+    total_amount: number;
     status: string;
     created_at: string;
     meta_data?: {

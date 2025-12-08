@@ -1,21 +1,38 @@
 <?php
 namespace App\Http\Controllers;
 
-use App\Http\Requests\TableReservationRequest;
-use App\Http\Requests\TableRoomRequest;
-use App\Models\TableRoomLocation;
-use App\Services\TableRoomService;
 use Exception;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
+use App\Models\Cart;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Http\Request;
+use App\Models\TableRoomLocation;
+use App\Enums\TableRoomStatusType;
+use App\Services\TableRoomService;
+use Illuminate\Http\RedirectResponse;
+use App\Http\Requests\TableRoomRequest;
+use App\Http\Resources\TableLocationResource;
+use App\Http\Requests\TableReservationRequest;
 
 class TableRoomController extends Controller
 {
     public function __construct(protected TableRoomService $tableRoomService)
     {
         $this->tableRoomService = $tableRoomService;
+    }
+
+
+    public function index(Request $request)
+    {
+
+        //get the active branch using user cashier id from session
+        $cashierSession = $request->user()->cashierSession;
+
+        $tableRooms = $this->tableRoomService->list($cashierSession->branch_id);
+
+        return Inertia::render('Resto/Tables', [
+            'tableRooms' => json_decode(json_encode(TableLocationResource::collection($tableRooms)), true),
+        ]);
     }
 
     public function list(): Response
@@ -90,7 +107,7 @@ class TableRoomController extends Controller
         try {
             $this->tableRoomService->mergeTable($tableId, $validated['merge_to']);
 
-            return redirect()->route('retail-cashier.tables')->with('success', 'Table merged successfully.');
+            return redirect()->route('resto.tables')->with('success', 'Table merged successfully.');
         } catch (Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
         }
@@ -101,7 +118,7 @@ class TableRoomController extends Controller
         try {
             $this->tableRoomService->reserveTable($request);
 
-            return redirect()->route('retail-cashier.tables')->with('success', 'Table reservation created successfully.');
+            return redirect()->route('resto.tables')->with('success', 'Table reservation created successfully.');
         } catch (Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
         }
@@ -112,7 +129,38 @@ class TableRoomController extends Controller
         try {
             $this->tableRoomService->unmergeTable($tableId);
 
-            return redirect()->route('retail-cashier.tables')->with('success', 'Table unmerged successfully.');
+            $redirectUrl = route('table-rooms.index');
+            if ($request->has('locationId')) {
+                $redirectUrl .= '?locationId=' . $request->query('locationId');
+            }
+
+            return redirect($redirectUrl)->with('success', 'Table unmerged successfully.');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+    }
+
+    public function unmergeAllTables(Request $request, int $tableId): RedirectResponse
+    {
+        try {
+            // Get the table to unmerge all its merged tables
+            $table = $this->tableRoomService->model->find($tableId);
+            if (!$table) {
+                return redirect()->back()->with('error', 'Table not found.');
+            }
+
+            // Unmerge all tables that are merged to this table
+            $mergedTables = $table->mergedTables;
+            foreach ($mergedTables as $mergedTable) {
+                $this->tableRoomService->unmergeTable($mergedTable->id);
+            }
+
+            $redirectUrl = route('table-rooms.index');
+            if ($request->has('locationId')) {
+                $redirectUrl .= '?locationId=' . $request->query('locationId');
+            }
+
+            return redirect($redirectUrl)->with('success', 'All merged tables unmerged successfully.');
         } catch (Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
         }
@@ -154,6 +202,18 @@ class TableRoomController extends Controller
             return redirect()->back()->with('success', 'Table positions updated successfully.');
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'Failed to bulk update positions.');
+        }
+    }
+
+    public function vacantTable(int $tableId): RedirectResponse
+    {
+        try {
+            $this->tableRoomService->vacantTable($tableId);
+
+            return redirect()->back()->with('success', 'Table has been set to Available successfully.');
+
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'Failed to set table to Available: ' . $e->getMessage());
         }
     }
 }

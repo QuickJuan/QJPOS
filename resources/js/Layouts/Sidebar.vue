@@ -1,6 +1,8 @@
 <template>
     <aside class="w-64 bg-purple-700 text-white flex flex-col">
-        <div class="p-4 text-2xl font-bold">QJPOS - {{ $page?.props?.active_branch?.name }}</div>
+        <div class="p-4 text-2xl font-bold">
+            QJPOS - {{ $page?.props?.active_branch?.name }}
+        </div>
         <nav class="flex-1 px-2 space-y-2">
             <a
                 v-for="item in navigation"
@@ -40,6 +42,7 @@ import {
     ChartBarIcon,
     ArrowRightOnRectangleIcon as LogoutIcon,
     ReceiptRefundIcon,
+    PrinterIcon,
 } from "@heroicons/vue/24/outline";
 import { ref } from "vue";
 
@@ -52,7 +55,18 @@ const navigation = ref([
     { name: "Sales", href: "#", icon: RectangleGroupIcon, current: false },
     { name: "Inventory", href: "#", icon: RectangleStackIcon, current: false },
     { name: "Attendance", href: "#", icon: TagIcon, current: false },
-    { name: "Transactions", href: "/transactions", icon: ReceiptRefundIcon, current: false },
+    {
+        name: "Transactions",
+        href: "/transactions",
+        icon: ReceiptRefundIcon,
+        current: false,
+    },
+    {
+        name: "Printer Config",
+        href: "/printer-config",
+        icon: PrinterIcon,
+        current: false,
+    },
     { name: "Reports", href: "#", icon: ChartBarIcon, current: false },
 ]);
 </script>

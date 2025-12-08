@@ -1,33 +1,65 @@
 <?php
 namespace App\Services;
 
-use App\Enums\TableRoomLocation\LocationType;
 use App\Enums\TableRoomStatusType;
+use App\Http\Resources\CartResource;
+use App\Http\Resources\PreparationItemCollectionResource;
 use App\Models\Branch;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\CashierSession;
 use App\Models\Discount;
 use App\Models\Order;
-use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductPackaging;
 use App\Models\TableRoom;
 use Exception;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class CartService
 {
     protected float $taxRate;
 
-    public function __construct(public Cart $model, public CashierSession $cashierSession, public DiscountService $discountService)
+    public function __construct(public Cart $model, public CashierSession $cashierSession, public DiscountService $discountService, public BranchService $branchService)
     {
         $this->model           = $model;
         $this->cashierSession  = $cashierSession;
         $this->discountService = $discountService;
+        $this->branchService   = $branchService;
         $this->taxRate         = config('sales.tax_rate');
+    }
+
+    public function createCart($payload)
+    {
+        //DB transaction to maintain consistency
+        try {
+            return DB::transaction(function () use ($payload) {
+                $table = TableRoom::find($payload['table_id']);
+                if (! $table) {
+                    throw new Exception('Table not found.');
+                }
+
+                //find if ther is a cart that is associated with the table
+                $cart = Cart::firstOrCreate([
+                    'cashier_id'         => Auth::id(),
+                    'cashier_session_id' => $payload->user()->cashierSession->id,
+                    'table_room_id'      => $table->id,
+                ]);
+
+                $table->update([
+                    'status'  => TableRoomStatusType::OCCUPIED->value,
+                    'time_in' => now(),
+                ]);
+
+                return $cart;
+            });
+
+        } catch (Exception $e) {
+            throw new Exception('Failed to create cart: ' . $e->getMessage());
+        }
+
     }
 
     public function addToCart(Request $request)
@@ -67,7 +99,8 @@ class CartService
 
         $cartItem = $cart->cartItems()
             ->create([
-                'product_id'           => $request['product_id'],
+                'product_id'           => $product->id,
+                'description'          => $product->receipt_alias,
                 'product_packaging_id' => $request['product_packaging_id'] ?? null,
                 'quantity'             => $quantity,
                 'price'                => $price,
@@ -77,29 +110,150 @@ class CartService
             ]);
 
         if ($withParent) {
-            foreach ($newSelectedOptions as $option) {
-                try {
-                    $cartItem->children()
-                        ->create([
-                            'parent_id'            => $cartItem->id,
-                            'cart_id'              => $cartItem->cart_id,
-                            'product_id'           => $option['product_id'],
-                            'product_packaging_id' => $option['product_packaging_id'] ?? null,
-                            'quantity'             => 1,
-                            'price'                => $option['price'],
-                            'amount'               => $option['price'],
-                            'order_type'           => $orderType,
-                            'sub_total'            => $option['price'],
+            foreach ($newSelectedOptions as $selectedOption) {
+                foreach ($selectedOption['items'] as $item) {
+                    try {
+                        $cartItem->children()
+                            ->create([
+                                'parent_id'            => $cartItem->id,
+                                'cart_id'              => $cartItem->cart_id,
+                                'product_id'           => $item['product_id'],
+                                'product_packaging_id' => $item['product_packaging_id'] ?? null,
+                                'quantity'             => $item['quantity'],
+                                'price'                => $item['price'],
+                                'amount'               => $item['price'] * $item['quantity'],
+                                'order_type'           => $orderType,
+                                'sub_total'            => $item['price'] * $item['quantity'],
+                            ]);
+                    } catch (\Throwable $e) {
+                        info('Failed on option:', [
+                            'message' => $e->getMessage(),
                         ]);
-                } catch (\Throwable $e) {
-                    info('Failed on option:', [
-                        'message' => $e->getMessage(),
-                    ]);
+                    }
                 }
             }
         }
 
         return $cartItem->load('children');
+    }
+
+    public function updateCart(Request $request, int $cartId): mixed
+    {
+        $cashierSession = $this->cashierSession->openSession()->first();
+
+        if (! $cashierSession) {
+            throw new Exception('No active cashier session found.');
+        }
+
+        $cart = Cart::find($cartId);
+
+        if (! $cart) {
+            throw new Exception('Cart not found.');
+        }
+
+        // Verify the cart belongs to the current cashier session
+        if ($cart->cashier_session_id !== $cashierSession->id) {
+            throw new Exception('Unauthorized cart access.');
+        }
+
+        // Update cart properties
+        $updateData = $request->only(['table_id', 'order_type', 'customer_name', 'customer_phone']);
+
+        // Remove null values to avoid overwriting existing data with null
+        $updateData = array_filter($updateData, function ($value) {
+            return $value !== null;
+        });
+
+        if (empty($updateData)) {
+            throw new Exception('No valid data provided for update.');
+        }
+
+        $cart->update($updateData);
+
+        return $cart->fresh();
+    }
+
+    public function mergeCart(Request $request, int $sourceCartId, int $targetTableId): mixed
+    {
+        $cashierSession = $this->cashierSession->openSession()->first();
+
+        if (! $cashierSession) {
+            info('no active cashier seeion');
+            throw new Exception('No active cashier session found.');
+        }
+
+        // Find the source cart
+        $sourceCart = Cart::find($sourceCartId);
+        if (! $sourceCart) {
+            info('source caret not found');
+            throw new Exception('Source cart not found.');
+        }
+
+        // Verify the source cart belongs to the current cashier session
+        if ($sourceCart->cashier_session_id !== $cashierSession->id) {
+            info('unauthorized');
+            throw new Exception('Unauthorized source cart access.');
+        }
+
+        // Find the target cart by table ID
+        $targetCart = Cart::where('table_room_id', $targetTableId)
+            ->first();
+
+        if (! $targetCart) {
+            warning('Target table cart not found');
+            throw new Exception('Target table cart not found.');
+        }
+
+        // Get all cart items from source cart
+        $sourceCartItems = $sourceCart->cartItems;
+
+        if ($sourceCartItems->isEmpty()) {
+            warning('No Items to merge from the source cart');
+            throw new Exception('No items to merge from source cart.');
+        }
+
+        // Move all cart items from source cart to target cart
+        foreach ($sourceCartItems as $cartItem) {
+            $cartItem->update([
+                'cart_id' => $targetCart->id,
+            ]);
+
+            // Also update child items (options/addons) if any
+            $cartItem->children()->update([
+                'cart_id' => $targetCart->id,
+            ]);
+        }
+
+        // Recalculate target cart totals
+        $this->recalculateCartTotals($targetCart);
+
+        // Delete the source cart since it's now empty
+        $sourceCart->delete();
+
+        return $targetCart->fresh();
+
+        // return $targetCart->fresh(['cartItems']);
+    }
+
+    protected function recalculateCartTotals(Cart $cart): void
+    {
+        $cartItems = $cart->cartItems()->whereNull('parent_id')->get();
+
+        $subTotal      = 0;
+        $totalDiscount = 0;
+
+        foreach ($cartItems as $item) {
+            $subTotal += $item->sub_total;
+            $totalDiscount += $item->discount_amount ?? 0;
+        }
+
+        $totalAmount = $subTotal - $totalDiscount;
+
+        $cart->update([
+            'sub_total'       => $subTotal,
+            'discount_amount' => $totalDiscount,
+            'total_amount'    => $totalAmount,
+        ]);
     }
 
     public function updateCartItem(Request $request, int $cartItemId): mixed
@@ -212,6 +366,7 @@ class CartService
 
     public function applyModifierToCartItem(Request $request)
     {
+        // dd($request->all());
         $cashierSession = $this->cashierSession->openSession()->first();
 
         if (! $cashierSession) {
@@ -224,29 +379,88 @@ class CartService
             throw new Exception('Cart not found.');
         }
 
-        $cartItems = $cart->cartItems()->findMany($request->cartItemIds);
+        $cartItems = CartItem::findMany($request->cartItemIds);
 
         if ($cartItems->isEmpty()) {
             throw new Exception('Cart items is empty.');
         }
 
         return $cartItems->map(function ($cartItem) use ($request) {
-            $modifier = [];
+            $modifiers = [];
 
-            foreach ($request['modifierOptions'] as $key => $modifierOption) {
-                $modifier[$key] = $modifierOption;
+            foreach ($request['modifierOptions'] as $key => $options) {
+                foreach ($options as $option) {
+                    if (! empty($option['name'])) {
+                        $modifiers[] = $option['name'];
+                    }
+                }
             }
 
-            $modifier['specialInstructions'] = $request['specialInstructions'];
+            if (! empty($request['specialInstructions'])) {
+                $modifiers[] = $request['specialInstructions'];
+            }
+
+            $modifiers = array_values($modifiers);
+
+            // Check if cart item already has existing modifiers
+            $existingMetaData  = $cartItem->meta_data ?? [];
+            $existingModifiers = $existingMetaData['modifier'] ?? [];
+
+            // Merge existing modifiers with new modifiers
+            $allModifiers = array_merge($existingModifiers, $modifiers);
+
+            // Remove duplicates to avoid duplicate entries
+            $allModifiers = array_unique($allModifiers);
+
+            // Re-index the array
+            $allModifiers = array_values($allModifiers);
+
+            // Re-index the array
+            $existingMetaData['modifier'] = $allModifiers;
 
             $cartItem->update([
-                'meta_data' => [
-                    [
-                        'modifier' => $modifier,
-                    ],
-                ],
+                'meta_data' => $existingMetaData,
             ]);
         });
+    }
+
+    public function removeModifierFromCartItem(Request $request): mixed
+    {
+        $cashierSession = $this->cashierSession->openSession()->first();
+
+        if (! $cashierSession) {
+            throw new Exception('No active cashier session found.');
+        }
+
+        $cart = Cart::authCashier()->cashierOpenSession($cashierSession->id)->first();
+
+        if (! $cart) {
+            throw new Exception('Cart not found.');
+        }
+
+        $cartItem = CartItem::findOrFail($request->cartItemId);
+
+        if (! $cartItem) {
+            throw new Exception('Cart item not found.');
+        }
+
+        // Get current meta_data and remove the specific modifier
+        $currentMetaData = $cartItem->meta_data;
+        $modifierValue   = $request->modifierValue;
+
+        if (isset($currentMetaData['modifier']) && is_array($currentMetaData['modifier'])) {
+            $key = array_search($modifierValue, $currentMetaData['modifier']);
+
+            if ($key !== false) {
+                unset($currentMetaData['modifier'][$key]);
+                // Re-index the array to maintain consecutive numeric keys
+                $currentMetaData['modifier'] = array_values($currentMetaData['modifier']);
+            }
+        }
+
+        return $cartItem->update([
+            'meta_data' => $currentMetaData,
+        ]);
     }
 
     public function clearDiscountToCartItem(int $cartItemId): mixed
@@ -290,116 +504,67 @@ class CartService
 
     public function deleteCartItem(int $cartItemId): mixed
     {
-        $cashierSession = $this->cashierSession->openSession()->first();
-
-        if (! $cashierSession) {
-            throw new Exception('No active cashier session found.');
-        }
-
-        $cart = Cart::authCashier()->cashierOpenSession($cashierSession->id)->first();
-
-        if (! $cart) {
-            throw new Exception('Cart not found.');
-        }
 
         $cartItem = CartItem::findOrFail($cartItemId);
-
         if (! $cartItem) {
-            throw new Exception('Cart item not found.');
+            throw new Exception('Cart item is empty.');
         }
-
         return $cartItem->delete();
     }
 
-    public function placeOrder(Request $request, int $cartId): int | RedirectResponse
+    public function placeOrder($payload): mixed
     {
-        // Get the current open cashier session
-        $cart = Cart::findOrFail($cartId);
+        try {
+            return DB::transaction(function () use ($payload) {
+                // Get the current open cashier session
+                $cart        = Cart::findOrFail($payload['cart_id']);
+                $orderNumber = null;
 
-        return $cart->cartItems()->update([
-            'placed_order' => true,
-            'discount_id'  => $request->filled('discountId') ?? null,
-        ]);
-    }
+                $branchId = $cart->branch_id ?? $cart->cashierSession->branch_id ?? null;
+                if ($branchId) {
+                    // Update the bill number for the cart
+                    $orderNumber = $this->branchService->getNextOrderNumber($branchId);
+                }
 
-    public function settleBill(Request $request, int $cartId): mixed
-    {
-        $cart = Cart::findOrFail($cartId);
+                if ($cart) {
+                    // Update cart items to placed_order
+                    $cart->cartItems()
+                        ->where('placed_order', false)
+                        ->where('batch_number', null)
+                        ->update([
+                            'placed_order' => true,
+                            'batch_number' => $orderNumber,
+                        ]);
 
-        // Create the order
-        $order = Order::create([
-            'cashier_id'         => $cart->cashier_id,
-            'cashier_session_id' => $cart->cashier_session_id,
-            'table_room_id'      => $cart->table_room_id,
-            'notes'              => $cart->notes,
-            'meta_data'          => [
-                'amount_paid'  => $request->amount_paid,
-                'total_amount' => $request->total_amount,
-                'change'       => $request->amount_paid - $request->total_amount,
-                'settled_at'   => now(),
-            ],
-        ]);
+                    $cart->update([
+                        'table_room_id' => $payload['table_id'],
+                    ]);
 
-        // Convert cart items to order items
-        foreach ($cart->cartItems as $cartItem) {
-            OrderItem::create([
-                'order_id'             => $order->id,
-                'product_id'           => $cartItem->product_id,
-                'product_packaging_id' => $cartItem->product_packaging_id,
-                'quantity'             => $cartItem->quantity,
-                'price'                => $cartItem->price,
-                'discount_amount'      => $cartItem->discount_amount,
-                'vatable_sales'        => $cartItem->vatable_sales,
-                'vat_exempt_sales'     => $cartItem->vat_exempt_sales,
-                'vat_amount'           => $cartItem->vat_amount,
-                'non_vat_sales'        => $cartItem->non_vat_sales,
-                'less_tax'             => $cartItem->less_tax,
-                'amount'               => $cartItem->amount,
-                'order_type'           => $cartItem->order_type,
-                'discount'             => $cartItem->discount,
-                'discount_id'          => $cartItem->discount_id,
-                'coupon_code'          => $cartItem->coupon_code,
-                'sub_total'            => $cartItem->sub_total,
-                'is_served'            => false,
-                'placed_order'         => true,
-                'is_void'              => $cartItem->is_void,
-                'reason'               => $cartItem->reason,
-                'notes'                => $cartItem->notes,
-                'meta_data'            => $cartItem->meta_data,
-            ]);
+                    // Get only necessary columns to prevent memory exhaustion
+                    $cartItems = CartItem::where('cart_id', $cart->id)
+                        ->where('batch_number', $orderNumber)
+                        ->select('id', 'cart_id', 'product_id', 'quantity', 'price', 'order_type', 'notes', 'meta_data', 'placed_order', 'batch_number')
+                        ->get();
+
+                    $newOrderItems = new PreparationItemCollectionResource($cartItems);
+
+                    return [
+                        'orderNumber'      => $orderNumber,
+                        'cart'             => $cart->fresh(['tableRoom']),
+                        'placedOrderItems' => $newOrderItems,
+                        'tableRoom'        => $cart->tableRoom,
+                        'success'          => true,
+                    ];
+                }
+
+                return [
+                    'success' => false,
+                ];
+            });
+        } catch (\Exception $e) {
+            // Transaction automatically rolls back on exception
+            throw new Exception('Failed to place order: ' . $e->getMessage());
         }
-
-        // Delete cart items after converting to order items
-        $cart->cartItems()->delete();
-
-        // Delete the cart itself
-        $cart->delete();
-
-        // If there's a table, mark it as vacant
-        if ($cart->table_room_id && $cart->tableRoom->tableRoomLocation && $cart->tableRoom->tableRoomLocation->location_type != LocationType::TAKEOUT->value) {
-            $tableRoom = $cart->tableRoom;
-            if ($tableRoom) {
-                $tableRoom->update([
-                    'status'        => TableRoomStatusType::VACANT->value,
-                    'time_in'       => null,
-                    'customer_name' => null,
-                    'number_of_pax' => null,
-                ]);
-            }
-        }
-
-        // Update the branch's last order number
-        if ($request->filled('branch_id')) {
-            $branch = Branch::find($request->branch_id);
-
-            if ($branch) {
-                $branch->order_number += 1;
-                $branch->save();
-            }
-
-        }
-
-        return $order;
     }
 
     public function claimOrder(int $tableId): mixed
@@ -424,7 +589,7 @@ class CartService
             $tableRoom = $order->tableRoom;
             if ($tableRoom) {
                 $tableRoom->update([
-                    'status'        => TableRoomStatusType::VACANT->value,
+                    'status'        => TableRoomStatusType::AVAILABLE->value,
                     'time_in'       => null,
                     'customer_name' => null,
                     'number_of_pax' => null,
@@ -456,11 +621,11 @@ class CartService
             throw new Exception('No active order found for the source table.');
         }
 
-        // Verify target table exists and is vacant
+        // Verify target table exists and is available
         $targetTable = TableRoom::findOrFail($targetTableId);
 
-        if ($targetTable->status !== TableRoomStatusType::VACANT->value) {
-            throw new Exception('Target table must be vacant to transfer the order.');
+        if ($targetTable->status !== TableRoomStatusType::AVAILABLE->value) {
+            throw new Exception('Target table must be available to transfer the order.');
         }
 
         // Update the order's table_room_id
@@ -468,10 +633,10 @@ class CartService
             'table_room_id' => $targetTableId,
         ]);
 
-        // Update source table to vacant
+        // Update source table to available
         $sourceTable = TableRoom::findOrFail($sourceTableId);
         $sourceTable->update([
-            'status'        => TableRoomStatusType::VACANT->value,
+            'status'        => TableRoomStatusType::AVAILABLE->value,
             'time_in'       => null,
             'customer_name' => null,
             'number_of_pax' => null,
@@ -486,5 +651,65 @@ class CartService
         ]);
 
         return $order;
+    }
+
+    public function updateBillNumber(int $cartId, int $branchId): void
+    {
+        $branch = Branch::find($branchId);
+        if (! $branch) {
+            throw new Exception('Branch not found.');
+        }
+
+        // Increment the bill number
+        $branch->increment('bill_no');
+        $newBillNumber = $branch->bill_no;
+
+        // Update the cart with the new bill number
+        $cart = Cart::find($cartId);
+        if (! $cart) {
+            throw new Exception('Cart not found.');
+        }
+
+        $cart->update(['bill_no' => $newBillNumber]);
+    }
+
+    public function getCartByTable(int $tableId): ?Cart
+    {
+        return $this->model->where('table_room_id', $tableId)
+            ->with(['cartItems', 'tableRoom'])
+            ->first();
+    }
+
+    public function getCartByTableAsResource(int $tableId): ?CartResource
+    {
+        $cart = $this->model->where('table_room_id', $tableId)
+            ->with(['cartItems.product', 'cartItems.productPackaging', 'tableRoom'])
+            ->first();
+
+        return new CartResource($cart);
+    }
+
+    public function getPrintBillData(int $cartId)
+    {
+        $cart = $this->model
+            ->with(['cartItems', 'cartItems.product', 'cashierSession.branch', 'customer'])
+            ->find($cartId);
+
+        if (! $cart) {
+            throw new Exception("Cart not foundsss.");
+        }
+
+        $branchId = $cart->branch_id ?? optional($cart->cashierSession)->branch_id ?? null;
+
+        if ($branchId) {
+            // Update the bill number for the cart
+            $billNumber = $this->branchService->getNextBillNumber($branchId);
+
+            // Update Bill No.
+            $cart->bill_no = $billNumber;
+            $cart->save();
+        }
+
+        return $cart->fresh();
     }
 }

@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Auth;
 class Order extends Model
 {
     protected $fillable = [
+        'invoice_no',
+        'bill_no',
         'customer_id',
         'cashier_id',
         'cashier_session_id',
@@ -22,6 +24,11 @@ class Order extends Model
         'item_discount',
         'total_due',
         'amount_tendered',
+        'vatable_sales',
+        'vat_amount',
+        'vat_exempt_sales',
+        'zero_rated_sales',
+        'non_vat',
         'notes',
         'meta_data',
         'status',

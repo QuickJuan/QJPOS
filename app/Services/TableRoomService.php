@@ -1,11 +1,13 @@
 <?php
 namespace App\Services;
 
-use App\Enums\TableRoomStatusType;
-use App\Models\TableRoom;
-use Carbon\Carbon;
 use Exception;
+use Carbon\Carbon;
+use App\Models\Cart;
+use App\Models\TableRoom;
 use Illuminate\Http\Request;
+use App\Models\TableRoomLocation;
+use App\Enums\TableRoomStatusType;
 use Illuminate\Support\Facades\Auth;
 
 class TableRoomService
@@ -82,9 +84,9 @@ class TableRoomService
             throw new Exception('Can only merge into occupied tables.');
         }
 
-        // Validate that the source table is vacant
-        if ($tableRoom->status !== 'vacant') {
-            throw new Exception('Can only merge vacant tables.');
+        // Validate that the source table is available
+        if ($tableRoom->status !== TableRoomStatusType::AVAILABLE->value) {
+            throw new Exception('Can only merge available tables.');
         }
 
         return $tableRoom->update([
@@ -131,6 +133,31 @@ class TableRoomService
         return $tableReservation;
     }
 
+
+
+    public function list(Int $branchId)
+    {
+
+        $tableRoomLocations = TableRoomLocation::with(['tableRooms' => function ($query) use ($branchId) {
+            $query->where('branch_id', $branchId)
+                    ->whereNull('merge_to')
+                    ->orderBy('name')
+                    ->with(['mergedTables', 'cart']);
+        }])
+        ->orderBy('name')
+        ->get();
+
+        return $tableRoomLocations;
+    }
+
+    public function mergedTable(Int $mainTableId, Int $mergingTableId): ?TableRoom
+    {
+        return $this->model->where('id', $mergingTableId)
+            ->where('merge_to', $mainTableId)
+            ->first();
+    }
+
+
     public function unmergeTable(int $tableId): bool
     {
         $tableRoom = $this->model->findOrFail($tableId);
@@ -141,7 +168,46 @@ class TableRoomService
 
         return $tableRoom->update([
             'merge_to' => null,
-            'status'   => TableRoomStatusType::VACANT->value,
+            'status'   => TableRoomStatusType::AVAILABLE->value,
+        ]);
+    }
+
+
+
+
+    function removeMergedTables(Int $tableId): void
+    {
+        $this->model->where('merge_to', $tableId)
+            ->update(['merge_to' => null, 'status' => TableRoomStatusType::AVAILABLE->value]);
+    }
+
+    public function vacantTable(int $tableId): bool
+    {
+        $table = $this->model->findOrFail($tableId);
+
+        if (!$table) {
+            throw new Exception('Table not found.');
+        }
+
+        // Check if there's a cart with active (non-void) items
+        $cartWithItems = Cart::where('table_room_id', $tableId)
+            ->whereHas('cartItems', fn($query) => $query->where('is_void', false))
+            ->exists();
+
+        if ($cartWithItems) {
+            throw new Exception('Cannot set table to available. There are cart items associated with this table.');
+        }
+
+        // Delete empty cart if exists
+        Cart::where('table_room_id', $tableId)
+            ->whereDoesntHave('cartItems', fn($query) => $query->where('is_void', false))
+            ->delete();
+
+        // Update table status to available
+        return $table->update([
+            'status' => TableRoomStatusType::AVAILABLE->value,
+            'number_of_pax' => null,
+            'time_in' => null,
         ]);
     }
 }

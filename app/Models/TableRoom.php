@@ -1,12 +1,13 @@
 <?php
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\MediaLibrary\HasMedia;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Spatie\MediaLibrary\InteractsWithMedia;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TableRoom extends Model implements HasMedia
 {
@@ -77,6 +78,11 @@ class TableRoom extends Model implements HasMedia
         return $this->belongsTo(TableRoom::class, 'merge_to');
     }
 
+    public function mergedTables(): HasMany
+    {
+        return $this->hasMany(TableRoom::class, 'merge_to');
+    }
+
     public function tableRoomLocation(): BelongsTo
     {
         return $this->belongsTo(TableRoomLocation::class);
@@ -85,5 +91,10 @@ class TableRoom extends Model implements HasMedia
     public function carts(): HasMany
     {
         return $this->hasMany(Cart::class);
+    }
+
+    public function cart(): HasOne
+    {
+        return $this->hasOne(Cart::class)->latest();
     }
 }

@@ -2,28 +2,96 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ApplyDiscountToCartItemRequest;
-use App\Http\Requests\CartRequest;
+use App\Http\Requests\CreateTableCartRequest;
+use App\Http\Requests\PlaceOrderRequest;
+use App\Http\Requests\SettleBillRequest;
+use App\Http\Resources\CartResource;
 use App\Services\CartService;
 use App\Services\CashierSessionService;
+use App\Services\PaymentService;
 use Exception;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class CartController extends Controller
 {
-    public function __construct(protected CartService $cartService, protected CashierSessionService $cashierSessionService)
-    {
+    public function __construct(
+        protected CartService $cartService,
+        protected CashierSessionService $cashierSessionService,
+        protected PaymentService $paymentService
+    ) {
         $this->cartService           = $cartService;
         $this->cashierSessionService = $cashierSessionService;
+        $this->paymentService        = $paymentService;
     }
 
-    public function addToCart(CartRequest $request): RedirectResponse
+    public function create(CreateTableCartRequest $request)
+    {
+        try {
+            $cart = $this->cartService->createCart($request);
+            //redrect to cashier ordering page
+            // return redirect()->route('resto.index', ['tableId' => $cart->table_room_id]);
+            return response()->json([
+                'success' => true,
+                'message' => 'Cart created successfully.',
+                'data'    => $cart,
+            ], 201);
+            // return redirect()->back()->with('success', 'Cart created successfully.');
+        } catch (Exception $e) {
+            Log::error('Cart creation error: ' . $e->getMessage());
+            // return redirect()->back()->with('error', 'There was an error creating cart.');
+            return response()->json([
+                'success' => false,
+                'message' => 'There was an error creating cart.',
+                'error'   => $e->getMessage(),
+            ]);
+        }
+    }
+
+    // public function addToCart(CartRequest $request): RedirectResponse
+    public function addToCart(Request $request): RedirectResponse
     {
         try {
             $this->cartService->addToCart($request);
             return redirect()->back()->with('success', 'Item added to cart successfully.');
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'There was an error adding item to cart.');
+        }
+    }
+
+    public function updateCart(Request $request, int $cartId): RedirectResponse
+    {
+        try {
+            if (! $cartId) {
+                return redirect()->back()->with('error', 'Cart ID is empty.');
+            }
+
+            $this->cartService->updateCart($request, $cartId);
+
+            return redirect()->back()->with('success', 'Cart updated successfully.');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'There was an error updating cart.');
+        }
+    }
+
+    public function mergeCart(Request $request): RedirectResponse
+    {
+        try {
+            $sourceCartId  = $request->input('source_cart_id');
+            $targetTableId = $request->input('target_table_id');
+
+            if (! $sourceCartId || ! $targetTableId) {
+                return redirect()->back()->with('error', 'Source cart ID and target table ID are required.');
+            }
+
+            $mergedCart = $this->cartService->mergeCart($request, $sourceCartId, $targetTableId);
+
+            return redirect()->back()->with('success', 'Cart items merged successfully and source cart is deleted.');
+        } catch (Exception $e) {
+            \Log::error('Cart merge error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'There was an error merging cart items: ' . $e->getMessage());
         }
     }
 
@@ -88,9 +156,20 @@ class CartController extends Controller
         try {
             $this->cartService->applyModifierToCartItem($request);
 
-            return redirect()->back()->with('success', 'Discount applied to cart item successfully.');
+            return redirect()->back()->with('success', 'Modifier applied to cart item successfully.');
         } catch (Exception $e) {
-            return redirect()->back()->with('error', 'There was an error applying discount to cart item.');
+            return redirect()->back()->with('error', 'There was an error applying modifier to cart item.');
+        }
+    }
+
+    public function removeModifierFromCartItem(Request $request): RedirectResponse
+    {
+        try {
+            $this->cartService->removeModifierFromCartItem($request);
+
+            return redirect()->back()->with('success', 'Modifier removed from cart item successfully.');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'There was an error removing modifier from cart item.');
         }
     }
 
@@ -109,33 +188,51 @@ class CartController extends Controller
         }
     }
 
-    public function placeOrder(Request $request, int $cartId): RedirectResponse
+    public function placeOrder(PlaceOrderRequest $request): JsonResponse
     {
         try {
-            if (! $cartId) {
-                return redirect()->back()->with('error', 'Cart ID is empty.');
+            $payload = [
+                'cart_id'  => $request->input('cart_id'),
+                'table_id' => $request->input('table_id'),
+            ];
+
+            $response = $this->cartService->placeOrder($payload);
+
+            if (! $response["success"]) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'There was an error placing order.',
+                ], 400);
             }
 
-            $this->cartService->placeOrder($request, $cartId);
+            return response()->json($response, 200);
 
-            return redirect()->route('retail-cashier.tables')->with('success', 'Successfully Placed Order.');
         } catch (Exception $e) {
-            return redirect()->back()->with('error', 'There was an error placing order.');
+            \Log::error('Place order error: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'There was an error placing order.',
+                'error'   => $e->getMessage(),
+            ], 500);
         }
     }
 
-    public function settleBill(Request $request, int $cartId): RedirectResponse
+    public function settleBill(SettleBillRequest $request): JsonResponse | RedirectResponse
     {
         try {
-            if (! $cartId) {
-                return redirect()->back()->with('error', 'Cart ID is empty.');
-            }
 
-            $this->cartService->settleBill($request, $cartId);
+            $order = $this->paymentService->settleBill($request->validated());
 
-            return redirect()->back()->with('success', 'Bill settled successfully.');
+            // return redirect()->back()->with('success', 'Bill settled successfully.');
+            return response()->json([
+                'message' => 'Bill settled successfully.',
+                'data'    => $order,
+            ], 200);
         } catch (Exception $e) {
-            return redirect()->back()->with('error', 'There was an error settling the bill.');
+            return response()->json([
+                'message' => 'There was an error settling the bill.',
+                'error'   => $e->getMessage(),
+            ], 500);
+            // return redirect()->back()->with('error', 'There was an error settling the bill.');
         }
     }
 
@@ -170,6 +267,38 @@ class CartController extends Controller
             return redirect()->back()->with('success', 'Order transferred successfully.');
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'There was an error transferring the order: ' . $e->getMessage());
+        }
+    }
+
+    public function updateBillNumber(Request $request, int $cartId): RedirectResponse
+    {
+        try {
+            if (! $cartId) {
+                return redirect()->back()->with('error', 'Cart ID is empty.');
+            }
+
+            $branchId = $request->input('branch_id') ?? session('active_branch')->id;
+            if (! $branchId) {
+                return redirect()->back()->with('error', 'Branch ID is required.');
+            }
+
+            $this->cartService->updateBillNumber($cartId, $branchId);
+
+            return redirect()->back()->with('success', 'Bill number updated successfully.');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'There was an error updating bill number: ' . $e->getMessage());
+        }
+    }
+
+    public function getPrintBillData(int $cartId): JsonResponse
+    {
+        try {
+            $cart = $this->cartService->getPrintBillData($cartId);
+
+            return response()->json(new CartResource($cart), 200);
+
+        } catch (Exception $e) {
+            return response()->json(['message' => 'There was an error in fetching print bill data' . $e->getMessage()], 400);
         }
     }
 }

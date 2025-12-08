@@ -8,7 +8,7 @@ enum TableRoomStatusType: string
 {
     use EnumsWithOptions;
 
-    case VACANT = 'vacant';
+    case AVAILABLE = 'available';
     case OCCUPIED = 'occupied';
     case RESERVED = 'reserved';
 }

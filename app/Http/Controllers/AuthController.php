@@ -55,6 +55,16 @@ class AuthController extends Controller
             ]);
         }
 
+        // Check if the user has open session to another branch
+        if ($user->hasOpenSessionToAnotherBranch($branch)) {
+            $anotherBranch     = $user->getBranchWithOpenSession($branch);
+            $anotherBranchName = $anotherBranch->name ?? 'another';
+
+            throw ValidationException::withMessages([
+                'branch' => ["You have an open session in {$anotherBranchName} branch. Please close the session from that branch first."],
+            ]);
+        }
+
         Auth::login($user);
 
         // Save the selected branch ID in the session

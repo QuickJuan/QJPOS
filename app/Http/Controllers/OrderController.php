@@ -1,14 +1,41 @@
 <?php
 namespace App\Http\Controllers;
 
-use App\Http\Requests\RefundRequest;
+use App\Models\User;
+use Inertia\Inertia;
 use App\Models\Order;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Services\OrderService;
+use App\Settings\GeneralSettings;
+use Illuminate\Http\JsonResponse;
+use App\Http\Requests\RefundRequest;
+use App\Services\GeneralSettingsService;
 use Illuminate\Support\Facades\Auth;
 
 class OrderController extends Controller
 {
+    public function __construct(
+        protected OrderService $orderService
+    ) {
+    }
+
+    public function index(Request $request)
+    {
+        $generalSettings = app(GeneralSettingsService::class)->getCompanySettings();
+        $orders = $this->orderService->getOrders(
+            filters: $request->only(['search', 'date_from', 'date_to', 'status', 'cashier_id']),
+            perPage: 5
+        );
+
+        $cashiers = User::select('id', 'name')->orderBy('name')->get();
+
+        return Inertia::render('Transactions/Index', [
+            'orders'   => $orders,
+            'cashiers' => $cashiers,
+            'filters'  => $request->only(['search', 'date_from', 'date_to', 'status', 'cashier_id']),
+            'generalSettings' => $generalSettings,
+        ]);
+    }
     public function refund(RefundRequest $request, Order $order): JsonResponse
     {
         if ($order->status !== 'settled') {

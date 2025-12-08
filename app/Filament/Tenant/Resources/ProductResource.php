@@ -1,29 +1,30 @@
 <?php
 namespace App\Filament\Tenant\Resources;
 
-use Filament\Tables;
+use App\Enums\VatType;
+use App\Filament\Imports\ProductImporter;
+use App\Filament\Tenant\Resources\ProductResource\Pages;
+use App\Filament\Tenant\Resources\ProductResource\RelationManagers;
 use App\Models\Product;
-use Filament\Forms\Get;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\RichEditor;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
+use Filament\Notifications\Notification;
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Actions\Action;
+use Filament\Tables\Actions\ActionGroup;
+use Filament\Tables\Actions\ImportAction;
+use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Support\HtmlString;
-use Filament\Resources\Resource;
-use Filament\Tables\Actions\Action;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Toggle;
-use Filament\Forms\Components\Repeater;
-use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Forms\Components\TextInput;
-use Filament\Notifications\Notification;
-use Filament\Tables\Actions\ActionGroup;
-use App\Filament\Imports\ProductImporter;
-use Filament\Forms\Components\RichEditor;
-use Filament\Tables\Actions\ImportAction;
-use App\Filament\Tenant\Resources\ProductResource\Pages;
-use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
-use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
-use App\Filament\Tenant\Resources\ProductResource\RelationManagers;
 
 class ProductResource extends Resource
 {
@@ -63,6 +64,27 @@ class ProductResource extends Resource
                             ->label('Brand Name'),
                     ]),
 
+                Select::make('preparation_location_id')
+                    ->relationship('preparationLocation', 'description')
+                    ->nullable()
+                    ->label('Preparation Location')
+                    ->searchable()
+                    ->preload()
+                    ->placeholder('Select a preparation location')
+                    ->createOptionForm([
+                        TextInput::make('description')
+                            ->required()
+                            ->maxLength(255),
+
+                        Toggle::make('printable')
+                            ->label('Printable')
+                            ->default(true),
+
+                        Toggle::make('show_on_screen')
+                            ->label('Show on Screen')
+                            ->default(true),
+                    ]),
+
                 Select::make('groups')
                     ->relationship('groups', 'name')
                     ->multiple()
@@ -98,6 +120,34 @@ class ProductResource extends Resource
                     ->label('Price')
                     ->hidden(fn(Get $get) => $get('multiple_packaging') === true),
 
+                Select::make('vat_type')
+                    ->label('VAT Type')
+                    ->options([
+                        VatType::VAT->value => VatType::VAT->getLabel(),
+                        VatType::NON_VAT->value => VatType::NON_VAT->getLabel(),
+                    ])
+                    ->native(false)
+                    ->searchable()
+                    ->placeholder('Select VAT Type')
+                    ->live(onBlur: true),
+
+                Toggle::make('vat_inclusive')
+                    ->label('VAT Inclusive')
+                    ->default(false)
+                    ->hidden(fn(Get $get) => $get('vat_type') !== VatType::VAT->value)
+                    ->helperText('Check if VAT is included in the price'),
+
+                TextInput::make('vat_rate')
+                    ->label('VAT Rate (%)')
+                    ->numeric()
+                    ->minValue(0)
+                    ->maxValue(100)
+                    ->step(0.01)
+                    ->default(0)
+                    ->suffix('%')
+                    ->hidden(fn(Get $get) => $get('vat_type') !== VatType::VAT->value)
+                    ->helperText('Enter the VAT rate as a percentage'),
+
                 TextInput::make('unit_measure')
                     ->label('Unit of Measure')
                     ->hidden(fn(Get $get) => $get('multiple_packaging') === true),
@@ -116,20 +166,20 @@ class ProductResource extends Resource
                             ->helperText(function (Get $get): ?HtmlString {
                                 $optionId = $get('option_id');
 
-                                if (!$optionId) {
+                                if (! $optionId) {
                                     return null;
                                 }
 
                                 $option = \App\Models\Option::with(['optionItems.product', 'optionItems.productPackaging'])->find($optionId);
 
-                                if (!$option || $option->optionItems->isEmpty()) {
+                                if (! $option || $option->optionItems->isEmpty()) {
                                     return new HtmlString('<span class="text-sm text-gray-500">No option items available</span>');
                                 }
 
                                 $items = $option->optionItems->map(function ($item) {
                                     $productName = $item->product?->name ?? 'Unknown';
-                                    $packaging = $item->productPackaging?->unit_measure ?? '';
-                                    $price = '₱' . number_format($item->price, 2);
+                                    $packaging   = $item->productPackaging?->unit_measure ?? '';
+                                    $price       = '₱' . number_format($item->price, 2);
 
                                     $itemText = $packaging
                                         ? "{$productName} ({$packaging}) - {$price}"
@@ -162,7 +212,7 @@ class ProductResource extends Resource
                     ->columns(3)
                     ->reorderable(false)
                     ->collapsible()
-                    ->itemLabel(fn (array $state): ?string => \App\Models\Option::find($state['option_id'])?->option_name ?? null)
+                    ->itemLabel(fn(array $state): ?string => \App\Models\Option::find($state['option_id'])?->option_name ?? null)
                     ->addActionLabel('Add Option')
                     ->columnSpanFull(),
 

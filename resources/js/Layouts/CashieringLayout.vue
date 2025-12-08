@@ -2,79 +2,17 @@
     <div class="h-screen bg-gray-50 flex flex-col">
         <!-- Header (Desktop Only) -->
         <header
-            class="hidden lg:block bg-white border-b border-gray-200 shadow-lg"
+            class="hidden lg:block bg-white border-b border-gray-200 relative z-50"
         >
             <div class="px-6 py-4">
-                <div class="grid grid-cols-12 gap-4 items-center">
-                    <!-- Left Column: Cashier Info -->
-                    <div class="col-span-2">
+                <div class="flex items-center justify-between">
+                    <!-- Left: Cashier Info -->
+                    <div class="flex-shrink-0">
                         <div class="text-sm">
                             <p class="text-gray-500">Cashier</p>
                             <p class="font-semibold text-gray-900">
                                 {{ cashierName }}
                             </p>
-                        </div>
-                    </div>
-
-                    <!-- Center Column: Barcode Scanner & Options -->
-                    <div class="col-span-8">
-                        <div class="flex items-center gap-4 justify-start">
-                            <!-- Barcode Scanner -->
-                            <div class="flex items-center gap-2">
-                                <QrCodeIcon class="w-5 h-5 text-gray-600" />
-                                <input
-                                    v-model="barcodeInput"
-                                    type="text"
-                                    placeholder="Scan barcode or enter product code..."
-                                    class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64"
-                                    @keyup.enter="handleBarcodeSearch"
-                                />
-                                <button
-                                    @click="handleBarcodeSearch"
-                                    class="px-4 py-2 bg-primary text-white rounded-lg transition-colors"
-                                >
-                                    Search
-                                </button>
-                            </div>
-
-                            <!-- Tables Button -->
-                            <button
-                                v-if="
-                                    !checkCurrentRoute('retail-cashier.tables')
-                                "
-                                @click="handleTablesClick"
-                                class="flex items-center gap-2 px-4 py-2 text-white rounded-lg bg-primary transition-colors"
-                            >
-                                <TableCellsIcon class="w-5 h-5" />
-                                Tables
-                            </button>
-
-                            <!-- Review Transactions Button -->
-                            <button
-                                @click="handleReviewTransactionsClick"
-                                class="flex items-center gap-2 px-4 py-2 text-white rounded-lg bg-primary transition-colors"
-                            >
-                                <DocumentTextIcon class="w-5 h-5" />
-                                Review Transactions
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Right Column: Close Shift & Logout -->
-                    <div class="col-span-2">
-                        <div class="flex items-center gap-2 justify-end">
-                            <button
-                                @click="handleCloseShift"
-                                class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm"
-                            >
-                                Close Shift
-                            </button>
-                            <button
-                                @click="handleLogout"
-                                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
-                            >
-                                Logout
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -85,13 +23,13 @@
         <div
             v-if="showSidebar"
             @click="toggleSidebar"
-            class="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity"
+            class="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-[65] transition-opacity"
         ></div>
 
         <!-- Sidebar (Mobile/Tablet) -->
         <aside
             :class="[
-                'lg:hidden fixed left-0 bottom-0 w-80 bg-white shadow-2xl z-40 transform transition-transform duration-300 ease-in-out overflow-y-auto',
+                'lg:hidden fixed left-0 bottom-0 w-80 bg-white shadow-2xl z-[70] transform transition-transform duration-300 ease-in-out overflow-y-auto',
                 'top-[56px]',
                 showSidebar ? 'translate-x-0' : '-translate-x-full',
             ]"
@@ -130,7 +68,7 @@
                 <!-- Action Buttons -->
                 <div class="space-y-3">
                     <button
-                        v-if="!checkCurrentRoute('retail-cashier.tables')"
+                        v-if="!checkCurrentRoute('resto.tables')"
                         @click="handleTablesClick"
                         class="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                     >
@@ -190,9 +128,9 @@ import { router, usePage } from "@inertiajs/vue3";
 import { route } from "ziggy-js";
 import { useConfirm } from "primevue";
 import { useToast } from "primevue";
-import Header from "@/Pages/RetailCashier/Partials/Header.vue";
+import Header from "@/Pages/Resto/Partials/Header.vue";
 import { ConfirmPopup, Toast } from "primevue";
-import CloseSessionModal from "@/Pages/RetailCashier/Partials/CloseSessionModal.vue";
+import CloseSessionModal from "@/Pages/Resto/Partials/CloseSessionModal.vue";
 import {
     QrCodeIcon,
     TableCellsIcon,
@@ -265,7 +203,7 @@ const handleBarcodeSearch = () => {
 
 const handleTablesClick = () => {
     showSidebar.value = false;
-    router.visit(route("retail-cashier.tables"));
+    router.visit(route("resto.tables"));
 };
 
 const handleReviewTransactionsClick = () => {
@@ -296,7 +234,7 @@ const handleLogout = () => {
 const handleConfirmCloseSession = (data: any) => {
     console.log(data);
     router.post(
-        route("retail-cashier.session.close"),
+        route("resto.session.close"),
         {
             cash_denomination: data.denominationData,
             closing_cash: data.totalCashCounted,
