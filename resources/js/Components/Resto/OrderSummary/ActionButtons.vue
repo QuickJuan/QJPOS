@@ -215,7 +215,7 @@ const receiptData = ref({
 });
 
 const billData = ref({
-    billNumber: getNextBillNumber().toString().padStart(6, "0"),
+    billNumber: "",
     date: new Date().toISOString(),
     tableInfo: "",
     cashierName: "",
@@ -224,9 +224,9 @@ const billData = ref({
     subtotal: 0,
     lessTax: 0,
     lessDiscount: 0,
-    discountName: null as string | null,
-    discountType: null as string | null,
-    removeTax: false,
+    // discountName: null as string | null,
+    // discountType: null as string | null,
+    // removeTax: false,
     totalAmount: 0,
 });
 
@@ -297,22 +297,26 @@ const handleSettleBill = (data: any) => {
 };
 
 // Handle print bill
-const handlePrintBill = () => {
-    console.log("table info", props.tableInfo);
+const handlePrintBill = async () => {
+    const response = await axios.get(
+        `/api/carts/${page.props.cart?.id}/print-bill`
+    );
+    const responseData = response.data;
+
     // Populate bill data
     billData.value = {
-        billNumber: props.billNumber,
-        date: new Date().toISOString(),
-        tableInfo: props.tableInfo || "",
-        cashierName: (page.props.auth as any)?.user?.name || "",
+        billNumber: responseData.bill_number,
+        date: responseData.cart_date,
+        tableInfo: responseData.table_number,
+        cashierName: responseData.cashier?.name,
         orderType: props.selectedOrderType,
-        orderItems: props.orderItems,
-        subtotal: parseFloat(props.subTotal.toFixed(2)),
-        lessTax: parseFloat(props.lessTaxTotal.toFixed(2)),
-        lessDiscount: parseFloat(props.lessDiscountTotal.toFixed(2)),
-        discountName: props.appliedDiscount?.discountName || null,
-        discountType: props.appliedDiscount?.discountType || null,
-        removeTax: props.appliedDiscount?.removeTax || false,
+        orderItems: responseData.cart_items[0].cartItems,
+        subtotal: responseData.totals.subtotal,
+        lessTax: responseData.totals.less_tax,
+        lessDiscount: responseData.totals.less_discount,
+        // discountName: props.appliedDiscount?.discountName || null,
+        // discountType: props.appliedDiscount?.discountType || null,
+        // removeTax: props.appliedDiscount?.removeTax || false,
         totalAmount: parseFloat(props.total.toFixed(2)),
     };
 

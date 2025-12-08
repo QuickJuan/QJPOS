@@ -1,19 +1,19 @@
 <?php
 namespace App\Http\Controllers;
 
-use Exception;
-use Illuminate\Http\Request;
-use App\Services\CartService;
-use App\Services\PaymentService;
-use Illuminate\Http\JsonResponse;
-use App\Http\Requests\CartRequest;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Http\RedirectResponse;
-use App\Services\CashierSessionService;
+use App\Http\Requests\ApplyDiscountToCartItemRequest;
+use App\Http\Requests\CreateTableCartRequest;
 use App\Http\Requests\PlaceOrderRequest;
 use App\Http\Requests\SettleBillRequest;
-use App\Http\Requests\CreateTableCartRequest;
-use App\Http\Requests\ApplyDiscountToCartItemRequest;
+use App\Http\Resources\CartResource;
+use App\Services\CartService;
+use App\Services\CashierSessionService;
+use App\Services\PaymentService;
+use Exception;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class CartController extends Controller
 {
@@ -26,7 +26,6 @@ class CartController extends Controller
         $this->cashierSessionService = $cashierSessionService;
         $this->paymentService        = $paymentService;
     }
-
 
     public function create(CreateTableCartRequest $request)
     {
@@ -199,7 +198,7 @@ class CartController extends Controller
 
             $response = $this->cartService->placeOrder($payload);
 
-            if (!$response["success"]) {
+            if (! $response["success"]) {
                 return response()->json([
                     'success' => false,
                     'message' => 'There was an error placing order.',
@@ -288,6 +287,18 @@ class CartController extends Controller
             return redirect()->back()->with('success', 'Bill number updated successfully.');
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'There was an error updating bill number: ' . $e->getMessage());
+        }
+    }
+
+    public function getPrintBillData(int $cartId): JsonResponse
+    {
+        try {
+            $cart = $this->cartService->getPrintBillData($cartId);
+
+            return response()->json(new CartResource($cart), 200);
+
+        } catch (Exception $e) {
+            return response()->json(['message' => 'There was an error in fetching print bill data' . $e->getMessage()], 400);
         }
     }
 }
