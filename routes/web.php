@@ -17,7 +17,7 @@ foreach (config('tenancy.central_domains') as $domain) {
             if (auth()->check()) {
                 return redirect('/central');
             }
-            return Inertia::render('TestLanding', [
+            return Inertia::render('LandingPage', [
                 'table' => 'Welcome to the Central Domain',
             ]);
         })->name('central.home');
