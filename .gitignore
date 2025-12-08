@@ -2,6 +2,7 @@
 /node_modules
 /public/build
 /public/hot
+/public/build.zip
 /public/videos
 /public/storage
 /storage/*.key

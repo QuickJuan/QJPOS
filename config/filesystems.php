@@ -61,18 +61,6 @@ return [
             'report' => false,
         ],
 
-        'tenant-backups' => [
-            'driver' => 'local',
-            'root' => function() {
-                if (app()->bound('tenant') && tenant()) {
-                    return storage_path('app/tenant-' . tenant('id') . '/backups');
-                }
-                return storage_path('app/backups');
-            },
-            'throw' => false,
-            'report' => false,
-        ],
-
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),
