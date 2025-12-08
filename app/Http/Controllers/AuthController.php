@@ -67,6 +67,9 @@ class AuthController extends Controller
 
         Auth::login($user);
 
+        // Regenerate session to prevent session fixation and refresh CSRF token
+        session()->regenerate();
+
         // Save the selected branch ID in the session
         session(['active_branch' => $branch]);
 

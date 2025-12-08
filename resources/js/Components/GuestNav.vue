@@ -156,6 +156,23 @@
                             Contact Us
                         </a>
                     </li>
+                    <li>
+                        <Link
+                            :href="
+                                $page.props.auth.user
+                                    ? route('home')
+                                    : route('login')
+                            "
+                            class="block py-2 text-secondary hover:text-primary transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                            @click="mobileNavOpen = false"
+                        >
+                            {{
+                                $page.props.auth.user
+                                    ? `Hi, ${$page.props.auth.user.name}`
+                                    : "Sign in"
+                            }}
+                        </Link>
+                    </li>
                 </ul>
             </nav>
         </transition>

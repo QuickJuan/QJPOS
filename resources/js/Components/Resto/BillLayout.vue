@@ -62,7 +62,7 @@
                 <div v-for="item in items" :key="item.id" class="my-3">
                     <template v-if="item.parent_id == null">
                         <div class="flex justify-between">
-                            <span class="flex-1">{{ item.description }}</span>
+                            <span class="flex-1">{{ item?.product?.name }}</span>
                         </div>
                         <div
                             v-if="item.quantity >= 1"
@@ -246,7 +246,7 @@ const lessTotalDiscount = computed(() => {
 const groupedOrderItems = computed(() => {
     const groups: { [key: string]: any[] } = {};
     orderItems.value.forEach((item) => {
-        const orderType = item.order_type || "dine-in";
+        const orderType = item.orderType || "dine-in";
         if (!groups[orderType]) {
             groups[orderType] = [];
         }
