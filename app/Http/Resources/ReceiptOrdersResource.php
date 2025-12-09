@@ -19,7 +19,6 @@ class ReceiptOrdersResource extends JsonResource
             'invoice_no'   => $this->invoice_no,
             'bill_number'  => $this->bill_number,
             'order_date'   => $this->created_at,
-            'order_type'   => $this->order_type,
             'status'       => $this->status,
             'table_number' => $this->table_number,
 
@@ -52,10 +51,10 @@ class ReceiptOrdersResource extends JsonResource
 
             // Financial Information
             'totals'       => [
-                'subtotal'        => $this->subtotal,
+                'subtotal'        => $this->total_amount, // total_amount
                 'tax_amount'      => $this->tax_amount,
                 'discount_amount' => $this->discount_amount,
-                'total_amount'    => $this->total_amount,
+                'total_amount'    => $this->total_due, // gross amount
                 'less_tax'        => $this->less_tax ?? 0,
                 'less_discount'   => $this->less_discount ?? 0,
                 'vatable_sales'   => $this->vatable_sales ?? 0,
