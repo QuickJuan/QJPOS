@@ -97,6 +97,29 @@ class CartService
         $discount = 0;
         $subtotal = $amount - $discount;
 
+        //compute tax if applicable
+        if ($product->vat_type === 'VAT') {
+            if ($product->vat_inclusive) {
+                $amount   = $price * $quantity;
+                $subtotal = $amount - $discount;
+                $vatable_sales    = $subtotal / (1 + ($this->taxRate / 100));
+                $vat_amount = $subtotal - ($vatable_sales);
+
+
+            }else {
+                $newPrice = $price * ($this->taxRate / 100);
+                $amount = $newPrice   * $quantity;
+                $vatable_sales = $amount / (1 + ($this->taxRate / 100));
+                $vat_amount    = $amount - ($vatable_sales);
+                $subtotal = $amount - $discount;
+            }
+        } else {
+            $vatable_sales = 0;
+            $vat_amount    = 0;
+            $non_vat_sales = $amount;
+            $vat_exempt_sales = 0;
+        }
+
         $cartItem = $cart->cartItems()
             ->create([
                 'product_id'           => $product->id,
@@ -107,11 +130,44 @@ class CartService
                 'amount'               => $amount,
                 'sub_total'            => $subtotal,
                 'order_type'           => $orderType,
+                'vatable_sales'        => $vatable_sales ?? 0,
+                'vat_exempt_sales'     => $vat_exempt_sales ?? 0,
+                'vat_amount'           => $vat_amount ?? 0,
+                'non_vat_sales'        => $non_vat_sales ?? 0,
             ]);
 
         if ($withParent) {
             foreach ($newSelectedOptions as $selectedOption) {
                 foreach ($selectedOption['items'] as $item) {
+
+                    $vatable_sales = 0;
+                    $vat_amount    = 0;
+                    $non_vat_sales = 0;
+                    $vat_exempt_sales = 0;
+                    $discount = 0;
+                    $price = $item['price'] ?? 0;
+
+                    //compute tax if applicable for children items if price is greater than 0
+                    if ($product->vat_type === 'VAT' && $price > 0) {
+                        if ($product->vat_inclusive) {
+                            $amount   = $price * $quantity;
+                            $subtotal = $amount - $discount;
+                            $vatable_sales    = $subtotal / (1 + ($this->taxRate / 100));
+                            $vat_amount = $subtotal - ($vatable_sales);
+                        }else {
+                            $newPrice = $price * ($this->taxRate / 100);
+                            $amount = $newPrice   * $quantity;
+                            $vatable_sales = $amount / (1 + ($this->taxRate / 100));
+                            $vat_amount    = $amount - ($vatable_sales);
+                            $subtotal = $amount - $discount;
+                        }
+                    } else if ($price > 0) {
+                        $vatable_sales = 0;
+                        $vat_amount    = 0;
+                        $non_vat_sales = $amount;
+                        $vat_exempt_sales = 0;
+                    }
+
                     try {
                         $cartItem->children()
                             ->create([
@@ -124,6 +180,10 @@ class CartService
                                 'amount'               => $item['price'] * $item['quantity'],
                                 'order_type'           => $orderType,
                                 'sub_total'            => $item['price'] * $item['quantity'],
+                                'vatable_sales'        => $vatable_sales ?? 0,
+                                'vat_exempt_sales'     => $vat_exempt_sales ?? 0,
+                                'vat_amount'           => $vat_amount ?? 0,
+                                'non_vat_sales'        => $non_vat_sales ?? 0,
                             ]);
                     } catch (\Throwable $e) {
                         info('Failed on option:', [
@@ -135,6 +195,14 @@ class CartService
         }
 
         return $cartItem->load('children');
+    }
+
+
+    public function store($cartItemData)
+    {
+        $cart = Cart::create($cartData);
+
+        return $cart;
     }
 
     public function updateCart(Request $request, int $cartId): mixed
