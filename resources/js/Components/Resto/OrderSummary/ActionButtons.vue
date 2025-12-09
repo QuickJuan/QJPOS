@@ -302,7 +302,7 @@ const handlePrintBill = async () => {
 
     // Populate bill data
     billData.value = {
-        billNumber: responseData.bill_number,
+        billNumber: responsxeData.bill_number,
         date: responseData.cart_date,
         tableInfo: responseData.table_number,
         cashierName: responseData.cashier?.name,

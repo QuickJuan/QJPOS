@@ -111,8 +111,6 @@ import { ref, computed, nextTick } from "vue";
 import { Dialog } from "primevue";
 import { useToast } from "primevue";
 import Swal from "sweetalert2";
-import { router } from "@inertiajs/vue3";
-import { route } from "ziggy-js";
 import { formatMoney } from "@/Utils/FormatMoney";
 import TextField from "@/Components/Form/TextField.vue";
 import { usePage } from "@inertiajs/vue3";
@@ -136,6 +134,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     "update:visible": [value: boolean];
+    "settle-bill": [data: any];
 }>();
 
 // Get cashier composable
@@ -186,10 +185,12 @@ const receiptData = ref({
     orderType: "",
     orderItems: [] as any[],
     subtotal: 0,
-    lessTax: 0,
-    lessDiscount: 0,
+    taxAmount: 0,
+    discountAmount: 0,
     discountName: null as string | null,
     discountType: null as string | null,
+    removeTax: false,
+    isSeniorDiscount: false,
     totalAmount: 0,
     paymentInfo: null as any,
     taxInfo: null as any,
@@ -240,6 +241,8 @@ const handleSettleBill = async () => {
             total_amount: props.totalAmount,
         });
 
+        console.log("Sample: ", response);
+
         if (response.success) {
             toast.add({
                 severity: "success",
@@ -247,7 +250,28 @@ const handleSettleBill = async () => {
                 detail: response.message || "Bill settled successfully",
                 life: 3000,
             });
-            //show swal to show the change of the customer
+
+            const responseData = response.data.data;
+
+            // Populate receipt data
+            receiptData.value = {
+                receiptNumber: responseData.invoice_no,
+                date: responseData.order_date,
+                tableNumber: responseData.table_number,
+                cashierName: responseData.cashier.name,
+                orderItems: responseData.order_items,
+                subtotal: responseData.totals.subtotal,
+                taxAmount: responseData.totals.tax_amount,
+                discountAmount: responseData.totals.discount_amount,
+                totalAmount: responseData.totals.total_amount || props.totalAmount,
+                paymentInfo: {
+                    amountPaid: responseData.payment.amount_paid,
+                    change: responseData.payment.change
+                },
+                taxInfo: null
+            };
+
+            // Show change amount in Swal
             emit("update:visible", false);
             showingSwal.value = true;
             Swal.fire({
@@ -267,8 +291,8 @@ const handleSettleBill = async () => {
             }).then(() => {
                 showingSwal.value = false;
                 amountPaid.value = 0;
-                // Redirect to table-rooms index
-                router.visit(route("table-rooms.index"));
+                // Emit settle bill event to show receipt modal
+                emit("settle-bill", { receipt_data: receiptData.value });
             });
         } else {
             toast.add({
