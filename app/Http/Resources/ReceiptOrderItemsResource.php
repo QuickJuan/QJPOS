@@ -39,10 +39,12 @@ class ReceiptOrderItemsResource extends JsonResource
                         'amount' => $item->amount,
                         'lessTax' => $item->less_tax ?? 0,
                         'discount' => $item->discount ?? "N/A",
-                        'discount_amount' => $item->discount ?? 0,
+                        'discount_amount' => $item->discount_amount ?? 0,
                         'sub_total' => $item->sub_total ?? 0,
                         'vatable_sales' => $item->vatable_sales ?? 0,
                         'vat_amount' => $item->vat_amount ?? 0,
+                        'vat_exempt_sales' => $item->vat_exempt_sales ?? 0,
+                        'non_vat_sales' => $item->non_vat_sales ?? 0,
                         'modifiers' => $item->modifiers ?? [],
                         'sub_items' => $this->getSubItems($item->id),
                         // Add any other order item fields you need

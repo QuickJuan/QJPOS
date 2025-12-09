@@ -20,15 +20,12 @@ use Illuminate\Support\Facades\DB;
 
 class CartService
 {
-    protected float $taxRate;
-
     public function __construct(public Cart $model, public CashierSession $cashierSession, public DiscountService $discountService, public BranchService $branchService)
     {
         $this->model           = $model;
         $this->cashierSession  = $cashierSession;
         $this->discountService = $discountService;
         $this->branchService   = $branchService;
-        $this->taxRate         = config('sales.tax_rate');
     }
 
     public function createCart($payload)
@@ -79,11 +76,12 @@ class CartService
 
         // Extract request data
         $quantity = $request['quantity'] ?? 1;
-        $price = $this->getProductPrice($product, $productPackaging);
+        $basePrice = $this->getProductPrice($product, $productPackaging);
+        $price = $this->applyVatToPrice($basePrice, $product);
         $orderType = $request['order_type'];
 
         // Calculate pricing and tax for main item
-        $pricingData = $this->calculatePricingData($price, $quantity, $product);
+        $pricingData = $this->calculatePricingData($basePrice, $quantity, $product);
 
         // Create main cart item
         $cartItem = $this->createCartItem(
@@ -148,7 +146,7 @@ class CartService
     private function applyVatToPrice(float $price, Product $product): float
     {
         if ($product->vat_type === 'vat' && ! $product->vat_inclusive) {
-            return $price + ($price * ($this->taxRate / 100));
+            return $price + ($price * ($product->vat_rate / 100));
         }
 
         return $price;
@@ -169,8 +167,8 @@ class CartService
             ];
         }
 
-        $vatable_sales = $amount / (1 + ($this->taxRate / 100));
-        $vat_amount = $this->calculateInclusiveTaxAmount($amount);
+        $vatable_sales = $amount / (1 + ($product->vat_rate / 100));
+        $vat_amount = $amount - $vatable_sales;
 
         return [
             'vatable_sales'   => $vatable_sales,
@@ -317,9 +315,9 @@ class CartService
      *
      * Formula: tax = subtotal - (subtotal / (1 + taxRate/100))
      */
-    private function calculateInclusiveTaxAmount(float $subtotal): float
+    private function calculateInclusiveTaxAmount(float $subtotal, float $taxRate): float
     {
-        $vatable = $subtotal / (1 + ($this->taxRate / 100));
+        $vatable = $subtotal / (1 + ($taxRate / 100));
         return $subtotal - $vatable;
     }
 
@@ -495,7 +493,7 @@ class CartService
             // Calculate less_tax from the product's VAT configuration
             $product = $cartItem->product;
             if ($product && $product->vat_type === 'VAT' && $product->vat_inclusive) {
-                $lessTax = $this->calculateInclusiveTaxAmount($amount);
+                $lessTax = $this->calculateInclusiveTaxAmount($amount, $product->vat_rate);
             }
         }
 
@@ -566,7 +564,7 @@ class CartService
             if ($lessTax == 0 && ! $shouldRemoveTax) {
                 $product = $cartItem->product;
                 if ($product && $product->vat_type === 'VAT' && $product->vat_inclusive) {
-                    $lessTax = $this->calculateInclusiveTaxAmount($subTotal);
+                    $lessTax = $this->calculateInclusiveTaxAmount($subTotal, $product->vat_rate);
                 }
             }
 
@@ -697,7 +695,7 @@ class CartService
             throw new Exception('No active cashier session found.');
         }
 
-        $cart = Cart::authCashier()->cashierOpenSession($cashierSession->id)->first();
+        $cart = CartItem::find($cartItemId)->cart;
 
         if (! $cart) {
             throw new Exception('Cart not found.');
@@ -712,25 +710,24 @@ class CartService
         $price = $cartItem->price;
         $quantity = $cartItem->quantity;
         $amount = $price * $quantity;
-        $subtotal = $amount;
 
-        // Calculate less_tax from the product's VAT configuration
-        $lessTax = 0;
+        // Get product for tax calculation
         $product = $cartItem->product;
-        if ($product && $product->vat_type === 'VAT' && $product->vat_inclusive) {
-            $lessTax = $this->calculateInclusiveTaxAmount($subtotal);
-        }
+
+        // Recalculate tax breakdown when removing discount
+        $pricingData = $this->calculatePricingData($price, $quantity, $product);
+        $subtotal = $amount; //$pricingData['vatable_sales'] + $pricingData['vat_amount'] + $pricingData['non_vat_sales'];
 
         return $cartItem->update([
             'discount_amount'  => 0.00,
-            'discount_id'      => 0.00,
-            'vatable_sales'    => 0.00,
-            'vat_exempt_sales' => 0.00,
-            'vat_amount'       => 0.00,
-            'non_vat_sales'    => 0.00,
-            'less_tax'         => $lessTax,
+            'discount_id'      => null,
             'amount'           => $amount,
             'sub_total'        => $subtotal,
+            'vatable_sales'    => $pricingData['vatable_sales'],
+            'vat_exempt_sales' => $pricingData['vat_exempt_sales'],
+            'vat_amount'       => $pricingData['vat_amount'],
+            'non_vat_sales'    => $pricingData['non_vat_sales'],
+            'less_tax'         => $pricingData['less_tax'],
         ]);
     }
 

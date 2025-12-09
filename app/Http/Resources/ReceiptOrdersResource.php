@@ -51,21 +51,24 @@ class ReceiptOrdersResource extends JsonResource
 
             // Financial Information
             'totals'       => [
-                'subtotal'        => $this->total_amount, // total_amount
-                'tax_amount'      => $this->tax_amount,
-                'discount_amount' => $this->discount_amount,
-                'total_amount'    => $this->total_due, // gross amount
+                'total_amount'        => $this->total_amount, // total_amount
+                'tax_amount'      => $this->vat_amount,
+                'discount_amount' => $this->item_discount,
+                'total_due'    => $this->total_due, // gross amount
                 'less_tax'        => $this->less_tax ?? 0,
                 'less_discount'   => $this->less_discount ?? 0,
                 'vatable_sales'   => $this->vatable_sales ?? 0,
                 'vat_amount'      => $this->vat_amount ?? 0,
+                'vat_exempt_sales'=> $this->vat_exempt_sales ?? 0,
+                'zero_rated_sales'=> $this->zero_rated_sales ?? 0,
+                'non_vat_sales'   => $this->non_vat_sales ?? 0,
             ],
 
             // Payment Information
             'payment'      => [
                 'method'      => $this->payment_method,
-                'amount_paid' => $this->amount_tendered,
-                'change'      => $this->amount_tendered - $this->total_due,
+                'amount_paid' => (float) $this->amount_tendered,
+                'change'      => (float) ($this->amount_tendered - $this->total_due),
                 'status'      => $this->payment_status,
             ],
 

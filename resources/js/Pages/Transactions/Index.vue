@@ -17,9 +17,7 @@
             </div>
         </template>
         <div class="flex flex-col h-full px-4 md:px-6 lg:px-8 py-4">
-            <div
-                class="flex flex-col md:flex-row gap-4 md:gap-6 h-full overflow-hidden"
-            >
+            <div class="flex flex-col md:flex-row gap-4 md:gap-6 h-full">
                 <!-- Sidebar -->
                 <div
                     class="w-full md:w-3/5 2xl:w-1/4 h-auto md:h-full flex flex-col min-h-[300px] md:min-h-0"
@@ -33,13 +31,8 @@
                 </div>
 
                 <!-- Detail Pane -->
-                <div
-                    class="flex flex-col w-full h-auto md:h-full overflow-hidden"
-                >
-                    <div
-                        v-if="activeOrder"
-                        class="flex flex-col h-full overflow-hidden"
-                    >
+                <div class="flex flex-col w-full h-auto md:h-full">
+                    <div v-if="activeOrder" class="flex flex-col h-full">
                         <div
                             class="px-4 py-5 md:px-6 md:py-6 border-b border-gray-100 bg-white flex-shrink-0"
                         >
@@ -49,8 +42,8 @@
                                 <div>
                                     <p class="text-sm text-gray-500">
                                         {{
-                                            activeOrder.table_room
-                                                ?.customer_name ||
+                                            activeOrder.customer?.name ||
+                                            activeOrder.table_number ||
                                             "Walk-in Customer"
                                         }}
                                     </p>
@@ -352,7 +345,7 @@ const refundForm = ref({
     supervisor_name: "",
 });
 const refundLoading = ref(false);
-const refundMeta = computed(() => activeOrder.value?.meta_data?.refund || null);
+const refundMeta = computed(() => activeOrder.value?.meta?.refund || null);
 const showActionMenu = ref(false);
 const showThermalPrinter = ref(false);
 
@@ -360,8 +353,10 @@ const showThermalPrinter = ref(false);
 const thermalReceiptData = computed(() => {
     if (!activeOrder.value) return null;
 
-    // Format date and time separately (matching ReceiptLayout)
-    const orderDate = new Date(activeOrder.value.created_at);
+    // Format date and time from order_date
+    const orderDate = new Date(
+        activeOrder.value.order_date || activeOrder.value.created_at
+    );
     const dateStr = orderDate.toLocaleDateString("en-US", {
         year: "numeric",
         month: "short",
@@ -373,26 +368,50 @@ const thermalReceiptData = computed(() => {
         hour12: true,
     });
 
-    // Use branch info if available, otherwise use general settings
+    // Use branch info from the order if available, otherwise use general settings
     const branchName =
+        activeOrder.value.branch?.name ||
         props.generalSettings?.company_name ||
-        props.active_branch?.name ||
         "Quick Juan Restaurant";
     const branchAddress =
-        props.active_branch?.address ||
+        activeOrder.value.branch?.address ||
         props.generalSettings?.company_address ||
         "";
     const branchPhone =
-        props.active_branch?.phone ||
+        activeOrder.value.branch?.phone ||
         props.generalSettings?.company_phone ||
         "";
-    const receiptHeader = props.active_branch?.receipt_headers || [];
+    const receiptHeader =
+        activeOrder.value.branch?.receipt_headers ||
+        props.active_branch?.receipt_headers ||
+        [];
     const receiptFooterData =
-        props.active_branch?.receipt_footer || props.receiptFooter;
+        activeOrder.value.branch?.receipt_footer || props.receiptFooter;
+
+    // Flatten order items from the grouped structure
+    const flattenedItems =
+        activeOrder.value.order_items?.flatMap(
+            (group) =>
+                group.orderItems.map((item) => ({
+                    name: item.description,
+                    quantity: item.quantity,
+                    price: item.price,
+                    amount: item.amount,
+                    selectedOptions:
+                        item.modifiers?.map((mod) => ({
+                            name: mod,
+                            price: 0,
+                        })) || [],
+                    less_tax: parseFloat(String(item.lessTax || 0)),
+                    discount:
+                        item.discount === "N/A" ? 0 : item.discount_amount || 0,
+                    orderType: item.orderType || "dine-in",
+                })) || []
+        ) || [];
 
     return {
         storeName: branchName,
-        branchName: props.active_branch?.name || "",
+        branchName: activeOrder.value.branch?.name || "",
         storeAddress: branchAddress,
         storePhone: branchPhone,
         orderNumber: activeOrder.value.invoice_no || "",
@@ -400,44 +419,38 @@ const thermalReceiptData = computed(() => {
         receiptHeader: receiptHeader,
         date: dateStr,
         time: timeStr,
-        tableNumber: activeOrder.value.table_room?.name || null,
-        orderType: null, // Remove single order type since items can have different types
-        items:
-            activeOrder.value.order_items?.map((item) => ({
-                name: item.product?.name || "Item",
-                quantity: item.quantity,
-                price: item.price,
-                amount: item.amount,
-                selectedOptions:
-                    (item as any).selected_options?.map((option: any) => ({
-                        name: option.name,
-                        price: option.price,
-                    })) || [],
-                lessTax: (item as any).less_tax || 0,
-                discount: (item as any).discount_amount || 0,
-                orderType: (item as any).order_type || "dine-in", // Each item has its own order type
-            })) || [],
-        subtotal: activeOrder.value.total_amount || 0,
-        lessTax: 0, // Calculate from items if needed
-        lessDiscount: (activeOrder.value as any).total_discount || 0,
-        total: activeOrder.value.total_amount || 0,
-        payment: (activeOrder.value as any).amount_tendered
+        tableNumber: activeOrder.value.table_number || null,
+        orderType: null,
+        items: flattenedItems,
+        subtotal: parseFloat(
+            String(activeOrder.value.totals?.total_amount || 0)
+        ),
+        lessTax: parseFloat(String(activeOrder.value.totals?.less_tax || 0)),
+        lessDiscount: parseFloat(
+            String(activeOrder.value.totals?.less_discount || 0)
+        ),
+        total: parseFloat(
+            String(
+                activeOrder.value.totals?.total_due ||
+                    activeOrder.value.totals?.total_amount ||
+                    0
+            )
+        ),
+        payment: activeOrder.value.payment
             ? {
-                  method: activeOrder.value.payment_method || "Cash",
-                  amountPaid: (activeOrder.value as any).amount_tendered,
-                  change: Math.max(
-                      0,
-                      ((activeOrder.value as any).amount_tendered || 0) -
-                          (activeOrder.value.total_amount || 0)
-                  ),
+                  method: activeOrder.value.payment.method || "Cash",
+                  amountPaid: activeOrder.value.payment.amount_paid,
+                  change: activeOrder.value.payment.change,
               }
             : {
-                  method: activeOrder.value.payment_method || "Cash",
-                  amountPaid: activeOrder.value.total_amount,
+                  method: "Cash",
+                  amountPaid: parseFloat(
+                      String(activeOrder.value.totals?.total_due || 0)
+                  ),
                   change: 0,
               },
         receiptFooter: receiptFooterData,
-        footerMessage: "Generated by Quick Juan POS System", // Match ReceiptLayout default
+        footerMessage: "Generated by Quick Juan POS System",
     };
 });
 

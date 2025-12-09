@@ -9,8 +9,9 @@ use App\Services\OrderService;
 use App\Settings\GeneralSettings;
 use Illuminate\Http\JsonResponse;
 use App\Http\Requests\RefundRequest;
-use App\Services\GeneralSettingsService;
 use Illuminate\Support\Facades\Auth;
+use App\Services\GeneralSettingsService;
+use App\Http\Resources\ReceiptOrdersResource;
 
 class OrderController extends Controller
 {
@@ -24,13 +25,13 @@ class OrderController extends Controller
         $generalSettings = app(GeneralSettingsService::class)->getCompanySettings();
         $orders = $this->orderService->getOrders(
             filters: $request->only(['search', 'date_from', 'date_to', 'status', 'cashier_id']),
-            perPage: 5
+            perPage: 10
         );
 
         $cashiers = User::select('id', 'name')->orderBy('name')->get();
 
         return Inertia::render('Transactions/Index', [
-            'orders'   => $orders,
+            'orders'   => ReceiptOrdersResource::collection($orders),
             'cashiers' => $cashiers,
             'filters'  => $request->only(['search', 'date_from', 'date_to', 'status', 'cashier_id']),
             'generalSettings' => $generalSettings,

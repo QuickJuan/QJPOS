@@ -150,66 +150,135 @@ const loadReceiptData = async () => {
     }
 };
 
-const getReceiptData = (order: any, orderItems: any) => {
-    // Map orderItems to include name from product and discount
-    const mappedOrderItems = orderItems.map((item: any) => ({
-        ...item,
-        name: item.product?.name || "Unnamed item",
-        discount: item.discount_amount || 0,
-    }));
+const getReceiptData = (order: any, orderItemsParam: any) => {
+    // Handle both old flat structure and new grouped structure
+    let mappedOrderItems: any[] = [];
 
-    // Calculate totals
-    const amount = mappedOrderItems.reduce(
-        (sum: number, item: any) =>
-            sum + Number(item.quantity * item.price || 0),
-        0
-    );
-    const lessTaxTotal = mappedOrderItems.reduce(
-        (sum: number, item: any) => sum + Number(item.less_tax || 0),
-        0
-    );
-    const lessDiscountTotal = mappedOrderItems.reduce(
-        (sum: number, item: any) => sum + Number(item.discount_amount || 0),
-        0
-    );
-    const totalAmount = amount - (lessTaxTotal + lessDiscountTotal);
-    const paymentInfo = {
+    if (Array.isArray(orderItemsParam) && orderItemsParam.length > 0) {
+        // New grouped structure: array of {orderId, orderType, orderItems}
+        if (orderItemsParam[0].orderItems) {
+            // Keep the grouped structure for ReceiptLayout
+            mappedOrderItems = orderItemsParam.map((group: any) => ({
+                orderId: group.orderId,
+                orderType: group.orderType,
+                orderItems: group.orderItems.map((item: any) => ({
+                    ...item,
+                    name:
+                        item.description ||
+                        item.product?.name ||
+                        "Unnamed item",
+                    discount:
+                        item.discount_amount ||
+                        (item.discount === "N/A" ? 0 : item.discount),
+                    less_tax: parseFloat(String(item.lessTax || 0)),
+                    quantity: parseFloat(String(item.quantity || 0)),
+                    price: parseFloat(String(item.price || 0)),
+                    amount: parseFloat(String(item.amount || 0)),
+                })),
+            }));
+        } else {
+            // Old flat structure - wrap in grouped format for compatibility
+            mappedOrderItems = [
+                {
+                    orderId: null,
+                    orderType: "dine-in",
+                    orderItems: orderItemsParam.map((item: any) => ({
+                        ...item,
+                        name: item.product?.name || "Unnamed item",
+                        discount: item.discount_amount || 0,
+                        description:
+                            item.name || item.product?.name || "Unnamed item",
+                        quantity: parseFloat(String(item.quantity || 0)),
+                        price: parseFloat(String(item.price || 0)),
+                        amount: parseFloat(String(item.amount || 0)),
+                        less_tax: parseFloat(String(item.less_tax || 0)),
+                    })),
+                },
+            ];
+        }
+    }
+
+    // Use order.totals if available (new structure), otherwise calculate
+    let totalAmount: number;
+    let lessTaxTotal: number;
+    let lessDiscountTotal: number;
+    let amount: number;
+
+    if (order.totals) {
+        // New API structure with totals object
+        amount = parseFloat(String(order.totals.total_amount || 0));
+        lessTaxTotal = parseFloat(String(order.totals.less_tax || 0));
+        lessDiscountTotal = parseFloat(String(order.totals.less_discount || 0));
+        totalAmount = parseFloat(
+            String(order.totals.total_due || order.totals.total_amount || 0)
+        );
+    } else {
+        // Old structure - calculate from items
+        const flattenedItems = mappedOrderItems.flatMap(
+            (group: any) => group.orderItems
+        );
+        amount = flattenedItems.reduce(
+            (sum: number, item: any) =>
+                sum + Number(item.quantity * item.price || 0),
+            0
+        );
+        lessTaxTotal = flattenedItems.reduce(
+            (sum: number, item: any) => sum + Number(item.less_tax || 0),
+            0
+        );
+        lessDiscountTotal = flattenedItems.reduce(
+            (sum: number, item: any) => sum + Number(item.discount_amount || 0),
+            0
+        );
+        totalAmount = amount - (lessTaxTotal + lessDiscountTotal);
+    }
+
+    const paymentInfo = order.payment || {
         amount_paid: order.amount_tendered || null,
         total_amount: order.total_due || null,
         change: order.amount_tendered - order.total_due || null,
     };
-    const taxInfo = computed(() => {
-        return orderItems.reduce(
-            (acc: any, item: any) => {
-                acc.vatableSales += Number(item.vatable_sales) || 0;
-                acc.nonVatableSales += Number(item.non_vat_sales) || 0;
-                acc.vatExemptSales += Number(item.vat_exempt_sales) || 0;
-                acc.vatAmount += Number(item.vat_amount) || 0;
-                return acc;
-            },
-            {
-                vatableSales: 0,
-                nonVatableSales: 0,
-                vatExemptSales: 0,
-                vatAmount: 0,
-            }
-        );
-    });
+
+    // Calculate tax info from order items
+    const flattenedItems = mappedOrderItems.flatMap(
+        (group: any) => group.orderItems
+    );
+    const calculatedTaxInfo = flattenedItems.reduce(
+        (acc: any, item: any) => {
+            acc.vatableSales += Number(item.vatable_sales) || 0;
+            acc.nonVatableSales += Number(item.non_vat_sales) || 0;
+            acc.vatExemptSales += Number(item.vat_exempt_sales) || 0;
+            acc.vatAmount += Number(item.vat_amount) || 0;
+            return acc;
+        },
+        {
+            vatableSales: 0,
+            nonVatableSales: 0,
+            vatExemptSales: 0,
+            vatAmount: 0,
+        }
+    );
+
+    // Use order totals if available, otherwise use calculated tax info
+    const taxInfo = order.totals || calculatedTaxInfo;
 
     receiptData.value.receiptNumber = `RCP-${order.id}`;
-    receiptData.value.date = order.created_at;
-    receiptData.value.tableNumber = order.table_room?.name || "N/A";
+    receiptData.value.date = order.order_date || order.created_at;
+    receiptData.value.tableNumber = order.table_number || "N/A";
     receiptData.value.cashierName = order.cashier?.name || "Unknown";
-    receiptData.value.orderType = (order as any).order_type || "dine-in";
+    receiptData.value.orderType = null; // Order type is per item in new structure
     receiptData.value.orderItems = mappedOrderItems;
-    receiptData.value.subtotal = parseFloat(amount.toFixed(2));
-    (receiptData.value.lessTax = parseFloat(lessTaxTotal.toFixed(2))),
-        (receiptData.value.lessDiscount = parseFloat(
-            lessDiscountTotal.toFixed(2)
-        )),
-        (receiptData.value.totalAmount = totalAmount);
-    receiptData.value.paymentInfo =
-        paymentInfo || (order as any).meta_data || order.payment_info || null;
+    receiptData.value.subtotal = parseFloat(
+        String(order.totals?.total_amount || 0)
+    );
+    receiptData.value.lessTax = parseFloat(String(order.totals?.less_tax || 0));
+    receiptData.value.lessDiscount = parseFloat(
+        String(order.totals?.less_discount || 0)
+    );
+    receiptData.value.totalAmount = parseFloat(
+        String(order.totals?.total_due || order.totals?.total_amount || 0)
+    );
+    receiptData.value.paymentInfo = order.payment || order.meta || null;
     receiptData.value.taxInfo = taxInfo;
 };
 

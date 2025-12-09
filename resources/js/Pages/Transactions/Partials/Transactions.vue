@@ -11,7 +11,7 @@
             <span
                 class="text-xs font-medium px-3 py-1 bg-primary/10 text-primary rounded-full"
             >
-                {{ props.orders.total }}
+                {{ props.orders?.total }}
             </span>
         </div>
         <div
@@ -52,7 +52,11 @@
                                 </span>
                             </p>
                             <span class="text-xs md:text-sm text-gray-400">
-                                {{ formatDateTime(order.created_at) }}
+                                {{
+                                    formatDateTime(
+                                        order.order_date || order.created_at
+                                    )
+                                }}
                             </span>
                         </div>
                         <p
@@ -74,7 +78,7 @@
             v-if="hasOrders && showPagination"
             class="px-5 py-4 border-t border-gray-100 flex flex-col space-y-4 xl:flex-row items-center justify-between text-sm text-gray-500"
         >
-            <span>Showing {{ orders.from }} - {{ orders.to }}</span>
+            <span>Showing {{ orders?.from }} - {{ orders?.to }}</span>
             <div class="flex gap-2 items-center">
                 <button
                     @click="$emit('goToPage', prevPageUrl)"
@@ -90,7 +94,7 @@
                     <span class="hidden sm:inline">Previous</span>
                 </button>
                 <span class="text-xs text-gray-500">
-                    Page {{ orders.current_page }}
+                    Page {{ orders?.current_page }}
                 </span>
                 <button
                     @click="$emit('goToPage', nextPageUrl)"
@@ -132,7 +136,7 @@ const selectOrder = (order: Order) => {
 
 const orderListingSubtitle = (order: Order) => {
     return `${
-        order?.customer?.customer_name || order?.table_room?.name || "Walk-in"
+        order?.customer?.name || order?.table_number || "Walk-in Customer"
     }`;
 };
 
@@ -145,18 +149,13 @@ const hasOrders = computed(
 );
 
 const prevPageUrl = computed(() => {
-    const prevLink = props.orders.links?.find(
-        (link) =>
-            link.label.includes("Previous") || link.label.includes("&laquo;")
-    );
-    return prevLink?.url || null;
+    // API response has links as object with prev/next properties
+    return props.orders?.links?.prev || null;
 });
 
 const nextPageUrl = computed(() => {
-    const nextLink = props.orders.links?.find(
-        (link) => link.label.includes("Next") || link.label.includes("&raquo;")
-    );
-    return nextLink?.url || null;
+    // API response has links as object with prev/next properties
+    return props.orders?.links?.next || null;
 });
 
 const showPagination = computed(() => {

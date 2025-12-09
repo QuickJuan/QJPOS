@@ -93,6 +93,19 @@
             </button>
 
             <button
+                @click="handleReviewTransactions"
+                class="w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center gap-3 bg-gray-100 text-secondary-700 hover:bg-gray-200"
+            >
+                <TableCellsIcon class="w-5 h-5" />
+                <div class="text-left">
+                    <div class="font-semibold">Review Transactions</div>
+                    <div class="text-xs opacity-75">
+                        Review Previous Transactions
+                    </div>
+                </div>
+            </button>
+
+            <button
                 @click="handlePrinterConfig"
                 class="w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center gap-3 bg-gray-100 text-secondary-700 hover:bg-gray-200"
             >
@@ -130,6 +143,8 @@ import {
     PowerIcon,
     CogIcon,
 } from "@heroicons/vue/24/outline";
+import { route } from "ziggy-js";
+import { router } from "@inertiajs/vue3";
 
 const props = defineProps<{
     visible: boolean;
@@ -148,8 +163,9 @@ const emit = defineEmits<{
     "update:visible": [value: boolean];
 }>();
 
-const handleSaveOrder = () => {
-    emit("saveOrder");
+const handleReviewTransactions = () => {
+    //redirect to transactions page using router
+    router.visit(route("transactions.index"));
     emit("update:visible", false);
 };
 
