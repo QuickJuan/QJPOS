@@ -20,7 +20,7 @@
                     Total Amount Due
                 </label>
                 <div class="text-4xl font-bold text-primary-600">
-                    {{ formatMoney(totalAmount) }}
+                    {{ formatMoney(total) }}
                 </div>
             </div>
 
@@ -71,12 +71,12 @@
                 </div>
 
                 <button
-                    v-if="totalAmount > 0"
+                    v-if="props.total > 0"
                     type="button"
-                    @click="setExactAmount(totalAmount)"
+                    @click="setExactAmount(props.total)"
                     class="w-full h-12 mt-2 py-2 px-4 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-medium text-sm transition-colors"
                 >
-                    Exact Amount ({{ formatMoney(totalAmount) }})
+                    Exact Amount ({{ formatMoney(props.total) }})
                 </button>
             </div>
 
@@ -91,10 +91,10 @@
                 </button>
                 <button
                     type="submit"
-                    :disabled="amountPaid < totalAmount"
+                    :disabled="amountPaid < props.total"
                     :class="[
                         'flex-1 py-3 px-4 rounded-lg font-semibold text-white transition-colors',
-                        amountPaid >= totalAmount
+                        amountPaid >= props.total
                             ? 'bg-success-600 hover:bg-success-700'
                             : 'bg-gray-400 cursor-not-allowed',
                     ]"
@@ -119,17 +119,9 @@ import { useCashier } from "@/composables/useCashier";
 const props = defineProps<{
     visible: boolean;
     cart: any;
-    orderItems: any[];
-    selectedOrderType: string;
-    totalAmount: number;
-    appliedDiscount: any;
     subTotal: number;
     total: number;
-    lessTaxTotal: number;
-    lessDiscountTotal: number;
     tableInfo: any;
-    billFooter: any;
-    receiptNumber: string;
 }>();
 
 const emit = defineEmits<{
@@ -142,9 +134,6 @@ const { settlePayment } = useCashier();
 
 // Get toast
 const toast = useToast();
-
-// Use applied discount from props
-const appliedDiscount = computed(() => props.appliedDiscount);
 
 // Settle bill form data
 const amountPaid = ref(0);
@@ -178,7 +167,7 @@ const page = usePage();
 
 // Receipt data
 const receiptData = ref({
-    receiptNumber: props.receiptNumber,
+    receiptNumber: null as string | null,
     date: new Date().toISOString(),
     tableNumber: "",
     cashierName: "",
@@ -186,11 +175,6 @@ const receiptData = ref({
     orderItems: [] as any[],
     subtotal: 0,
     taxAmount: 0,
-    discountAmount: 0,
-    discountName: null as string | null,
-    discountType: null as string | null,
-    removeTax: false,
-    isSeniorDiscount: false,
     totalAmount: 0,
     paymentInfo: null as any,
     taxInfo: null as any,
@@ -238,10 +222,8 @@ const handleSettleBill = async () => {
         const response = await settlePayment({
             cart_id: props.cart.id,
             amount_paid: amountPaid.value,
-            total_amount: props.totalAmount,
+            total_amount: props.total,
         });
-
-        console.log("Sample: ", response);
 
         if (response.success) {
             toast.add({
@@ -251,49 +233,53 @@ const handleSettleBill = async () => {
                 life: 3000,
             });
 
-            const responseData = response.data.data;
+            console.log("Settlement response:", response);
 
-            // Populate receipt data
-            receiptData.value = {
-                receiptNumber: responseData.invoice_no,
-                date: responseData.order_date,
-                tableNumber: responseData.table_number,
-                cashierName: responseData.cashier.name,
-                orderItems: responseData.order_items,
-                subtotal: responseData.totals.subtotal,
-                taxAmount: responseData.totals.tax_amount,
-                discountAmount: responseData.totals.discount_amount,
-                totalAmount: responseData.totals.total_amount || props.totalAmount,
-                paymentInfo: {
-                    amountPaid: responseData.payment.amount_paid,
-                    change: responseData.payment.change
-                },
-                taxInfo: null
-            };
+            emit("update:visible", false);
+            emit("settle-bill", response);
+
+            // const responseData = response.data;
+
+            // // Populate receipt data
+            // receiptData.value = {
+            //     receiptNumber: responseData.invoice_no,
+            //     date: responseData.order_date,
+            //     tableNumber: responseData.table_number,
+            //     cashierName: responseData.cashier.name,
+            //     orderItems: responseData.order_items,
+            //     subtotal: responseData.totals.subtotal,
+            //     taxAmount: responseData.totals.tax_amount,
+            //     totalAmount: responseData.totals.total_amount,
+            //     paymentInfo: {
+            //         amountPaid: responseData.payment.amount_paid,
+            //         change: responseData.payment.change,
+            //     },
+            //     taxInfo: null,
+            // };
 
             // Show change amount in Swal
-            emit("update:visible", false);
-            showingSwal.value = true;
-            Swal.fire({
-                title: formatMoney(amountPaid.value - props.totalAmount),
-                text: "Change to return to customer",
-                icon: "success",
-                confirmButtonText: "OK",
-                didOpen: () => {
-                    // Focus the OK button when Swal opens
-                    const confirmButton = document.querySelector(
-                        ".swal2-confirm"
-                    ) as HTMLButtonElement;
-                    if (confirmButton) {
-                        confirmButton.focus();
-                    }
-                },
-            }).then(() => {
-                showingSwal.value = false;
-                amountPaid.value = 0;
-                // Emit settle bill event to show receipt modal
-                emit("settle-bill", { receipt_data: receiptData.value });
-            });
+
+            // Swal.fire({
+            //     title: formatMoney(
+            //         amountPaid.value - responseData.totals.total_due
+            //     ),
+            //     text: "Change to return to customer",
+            //     icon: "success",
+            //     confirmButtonText: "OK",
+            //     didOpen: () => {
+            //         // Focus the OK button when Swal opens
+            //         const confirmButton = document.querySelector(
+            //             ".swal2-confirm"
+            //         ) as HTMLButtonElement;
+            //         if (confirmButton) {
+            //             confirmButton.focus();
+            //         }
+            //     },
+            // }).then(() => {
+            //     amountPaid.value = 0;
+            //     // Emit settle bill event to show receipt modal
+            //     emit("settle-bill", { receipt_data: receiptData.value });
+            // });
         } else {
             toast.add({
                 severity: "error",

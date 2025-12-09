@@ -54,8 +54,6 @@
             @checkout="handleCheckout"
             @open-discount-modal="openDiscountModal"
             @add-modifier="handleAddModifier"
-            @settle-bill="handleSettleBill"
-            @print-bill="handlePrintBill"
             @view-table="handleViewTable"
             @end-of-shift="handleEndOfShift"
             @update-order-type="(type: string) => {
@@ -450,17 +448,17 @@ const handleCheckout = (data: any) => {
     });
 };
 
-const handleSettleBill = (data: any) => {
-    if (orderItems.value.length === 0) {
-        toast.add({
-            severity: "warn",
-            summary: "Warning",
-            detail: "No items in cart to settle",
-            life: 3000,
-        });
-        return;
-    }
-};
+// const handleSettleBill = (data: any) => {
+//     if (orderItems.value.length === 0) {
+//         toast.add({
+//             severity: "warn",
+//             summary: "Warning",
+//             detail: "No items in cart to settle",
+//             life: 3000,
+//         });
+//         return;
+//     }
+// };
 
 const handleAddModifier = () => {
     showAddModifierModal.value = true;
@@ -620,9 +618,9 @@ const handleRemoveModifier = (item: any, modifierValue: number) => {
 //     { immediate: true }
 // );
 
-const handlePrintBill = () => {
-    emit("printBill");
-};
+// const handlePrintBill = () => {
+//     emit("printBill");
+// };
 
 const handleViewTable = () => {
     router.visit(route("table-rooms.index"));

@@ -20,15 +20,12 @@ use Illuminate\Support\Facades\DB;
 
 class CartService
 {
-    protected float $taxRate;
-
     public function __construct(public Cart $model, public CashierSession $cashierSession, public DiscountService $discountService, public BranchService $branchService)
     {
         $this->model           = $model;
         $this->cashierSession  = $cashierSession;
         $this->discountService = $discountService;
         $this->branchService   = $branchService;
-        $this->taxRate         = config('sales.tax_rate');
     }
 
     public function createCart($payload)
@@ -64,77 +61,272 @@ class CartService
 
     public function addToCart(Request $request)
     {
-        // Get or create cart for current cashier session
+        // Verify cashier session is active
         $cashierSession = $this->cashierSession->openSession()->first();
-
         if (! $cashierSession) {
             throw new Exception('No active cashier session found.');
         }
 
+        // Get or create cart for current cashier session
+        $cart = $this->getOrCreateCart($cashierSession->id, $request);
+
+        // Fetch product and packaging information
+        $product = Product::findOrFail($request['product_id']);
+        $productPackaging = ProductPackaging::find($request['product_packaging_id']);
+
+        // Extract request data
+        $quantity = $request['quantity'] ?? 1;
+        $basePrice = $this->getProductPrice($product, $productPackaging);
+        $price = $this->applyVatToPrice($basePrice, $product);
+        $orderType = $request['order_type'];
+
+        // Calculate pricing and tax for main item
+        $pricingData = $this->calculatePricingData($basePrice, $quantity, $product);
+
+        // Create main cart item
+        $cartItem = $this->createCartItem(
+            $cart,
+            $product,
+            $request,
+            $quantity,
+            $price,
+            $pricingData,
+            $orderType
+        );
+
+        // Add child items (options/add-ons) if applicable
+        if ($request['withParent'] ?? false) {
+            $this->addChildItems($cartItem, $request['selected_options'] ?? [], $product, $quantity, $orderType);
+        }
+
+        return $cartItem->load('children');
+    }
+
+    /**
+     * Get or create a cart for the current cashier session
+     */
+    private function getOrCreateCart(int $cashierSessionId, Request $request): Cart
+    {
         $cartAttributes = [
             'cashier_id'         => Auth::id(),
-            'cashier_session_id' => $cashierSession->id,
+            'cashier_session_id' => $cashierSessionId,
         ];
 
         if ($request->filled('table_id')) {
             $cartAttributes['table_room_id'] = $request->input('table_id');
         }
 
-        $cart = Cart::firstOrCreate($cartAttributes);
+        return Cart::firstOrCreate($cartAttributes);
+    }
 
-        $product          = Product::findOrFail($request['product_id']);
-        $productPackaging = ProductPackaging::find($request['product_packaging_id']);
+    /**
+     * Determine the product price based on packaging
+     */
+    private function getProductPrice(Product $product, ?ProductPackaging $productPackaging): float
+    {
+        return $product->multiple_packaging && $productPackaging
+            ? (float) $productPackaging->price
+            : (float) $product->price;
+    }
 
-        $newSelectedOptions = $request['selected_options'] ?? [];
-        $orderType          = $request['order_type'];
-        $withParent         = $request['withParent'];
+    /**
+     * Calculate pricing data including amount and tax information
+     */
+    private function calculatePricingData(float $price, int $quantity, Product $product): array
+    {
+        $priceWithTax = $this->applyVatToPrice($price, $product);
+        $amount = $priceWithTax * $quantity;
 
-        $price = $product->multiple_packaging && $productPackaging
-            ? $productPackaging->price
-            : $product->price;
-        $quantity = $request['quantity'] ?? 1;
-        $amount   = $price * $quantity;
-        $discount = 0;
-        $subtotal = $amount - $discount;
+        return $this->computeTaxBreakdown($amount, $product);
+    }
 
-        $cartItem = $cart->cartItems()
-            ->create([
-                'product_id'           => $product->id,
-                'description'          => $product->receipt_alias,
-                'product_packaging_id' => $request['product_packaging_id'] ?? null,
-                'quantity'             => $quantity,
-                'price'                => $price,
-                'amount'               => $amount,
-                'sub_total'            => $subtotal,
-                'order_type'           => $orderType,
-            ]);
-
-        if ($withParent) {
-            foreach ($newSelectedOptions as $selectedOption) {
-                foreach ($selectedOption['items'] as $item) {
-                    try {
-                        $cartItem->children()
-                            ->create([
-                                'parent_id'            => $cartItem->id,
-                                'cart_id'              => $cartItem->cart_id,
-                                'product_id'           => $item['product_id'],
-                                'product_packaging_id' => $item['product_packaging_id'] ?? null,
-                                'quantity'             => $item['quantity'],
-                                'price'                => $item['price'],
-                                'amount'               => $item['price'] * $item['quantity'],
-                                'order_type'           => $orderType,
-                                'sub_total'            => $item['price'] * $item['quantity'],
-                            ]);
-                    } catch (\Throwable $e) {
-                        info('Failed on option:', [
-                            'message' => $e->getMessage(),
-                        ]);
-                    }
-                }
-            }
+    /**
+     * Apply VAT to price if product is VAT and not inclusive
+     */
+    private function applyVatToPrice(float $price, Product $product): float
+    {
+        if ($product->vat_type === 'vat' && ! $product->vat_inclusive) {
+            return $price + ($price * ($product->vat_rate / 100));
         }
 
-        return $cartItem->load('children');
+        return $price;
+    }
+
+    /**
+     * Calculate tax breakdown (vatable sales, vat amount, etc.)
+     */
+    private function computeTaxBreakdown(float $amount, Product $product): array
+    {
+        if ($product->vat_type !== 'vat') {
+            return [
+                'vatable_sales'   => 0,
+                'vat_amount'      => 0,
+                'non_vat_sales'   => $amount,
+                'vat_exempt_sales' => 0,
+                'less_tax'        => 0,
+            ];
+        }
+
+        $vatable_sales = $amount / (1 + ($product->vat_rate / 100));
+        $vat_amount = $amount - $vatable_sales;
+
+        return [
+            'vatable_sales'   => $vatable_sales,
+            'vat_amount'      => $vat_amount,
+            'non_vat_sales'   => 0,
+            'vat_exempt_sales' => 0,
+            'less_tax'        => 0,
+        ];
+    }
+
+    /**
+     * Create main cart item with calculated pricing
+     */
+    private function createCartItem(
+        Cart $cart,
+        Product $product,
+        Request $request,
+        int $quantity,
+        float $price,
+        array $pricingData,
+        string $orderType
+    ): CartItem {
+        $amount = $pricingData['vatable_sales'] + $pricingData['vat_amount'] + $pricingData['non_vat_sales'];
+
+        return $cart->cartItems()->create([
+            'product_id'           => $product->id,
+            'description'          => $product->receipt_alias,
+            'product_packaging_id' => $request['product_packaging_id'] ?? null,
+            'quantity'             => $quantity,
+            'price'                => $price,
+            'amount'               => $amount,
+            'sub_total'            => $amount,
+            'order_type'           => $orderType,
+            'vatable_sales'        => $pricingData['vatable_sales'],
+            'vat_exempt_sales'     => $pricingData['vat_exempt_sales'],
+            'vat_amount'           => $pricingData['vat_amount'],
+            'non_vat_sales'        => $pricingData['non_vat_sales'],
+            'less_tax'             => $pricingData['less_tax'],
+        ]);
+    }
+
+    /**
+     * Add child items (options/add-ons) to parent cart item
+     */
+    private function addChildItems(
+        CartItem $parentItem,
+        array $selectedOptions,
+        Product $parentProduct,
+        int $parentQuantity,
+        string $orderType
+    ): void {
+        foreach ($selectedOptions as $selectedOption) {
+            foreach ($selectedOption['items'] as $childItemData) {
+                $this->createChildItem(
+                    $parentItem,
+                    $childItemData,
+                    $parentProduct,
+                    $parentQuantity,
+                    $orderType
+                );
+            }
+        }
+    }
+
+    /**
+     * Create a single child cart item with proper pricing and tax calculation
+     */
+    private function createChildItem(
+        CartItem $parentItem,
+        array $childItemData,
+        Product $parentProduct,
+        int $parentQuantity,
+        string $orderType
+    ): void {
+        try {
+            $childPrice = (float) ($childItemData['price'] ?? 0);
+
+            // Skip items with no price
+            if ($childPrice <= 0) {
+                return;
+            }
+
+            $pricingData = $this->calculatePricingData($childPrice, $parentQuantity, $parentProduct);
+            $amount = $pricingData['vatable_sales'] + $pricingData['vat_amount'] + $pricingData['non_vat_sales'];
+
+            $parentItem->children()->create([
+                'parent_id'            => $parentItem->id,
+                'cart_id'              => $parentItem->cart_id,
+                'product_id'           => $childItemData['product_id'],
+                'product_packaging_id' => $childItemData['product_packaging_id'] ?? null,
+                'quantity'             => $childItemData['quantity'],
+                'price'                => $childPrice,
+                'amount'               => $amount,
+                'order_type'           => $orderType,
+                'sub_total'            => $amount,
+                'vatable_sales'        => $pricingData['vatable_sales'],
+                'vat_exempt_sales'     => $pricingData['vat_exempt_sales'],
+                'vat_amount'           => $pricingData['vat_amount'],
+                'non_vat_sales'        => $pricingData['non_vat_sales'],
+                'less_tax'             => $pricingData['less_tax'],
+            ]);
+        } catch (\Throwable $e) {
+            info('Failed to add child cart item', [
+                'message'   => $e->getMessage(),
+                'item_data' => $childItemData,
+            ]);
+        }
+    }
+
+    /**
+     * Apply discount to cart item and handle tax removal if needed
+     *
+     * When a discount with remove_tax = true is applied:
+     * - vatable_sales becomes 0
+     * - vat_amount becomes 0
+     * - The full amount is set to vat_exempt_sales
+     */
+    private function applyDiscountTaxLogic(
+        array $discountData,
+        float $amount,
+        bool $shouldRemoveTax = false
+    ): array {
+        // If discount removes tax, move all sales to vat_exempt_sales
+        if ($shouldRemoveTax) {
+            return [
+                'vatable_sales'    => 0,
+                'vat_exempt_sales' => $amount,
+                'vat_amount'       => 0,
+                'non_vat_sales'    => 0,
+            ];
+        }
+
+        // Otherwise, use the discount calculation data
+        return [
+            'vatable_sales'    => $discountData['vatableSales'] ?? 0,
+            'vat_exempt_sales' => $discountData['vatExempt'] ?? 0,
+            'vat_amount'       => $discountData['taxAmount'] ?? 0,
+            'non_vat_sales'    => 0,
+        ];
+    }
+
+    /**
+     * Calculate the tax amount from a subtotal when VAT is inclusive
+     *
+     * Formula: tax = subtotal - (subtotal / (1 + taxRate/100))
+     */
+    private function calculateInclusiveTaxAmount(float $subtotal, float $taxRate): float
+    {
+        $vatable = $subtotal / (1 + ($taxRate / 100));
+        return $subtotal - $vatable;
+    }
+
+
+    public function store($cartItemData)
+    {
+        $cart = Cart::create($cartData);
+
+        return $cart;
     }
 
     public function updateCart(Request $request, int $cartId): mixed
@@ -276,13 +468,19 @@ class CartService
             throw new Exception('Cart item not found.');
         }
 
-        $price    = $cartItem->price;
+        $price = $cartItem->price;
         $quantity = $request['quantity'] ?? $cartItem->quantity;
-        $amount   = $price * $quantity;
+        $amount = $price * $quantity;
 
+        // If there's a discount applied, recalculate with tax logic
         $discountComputation = null;
+        $shouldRemoveTax = false;
+        $lessTax = 0;
 
         if (! empty($cartItem->discount_id)) {
+            $discount = Discount::find($cartItem->discount_id);
+            $shouldRemoveTax = $discount?->remove_tax ?? false;
+
             $results = $this->discountService->calculateDiscountAmount(
                 $cartItem->discount_id,
                 [$cartItem->id],
@@ -290,6 +488,13 @@ class CartService
             );
 
             $discountComputation = $results[0] ?? null;
+            $lessTax = $discountComputation['lessTax'] ?? 0;
+        } else {
+            // Calculate less_tax from the product's VAT configuration
+            $product = $cartItem->product;
+            if ($product && $product->vat_type === 'VAT' && $product->vat_inclusive) {
+                $lessTax = $this->calculateInclusiveTaxAmount($amount, $product->vat_rate);
+            }
         }
 
         $discount = $discountComputation
@@ -297,16 +502,19 @@ class CartService
             : 0;
         $subtotal = $amount - $discount;
 
+        // Apply tax logic based on discount's remove_tax flag
+        $taxData = $this->applyDiscountTaxLogic($discountComputation ?? [], $subtotal, $shouldRemoveTax);
+
         return $cartItem->update([
             'quantity'         => $quantity,
             'amount'           => $amount,
             'sub_total'        => $subtotal,
             'discount_id'      => $cartItem->discount_id ?? null,
             'discount_amount'  => $discountComputation['discountAmount'] ?? 0.00,
-            'vatable_sales'    => $discountComputation['vatableSales'] ?? 0.00,
-            'vat_exempt_sales' => $discountComputation['vatExempt'] ?? 0.00,
-            'vat_amount'       => $discountComputation['taxAmount'] ?? 0.00,
-            'less_tax'         => $discountComputation['lessTax'] ?? 0.00,
+            'vatable_sales'    => $taxData['vatable_sales'],
+            'vat_exempt_sales' => $taxData['vat_exempt_sales'],
+            'vat_amount'       => $taxData['vat_amount'],
+            'less_tax'         => $lessTax,
         ]);
     }
 
@@ -335,26 +543,42 @@ class CartService
     public function applyDiscountToCartItem(Request $request): mixed
     {
         $cartItems = CartItem::findMany($request->cartItemIds);
+        $discount = Discount::findOrFail($request->discount_id);
+        $shouldRemoveTax = $discount->remove_tax ?? false;
 
-        $calculatedDiscountAmounts = $this->discountService->calculateDiscountAmount($request->discount_id, $request->cartItemIds);
+        $calculatedDiscountAmounts = $this->discountService->calculateDiscountAmount(
+            $request->discount_id,
+            $request->cartItemIds
+        );
 
         $results = [];
 
-        $discount = Discount::findOrFail($request->discount_id);
-
         foreach ($cartItems as $index => $cartItem) {
             $calculatedDiscountAmount = $calculatedDiscountAmounts[$index];
-            $amount                   = $cartItem->price * $cartItem->quantity;
-            $subTotal                 = $amount - ($calculatedDiscountAmount['lessTax'] + $calculatedDiscountAmount['discountAmount']);
+            $amount = $cartItem->price * $cartItem->quantity;
+            $subTotal = $amount - ($calculatedDiscountAmount['lessTax'] + $calculatedDiscountAmount['discountAmount']);
+
+            // Determine less_tax: use from discount calculation if available, otherwise calculate from product VAT
+            $lessTax = $calculatedDiscountAmount['lessTax'] ?? 0;
+
+            if ($lessTax == 0 && ! $shouldRemoveTax) {
+                $product = $cartItem->product;
+                if ($product && $product->vat_type === 'VAT' && $product->vat_inclusive) {
+                    $lessTax = $this->calculateInclusiveTaxAmount($subTotal, $product->vat_rate);
+                }
+            }
+
+            // Apply tax logic based on discount's remove_tax flag
+            $taxData = $this->applyDiscountTaxLogic($calculatedDiscountAmount, $subTotal, $shouldRemoveTax);
 
             $cartItem->update([
                 'amount'           => $amount,
                 'discount_id'      => $discount->id,
                 'discount_amount'  => $calculatedDiscountAmount['discountAmount'],
-                'vatable_sales'    => $calculatedDiscountAmount['vatableSales'],
-                'vat_exempt_sales' => $calculatedDiscountAmount['vatExempt'],
-                'vat_amount'       => $calculatedDiscountAmount['taxAmount'],
-                'less_tax'         => $calculatedDiscountAmount['lessTax'],
+                'vatable_sales'    => $taxData['vatable_sales'],
+                'vat_exempt_sales' => $taxData['vat_exempt_sales'],
+                'vat_amount'       => $taxData['vat_amount'],
+                'less_tax'         => $lessTax,
                 'sub_total'        => $subTotal,
             ]);
 
@@ -471,7 +695,7 @@ class CartService
             throw new Exception('No active cashier session found.');
         }
 
-        $cart = Cart::authCashier()->cashierOpenSession($cashierSession->id)->first();
+        $cart = CartItem::find($cartItemId)->cart;
 
         if (! $cart) {
             throw new Exception('Cart not found.');
@@ -483,22 +707,27 @@ class CartService
             throw new Exception('Cart item is empty.');
         }
 
-        $price    = $cartItem->price;
+        $price = $cartItem->price;
         $quantity = $cartItem->quantity;
-        $amount   = $price * $quantity;
-        $discount = 0;
-        $subtotal = $amount - $discount;
+        $amount = $price * $quantity;
+
+        // Get product for tax calculation
+        $product = $cartItem->product;
+
+        // Recalculate tax breakdown when removing discount
+        $pricingData = $this->calculatePricingData($price, $quantity, $product);
+        $subtotal = $amount; //$pricingData['vatable_sales'] + $pricingData['vat_amount'] + $pricingData['non_vat_sales'];
 
         return $cartItem->update([
             'discount_amount'  => 0.00,
-            'discount_id'      => 0.00,
-            'vatable_sales'    => 0.00,
-            'vat_exempt_sales' => 0.00,
-            'vat_amount'       => 0.00,
-            'non_vat_sales'    => 0.00,
-            'less_tax'         => 0.00,
+            'discount_id'      => null,
             'amount'           => $amount,
             'sub_total'        => $subtotal,
+            'vatable_sales'    => $pricingData['vatable_sales'],
+            'vat_exempt_sales' => $pricingData['vat_exempt_sales'],
+            'vat_amount'       => $pricingData['vat_amount'],
+            'non_vat_sales'    => $pricingData['non_vat_sales'],
+            'less_tax'         => $pricingData['less_tax'],
         ]);
     }
 
