@@ -46,9 +46,28 @@ class ViewProduct extends ViewRecord
                             ->label('Receipt Name'),
 
                         TextEntry::make('description')
-                            ->label('Description'),
+                            ->label('Description')
+                            ->html(),
                     ])
                     ->columns(4),
+
+                Section::make('Tax Information')
+                    ->schema([
+                        TextEntry::make('vat_type')
+                            ->label('Tax Type')
+                            ->formatStateUsing(fn($state) => \App\Enums\VatType::tryFrom($state)?->getLabel() ?? '-'),
+
+                        TextEntry::make('vat_inclusive')
+                            ->label('Tax Inclusive')
+                            ->formatStateUsing(fn($state) => $state ? 'Yes' : 'No')
+                            ->visible(fn($record) => $record->vat_type === \App\Enums\VatType::VAT->value),
+
+                        TextEntry::make('vat_rate')
+                            ->label('Tax Rate')
+                            ->formatStateUsing(fn($state) => $state ? $state . '%' : '-')
+                            ->visible(fn($record) => $record->vat_type === \App\Enums\VatType::VAT->value),
+                    ])
+                    ->columns(3),
 
                 Section::make('Images')
                     ->schema([

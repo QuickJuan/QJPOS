@@ -239,23 +239,8 @@ export const useCashier = () => {
                     total_amount: paymentData.total_amount,
                 }
             );
+           return response;
 
-            if (response.success) {
-                // Remove the settled cart from open carts
-                removeCart(paymentData.cart_id);
-
-                return {
-                    success: true,
-                    message: "Payment settled successfully",
-                    data: response.data,
-                };
-            } else {
-                return {
-                    success: false,
-                    message: response.error || "Failed to settle payment",
-                    data: null,
-                };
-            }
         } catch (error) {
             console.error("Error settling payment:", error);
             return {

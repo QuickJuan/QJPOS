@@ -85,7 +85,10 @@
                     class="flex flex-col items-center justify-center text-center px-4"
                 >
                     <!-- Large Logo Background Circle -->
-                    <div class="relative mb-8">
+                    <div
+                        class="relative mb-8"
+                        v-if="generalSettings.company_logo"
+                    >
                         <div
                             class="absolute inset-0 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-full blur-xl"
                             style="width: 300px; height: 300px; margin: auto"
