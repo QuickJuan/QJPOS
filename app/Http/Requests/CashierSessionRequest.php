@@ -22,9 +22,9 @@ class CashierSessionRequest extends FormRequest
     {
         return [
             'beginning_cash'            => 'sometimes|required|numeric|min:0',
-            'cash_denomination_details' => 'sometimes|required|array',
-            'cash_denomination'         => 'sometimes|required|numeric|min:0',
-            'table_id'                  => 'sometimes|nullable|exists:table_rooms,id',
+            // 'cash_denomination_details' => 'sometimes|required|array',
+            // 'cash_denomination'         => 'sometimes|required|numeric|min:0',
+            // 'table_id'                  => 'sometimes|nullable|exists:table_rooms,id',
         ];
     }
 }

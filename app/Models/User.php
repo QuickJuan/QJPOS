@@ -8,6 +8,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -32,6 +33,7 @@ class User extends Authenticatable
         'email',
         'password',
         'employee_code',
+        'branch_id',
     ];
 
     /**
@@ -72,6 +74,11 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Branch::class, 'branch_user', 'user_id', 'branch_id')
             ->withTimestamps();
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     public function attendances(): HasMany
