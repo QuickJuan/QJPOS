@@ -18,7 +18,7 @@ class CartResource extends JsonResource
             'id'           => $this->id,
             'bill_number'  => $this->bill_no, // Bill number (generated when printing)
             'cart_date'    => $this->created_at,
-            'table_number' => $this->tableRoom?->name ?? 'N/A',
+            'table_number' => $this->tableRoom?->name,
 
             // Customer Information
             'customer'     => [
@@ -57,6 +57,8 @@ class CartResource extends JsonResource
                 'less_discount'   => $this->item_discount ?? 0,
                 'vatable_sales'   => $this->cartItems->sum('vatable_sales'),
                 'vat_amount'      => $this->cartItems->sum('vat_amount'),
+                'vat_exempt_sales'=> $this->cartItems->sum('vat_exempt_sales'),
+                'non_vat_sales'   => $this->cartItems->sum('non_vat_sales'),
             ],
 
             // Payment Information (not applicable for bills, only for settled orders)

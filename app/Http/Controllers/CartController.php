@@ -291,10 +291,10 @@ class CartController extends Controller
         }
     }
 
-    public function getPrintBillData(int $cartId): JsonResponse
+    public function printBill(int $cartId): JsonResponse
     {
         try {
-            $cart = $this->cartService->getPrintBillData($cartId);
+            $cart = $this->cartService->printBill($cartId);
 
             return response()->json(new CartResource($cart), 200);
 

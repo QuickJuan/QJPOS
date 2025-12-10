@@ -119,7 +119,7 @@ import BillModal from "./BillModal.vue";
 import { useBillNumber } from "@/composables/useBillNumber";
 import { usePage, router } from "@inertiajs/vue3";
 import { ConfirmPopup, useConfirm } from "primevue";
-import axios from "axios";
+import { httpGet } from "@/Utils/axiosHelper";
 import { route } from "ziggy-js";
 import { useTable } from "@/composables/useTable";
 import { thermalPrinter } from "@/Services/ThermalPrinterService";
@@ -288,9 +288,20 @@ const handleSettleBill = (response: any) => {
 
 // Handle print bill
 const handlePrintBill = async () => {
-    const response = await axios.get(
+    const response = await httpGet(
         `/api/carts/${page.props.cart?.id}/print-bill`
     );
+
+    if (!response.success) {
+        toast.add({
+            severity: "error",
+            summary: "Error",
+            detail: response.error || "Failed to fetch bill data",
+            life: 3000,
+        });
+        return;
+    }
+
     const responseData = response.data;
     console.log(responseData);
 

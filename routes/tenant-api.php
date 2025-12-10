@@ -34,7 +34,7 @@ Route::middleware([
             ->prefix('/carts')
             ->controller(CartController::class)
             ->group(function () {
-                Route::get('/{cartId}/print-bill', 'getPrintBillData')->name('print-bill');
+                Route::get('/{cartId}/print-bill', 'printBill')->name('print-bill');
             });
 
         // Receipt API Routes

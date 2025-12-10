@@ -16,9 +16,7 @@
             <p class="text-sm">{{ businessAddress }}</p>
             <p class="text-sm">{{ businessPhone }}</p>
             <div class="border-b border-dashed mt-2"></div>
-            <h2 class="text-lg font-semibold mt-2">
-                Table #: {{ tableInfo }}
-            </h2>
+            <h2 class="text-lg font-semibold mt-2">Table #: {{ tableInfo }}</h2>
         </div>
 
         <!-- Bill Info -->
@@ -59,10 +57,14 @@
                 </div>
 
                 <!-- Items in this group -->
-                <div v-for="item in items.cartItems" :key="item.id" class="my-3">
+                <div
+                    v-for="item in items.cartItems"
+                    :key="item.id"
+                    class="my-3"
+                >
                     <template v-if="item.parent_id == null">
                         <div class="flex justify-between">
-                            <span class="flex-1">{{ item.description }}</span>
+                            <span class="flex-1">{{ item.name }}</span>
                         </div>
                         <div
                             v-if="item.quantity >= 1"

@@ -918,7 +918,7 @@ class CartService
         return new CartResource($cart);
     }
 
-    public function getPrintBillData(int $cartId)
+    public function printBill(int $cartId)
     {
         $cart = $this->model
             ->with(['cartItems', 'cartItems.product', 'cashierSession.branch', 'customer'])
@@ -928,7 +928,7 @@ class CartService
             throw new Exception("Cart not foundsss.");
         }
 
-        $branchId = $cart->branch_id ?? optional($cart->cashierSession)->branch_id ?? null;
+        $branchId = $cart->branch_id;
 
         if ($branchId) {
             // Update the bill number for the cart
