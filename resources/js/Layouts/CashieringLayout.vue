@@ -15,6 +15,22 @@
                             </p>
                         </div>
                     </div>
+
+                    <!-- Right: Action Buttons -->
+                    <div class="flex items-center gap-3">
+                        <button
+                            @click="handleCloseShift"
+                            class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium text-sm"
+                        >
+                            Close Shift
+                        </button>
+                        <button
+                            @click="handleLogout"
+                            class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm"
+                        >
+                            Logout
+                        </button>
+                    </div>
                 </div>
             </div>
         </header>
