@@ -20,7 +20,7 @@ class ReceiptOrdersResource extends JsonResource
             'bill_number'  => $this->bill_number,
             'order_date'   => $this->created_at,
             'status'       => $this->status,
-            'table_number' => $this->table_number,
+            'table_number' => $this->tableRoom?->name ?? null,
 
             // Customer Information
             'customer'     => [
@@ -51,10 +51,10 @@ class ReceiptOrdersResource extends JsonResource
 
             // Financial Information
             'totals'       => [
-                'total_amount'        => $this->total_amount, // total_amount
+                'total_amount'    => $this->total_amount, // total_amount
                 'tax_amount'      => $this->vat_amount,
                 'discount_amount' => $this->item_discount,
-                'total_due'    => $this->total_due, // gross amount
+                'total_due'       => $this->total_due, // gross amount
                 'less_tax'        => $this->less_tax ?? 0,
                 'less_discount'   => $this->less_discount ?? 0,
                 'vatable_sales'   => $this->vatable_sales ?? 0,
@@ -62,6 +62,7 @@ class ReceiptOrdersResource extends JsonResource
                 'vat_exempt_sales'=> $this->vat_exempt_sales ?? 0,
                 'zero_rated_sales'=> $this->zero_rated_sales ?? 0,
                 'non_vat_sales'   => $this->non_vat_sales ?? 0,
+                'service_charge'  => $this->service_charge ?? 0,
             ],
 
             // Payment Information
