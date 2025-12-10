@@ -81,7 +81,6 @@ const toast = useToast();
 // Props from the controller
 const props = defineProps({
     user: Object,
-    activeBranch: Object,
     attendanceStatus: Object,
 });
 
@@ -90,7 +89,7 @@ const isClockedIn = ref(props.attendanceStatus?.is_clocked_in || false);
 
 // Computed properties
 const user = computed(() => props.user);
-const activeBranch = computed(() => props.activeBranch);
+const activeBranch = computed(() => page.props.active_branch);
 
 const actions = [
     // {

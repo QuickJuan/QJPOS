@@ -43,8 +43,7 @@ class CashierSessionController extends Controller
 
     public function preview(Request $request): Response
     {
-        $activeBranch    = $request->user()->cashierSession->branch;
-        $generalSettings = app(GeneralSettingsService::class)->getCompanySettings();
+
 
         // Check if the current auth user has an open cashier session (closing_time is null)
         $openSession = $this->cashierSessionService->model
@@ -52,16 +51,10 @@ class CashierSessionController extends Controller
             ->with('cashier')
             ->first();
 
-        if ($openSession) {
-            $sessionSummary = $this->cashierSessionService->getSessionSummary($openSession);
-        }
 
         // dd($sessionSummary);
         return Inertia::render('Resto/Preview', [
-            'activeBranch'    => $activeBranch,
             'openSession'     => $openSession,
-            'sessionSummary'  => $sessionSummary ?? null,
-            'generalSettings' => $generalSettings,
         ]);
     }
 

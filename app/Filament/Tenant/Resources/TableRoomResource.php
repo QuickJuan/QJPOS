@@ -15,6 +15,8 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Filament\Tables\Actions\BulkAction;
+use Illuminate\Database\Eloquent\Collection;
 
 class TableRoomResource extends Resource
 {
@@ -167,6 +169,21 @@ class TableRoomResource extends Resource
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
+                    BulkAction::make('updateStatus')
+                        ->label('Update Status')
+                        ->icon('heroicon-m-pencil')
+                        ->form([
+                            Select::make('status')
+                                ->label('Status')
+                                ->options(TableRoomStatusType::filamentOptions())
+                                ->required(),
+                        ])
+                        ->action(function (Collection $records, array $data): void {
+                            $records->each(function (TableRoom $record) use ($data) {
+                                $record->update(['status' => $data['status']]);
+                            });
+                        })
+                        ->successNotificationTitle('Status updated successfully'),
                 ]),
             ]);
     }
