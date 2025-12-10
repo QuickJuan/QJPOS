@@ -110,6 +110,7 @@ class CartService
         $cartAttributes = [
             'cashier_id'         => Auth::id(),
             'cashier_session_id' => $cashierSessionId,
+            'branch_id'          => $request->user()->branch_id,
         ];
 
         if ($request->filled('table_id')) {
@@ -207,6 +208,9 @@ class CartService
             'vat_amount'           => $pricingData['vat_amount'],
             'non_vat_sales'        => $pricingData['non_vat_sales'],
             'less_tax'             => $pricingData['less_tax'],
+            'tax_type'             => $product->vat_type,
+            'tax_percentage'       => $product->vat_rate,
+            'tax_included'         => $product->vat_inclusive,
         ]);
     }
 
@@ -515,6 +519,9 @@ class CartService
             'vat_exempt_sales' => $taxData['vat_exempt_sales'],
             'vat_amount'       => $taxData['vat_amount'],
             'less_tax'         => $lessTax,
+            'tax_type'         => $product->vat_type,
+            'tax_percentage'   => $product->vat_rate,
+            'tax_included'     => $product->vat_inclusive,
         ]);
     }
 
@@ -918,24 +925,34 @@ class CartService
         return new CartResource($cart);
     }
 
-    public function getPrintBillData(int $cartId)
+    public function printBill(int $cartId)
     {
         $cart = $this->model
-            ->with(['cartItems', 'cartItems.product', 'cashierSession.branch', 'customer'])
+            ->with([
+                'cartItems',
+                'cartItems.product',
+                'cashierSession.branch',
+                'customer',
+                'tableRoom.tableRoomLocation',
+            ])
             ->find($cartId);
 
         if (! $cart) {
             throw new Exception("Cart not foundsss.");
         }
 
-        $branchId = $cart->branch_id ?? optional($cart->cashierSession)->branch_id ?? null;
+        $branchId = $cart->branch_id;
 
         if ($branchId) {
             // Update the bill number for the cart
             $billNumber = $this->branchService->getNextBillNumber($branchId);
 
+            //calculate the service charge if applicable
+            $serviceCharge = $cart->tableRoom->calculateServiceCharge($cart);
+
             // Update Bill No.
             $cart->bill_no = $billNumber;
+            $cart->service_charge = $serviceCharge;
             $cart->save();
         }
 

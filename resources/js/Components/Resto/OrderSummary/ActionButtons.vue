@@ -92,9 +92,6 @@
         <BillModal
             v-model:visible="showBillModal"
             :bill-data="billData"
-            :order-items="orderItems"
-            :table-info="tableInfo"
-            :billFooter="billFooter"
             :general-settings="generalSettings"
         />
     </div>
@@ -119,7 +116,7 @@ import BillModal from "./BillModal.vue";
 import { useBillNumber } from "@/composables/useBillNumber";
 import { usePage, router } from "@inertiajs/vue3";
 import { ConfirmPopup, useConfirm } from "primevue";
-import axios from "axios";
+import { httpGet } from "@/Utils/axiosHelper";
 import { route } from "ziggy-js";
 import { useTable } from "@/composables/useTable";
 import { thermalPrinter } from "@/Services/ThermalPrinterService";
@@ -288,24 +285,34 @@ const handleSettleBill = (response: any) => {
 
 // Handle print bill
 const handlePrintBill = async () => {
-    const response = await axios.get(
+    const response = await httpGet(
         `/api/carts/${page.props.cart?.id}/print-bill`
     );
-    const responseData = response.data;
-    console.log(responseData);
+
+    if (!response.success) {
+        toast.add({
+            severity: "error",
+            summary: "Error",
+            detail: response.error || "Failed to fetch bill data",
+            life: 3000,
+        });
+        return;
+    }
+
+    billData.value = response.data;
 
     // Populate bill data
-    billData.value = {
-        billNumber: responsxeData.bill_number,
-        date: responseData.cart_date,
-        tableInfo: responseData.table_number,
-        cashierName: responseData.cashier?.name,
-        orderItems: responseData.cart_items,
-        subtotal: responseData.totals.subtotal,
-        lessTax: responseData.totals.less_tax,
-        lessDiscount: responseData.totals.less_discount,
-        totalAmount: parseFloat(props.total.toFixed(2)),
-    };
+    // billData.value = {
+    //     billNumber: responseData.bill_number,
+    //     date: responseData.cart_date,
+    //     tableInfo: responseData.table_number,
+    //     cashierName: responseData.cashier?.name,
+    //     orderItems: responseData.cart_items,
+    //     subtotal: responseData.totals.subtotal,
+    //     lessTax: responseData.totals.less_tax,
+    //     lessDiscount: responseData.totals.less_discount,
+    //     totalAmount: parseFloat(props.total.toFixed(2)),
+    // };
 
     showBillModal.value = true;
 };
