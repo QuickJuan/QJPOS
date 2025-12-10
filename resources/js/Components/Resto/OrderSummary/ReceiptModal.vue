@@ -3,7 +3,7 @@
         v-model:visible="visible"
         modal
         header="Receipt"
-        :style="getModalStyle(props.orderItems.length)"
+        :style="getModalStyle(props?.orderItems?.length)"
         :closable="false"
         @keydown="handleKeydown"
     >
@@ -64,7 +64,7 @@ import { ref, computed, nextTick, watch } from "vue";
 import { Dialog } from "primevue";
 import ReceiptLayout from "@/Components/ReceiptLayout.vue";
 import { route } from "ziggy-js";
-import { router } from "@inertiajs/vue3";
+import { router, usePage } from "@inertiajs/vue3";
 import { useModalStyle } from "@/composables/useModalStyle";
 import { thermalPrinter } from "@/Services/ThermalPrinterService";
 import { useToast } from "primevue";
@@ -72,20 +72,32 @@ import { useToast } from "primevue";
 const props = defineProps<{
     visible: boolean;
     receiptData: any;
-    orderItems: any[];
-    receiptFooter: any;
-    generalSettings: {
-        company_name: string;
-        company_address: string;
-        company_phone: string;
-        company_logo: string;
-    };
-    activeBranch?: any;
 }>();
+
+const page = usePage<any>();
+const generalSettings = page.props.generalSettings;
 
 const emit = defineEmits<{
     "update:visible": [value: boolean];
 }>();
+
+const receiptHeader = computed(() => ({
+    companyName: generalSettings.company_name || "",
+    companyAddress: generalSettings.company_address || "",
+    branchName: props.receiptData?.branch?.name || "",
+    branchAddress: props.receiptData?.branch?.address || "",
+    branchTIN: props.receiptData?.branch?.tin || "",
+    branchPhone: props.receiptData?.branch?.phone || "",
+    additionalHeaders: props.receiptData?.branch?.receipt_headers || [],
+    additionalFooters: props.receiptData?.branch?.receipt_footer || [],
+}));
+
+const receiptFooter = computed(
+    () =>
+        props.receiptData?.branch?.receipt_footer ||
+        generalSettings.receipt_footer ||
+        []
+);
 
 const { getModalStyle } = useModalStyle();
 const toast = useToast();
@@ -112,7 +124,7 @@ const handleKeydown = (event: KeyboardEvent) => {
 
 // Handle close modal
 const handleClose = () => {
-    router.visit(route("resto.tables"));
+    router.visit(route("resto.table-rooms"));
     visible.value = false;
 };
 

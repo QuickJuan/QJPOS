@@ -1,9 +1,6 @@
 <template>
     <div
-        :class="[
-            'receipt-container bg-white p-4 font-mono text-xs leading-tight',
-            embedded ? '' : 'max-w-xs mx-auto',
-        ]"
+        class="receipt-container max-w-xs mx-auto bg-white p-4 font-mono text-sm leading-tight border-2 border-gray-300"
     >
         <!-- Header -->
         <div class="text-center mb-4">
@@ -12,12 +9,16 @@
                     :src="businessLogo"
                     alt="Company Logo"
                     class="w-16 h-auto mx-auto mb-2"
+                    style="max-width: 64px"
                 />
             </div>
             <h1 class="text-lg font-bold mb-1">{{ businessName }}</h1>
-            <p class="text-xs">{{ businessAddress }}</p>
-            <p class="text-xs">{{ businessPhone }}</p>
-            <div class="border-b border-dashed"></div>
+            <p class="text-sm">{{ businessAddress }}</p>
+            <p class="text-sm">{{ businessPhone }}</p>
+            <div class="border-b border-dashed mt-2"></div>
+            <h2 class="text-lg font-semibold mt-2">
+                Table #: {{ tableNumber }}
+            </h2>
         </div>
 
         <!-- Receipt Info -->
@@ -54,19 +55,19 @@
         <div class="my-3">
             <div class="text-center font-bold mb-2">ORDER ITEMS</div>
             <div
-                v-for="(items, orderType) in groupedOrderItems"
-                :key="orderType"
+                v-for="(items, orderItemsKey) in props.orderItems"
+                :key="orderItemsKey"
                 class="mb-4"
             >
                 <!-- Order Type Header -->
                 <div class="text-center font-semibold text-sm mb-2 pb-1">
-                    {{ getOrderTypeLabel(String(orderType)) }}
+                    {{ getOrderTypeLabel(String(items.orderType)) }}
                 </div>
 
-                <div v-for="item in items" :key="item.id" class="my-3">
+                <div v-for="item in items.orderItems" :key="item.id" class="my-3">
                     <template v-if="item.parent_id == null">
                         <div class="flex justify-between">
-                            <span class="flex-1">{{ item.name }}</span>
+                            <span class="flex-1">{{ item.description }}</span>
                         </div>
                         <div
                             v-if="item.quantity >= 1"
@@ -83,23 +84,37 @@
 
                         <!-- Less Tax -->
                         <div
-                            v-if="item.less_tax > 0"
+                            v-if="parseFloat(item.less_tax || 0) > 0"
                             class="ml-2 text-xs text-gray-600"
                         >
                             <div class="flex justify-between">
                                 <span>Less Tax: </span>
-                                <span>-{{ formatMoney(item.less_tax) }}</span>
+                                <span
+                                    >-{{
+                                        formatMoney(
+                                            parseFloat(item.less_tax || 0)
+                                        )
+                                    }}</span
+                                >
                             </div>
                         </div>
 
                         <!-- Less Discount -->
                         <div
-                            v-if="item.discount > 0"
+                            v-if="parseFloat(item.discount_amount || 0) > 0"
                             class="ml-2 text-xs text-gray-600"
                         >
                             <div class="flex justify-between">
                                 <span>Less Discount: </span>
-                                <span>-{{ formatMoney(item.discount) }}</span>
+                                <span
+                                    >-{{
+                                        formatMoney(
+                                            parseFloat(
+                                                item.discount_amount || 0
+                                            )
+                                        )
+                                    }}</span
+                                >
                             </div>
                         </div>
 
@@ -133,27 +148,34 @@
 
         <!-- Totals -->
         <div class="mt-3 mb-5">
-            <div class="flex justify-between">
+            <!-- Subtotal -->
+            <div class="flex justify-between" v-if="subtotal != totalAmount">
                 <span>Subtotal:</span>
                 <span>{{ formatMoney(subtotal) }}</span>
             </div>
-            <div class="flex justify-between" v-if="lessTax">
+
+            <!-- Less Tax -->
+            <div class="flex justify-between" v-if="lessTotalTax">
                 <span>Less Tax:</span>
-                <span>-{{ formatMoney(lessTax) ?? 0 }}</span>
+                <span>-{{ formatMoney(lessTotalTax) }}</span>
             </div>
-            <div class="flex justify-between" v-if="lessDiscount">
+
+            <!-- Less Discount -->
+            <div class="flex justify-between" v-if="lessTotalDiscount">
                 <span>Less Discount:</span>
-                <span>-{{ formatMoney(lessDiscount) ?? 0 }}</span>
+                <span>-{{ formatMoney(lessTotalDiscount) }}</span>
             </div>
+
+            <!-- Total -->
             <div
-                class="border-t border-dashed pt-1 flex justify-between font-bold"
+                class="border-none pt-2 flex justify-between font-bold text-base"
             >
                 <span>TOTAL:</span>
                 <span>{{ formatMoney(totalAmount) }}</span>
             </div>
             <div class="flex justify-between" v-if="paymentInfo">
                 <span>Payment Received:</span>
-                <span>{{ formatMoney(paymentInfo.amount_paid) }}</span>
+                <span>{{ formatMoney(paymentInfo.amountPaid) }}</span>
             </div>
             <div class="flex justify-between" v-if="paymentInfo">
                 <span>Change:</span>
@@ -275,6 +297,20 @@ const formatTime = (dateString: string) => {
         hour12: true,
     });
 };
+
+//compute the total less tax from order items
+const lessTotalTax = computed(() => {
+    return orderItems.value.reduce((sum, item) => {
+        return sum + parseFloat(item.less_tax || 0);
+    }, 0);
+});
+
+//compute the total less discount from order items
+const lessTotalDiscount = computed(() => {
+    return orderItems.value.reduce((sum, item) => {
+        return sum + parseFloat(item.discount_amount || 0);
+    }, 0);
+});
 </script>
 
 <style scoped>
@@ -290,7 +326,13 @@ const formatTime = (dateString: string) => {
         max-width: none;
         margin: 0;
         padding: 10px;
-        font-size: 10px;
+        font-size: 12px;
+        border: none;
+    }
+
+    .receipt-container img {
+        max-width: 48px !important;
+        height: auto !important;
     }
 }
 </style>

@@ -19,6 +19,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\ActionGroup;
+use Filament\Tables\Actions\BulkAction;
 use Filament\Tables\Actions\ImportAction;
 use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -121,7 +122,7 @@ class ProductResource extends Resource
                     ->hidden(fn(Get $get) => $get('multiple_packaging') === true),
 
                 Select::make('vat_type')
-                    ->label('VAT Type')
+                    ->label('Tax Type')
                     ->options([
                         VatType::VAT->value => VatType::VAT->getLabel(),
                         VatType::NON_VAT->value => VatType::NON_VAT->getLabel(),
@@ -132,13 +133,13 @@ class ProductResource extends Resource
                     ->live(onBlur: true),
 
                 Toggle::make('vat_inclusive')
-                    ->label('VAT Inclusive')
+                    ->label('Tax Inclusive')
                     ->default(false)
                     ->hidden(fn(Get $get) => $get('vat_type') !== VatType::VAT->value)
-                    ->helperText('Check if VAT is included in the price'),
+                    ->helperText('Check if Tax is included in the price'),
 
                 TextInput::make('vat_rate')
-                    ->label('VAT Rate (%)')
+                    ->label('Tax Rate (%)')
                     ->numeric()
                     ->minValue(0)
                     ->maxValue(100)
@@ -146,7 +147,7 @@ class ProductResource extends Resource
                     ->default(0)
                     ->suffix('%')
                     ->hidden(fn(Get $get) => $get('vat_type') !== VatType::VAT->value)
-                    ->helperText('Enter the VAT rate as a percentage'),
+                    ->helperText('Enter the Tax rate as a percentage'),
 
                 TextInput::make('unit_measure')
                     ->label('Unit of Measure')
@@ -332,6 +333,59 @@ class ProductResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+                    BulkAction::make('update_vat')
+                        ->label('Update VAT Settings')
+                        ->icon('heroicon-m-pencil-square')
+                        ->form([
+                            Select::make('vat_type')
+                                ->label('Tax Type')
+                                ->options([
+                                    VatType::VAT->value => VatType::VAT->getLabel(),
+                                    VatType::NON_VAT->value => VatType::NON_VAT->getLabel(),
+                                ])
+                                ->native(false)
+                                ->searchable()
+                                ->placeholder('Select Tax Type')
+                                ->live(onBlur: true),
+
+                            Toggle::make('vat_inclusive')
+                                ->label('Tax Inclusive')
+                                ->hidden(fn(Get $get) => $get('vat_type') !== VatType::VAT->value),
+
+                            TextInput::make('vat_rate')
+                                ->label('Tax Rate (%)')
+                                ->numeric()
+                                ->minValue(0)
+                                ->maxValue(100)
+                                ->step(0.01)
+                                ->suffix('%')
+                                ->hidden(fn(Get $get) => $get('vat_type') !== VatType::VAT->value),
+                        ])
+                        ->action(function (array $data, Tables\Actions\BulkAction $action) {
+                            $records = $action->getRecords();
+
+                            foreach ($records as $record) {
+                                if (isset($data['vat_type'])) {
+                                    $record->vat_type = $data['vat_type'];
+                                }
+                                if ($data['vat_type'] === VatType::VAT->value) {
+                                    if (isset($data['vat_inclusive'])) {
+                                        $record->vat_inclusive = $data['vat_inclusive'];
+                                    }
+                                    if (isset($data['vat_rate'])) {
+                                        $record->vat_rate = $data['vat_rate'];
+                                    }
+                                }
+                                $record->save();
+                            }
+
+                            Notification::make()
+                                ->title('Tax Settings Updated')
+                                ->body('Tax settings have been successfully updated for ' . count($records) . ' product(s).')
+                                ->success()
+                                ->send();
+                        }),
+
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);

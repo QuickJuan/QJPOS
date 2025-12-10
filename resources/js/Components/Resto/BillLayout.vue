@@ -49,17 +49,17 @@
         <div class="my-3">
             <div class="text-center font-bold mb-2">ORDER ITEMS</div>
             <div
-                v-for="(items, orderType) in groupedOrderItems"
-                :key="orderType"
+                v-for="(items, itemsKey) in props.orderItems"
+                :key="itemsKey"
                 class="mb-4"
             >
                 <!-- Order Type Header -->
                 <div class="text-center font-semibold text-sm mb-2 pb-1">
-                    {{ getOrderTypeLabel(String(orderType)) }}
+                    {{ getOrderTypeLabel(String(items.orderType)) }}
                 </div>
 
                 <!-- Items in this group -->
-                <div v-for="item in items" :key="item.id" class="my-3">
+                <div v-for="item in items.cartItems" :key="item.id" class="my-3">
                     <template v-if="item.parent_id == null">
                         <div class="flex justify-between">
                             <span class="flex-1">{{ item.description }}</span>
@@ -198,7 +198,6 @@ const props = defineProps<{
     billDate?: string;
     tableInfo?: any;
     cashierName?: string;
-    orderType?: string;
     orderItems?: any[];
     subtotal?: number;
     lessTax?: number;
@@ -242,20 +241,6 @@ const lessTotalDiscount = computed(() => {
     }, 0);
 });
 
-// Group items by order type
-const groupedOrderItems = computed(() => {
-    const groups: { [key: string]: any[] } = {};
-    orderItems.value.forEach((item) => {
-        const orderType = item.order_type || "dine-in";
-        if (!groups[orderType]) {
-            groups[orderType] = [];
-        }
-        groups[orderType].push(item);
-    });
-    return groups;
-});
-
-// Get order type label
 const getOrderTypeLabel = (orderType: string) => {
     const labels: { [key: string]: string } = {
         "dine-in": "Dine-in",

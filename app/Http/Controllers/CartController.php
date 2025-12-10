@@ -1,19 +1,20 @@
 <?php
 namespace App\Http\Controllers;
 
-use App\Http\Requests\ApplyDiscountToCartItemRequest;
-use App\Http\Requests\CreateTableCartRequest;
+use Exception;
+use Illuminate\Http\Request;
+use App\Services\CartService;
+use App\Services\PaymentService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
+use App\Http\Resources\CartResource;
+use Illuminate\Http\RedirectResponse;
+use App\Services\CashierSessionService;
 use App\Http\Requests\PlaceOrderRequest;
 use App\Http\Requests\SettleBillRequest;
-use App\Http\Resources\CartResource;
-use App\Services\CartService;
-use App\Services\CashierSessionService;
-use App\Services\PaymentService;
-use Exception;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
+use App\Http\Requests\CreateTableCartRequest;
+use App\Http\Resources\ReceiptOrdersResource;
+use App\Http\Requests\ApplyDiscountToCartItemRequest;
 
 class CartController extends Controller
 {
@@ -225,7 +226,7 @@ class CartController extends Controller
             // return redirect()->back()->with('success', 'Bill settled successfully.');
             return response()->json([
                 'message' => 'Bill settled successfully.',
-                'data'    => $order,
+                'data'    => new ReceiptOrdersResource($order),
             ], 200);
         } catch (Exception $e) {
             return response()->json([

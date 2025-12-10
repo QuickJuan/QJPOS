@@ -50,7 +50,7 @@ class PaymentService
                 $cart->delete();
 
 
-                return $order->load('orderItems');
+                return $order->load(['orderItems', 'orderItems.product', 'cashierSession.branch', 'customer']);
             });
         } catch (\Exception $e) {
             Log::error('Settle bill failed', ['error' => $e->getMessage(), 'cartId' => $payload['cart_id']]);

@@ -66,23 +66,16 @@
             @view-table="handleViewTable"
             @printer-config="handlePrinterConfig"
             @end-of-shift="handleEndOfShift"
+            @review-transactions="handleReviewTransactions"
         />
 
         <!-- Settle Bill Modal -->
         <SettleBillModal
             v-model:visible="showSettleBillModal"
             :cart="cart"
-            :order-items="orderItems"
-            :selected-order-type="selectedOrderType"
-            :total-amount="props.total"
-            :applied-discount="appliedDiscount"
             :sub-total="props.subTotal"
             :total="props.total"
-            :less-tax-total="props.lessTaxTotal"
-            :less-discount-total="props.lessDiscountTotal"
             :table-info="tableInfo"
-            :bill-footer="billFooter"
-            :receipt-number="receiptNumber"
             @settle-bill="handleSettleBill"
         />
 
@@ -219,14 +212,10 @@ const billData = ref({
     date: new Date().toISOString(),
     tableInfo: "",
     cashierName: "",
-    orderType: "",
     orderItems: [] as any[],
     subtotal: 0,
     lessTax: 0,
     lessDiscount: 0,
-    // discountName: null as string | null,
-    // discountType: null as string | null,
-    // removeTax: false,
     totalAmount: 0,
 });
 
@@ -287,13 +276,14 @@ const handleAddModifier = () => {
 };
 
 // Handle settle bill form submission
-const handleSettleBill = (data: any) => {
+const handleSettleBill = (response: any) => {
     // Update receipt data from settle bill modal
-    if (data.receipt_data) {
-        receiptData.value = data.receipt_data;
+    // emit("settleBill", response.data);
+    receiptData.value = response?.data?.data || null;
+    showSettleBillModal.value = false;
+    if (receiptData.value) {
+        showReceiptModal.value = true;
     }
-    emit("settleBill", data);
-    showReceiptModal.value = true;
 };
 
 // Handle print bill
@@ -302,21 +292,18 @@ const handlePrintBill = async () => {
         `/api/carts/${page.props.cart?.id}/print-bill`
     );
     const responseData = response.data;
+    console.log(responseData);
 
     // Populate bill data
     billData.value = {
-        billNumber: responseData.bill_number,
+        billNumber: responsxeData.bill_number,
         date: responseData.cart_date,
         tableInfo: responseData.table_number,
         cashierName: responseData.cashier?.name,
-        orderType: props.selectedOrderType,
-        orderItems: responseData.cart_items[0].cartItems,
+        orderItems: responseData.cart_items,
         subtotal: responseData.totals.subtotal,
         lessTax: responseData.totals.less_tax,
         lessDiscount: responseData.totals.less_discount,
-        // discountName: props.appliedDiscount?.discountName || null,
-        // discountType: props.appliedDiscount?.discountType || null,
-        // removeTax: props.appliedDiscount?.removeTax || false,
         totalAmount: parseFloat(props.total.toFixed(2)),
     };
 
@@ -375,6 +362,16 @@ const handlePlaceOrder = async () => {
                         response.tableRoom?.name || "Table",
                         response.placedOrderItems
                     );
+                }
+                //redirect back to table-rooms index after printing
+                let locationId =
+                    response.data?.tableRoom?.table_room_location_id;
+                if (locationId) {
+                    router.visit(
+                        route("table-rooms.index", { locationId: locationId })
+                    );
+                } else {
+                    router.visit(route("table-rooms.index"));
                 }
             } catch (printError) {
                 console.error("Failed to print order:", printError);
