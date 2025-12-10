@@ -5,6 +5,7 @@ use App\Models\Branch;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -55,15 +56,11 @@ class AuthController extends Controller
             ]);
         }
 
-        // Check if the user has open session to another branch
-        if ($user->hasOpenSessionToAnotherBranch($branch)) {
-            $anotherBranch     = $user->getBranchWithOpenSession($branch);
-            $anotherBranchName = $anotherBranch->name ?? 'another';
+        // Invalidate all other sessions for this user (logout from other devices)
+        $this->invalidateUserSessions($user);
 
-            throw ValidationException::withMessages([
-                'branch' => ["You have an open session in {$anotherBranchName} branch. Please close the session from that branch first."],
-            ]);
-        }
+        // Update the user's current branch_id
+        $user->update(['branch_id' => $branch->id]);
 
         Auth::login($user);
 
@@ -81,5 +78,19 @@ class AuthController extends Controller
         auth()->logout();
 
         return redirect()->route('login');
+    }
+
+    /**
+     * Invalidate all other sessions for a user.
+     * This ensures only one active session per user at a time.
+     * When a user logs in from a new device, their previous sessions are deleted,
+     * effectively logging them out from other locations.
+     */
+    private function invalidateUserSessions(User $user): void
+    {
+        // Delete all sessions for this user from the sessions table
+        DB::table('sessions')
+            ->where('user_id', $user->id)
+            ->delete();
     }
 }
