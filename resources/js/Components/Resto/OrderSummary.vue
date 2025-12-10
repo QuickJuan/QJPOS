@@ -200,7 +200,7 @@ const orderItemLessTax = computed(() => {
 
 const orderItemLessDiscount = computed(() => {
     return orderItems.value.reduce((sum, item) => {
-        const lessDiscount = parseFloat(item.less_discount || "0");
+        const lessDiscount = parseFloat(item.discount_amount || "0");
         return sum + lessDiscount;
     }, 0);
 });

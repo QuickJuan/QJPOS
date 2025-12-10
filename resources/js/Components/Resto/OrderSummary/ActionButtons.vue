@@ -92,9 +92,6 @@
         <BillModal
             v-model:visible="showBillModal"
             :bill-data="billData"
-            :order-items="orderItems"
-            :table-info="tableInfo"
-            :billFooter="billFooter"
             :general-settings="generalSettings"
         />
     </div>
@@ -302,21 +299,20 @@ const handlePrintBill = async () => {
         return;
     }
 
-    const responseData = response.data;
-    console.log(responseData);
+    billData.value = response.data;
 
     // Populate bill data
-    billData.value = {
-        billNumber: responseData.bill_number,
-        date: responseData.cart_date,
-        tableInfo: responseData.table_number,
-        cashierName: responseData.cashier?.name,
-        orderItems: responseData.cart_items,
-        subtotal: responseData.totals.subtotal,
-        lessTax: responseData.totals.less_tax,
-        lessDiscount: responseData.totals.less_discount,
-        totalAmount: parseFloat(props.total.toFixed(2)),
-    };
+    // billData.value = {
+    //     billNumber: responseData.bill_number,
+    //     date: responseData.cart_date,
+    //     tableInfo: responseData.table_number,
+    //     cashierName: responseData.cashier?.name,
+    //     orderItems: responseData.cart_items,
+    //     subtotal: responseData.totals.subtotal,
+    //     lessTax: responseData.totals.less_tax,
+    //     lessDiscount: responseData.totals.less_discount,
+    //     totalAmount: parseFloat(props.total.toFixed(2)),
+    // };
 
     showBillModal.value = true;
 };
