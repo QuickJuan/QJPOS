@@ -11,8 +11,8 @@ class HomeController extends Controller
     public function index()
     {
         $user = Auth::user();
-        $activeBranch = session('active_branch');
-        
+
+
         // Get attendance status for the current user (you may need to implement this based on your attendance model)
         $attendanceStatus = [
             'is_clocked_in' => false, // This should be fetched from your attendance system
@@ -22,7 +22,6 @@ class HomeController extends Controller
 
         return Inertia::render('Home', [
             'user' => $user,
-            'activeBranch' => $activeBranch,
             'attendanceStatus' => $attendanceStatus,
         ]);
     }

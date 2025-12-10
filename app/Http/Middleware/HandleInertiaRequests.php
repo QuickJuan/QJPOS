@@ -2,12 +2,13 @@
 namespace App\Http\Middleware;
 
 use App\Models\Cart;
-use App\Models\CashierSession;
+use App\Models\Branch;
+use Inertia\Middleware;
+use Illuminate\Http\Request;
 use App\Services\CartService;
+use App\Models\CashierSession;
 use App\Services\DiscountService;
 use App\Services\GeneralSettingsService;
-use Illuminate\Http\Request;
-use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -61,7 +62,7 @@ class HandleInertiaRequests extends Middleware
             ...$this->getTenantSharedData($request),
             // Main site data
             ...$this->getMainSiteSharedData($request),
-            'tax_rate'            => config('sales.tax_rate'),
+            // 'tax_rate'            => config('sales.tax_rate'),
         ]);
     }
 
@@ -75,17 +76,15 @@ class HandleInertiaRequests extends Middleware
         }
 
         // Get the current user's active cashier session
-        $cashierSession = CashierSession::with('branch')
-            ->where('cashier_id', $request->user()->id)
-            ->whereNull('closing_time')
-            ->latest('started_time')
-            ->first();
+        $branch = Branch::find($request->user()->branch_id);
 
-        if (!$cashierSession || !$cashierSession->branch) {
+
+        if (!$branch) {
             return null;
         }
 
-        return $cashierSession->branch->toArray();
+
+        return $branch->toArray();
     }
 
     /**

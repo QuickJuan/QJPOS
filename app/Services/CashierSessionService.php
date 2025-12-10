@@ -23,10 +23,16 @@ class CashierSessionService
 
     public function startSession(Request $request): CashierSession
     {
+
+
         // Check if user already has an open session
-        $existingSession = $this->model
-            ->openSession()
+        // $existingSession = $this->model
+        //     ->openSession()
+        //     ->first();
+        $existingSession = CashierSession::where('cashier_id', $request->user()->id)
+            ->whereNull('closing_time')
             ->first();
+
 
         if ($existingSession) {
             throw new Exception('You already have an open session. Please continue or close it first before starting new one.');
@@ -34,7 +40,7 @@ class CashierSessionService
 
         $session = $this->model->create([
             'business_date'  => now()->toDateString(),
-            'branch_id'      => session('active_branch')->id,
+            'branch_id'      => $request->user()->branch_id,
             'cashier_id'     => Auth::id(),
             'started_time'   => now(),
             'beginning_cash' => $request['beginning_cash'],

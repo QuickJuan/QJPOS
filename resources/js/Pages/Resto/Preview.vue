@@ -12,10 +12,10 @@
             <div class="mt-4 sm:mt-0 text-right">
                 <p class="text-sm font-medium text-gray-600">Current Branch</p>
                 <p class="text-lg font-semibold text-primary">
-                    {{ props.activeBranch?.name || "No Branch Selected" }}
+                    {{ page.props.active_branch?.name || "No Branch Selected" }}
                 </p>
                 <p class="text-xs text-gray-500">
-                    Code: {{ props.activeBranch?.branch_code || "N/A" }}
+                    Code: {{ page.props.active_branch?.branch_code || "N/A" }}
                 </p>
             </div>
         </div>
@@ -138,10 +138,7 @@ import CloseSessionModal from "./Partials/CloseSessionModal.vue";
 import SessionSummaryModal from "./Partials/SessionSummaryModal.vue";
 
 const props = defineProps<{
-    activeBranch: Branch;
     openSession: CashieringSession | null;
-    sessionSummary: any;
-    generalSettings: any;
 }>();
 
 const page = usePage<PageProps>();
@@ -155,7 +152,7 @@ const sessionSummaryData = ref(null);
 // Check for auto_close query parameter and open modal automatically
 onMounted(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('auto_close') === 'true' && props.openSession) {
+    if (urlParams.get("auto_close") === "true" && props.openSession) {
         showCloseDialog.value = true;
     }
 });
