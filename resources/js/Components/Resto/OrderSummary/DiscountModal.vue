@@ -52,48 +52,6 @@
                                 </div>
                             </div>
                             <div class="text-right ml-4">
-                                <!-- <p
-                                    v-if="
-                                        selectedDiscountId && selectedDiscount
-                                    "
-                                    class="text-xs text-secondary-500 line-through"
-                                >
-                                    {{
-                                        formatMoney(
-                                            (
-                                                item.quantity * item.price
-                                            ).toFixed(2)
-                                        )
-                                    }}
-                                </p> -->
-
-                                <!-- <p class="font-semibold text-secondary-900">
-                                    {{
-                                        selectedDiscountId &&
-                                        selectedDiscount &&
-                                        previewData &&
-                                        previewData.item_discounts
-                                            ? formatMoney(
-                                                  previewData.item_discounts
-                                                      .find(
-                                                          (d) =>
-                                                              d.id === item.id
-                                                      )
-                                                      ?.discounted_price?.toFixed(
-                                                          2
-                                                      ) ||
-                                                      (
-                                                          item.quantity *
-                                                          item.price
-                                                      ).toFixed(2)
-                                              )
-                                            : formatMoney(
-                                                  (
-                                                      item.quantity * item.price
-                                                  ).toFixed(2)
-                                              )
-                                    }}
-                                </p> -->
                                 <p class="font-semibold text-secondary-900">
                                     {{
                                         formatMoney(
@@ -451,6 +409,7 @@ const otherDiscounts = computed(() => {
 // Select discount method
 const selectDiscount = (discount: any) => {
     selectedDiscountId.value = String(discount.id);
+
     const calculatedDiscountAmount = calculateDiscountAmount(discount);
 
     lessTaxValue.value = calculatedDiscountAmount.map((d) => d?.lessTax || 0);
@@ -533,12 +492,18 @@ const applyDiscount = () => {
 
 const calculateDiscountAmount = (discount: any) => {
     if (!discount) return;
+    console.log("items to discount", props.selectedItems);
 
     return props.selectedItems.map((item: any) => {
         const amount = item.quantity * item.price;
+        const itemTax = {
+            type: item.tax_type,
+            percentage: item.tax_percentage,
+            included: item.tax_included,
+        };
 
         if (discount.remove_tax) {
-            return calculateDiscountWithTaxRemoval(discount, amount);
+            return calculateDiscountWithTaxRemoval(discount, amount, itemTax);
         }
 
         switch (discount.type) {
@@ -561,11 +526,24 @@ const calculateDiscountAmount = (discount: any) => {
     });
 };
 
-const calculateDiscountWithTaxRemoval = (discount: any, amount: number) => {
-    const vatExempt = amount / taxRate.value;
-    const taxAmount = 0;
-    const vatableSales = 0;
-    const lessTax = amount - vatExempt;
+const calculateDiscountWithTaxRemoval = (
+    discount: any,
+    amount: number,
+    itemTax: any
+) => {
+    let vatExempt = 0;
+    let lessTax = 0;
+    let vatableSales = 0;
+    let taxAmount = 0;
+
+    if (itemTax.percentage > 0 && itemTax.included) {
+        vatExempt = amount / (itemTax.percentage / 100 + 1);
+        vatableSales = 0;
+        taxAmount = 0;
+        lessTax = amount - vatExempt;
+    }
+    // const vatExempt = amount / (itemTax.percentage / 100 + 1);
+
     const discountAmount =
         discount.type == "percentage"
             ? vatExempt * (discount.amount / 100)

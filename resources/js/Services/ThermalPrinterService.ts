@@ -3,45 +3,60 @@ import axios from 'axios';
 
 interface BillData {
     storeName: string;
-    branchName?: string;
-    storeAddress: string;
-    storePhone?: string;
-    billNumber: string;
-    cashier: string;
-    date: string;
-    time?: string;
-    tableInfo: {
-        name?: string;
-        number_of_pax?: number;
-    };
-    orderType?: string;
-    items: Array<{
+    branch?: {
+        id: number;
         name: string;
-        quantity: number | string;
-        price: number | string;
-        amount: number | string;
-        selectedOptions?: Array<{
+        address: string;
+        phone: string;
+        tin?: string | null;
+        registration_number?: string | null;
+        bill_headers?: string[];
+        bill_footer?: string[];
+    };
+    billNumber: number | string;
+    tableName: string;
+    cashier?: {
+        id: number;
+        name: string;
+    };
+    date?: string;
+    time?: string;
+    items: Array<{
+        orderType: string;
+        cartItems: Array<{
+            id: number;
             name: string;
+            description?: string;
+            quantity: number | string;
             price: number | string;
+            amount: number | string;
+            lessTax?: number | string;
+            discount?: number | string;
+            discount_amount?: number | string;
+            selectedOptions?: Array<{
+                name: string;
+                price: number | string;
+            }>;
+            modifiers?: string[];
+            notes?: string | null;
         }>;
-        lessTax?: number | string;
-        discount?: number | string;
-        orderType?: string;
     }>;
-    subtotal: number | string;
-    lessTax?: number | string;
-    lessDiscount?: number | string;
-    discountAmount?: number | string;
-    discountName?: string;
-    discountType?: string;
-    removeTax?: boolean;
-    total: number | string;
+    totals: {
+        total_amount?: number | string;
+        sub_total: number | string;
+        less_tax: number | string;
+        less_discount: number | string;
+        service_charge?: number | string;
+        total_due: number | string;
+        vatable_sales?: number | string;
+        vat_amount?: number | string;
+        vat_exempt_sales?: number | string;
+    };
     payment?: {
         method: string;
         amountPaid: number | string;
         change?: number | string;
     };
-    receiptHeader?: any;
     billFooter?: {
         footer_notes?: string;
     };
@@ -433,10 +448,7 @@ class ThermalPrinterService {
                 commands.push(...this.stringToBytes(this.formatInfoLine('Cashier:', receiptData.cashier)));
                 commands.push(...this.ESC_POS.LINE_FEED);
             }
-            if (receiptData.orderType) {
-                commands.push(...this.stringToBytes(this.formatInfoLine('Order Type:', receiptData.orderType)));
-                commands.push(...this.ESC_POS.LINE_FEED);
-            }
+
             commands.push(...this.ESC_POS.LINE_FEED);
 
             // Items separator
@@ -468,8 +480,8 @@ class ThermalPrinterService {
                     commands.push(...this.ESC_POS.BOLD_ON);
                     commands.push(...this.stringToBytes(this.getOrderTypeLabel(orderType)));
                     commands.push(...this.ESC_POS.BOLD_OFF);
-                    commands.push(...this.ESC_POS.ALIGN_LEFT);
                     commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+                    commands.push(...this.ESC_POS.ALIGN_LEFT);
                 }
 
                 // Print items in this group
@@ -836,17 +848,17 @@ class ThermalPrinterService {
             commands.push(...this.ESC_POS.LINE_FEED);
 
             // Branch name (if provided)
-            if (billData.branchName) {
+            if (billData.branch.name) {
                 commands.push(...this.ESC_POS.BOLD_OFF);
-                commands.push(...this.stringToBytes(billData.branchName));
+                commands.push(...this.stringToBytes(billData.branch.name));
                 commands.push(...this.ESC_POS.LINE_FEED);
                 commands.push(...this.ESC_POS.BOLD_ON);
             }
 
             // Receipt Headers (from branch configuration)
-            if (billData.receiptHeader && Array.isArray(billData.receiptHeader)) {
+            if (billData.branch.bill_headers && Array.isArray(billData.branch.bill_headers)) {
                 commands.push(...this.ESC_POS.BOLD_OFF);
-                billData.receiptHeader.forEach((header: string) => {
+                billData.branch.bill_headers.forEach((header: string) => {
                     commands.push(...this.stringToBytes(header));
                     commands.push(...this.ESC_POS.LINE_FEED);
                 });
@@ -854,10 +866,10 @@ class ThermalPrinterService {
 
             // Store address and phone - normal size
             commands.push(...this.ESC_POS.BOLD_OFF);
-            commands.push(...this.stringToBytes(billData.storeAddress));
+            commands.push(...this.stringToBytes(billData.branch.address));
             commands.push(...this.ESC_POS.LINE_FEED);
-            if (billData.storePhone) {
-                commands.push(...this.stringToBytes(billData.storePhone));
+            if (billData.branch.phone) {
+                commands.push(...this.stringToBytes(billData.branch.phone));
                 commands.push(...this.ESC_POS.LINE_FEED);
             }
 
@@ -868,7 +880,7 @@ class ThermalPrinterService {
 
             // Table header - medium size and centered
             commands.push(...this.ESC_POS.ALIGN_CENTER);
-            this.addTextWithSize(commands, ` ${billData.tableInfo || 'N/A'}`, 'medium');
+            this.addTextWithSize(commands, ` ${billData.tableName || 'N/A'}`, 'medium');
             commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
             // Bill Info - left align
@@ -882,7 +894,7 @@ class ThermalPrinterService {
             commands.push(...this.stringToBytes(this.formatInfoLine('Bill #:', billData.billNumber)));
             commands.push(...this.ESC_POS.LINE_FEED);
             if (billData.cashier) {
-                commands.push(...this.stringToBytes(this.formatInfoLine('Cashier:', billData.cashier)));
+                commands.push(...this.stringToBytes(this.formatInfoLine('Cashier:', billData.cashier.name)));
                 commands.push(...this.ESC_POS.LINE_FEED);
             }
 
@@ -901,18 +913,19 @@ class ThermalPrinterService {
             // commands.push(...this.ESC_POS.BOLD_OFF);
             commands.push(...this.ESC_POS.LINE_FEED);
 
-            // Group items by order type (matching BillLayout)
-            const groupedItems = this.groupItemsByOrderType(billData.items);
-
-            Object.entries(groupedItems).forEach(([orderType, items]) => {
-                // Order type header - always show to match BillLayout
+            // Items are already grouped by order type - no need to re-group
+            // Just iterate through the pre-grouped items
+            billData.items.forEach((group: any, groupIndex: number) => {
+                // Order type header - centered and bold
                 commands.push(...this.ESC_POS.ALIGN_CENTER);
-                commands.push(...this.stringToBytes(this.getOrderTypeLabel(orderType)));
-                commands.push(...this.ESC_POS.ALIGN_LEFT);
+                commands.push(...this.ESC_POS.BOLD_ON);
+                commands.push(...this.stringToBytes(this.getOrderTypeLabel(group.orderType)));
+                commands.push(...this.ESC_POS.BOLD_OFF);
                 commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+                commands.push(...this.ESC_POS.ALIGN_LEFT);
 
-                // Print items in this group
-                items.forEach(item => {
+                // Print items in this group (cartItems)
+                group.cartItems?.forEach((item: any) => {
                     // Main item line
                     commands.push(...this.stringToBytes(item.name));
                     commands.push(...this.ESC_POS.LINE_FEED);
@@ -935,8 +948,8 @@ class ThermalPrinterService {
                     }
 
                     // Less tax (if any)
-                    if (item.less_tax !== undefined && item.less_tax !== null && item.less_tax !== '') {
-                        const lessTaxValue = typeof item.less_tax === 'string' ? parseFloat(item.less_tax) : item.less_tax;
+                    if (item.lessTax !== undefined && item.lessTax !== null && item.lessTax !== '') {
+                        const lessTaxValue = typeof item.lessTax === 'string' ? parseFloat(item.lessTax) : item.lessTax;
                         if (lessTaxValue !== 0) {
                             const taxLine = this.formatDeductionLine('Less Tax:', lessTaxValue);
                             commands.push(...this.stringToBytes(`  ${taxLine}`));
@@ -945,8 +958,8 @@ class ThermalPrinterService {
                     }
 
                     // Less discount (if any)
-                    if (item.discount !== undefined && item.discount !== null && item.discount !== '') {
-                        const discountValue = typeof item.discount === 'string' ? parseFloat(item.discount) : item.discount;
+                    if (item.discount_amount !== undefined && item.discount_amount !== null && item.discount_amount !== '') {
+                        const discountValue = typeof item.discount_amount === 'string' ? parseFloat(item.discount_amount) : item.discount_amount;
                         if (discountValue !== 0) {
                             const discountLine = this.formatDeductionLine('Less Discount:', discountValue);
                             commands.push(...this.stringToBytes(`  ${discountLine}`));
@@ -963,16 +976,16 @@ class ThermalPrinterService {
             commands.push(...this.ESC_POS.LINE_FEED);
 
             //only show the sub total if they are not equal with the total
-            // Totals section
-            if (billData.subtotal !== billData.total) {
-                const subtotal = typeof billData.subtotal === 'string' ? parseFloat(billData.subtotal) || 0 : billData.subtotal;
+            // Totals section - use the totals object from billData
+            if (billData.totals.sub_total !== billData.totals.total_due) {
+                const subtotal = typeof billData.totals.sub_total === 'string' ? parseFloat(billData.totals.sub_total) || 0 : billData.totals.sub_total;
                 commands.push(...this.stringToBytes(this.formatTotalLine('Subtotal:', subtotal)));
                 commands.push(...this.ESC_POS.LINE_FEED);
             }
 
             // Less Tax (if applicable)
-            if (billData.lessTax !== undefined && billData.lessTax !== null && billData.lessTax !== '') {
-                const lessTaxValue = typeof billData.lessTax === 'string' ? parseFloat(billData.lessTax) : billData.lessTax;
+            if (billData.totals.less_tax !== undefined && billData.totals.less_tax !== null && billData.totals.less_tax !== '') {
+                const lessTaxValue = typeof billData.totals.less_tax === 'string' ? parseFloat(billData.totals.less_tax) : billData.totals.less_tax;
                 if (lessTaxValue !== 0) {
                     commands.push(...this.stringToBytes(this.formatTotalLine('Less Tax:', -lessTaxValue)));
                     commands.push(...this.ESC_POS.LINE_FEED);
@@ -980,27 +993,28 @@ class ThermalPrinterService {
             }
 
             // Less Discount (if applicable)
-            if (billData.lessDiscount !== undefined && billData.lessDiscount !== null && billData.lessDiscount !== '') {
-                const lessDiscountValue = typeof billData.lessDiscount === 'string' ? parseFloat(billData.lessDiscount) : billData.lessDiscount;
+            if (billData.totals.less_discount !== undefined && billData.totals.less_discount !== null && billData.totals.less_discount !== '') {
+                const lessDiscountValue = typeof billData.totals.less_discount === 'string' ? parseFloat(billData.totals.less_discount) : billData.totals.less_discount;
                 if (lessDiscountValue !== 0) {
                     commands.push(...this.stringToBytes(this.formatTotalLine('Less Discount:', -lessDiscountValue)));
                     commands.push(...this.ESC_POS.LINE_FEED);
                 }
             }
 
-            // Discount details (if applicable)
-            if (billData.discountAmount && parseFloat(String(billData.discountAmount)) > 0) {
-                const discountAmount = typeof billData.discountAmount === 'string' ? parseFloat(billData.discountAmount) || 0 : billData.discountAmount;
-                const discountLabel = billData.discountName ? `${billData.discountName}:` : 'Discount:';
-                commands.push(...this.stringToBytes(this.formatTotalLine(discountLabel, -discountAmount)));
-                commands.push(...this.ESC_POS.LINE_FEED);
+            // Service Charge (if applicable)
+            if (billData.totals.service_charge !== undefined && billData.totals.service_charge !== null && billData.totals.service_charge !== '') {
+                const serviceChargeValue = typeof billData.totals.service_charge === 'string' ? parseFloat(billData.totals.service_charge) : billData.totals.service_charge;
+                if (serviceChargeValue !== 0) {
+                    commands.push(...this.stringToBytes(this.formatTotalLine('+ Service Charge:', serviceChargeValue)));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                }
             }
 
             // Total separator and amount - bold with configurable font size
             commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
             commands.push(...this.ESC_POS.LINE_FEED);
             commands.push(...this.ESC_POS.BOLD_ON);
-            const total = typeof billData.total === 'string' ? parseFloat(billData.total) || 0 : billData.total;
+            const total = typeof billData.totals.total_due === 'string' ? parseFloat(billData.totals.total_due) || 0 : billData.totals.total_due;
             const totalSize = this.currentConfig?.font_sizes?.totals || 'medium';
             this.addTextWithSize(commands, this.formatTotalLine('TOTAL:', total), totalSize);
             commands.push(...this.ESC_POS.BOLD_OFF);

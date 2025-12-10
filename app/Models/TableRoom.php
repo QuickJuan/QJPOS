@@ -97,4 +97,24 @@ class TableRoom extends Model implements HasMedia
     {
         return $this->hasOne(Cart::class)->latest();
     }
+
+    public function calculateServiceCharge(Cart $cart): float
+    {
+        // Get the location with service charge
+        $location = $this->tableRoomLocation;
+
+        // If no location or no service charge configured, return 0
+        if (!$location || !$location->service_charge || $location->location_type !== 'dine-in') {
+            return 0;
+        }
+
+        // Calculate service charge based on cart's subtotal
+        $subtotal = $cart->cartItems->sum('sub_total');
+        $serviceChargeAmount = ($location->service_charge / 100) * $subtotal;
+
+        // Round to nearest
+        $serviceChargeAmount = round($serviceChargeAmount);
+
+        return $serviceChargeAmount;
+    }
 }

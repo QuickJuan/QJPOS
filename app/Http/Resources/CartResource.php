@@ -13,12 +13,18 @@ class CartResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+
+        $totalAmount = $this->cartItems->sum('amount');
+        $lessDiscount = $this->cartItems->sum('discount_amount') ?? 0;
+        $lessTax = $this->cartItems->sum('less_tax');
+        $subTotal = $totalAmount - ( $lessDiscount + $lessTax);
+
         return [
             // Cart Information
             'id'           => $this->id,
             'bill_number'  => $this->bill_no, // Bill number (generated when printing)
             'cart_date'    => $this->created_at,
-            'table_number' => $this->tableRoom?->name ?? 'N/A',
+            'table_number' => $this->tableRoom?->name,
 
             // Customer Information
             'customer'     => [
@@ -37,26 +43,30 @@ class CartResource extends JsonResource
 
             // Branch Information & Bill Configuration
             'branch'       => [
-                'id'                  => $this->cashierSession->branch?->id,
-                'name'                => $this->cashierSession->branch?->name,
-                'address'             => $this->cashierSession->branch?->address,
-                'phone'               => $this->cashierSession->branch?->phone,
-                'tin'                 => $this->cashierSession->branch?->tin,
-                'registration_number' => $this->cashierSession->branch?->registration_number,
-                'bill_headers'        => $this->cashierSession->branch?->bill_headers ?? [],
-                'bill_footer'         => $this->cashierSession->branch?->bill_footer ?? [],
+                'id'                  => $this->branch?->id,
+                'name'                => $this->branch?->name,
+                'address'             => $this->branch?->address,
+                'phone'               => $this->branch?->phone,
+                'tin'                 => $this->branch?->tin,
+                'registration_number' => $this->branch?->registration_number,
+                'bill_headers'        => $this->branch?->receipt_headers ?? [],
+                'bill_footer'         => $this->branch?->receipt_footer ?? [],
             ],
+
+
 
             // Financial Information (calculated from cart items)
             'totals'       => [
-                'subtotal'        => $this->cartItems->sum('sub_total'),
-                'tax_amount'      => $this->cartItems->sum('vat_amount'),
-                'discount_amount' => $this->total_discount ?? 0,
-                'total_amount'    => $this->total_amount,
-                'less_tax'        => $this->cartItems->sum('less_tax'),
-                'less_discount'   => $this->item_discount ?? 0,
-                'vatable_sales'   => $this->cartItems->sum('vatable_sales'),
-                'vat_amount'      => $this->cartItems->sum('vat_amount'),
+                'total_amount'    => (float) $totalAmount,
+                'less_tax'        => (float) $lessTax,
+                'less_discount'   => (float) $lessDiscount ?? 0,
+                'sub_total'        => (float) $subTotal,
+                'vatable_sales'   => (float) $this->cartItems->sum('vatable_sales'),
+                'vat_amount'      => (float) $this->cartItems->sum('vat_amount'),
+                'vat_exempt_sales'=> (float) $this->cartItems->sum('vat_exempt_sales'),
+                'non_vat_sales'   => (float) $this->cartItems->sum('non_vat_sales'),
+                'service_charge'  => (float) $this->service_charge ?? 0,
+                'total_due'       => (float) $this->service_charge + $subTotal,
             ],
 
             // Payment Information (not applicable for bills, only for settled orders)

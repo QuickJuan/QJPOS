@@ -14,6 +14,8 @@ class Cart extends Model
         'cashier_id',
         'cashier_session_id',
         'table_room_id',
+        'branch_id',
+        'service_charge',
         'discount_id',
         'coupon_id',
         'coupon_code',
@@ -77,8 +79,20 @@ class Cart extends Model
         return $this->hasMany(CartItem::class)->isVoid(false);
     }
 
+    public function voidCartItems(): HasMany
+    {
+        return $this->hasMany(CartItem::class)->isVoid(true);
+    }
+
     public function tableRoom(): BelongsTo
     {
         return $this->belongsTo(TableRoom::class);
     }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
+
 }
