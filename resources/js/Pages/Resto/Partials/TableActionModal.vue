@@ -107,6 +107,21 @@
                     @click="handleViewOrder"
                 />
 
+                <!-- Transfer Guest (only if the order type is dine-in and the table is occupied) -->
+                <Button
+                    v-if="
+                        !isTakeoutOccupied &&
+                        table &&
+                        table.status === 'occupied'
+                    "
+                    label="Transfer Guest"
+                    icon="pi pi-arrow-right"
+                    class="w-full h-12"
+                    severity="warn"
+                    @click="handleTransferGuest"
+                    :disabled="!table"
+                />
+
                 <!-- Vacant table (only if occupied and not merged) -->
                 <Button
                     v-if="
@@ -135,7 +150,6 @@
                 />
 
                 <!-- Unmerge Table (this table from its parent) -->
-
                 <Button
                     v-if="table?.mergedTo"
                     label="Unmerge from Parent Table"
@@ -182,7 +196,7 @@
             <!-- Pax/Guest Input for Available Tables: show immediately -->
             <div
                 v-if="table && table.status === 'available' && !table.mergeTo"
-                class="space-y-3 border-t pt-4 space-y-8"
+                class="border-t pt-4 space-y-8"
             >
                 <h4 class="font-medium text-gray-900">Guest Count</h4>
                 <div class="flex flex-wrap gap-2 mb-2">
@@ -244,12 +258,12 @@ import Button from "primevue/button";
 import TextField from "@/Components/Form/TextField.vue";
 import { useTable } from "@/composables/useTable";
 import { useCashier } from "@/composables/useCashier";
-import TableManagementLayout from "@/Layouts/TableManagementLayout.vue";
 import { useToast } from "primevue";
-import { router } from "@inertiajs/vue3";
+import { router, usePage } from "@inertiajs/vue3";
 import { route } from "ziggy-js";
 
 const toast = useToast();
+const page = usePage();
 
 const props = defineProps<{
     show: boolean;
@@ -261,6 +275,7 @@ const emit = defineEmits<{
     takeOrder: [data: { pax: number; guest_name: string; table: any }];
     claimOrder: [];
     transferNumber: [];
+    transferGuest: [];
     viewOrder: [];
     mergeTable: [table: any];
     reserveTable: [];
@@ -276,7 +291,6 @@ const {
     viewOrder,
     mergeTable,
     claimOrder,
-    transferNumber,
     reserveTable,
 } = useTable();
 
@@ -328,9 +342,8 @@ const confirmTakeOrder = async () => {
     const response = await takeOrder(props.table.id, {
         pax: pax.value,
         guest_name: guestName.value.trim(),
+        branch_id: page.props.active_branch?.id ?? null,
     });
-
-    console.log("Take order response:", response);
 
     if (response.success) {
         const { setSelectedCart } = useCashier();
@@ -360,6 +373,7 @@ const confirmTakeOrder = async () => {
         });
     }
 };
+
 const vacantTable = () => {
     if (!props.table?.id) {
         return;
@@ -400,7 +414,12 @@ const handleClaimOrder = () => {
 };
 
 const handleTransferNumber = () => {
-    transferNumber(props.table);
+    emit("transferNumber");
+    handleClose();
+};
+
+const handleTransferGuest = () => {
+    emit("transferGuest");
     handleClose();
 };
 

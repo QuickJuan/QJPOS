@@ -2,12 +2,12 @@
 namespace App\Http\Controllers;
 
 use Exception;
-use App\Models\Cart;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Models\TableRoom;
 use Illuminate\Http\Request;
 use App\Models\TableRoomLocation;
-use App\Enums\TableRoomStatusType;
+use Illuminate\Http\JsonResponse;
 use App\Services\TableRoomService;
 use Illuminate\Http\RedirectResponse;
 use App\Http\Requests\TableRoomRequest;
@@ -21,11 +21,9 @@ class TableRoomController extends Controller
         $this->tableRoomService = $tableRoomService;
     }
 
-
     public function index(Request $request)
     {
-
-        //get the active branch using user cashier id from session
+        // Get the active branch using user cashier id from session
         $cashierSession = $request->user()->cashierSession;
 
         $tableRooms = $this->tableRoomService->list($cashierSession->branch_id);
@@ -68,6 +66,16 @@ class TableRoomController extends Controller
             'tables'    => $tableRooms,
             'locations' => $locations,
         ]);
+    }
+
+    public function getAllTables(): JsonResponse
+    {
+        $tables = TableRoom::all();
+
+        return response()->json([
+            'success' => true,
+            'data'    => $tables,
+        ], 201);
     }
 
     public function store(TableRoomRequest $request): RedirectResponse
@@ -145,7 +153,7 @@ class TableRoomController extends Controller
         try {
             // Get the table to unmerge all its merged tables
             $table = $this->tableRoomService->model->find($tableId);
-            if (!$table) {
+            if (! $table) {
                 return redirect()->back()->with('error', 'Table not found.');
             }
 

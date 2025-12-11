@@ -34,6 +34,7 @@ class CartService
         try {
             return DB::transaction(function () use ($payload) {
                 $table = TableRoom::find($payload['table_id']);
+
                 if (! $table) {
                     throw new Exception('Table not found.');
                 }
@@ -43,11 +44,14 @@ class CartService
                     'cashier_id'         => Auth::id(),
                     'cashier_session_id' => $payload->user()->cashierSession->id,
                     'table_room_id'      => $table->id,
+                    'branch_id'          => $payload['branch_id'],
                 ]);
 
                 $table->update([
-                    'status'  => TableRoomStatusType::OCCUPIED->value,
-                    'time_in' => now(),
+                    'status'        => TableRoomStatusType::OCCUPIED->value,
+                    'time_in'       => now(),
+                    'number_of_pax' => $payload['pax'],
+                    'customer_name' => $payload['guest_name'],
                 ]);
 
                 return $cart;
@@ -71,13 +75,13 @@ class CartService
         $cart = $this->getOrCreateCart($cashierSession->id, $request);
 
         // Fetch product and packaging information
-        $product = Product::findOrFail($request['product_id']);
+        $product          = Product::findOrFail($request['product_id']);
         $productPackaging = ProductPackaging::find($request['product_packaging_id']);
 
         // Extract request data
-        $quantity = $request['quantity'] ?? 1;
+        $quantity  = $request['quantity'] ?? 1;
         $basePrice = $this->getProductPrice($product, $productPackaging);
-        $price = $this->applyVatToPrice($basePrice, $product);
+        $price     = $this->applyVatToPrice($basePrice, $product);
         $orderType = $request['order_type'];
 
         // Calculate pricing and tax for main item
@@ -136,7 +140,7 @@ class CartService
     private function calculatePricingData(float $price, int $quantity, Product $product): array
     {
         $priceWithTax = $this->applyVatToPrice($price, $product);
-        $amount = $priceWithTax * $quantity;
+        $amount       = $priceWithTax * $quantity;
 
         return $this->computeTaxBreakdown($amount, $product);
     }
@@ -160,23 +164,23 @@ class CartService
     {
         if ($product->vat_type !== 'vat') {
             return [
-                'vatable_sales'   => 0,
-                'vat_amount'      => 0,
-                'non_vat_sales'   => $amount,
+                'vatable_sales'    => 0,
+                'vat_amount'       => 0,
+                'non_vat_sales'    => $amount,
                 'vat_exempt_sales' => 0,
-                'less_tax'        => 0,
+                'less_tax'         => 0,
             ];
         }
 
         $vatable_sales = $amount / (1 + ($product->vat_rate / 100));
-        $vat_amount = $amount - $vatable_sales;
+        $vat_amount    = $amount - $vatable_sales;
 
         return [
-            'vatable_sales'   => $vatable_sales,
-            'vat_amount'      => $vat_amount,
-            'non_vat_sales'   => 0,
+            'vatable_sales'    => $vatable_sales,
+            'vat_amount'       => $vat_amount,
+            'non_vat_sales'    => 0,
             'vat_exempt_sales' => 0,
-            'less_tax'        => 0,
+            'less_tax'         => 0,
         ];
     }
 
@@ -256,7 +260,7 @@ class CartService
             }
 
             $pricingData = $this->calculatePricingData($childPrice, $parentQuantity, $parentProduct);
-            $amount = $pricingData['vatable_sales'] + $pricingData['vat_amount'] + $pricingData['non_vat_sales'];
+            $amount      = $pricingData['vatable_sales'] + $pricingData['vat_amount'] + $pricingData['non_vat_sales'];
 
             $parentItem->children()->create([
                 'parent_id'            => $parentItem->id,
@@ -324,7 +328,6 @@ class CartService
         $vatable = $subtotal / (1 + ($taxRate / 100));
         return $subtotal - $vatable;
     }
-
 
     public function store($cartItemData)
     {
@@ -472,17 +475,17 @@ class CartService
             throw new Exception('Cart item not found.');
         }
 
-        $price = $cartItem->price;
+        $price    = $cartItem->price;
         $quantity = $request['quantity'] ?? $cartItem->quantity;
-        $amount = $price * $quantity;
+        $amount   = $price * $quantity;
 
         // If there's a discount applied, recalculate with tax logic
         $discountComputation = null;
-        $shouldRemoveTax = false;
-        $lessTax = 0;
+        $shouldRemoveTax     = false;
+        $lessTax             = 0;
 
         if (! empty($cartItem->discount_id)) {
-            $discount = Discount::find($cartItem->discount_id);
+            $discount        = Discount::find($cartItem->discount_id);
             $shouldRemoveTax = $discount?->remove_tax ?? false;
 
             $results = $this->discountService->calculateDiscountAmount(
@@ -492,7 +495,7 @@ class CartService
             );
 
             $discountComputation = $results[0] ?? null;
-            $lessTax = $discountComputation['lessTax'] ?? 0;
+            $lessTax             = $discountComputation['lessTax'] ?? 0;
         } else {
             // Calculate less_tax from the product's VAT configuration
             $product = $cartItem->product;
@@ -549,8 +552,8 @@ class CartService
 
     public function applyDiscountToCartItem(Request $request): mixed
     {
-        $cartItems = CartItem::findMany($request->cartItemIds);
-        $discount = Discount::findOrFail($request->discount_id);
+        $cartItems       = CartItem::findMany($request->cartItemIds);
+        $discount        = Discount::findOrFail($request->discount_id);
         $shouldRemoveTax = $discount->remove_tax ?? false;
 
         $calculatedDiscountAmounts = $this->discountService->calculateDiscountAmount(
@@ -562,8 +565,8 @@ class CartService
 
         foreach ($cartItems as $index => $cartItem) {
             $calculatedDiscountAmount = $calculatedDiscountAmounts[$index];
-            $amount = $cartItem->price * $cartItem->quantity;
-            $subTotal = $amount - ($calculatedDiscountAmount['lessTax'] + $calculatedDiscountAmount['discountAmount']);
+            $amount                   = $cartItem->price * $cartItem->quantity;
+            $subTotal                 = $amount - ($calculatedDiscountAmount['lessTax'] + $calculatedDiscountAmount['discountAmount']);
 
             // Determine less_tax: use from discount calculation if available, otherwise calculate from product VAT
             $lessTax = $calculatedDiscountAmount['lessTax'] ?? 0;
@@ -714,16 +717,16 @@ class CartService
             throw new Exception('Cart item is empty.');
         }
 
-        $price = $cartItem->price;
+        $price    = $cartItem->price;
         $quantity = $cartItem->quantity;
-        $amount = $price * $quantity;
+        $amount   = $price * $quantity;
 
         // Get product for tax calculation
         $product = $cartItem->product;
 
         // Recalculate tax breakdown when removing discount
         $pricingData = $this->calculatePricingData($price, $quantity, $product);
-        $subtotal = $amount; //$pricingData['vatable_sales'] + $pricingData['vat_amount'] + $pricingData['non_vat_sales'];
+        $subtotal    = $amount; //$pricingData['vatable_sales'] + $pricingData['vat_amount'] + $pricingData['non_vat_sales'];
 
         return $cartItem->update([
             'discount_amount'  => 0.00,
@@ -848,24 +851,24 @@ class CartService
         }
 
         // Find the order for the source table
-        $order = Order::where('table_room_id', $sourceTableId)
+        $cart = Cart::where('table_room_id', $sourceTableId)
             ->where('cashier_id', Auth::id())
             ->where('cashier_session_id', $cashierSession->id)
             ->first();
 
-        if (! $order) {
-            throw new Exception('No active order found for the source table.');
+        if (! $cart) {
+            throw new Exception('No active cart found for the source table.');
         }
 
         // Verify target table exists and is available
         $targetTable = TableRoom::findOrFail($targetTableId);
 
         if ($targetTable->status !== TableRoomStatusType::AVAILABLE->value) {
-            throw new Exception('Target table must be available to transfer the order.');
+            throw new Exception('Target table must be available to transfer the cart.');
         }
 
-        // Update the order's table_room_id
-        $order->update([
+        // Update the cart's table_room_id
+        $cart->update([
             'table_room_id' => $targetTableId,
         ]);
 
@@ -886,7 +889,7 @@ class CartService
             'number_of_pax' => $sourceTable->number_of_pax,
         ]);
 
-        return $order;
+        return $cart;
     }
 
     public function updateBillNumber(int $cartId, int $branchId): void
@@ -951,11 +954,32 @@ class CartService
             $serviceCharge = $cart->tableRoom->calculateServiceCharge($cart);
 
             // Update Bill No.
-            $cart->bill_no = $billNumber;
+            $cart->bill_no        = $billNumber;
             $cart->service_charge = $serviceCharge;
             $cart->save();
         }
 
         return $cart->fresh();
+    }
+
+    public function transferItems(Request $request)
+    {
+        $cashierSession = $this->cashierSession->openSession()->first();
+
+        if (! $cashierSession) {
+            throw new Exception('No active cashier session found.');
+        }
+
+        // Find the order for the source table
+        $cart = Cart::authCashier()
+            ->cashierOpenSession($cashierSession->id)
+            ->where('table_room_id', $request->targetTableId)
+            ->first();
+
+        if (! $cart) {
+            throw new Exception('Cart not found.');
+        }
+
+        return CartItem::whereIn('id', $request->cartItemIds)->update(['cart_id' => $cart->id]);
     }
 }
