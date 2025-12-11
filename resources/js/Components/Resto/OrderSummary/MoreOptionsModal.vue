@@ -66,6 +66,28 @@
             </button>
 
             <button
+                @click="handleTransferOrderItems"
+                :disabled="selectedItemsForDiscount.length === 0"
+                class="w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center gap-3 bg-gray-100 text-secondary-700 hover:bg-gray-200 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
+            >
+                <ArrowRightIcon class="w-5 h-5" />
+                <div class="text-left flex-1">
+                    <div class="font-semibold flex items-center gap-2">
+                        Transfer Order Items
+                        <span
+                            v-if="selectedItemsForDiscount.length > 0"
+                            class="bg-green-600 text-white text-xs px-1.5 py-0.5 rounded-full"
+                        >
+                            {{ selectedItemsForDiscount.length }}
+                        </span>
+                    </div>
+                    <div class="text-xs opacity-75">
+                        Transfer selected items to another table
+                    </div>
+                </div>
+            </button>
+
+            <button
                 @click="handlePrintBill"
                 :disabled="orderItems.length === 0"
                 class="w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center gap-3 bg-gray-100 text-secondary-700 hover:bg-gray-200 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
@@ -142,6 +164,7 @@ import {
     TableCellsIcon,
     PowerIcon,
     CogIcon,
+    ArrowRightIcon,
 } from "@heroicons/vue/24/outline";
 import { route } from "ziggy-js";
 import { router } from "@inertiajs/vue3";
@@ -156,6 +179,7 @@ const emit = defineEmits<{
     saveOrder: [];
     openDiscountModal: [];
     addModifier: [];
+    transferOrderItems: [];
     printBill: [];
     viewTable: [];
     printerConfig: [];
@@ -176,6 +200,11 @@ const handleApplyDiscount = () => {
 
 const handleAddModifier = () => {
     emit("addModifier");
+    emit("update:visible", false);
+};
+
+const handleTransferOrderItems = () => {
+    emit("transferOrderItems");
     emit("update:visible", false);
 };
 

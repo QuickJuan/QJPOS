@@ -56,7 +56,7 @@ export const useTable = () => {
        return response;
     };
 
-    const takeOrder = async (tableId: number, data: { pax: number; guest_name: string }) => {
+    const takeOrder = async (tableId: number, data: { pax: number; guest_name: string; branch_id: number }) => {
         if (!tableId ) {
             return { success: false, message: "Please select table", data: null };
         }
@@ -67,6 +67,7 @@ export const useTable = () => {
                 table_id: tableId,
                 pax: data.pax,
                 guest_name: data.guest_name || 'Guest',
+                branch_id: data.branch_id || null,
             }
         );
     };
@@ -248,6 +249,20 @@ export const useTable = () => {
         window.dispatchEvent(new CustomEvent('table-transfer-requested', { detail: { table } }));
     };
 
+    const transferGuest = (table: any) => {
+        if (!table?.id) {
+            toast.add({
+                severity: "error",
+                summary: "Error",
+                detail: "Table ID is required",
+                life: 3000,
+            });
+            return;
+        }
+        // Emit event through window for parent to listen
+        window.dispatchEvent(new CustomEvent('table-transfer-guest-requested', { detail: { table } }));
+    };
+
     const reserveTable = (table: any) => {
         if (!table?.id) {
             toast.add({
@@ -272,6 +287,7 @@ export const useTable = () => {
         mergeTable,
         claimOrder,
         transferNumber,
+        transferGuest,
         reserveTable,
     };
 };

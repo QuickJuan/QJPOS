@@ -2,36 +2,20 @@
     <Dialog
         :visible="visible"
         modal
-        :header="`Transfer Order from Table: ${sourceTable?.name}`"
+        header="Transfer Order Items"
         :style="{ width: '600px' }"
         :closable="true"
         @hide="$emit('update:visible', false)"
         @update:visible="$emit('update:visible', $event)"
     >
         <div class="space-y-4">
-            <!-- Current table info -->
-            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <div class="flex items-center gap-2 mb-1">
-                    <div class="w-3 h-3 rounded-full bg-red-500"></div>
-                    <span class="text-sm font-medium text-blue-900">
-                        Current Table (Takeout)
-                    </span>
-                </div>
-                <p class="text-sm text-blue-800 font-semibold">
-                    {{ sourceTable?.name }}
-                </p>
-                <p class="text-xs text-blue-600">
-                    {{ sourceTable?.chairs }} chairs
-                </p>
-            </div>
-
             <p class="text-sm text-gray-600">
-                Select an available table to transfer this order to:
+                Select an occupied table to transfer selected items to:
             </p>
 
             <div class="grid grid-cols-1 gap-3 max-h-80 overflow-y-auto">
                 <div
-                    v-for="table in availableTargets"
+                    v-for="table in occupiedTables"
                     :key="table.id"
                     @click="$emit('selectTarget', table)"
                     class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all cursor-pointer hover:scale-102 relative"
@@ -104,10 +88,10 @@
                 </div>
             </div>
 
-            <div v-if="availableTargets.length === 0" class="text-center py-8">
+            <div v-if="occupiedTables.length === 0" class="text-center py-8">
                 <i class="pi pi-info-circle text-2xl text-gray-300 mb-2"></i>
                 <p class="text-sm text-gray-600">
-                    No available tables available for transfer.
+                    No occupied tables available for transfer.
                 </p>
             </div>
         </div>
@@ -118,7 +102,7 @@
                 @click="$emit('update:visible', false)"
             />
             <Button
-                label="Transfer"
+                label="Transfer Items"
                 severity="success"
                 :disabled="!selectedTarget"
                 @click="$emit('confirmTransfer')"
@@ -133,8 +117,7 @@ import Button from "primevue/button";
 
 const props = defineProps<{
     visible: boolean;
-    sourceTable: any;
-    availableTargets: any[];
+    occupiedTables: any[];
     selectedTarget: any;
 }>();
 
@@ -160,4 +143,3 @@ const getTableStatusClasses = (status: string) => {
     }
 };
 </script>
-

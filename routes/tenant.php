@@ -145,6 +145,7 @@ Route::middleware([
                             Route::post('/cart/merge', 'mergeCart')->name('cart.merge');
                             Route::post('/cart/place-order', 'placeOrder')->name('cart.place-order');
                             Route::post('/cart/settle-bill', 'settleBill')->name('cart.settle-bill');
+                            Route::post('/cart/transfer-items}', 'transferItems')->name('cart.transfer-items');
                             Route::post('/cart/claim-order/{tableId}', 'claimOrder')->name('cart.claim-order');
                             Route::put('/cart/update-bill-number/{cartId}', 'updateBillNumber')->name('cart.update-bill-number');
                             Route::post('/order/transfer/{tableId}', 'transferOrder')->name('order.transfer');
@@ -174,6 +175,7 @@ Route::middleware([
                 ->group(function () {
                     Route::get('/', 'index')->name('index');
                     Route::get('/list', 'list')->name('list');
+                    Route::get('/get-all-tables', 'getAllTables')->name('get-all-tables');
                     Route::post('/tables', 'store')->name('store');
                     Route::post('/tables/bulk-update-positions', 'bulkUpdatePositions')->name('bulk-update-positions');
                     Route::post('/tables/reserve', 'reserveTable')->name('reserve');

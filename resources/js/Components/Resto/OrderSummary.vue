@@ -54,6 +54,7 @@
             @checkout="handleCheckout"
             @open-discount-modal="openDiscountModal"
             @add-modifier="handleAddModifier"
+            @transfer-order-items="handleTransferOrderItems"
             @view-table="handleViewTable"
             @end-of-shift="handleEndOfShift"
             @update-order-type="(type: string) => {
@@ -124,6 +125,15 @@
             @confirm-close="handleConfirmSessionSummary"
         />
 
+        <!-- Transfer Order Items -->
+         <TransferOrderItemsModal
+            v-model:visible="showTransferOrderItemsModal"
+            :occupied-tables="occupiedTables"
+            :selected-target="selectedTransferTarget"
+            @selectTarget="selectTransferTarget"
+            @confirmTransfer="confirmTransferOrderItems"
+         />
+
         <Toast />
         <ConfirmPopup />
     </aside>
@@ -149,6 +159,7 @@ import ItemModifiersModal from "./OrderSummary/ItemModifiersModal.vue";
 import CloseSessionModal from "@/Pages/Resto/Partials/CloseSessionModal.vue";
 import SessionSummaryModal from "@/Pages/Resto/Partials/SessionSummaryModal.vue";
 import axios from "axios";
+import TransferOrderItemsModal from "@/Pages/Resto/Partials/TransferOrderItemsModal.vue";
 
 const props = defineProps<{
     cart: any;
@@ -227,6 +238,7 @@ const showEditModal = ref(false);
 const showDiscountModal = ref(false);
 const showRequiredReasonModal = ref(false);
 const showAddModifierModal = ref(false);
+const showTransferOrderItemsModal = ref(false);
 const showItemModifiersModal = ref(false);
 const showCloseSessionModal = ref(false);
 const showSessionSummaryModal = ref(false);
@@ -235,6 +247,8 @@ const selectedItemsForDiscount = ref<number[]>([]);
 const selectedItemForModifiers = ref<any>(null);
 const selectedItemModifiers = ref<any[]>([]);
 const sessionSummaryData = ref(null);
+const occupiedTables = ref<any[]>([]);
+const selectedTransferTarget = ref<any>(null);
 
 // Discount state
 const appliedDiscount = ref<{
@@ -448,21 +462,33 @@ const handleCheckout = (data: any) => {
     });
 };
 
-// const handleSettleBill = (data: any) => {
-//     if (orderItems.value.length === 0) {
-//         toast.add({
-//             severity: "warn",
-//             summary: "Warning",
-//             detail: "No items in cart to settle",
-//             life: 3000,
-//         });
-//         return;
-//     }
-// };
-
 const handleAddModifier = () => {
     showAddModifierModal.value = true;
 };
+
+const handleTransferOrderItems = async () => {
+    // Fetch occupied tables
+    try {
+        // Get all table rooms and extract occupied tables
+        const response = await axios.get(route('table-rooms.get-all-tables'));
+        const tableRooms = response.data.data || [];
+
+        // Flatten all tables from all locations and filter occupied ones, excluding current table
+        occupiedTables.value = tableRooms.filter((table: any) =>
+            table.status === 'occupied' && table.id !== tableInfo.value.id
+        );
+
+        selectedTransferTarget.value = null;
+        showTransferOrderItemsModal.value = true;
+    } catch (error) {
+        toast.add({
+            severity: "error",
+            summary: "Error",
+            detail: "Failed to load occupied tables",
+            life: 3000,
+        });
+    }
+}
 
 const handleModifierAdded = (modifierData: any) => {
     const selectedItemIds = modifierData.selectedCartItems.map(
@@ -487,6 +513,7 @@ const handleModifierAdded = (modifierData: any) => {
                 });
 
                 showAddModifierModal.value = false;
+                selectedItemsForDiscount.value = [];
             },
             onError: (errors) => {
                 toast.add({
@@ -531,6 +558,7 @@ const handleRequiredReason = (data: any) => {
 
 const handleApplyDiscount = (discountData: any) => {
     appliedDiscount.value = discountData;
+    selectedItemsForDiscount.value = [];
 };
 
 const handleAddDiscountToItem = (item: any) => {
@@ -680,6 +708,52 @@ const handleConfirmSessionSummary = () => {
     showSessionSummaryModal.value = false;
     // Redirect to home after confirming the session summary
     router.visit(route("home"));
+};
+
+const selectTransferTarget = (table: any) => {
+    selectedTransferTarget.value = table;
+};
+
+const confirmTransferOrderItems = () => {
+    if (!selectedTransferTarget.value || selectedItemsForDiscount.value.length === 0) {
+        toast.add({
+            severity: "error",
+            summary: "Error",
+            detail: "Please select a target table and ensure items are selected",
+            life: 3000,
+        });
+        return;
+    }
+
+    // Implement the transfer logic here
+    // This would typically call an API to transfer the selected items
+    router.post(
+        route("resto.cart.transfer-items"),
+        {
+            targetTableId: selectedTransferTarget.value.id,
+            cartItemIds: selectedItemsForDiscount.value,
+        },
+        {
+            onSuccess: () => {
+                toast.add({
+                    severity: "success",
+                    summary: "Success",
+                    detail: `Items transferred to ${selectedTransferTarget.value.name}`,
+                    life: 3000,
+                });
+                showTransferOrderItemsModal.value = false;
+                selectedItemsForDiscount.value = [];
+            },
+            onError: (errors) => {
+                toast.add({
+                    severity: "error",
+                    summary: "Error",
+                    detail: errors?.message || "Failed to transfer items",
+                    life: 3000,
+                });
+            },
+        }
+    );
 };
 
 const handleRedirectToTables = () => {
