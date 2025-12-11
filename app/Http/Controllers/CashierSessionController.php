@@ -26,7 +26,7 @@ class CashierSessionController extends Controller
 
     public function index(Request $request): Response
     {
-        $categories         = $this->productCategoryService->getCategoriesWithProductsAsResources();
+        $categories   = $this->productCategoryService->getCategoriesWithProductsAsResources();
         if ($request->has('tableId')) {
             $tableId      = $request->input('tableId');
             $currentTable = TableRoom::find($tableId);
@@ -43,8 +43,6 @@ class CashierSessionController extends Controller
 
     public function preview(Request $request): Response
     {
-
-
         // Check if the current auth user has an open cashier session (closing_time is null)
         $openSession = $this->cashierSessionService->model
             ->openSession()

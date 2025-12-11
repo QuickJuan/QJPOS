@@ -98,7 +98,7 @@ class TableRoom extends Model implements HasMedia
         return $this->hasOne(Cart::class)->latest();
     }
 
-    public function calculateServiceCharge(Cart $cart): float
+    public function calculateServiceCharge(?Cart $cart): float
     {
         // Get the location with service charge
         $location = $this->tableRoomLocation;
