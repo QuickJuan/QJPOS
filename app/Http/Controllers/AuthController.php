@@ -48,6 +48,30 @@ class AuthController extends Controller
             ]);
         }
 
+        /**
+         * if current branch id and selected branch id are not the same
+         * check if user has a cashier session with closing time null with the current branch
+         * if yes, prevent login to another branch
+         * if no, allow login to another branch
+         */
+
+        $currentBranchId = $user->branch_id;
+        $curentBranchName = $user->branch?->name;
+        if ($currentBranchId && $currentBranchId != $request->branch) {
+            $openCashierSession = $user->cashierSessions()
+                ->where('branch_id', $currentBranchId)
+                ->whereNull('closing_time')
+                ->first();
+
+            if ($openCashierSession) {
+                throw ValidationException::withMessages([
+                    'branch' => ["You have an open cashier session in your current branch ($curentBranchName). Please close it before switching branches."],
+                ]);
+            }
+        }
+
+
+
         $branch = Branch::findOrFail($request->branch);
 
         if (! $user->canLoginTo($branch)) {
