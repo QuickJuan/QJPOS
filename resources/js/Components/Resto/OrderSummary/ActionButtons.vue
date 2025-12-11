@@ -66,7 +66,7 @@
             @view-table="handleViewTable"
             @printer-config="handlePrinterConfig"
             @end-of-shift="handleEndOfShift"
-            @review-transactions="handleReviewTransactions"
+            @transfer-order-items="handleTransferOrderItems"
         />
 
         <!-- Settle Bill Modal -->
@@ -153,6 +153,7 @@ const emit = defineEmits<{
     checkout: [data: any];
     openDiscountModal: [];
     addModifier: [];
+    transferOrderItems: [];
     settleBill: [data: any];
     printBill: [];
     viewTable: [];
@@ -269,6 +270,12 @@ const handleApplyDiscount = () => {
 // Handle add modifier from more options modal
 const handleAddModifier = () => {
     emit("addModifier");
+    showMoreOptionsModal.value = false;
+};
+
+// Handle transfer order items from more options modal
+const handleTransferOrderItems = () => {
+    emit("transferOrderItems");
     showMoreOptionsModal.value = false;
 };
 

@@ -2,7 +2,7 @@
     <Dialog
         :visible="visible"
         modal
-        :header="`Transfer Order from Table: ${sourceTable?.name}`"
+        :header="`Transfer Guest from Table: ${sourceTable?.name}`"
         :style="{ width: '600px' }"
         :closable="true"
         @hide="$emit('update:visible', false)"
@@ -160,4 +160,3 @@ const getTableStatusClasses = (status: string) => {
     }
 };
 </script>
-

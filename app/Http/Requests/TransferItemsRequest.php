@@ -3,7 +3,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class CreateTableCartRequest extends FormRequest
+class TransferItemsRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -21,9 +21,9 @@ class CreateTableCartRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'table_id'   => 'required|integer|exists:table_rooms,id',
-            'pax'        => 'nullable|integer|min:1',
-            'guest_name' => 'nullable|string|max:75',
+            'targetTableId' => 'required|exists:table_rooms,id',
+            'cartItemIds'   => ['required', 'array', 'min:1'],
+            'cartItemIds.*' => ['integer', 'distinct', 'exists:cart_items,id'],
         ];
     }
 }

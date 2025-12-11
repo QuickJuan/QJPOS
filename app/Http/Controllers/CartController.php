@@ -12,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use App\Services\CashierSessionService;
 use App\Http\Requests\PlaceOrderRequest;
 use App\Http\Requests\SettleBillRequest;
+use App\Http\Requests\TransferItemsRequest;
 use App\Http\Requests\CreateTableCartRequest;
 use App\Http\Resources\ReceiptOrdersResource;
 use App\Http\Requests\ApplyDiscountToCartItemRequest;
@@ -209,7 +210,7 @@ class CartController extends Controller
             return response()->json($response, 200);
 
         } catch (Exception $e) {
-            \Log::error('Place order error: ' . $e->getMessage());
+            Log::error('Place order error: ' . $e->getMessage());
             return response()->json([
                 'message' => 'There was an error placing order.',
                 'error'   => $e->getMessage(),
@@ -234,6 +235,17 @@ class CartController extends Controller
                 'error'   => $e->getMessage(),
             ], 500);
             // return redirect()->back()->with('error', 'There was an error settling the bill.');
+        }
+    }
+
+    public function transferItems(TransferItemsRequest $request): RedirectResponse
+    {
+        try {
+            $this->cartService->transferItems($request);
+
+            return redirect()->back()->with('success', 'Items transfered successfully.');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'There was an error transferring cart items.');
         }
     }
 

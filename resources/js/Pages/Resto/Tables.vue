@@ -305,7 +305,7 @@
                                                             'reserved' &&
                                                             'bg-yellow-500',
                                                         nestedMergedTable.status ===
-                                                            'vacant' &&
+                                                            'available' &&
                                                             'bg-green-500',
                                                         nestedMergedTable.status ===
                                                             'merged' &&
@@ -416,9 +416,9 @@
                 :show="showTableModal"
                 :table="selectedTable"
                 @close="closeTableModal"
-                @takeOrder="handleTakeOrder"
                 @claimOrder="handleClaimOrder"
                 @transferNumber="handleTransferNumber"
+                @transferGuest="handleTransferGuest"
                 @viewOrder="handleViewOrder"
                 @mergeTable="handleMergeTable"
                 @reserveTable="handleReserveTable"
@@ -462,6 +462,18 @@
                 @selectTarget="selectTransferTarget"
                 @confirmTransfer="confirmTransfer"
             />
+
+            <!-- Transfer Guess Modal -->
+            <TransferGuestModal
+                :key="showTransferGuestModal"
+                :visible="showTransferGuestModal"
+                :source-table="transferSourceTable"
+                :available-targets="availableTransferTargets"
+                :selected-target="selectedTransferGuestTarget"
+                @update:visible="closeTransferGuestModal"
+                @selectTarget="selectTransferGuestTarget"
+                @confirmTransfer="confirmTransferGuest"
+            />
         </div>
     </CashieringLayout>
 </template>
@@ -478,6 +490,7 @@ import ViewOrdersModal from "./Partials/ViewOrdersModal.vue";
 import MergeTableModal from "./Partials/MergeTableModal.vue";
 import ReserveTableModal from "./Partials/ReserveTableModal.vue";
 import TransferTableModal from "./Partials/TransferTableModal.vue";
+import TransferGuestModal from "./Partials/TransferGuestModal.vue";
 import PageProps from "@/Types/PageProps";
 import { formatTimeOccupied } from "@/Utils/FormatTime";
 import { useCashier } from "@/composables/useCashier";
@@ -504,7 +517,10 @@ const showOrdersModal = ref(false);
 const tableOrders = ref<any[]>([]);
 const showReserveModal = ref(false);
 const showTransferModal = ref(false);
+const showTransferGuestModal = ref(false);
 const selectedTransferTarget = ref<any>(null);
+const selectedTransferGuestTarget = ref<any>(null);
+const transferSourceTable = ref<any>(null);
 
 // Toast
 const toast = useToast();
@@ -530,13 +546,14 @@ const availableMergeTargets = computed(() =>
 );
 
 const availableTransferTargets = computed(() => {
-    if (!selectedTable.value) return [];
+    if (!transferSourceTable.value) return [];
 
-    // Show only vacant tables from the same location as the source table
-    // Filter out the source table itself
-    return filteredTables.value.filter(
-        (t) => t.status === "vacant" && t.id !== selectedTable.value?.id
+    // Show only available tables from the same location as the source table
+    const targets = filteredTables.value.filter(
+        (t) => t.status === "available" && t.id !== transferSourceTable.value?.id
     );
+
+    return [...targets];
 });
 
 const getTableStatusClasses = (status: string) => {
@@ -710,8 +727,24 @@ const closeTransferModal = () => {
     selectedTransferTarget.value = null;
 };
 
+const handleTransferGuest = () => {
+    transferSourceTable.value = selectedTable.value;
+    selectedTransferGuestTarget.value = null;
+    showTransferGuestModal.value = true;
+};
+
+const closeTransferGuestModal = () => {
+    showTransferGuestModal.value = false;
+    selectedTransferGuestTarget.value = null;
+    transferSourceTable.value = null;
+};
+
 const selectTransferTarget = (table: any) => {
     selectedTransferTarget.value = table;
+};
+
+const selectTransferGuestTarget = (table: any) => {
+    selectedTransferGuestTarget.value = table;
 };
 
 const confirmTransfer = () => {
@@ -742,6 +775,50 @@ const confirmTransfer = () => {
                 });
                 closeTransferModal();
                 closeTableModal();
+                // Refresh tables to show updated status
+                setTimeout(() => {
+                    router.reload({ only: ["tables"] });
+                }, 100);
+            },
+            onError: (errors) => {
+                toast.add({
+                    severity: "error",
+                    summary: "Error",
+                    detail: errors?.message || "Failed to transfer order",
+                    life: 3000,
+                });
+            },
+        }
+    );
+};
+
+const confirmTransferGuest = () => {
+    if (!transferSourceTable.value || !selectedTransferGuestTarget.value) {
+        toast.add({
+            severity: "error",
+            summary: "Error",
+            detail: "Please select a table to transfer to",
+            life: 3000,
+        });
+        return;
+    }
+
+    router.post(
+        route("resto.order.transfer", {
+            tableId: transferSourceTable.value.id,
+        }),
+        {
+            target_table_id: selectedTransferGuestTarget.value.id,
+        },
+        {
+            onSuccess: () => {
+                toast.add({
+                    severity: "success",
+                    summary: "Success",
+                    detail: `Order transferred from ${transferSourceTable.value.name} to ${selectedTransferGuestTarget.value.name}`,
+                    life: 3000,
+                });
+                closeTransferGuestModal();
                 // Refresh tables to show updated status
                 setTimeout(() => {
                     router.reload({ only: ["tables"] });
