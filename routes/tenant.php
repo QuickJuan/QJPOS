@@ -29,10 +29,13 @@ use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 |
 */
 
-Route::middleware([
-    'web',
-    InitializeTenancyBySubdomain::class,
-    PreventAccessFromCentralDomains::class,
+// Only register tenant routes if NOT on central domain
+if (!isCentralDomain()) {
+    Route::middleware([
+        'web',
+        InitializeTenancyBySubdomain::class,
+        PreventAccessFromCentralDomains::class,
+
 ])->group(function () {
 
     // ROUTE FOR AUTHENTICATION
@@ -246,4 +249,5 @@ Route::middleware([
     //         'receiptNumber' => $receiptNumber,
     //     ]);
     // })->name('receipt.view');
-});
+    });
+}
