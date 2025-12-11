@@ -38,9 +38,9 @@
                     {{ billNumber }}
                 </span>
             </div>
-            <div class="flex justify-between" v-if="cashierName">
+            <div class="flex justify-between" v-if="props.cashier?.name">
                 <span>Cashier:</span>
-                <span>{{ cashierName }}</span>
+                <span>{{ props.cashier?.name }}</span>
             </div>
         </div>
 
@@ -95,8 +95,8 @@
                                         formatMoney(
                                             parseFloat(item.lessTax || 0)
                                         )
-                                    }}</span
-                                >
+                                    }}
+                                </span>
                             </div>
                         </div>
 
@@ -114,8 +114,8 @@
                                                 item.discount_amount || 0
                                             )
                                         )
-                                    }}</span
-                                >
+                                    }}
+                                </span>
                             </div>
                         </div>
 
@@ -146,10 +146,10 @@
         </div>
 
         <div
-            class="border-b border-dashed my-3"
             v-if="props.totals?.total_amount != props.totals.sub_total"
-        ></div>
-        <!-- <pre>{{ lessTotalDiscount }}</pre> -->
+            class="border-b border-dashed my-3"
+        />
+
         <!-- Totals -->
         <div class="mt-3 mb-5">
             <!-- Subtotal -->
@@ -181,11 +181,13 @@
                 <span>+ Service Charge:</span>
                 <span>{{ formatMoney(props.totals.service_charge) }}</span>
             </div>
+
             <!-- Total -->
             <div
                 class="border-b border-dashed my-3"
                 v-if="props.totals?.total_amount != props.totals.sub_total"
-            ></div>
+            />
+
             <div
                 class="border-none pt-2 flex justify-between font-bold text-base"
             >
@@ -211,34 +213,14 @@ const props = defineProps<{
     tableName?: string;
     cashier?: string;
     items?: Array<any>;
-    totals?: Object;
+    totals?: any;
 }>();
 
 // Default values
 const businessName = computed(() => props.storeName || "QuickJuan POS");
-
-const branchAddress = computed(
-    () => props.branch.address || "Brgy. Kapanikian La Paz, Tarlac"
-);
-const businessPhone = computed(() => props.branch.phone || "(555) 123-4567");
 const billNumber = computed(() => props.billNumber || "001234");
 const billDate = computed(() => new Date().toISOString());
-const orderItems = computed(() => props.items || []);
 const totals = computed(() => props.totals || {});
-
-//compute the total less tax from order items
-const lessTotalTax = computed(() => {
-    return orderItems.value.reduce((sum, item) => {
-        return sum + parseFloat(item.less_tax || 0);
-    }, 0);
-});
-
-//compute the total less discount from order items
-const lessTotalDiscount = computed(() => {
-    return orderItems.value.reduce((sum, item) => {
-        return sum + parseFloat(item.discount_amount || 0);
-    }, 0);
-});
 
 const getOrderTypeLabel = (orderType: string) => {
     const labels: { [key: string]: string } = {

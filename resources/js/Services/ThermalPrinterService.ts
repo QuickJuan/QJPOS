@@ -65,7 +65,7 @@ interface BillData {
 
 interface ReceiptData {
     storeName: string;
-    branchName?: string;
+    branch?: any;
     storeAddress: string;
     storePhone?: string;
     orderNumber: string;
@@ -73,29 +73,9 @@ interface ReceiptData {
     date: string;
     time?: string;
     tableNumber?: string;
-    orderType?: string;
-    items: Array<{
-        name: string;
-        quantity: number | string;
-        price: number | string;
-        amount: number | string;
-        selectedOptions?: Array<{
-            name: string;
-            price: number | string;
-        }>;
-        lessTax?: number | string;
-        discount?: number | string;
-        orderType?: string;
-    }>;
-    subtotal: number | string;
-    lessTax?: number | string;
-    lessDiscount?: number | string;
-    total: number | string;
-    payment?: {
-        method: string;
-        amountPaid: number | string;
-        change?: number | string;
-    };
+    items: any;
+    totals: any;
+    payment?: any;
     receiptHeader?: any;
     receiptFooter?: {
         footer_notes?: string;
@@ -400,9 +380,9 @@ class ThermalPrinterService {
             commands.push(...this.ESC_POS.LINE_FEED);
 
             // Branch name (if provided)
-            if (receiptData.branchName) {
+            if (receiptData.branch.name) {
                 commands.push(...this.ESC_POS.BOLD_OFF);
-                commands.push(...this.stringToBytes(receiptData.branchName));
+                commands.push(...this.stringToBytes(receiptData.branch.name));
                 commands.push(...this.ESC_POS.LINE_FEED);
                 commands.push(...this.ESC_POS.BOLD_ON);
             }
@@ -418,10 +398,10 @@ class ThermalPrinterService {
 
             // Store address and phone - small size
             commands.push(...this.ESC_POS.BOLD_OFF);
-            commands.push(...this.stringToBytes(receiptData.storeAddress));
+            commands.push(...this.stringToBytes(receiptData.branch.address));
             commands.push(...this.ESC_POS.LINE_FEED);
-            if (receiptData.storePhone) {
-                commands.push(...this.stringToBytes(receiptData.storePhone));
+            if (receiptData.branch.phone) {
+                commands.push(...this.stringToBytes(receiptData.branch.phone));
                 commands.push(...this.ESC_POS.LINE_FEED);
             }
 
@@ -470,24 +450,19 @@ class ThermalPrinterService {
             // Left align for items
             commands.push(...this.ESC_POS.ALIGN_LEFT);
 
-            // Group items by order type (matching ReceiptLayout)
-            const groupedItems = this.groupItemsByOrderType(receiptData.items);
-
-            Object.entries(groupedItems).forEach(([orderType, items]) => {
+            receiptData.items.forEach((items: any, itemIndex: any) => {
                 // Order type header if there are multiple types
-                if (Object.keys(groupedItems).length > 1) {
-                    commands.push(...this.ESC_POS.ALIGN_CENTER);
-                    commands.push(...this.ESC_POS.BOLD_ON);
-                    commands.push(...this.stringToBytes(this.getOrderTypeLabel(orderType)));
-                    commands.push(...this.ESC_POS.BOLD_OFF);
-                    commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
-                    commands.push(...this.ESC_POS.ALIGN_LEFT);
-                }
+                commands.push(...this.ESC_POS.ALIGN_CENTER);
+                commands.push(...this.ESC_POS.BOLD_ON);
+                commands.push(...this.stringToBytes(this.getOrderTypeLabel(items.orderType)));
+                commands.push(...this.ESC_POS.BOLD_OFF);
+                commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+                commands.push(...this.ESC_POS.ALIGN_LEFT);
 
                 // Print items in this group
-                items.forEach(item => {
+                items.orderItems.forEach(item => {
                     // Main item line
-                    commands.push(...this.stringToBytes(item.name));
+                    commands.push(...this.stringToBytes(item.description));
                     commands.push(...this.ESC_POS.LINE_FEED);
 
                     // Quantity and price line (indented) - always show if we have price and amount
@@ -508,8 +483,8 @@ class ThermalPrinterService {
                     }
 
                     // Less tax (if any)
-                    if (item.less_tax !== undefined && item.less_tax !== null && item.less_tax !== '') {
-                        const lessTaxValue = typeof item.less_tax === 'string' ? parseFloat(item.less_tax) : item.less_tax;
+                    if (item.lessTax !== undefined && item.lessTax !== null && item.lessTax !== '') {
+                        const lessTaxValue = typeof item.lessTax === 'string' ? parseFloat(item.lessTax) : item.lessTax;
                         if (lessTaxValue !== 0) {
                             const taxLine = this.formatDeductionLine('Less Tax:', lessTaxValue);
                             commands.push(...this.stringToBytes(`  ${taxLine}`));
@@ -518,8 +493,8 @@ class ThermalPrinterService {
                     }
 
                     // Less discount (if any)
-                    if (item.discount !== undefined && item.discount !== null && item.discount !== '') {
-                        const discountValue = typeof item.discount === 'string' ? parseFloat(item.discount) : item.discount;
+                    if (item.discount_amount !== undefined && item.discount_amount !== null && item.discount_amount !== '') {
+                        const discountValue = typeof item.discount_amount === 'string' ? parseFloat(item.discount_amount) : item.discount_amount;
                         if (discountValue !== 0) {
                             const discountLine = this.formatDeductionLine('Less Discount:', discountValue);
                             commands.push(...this.stringToBytes(`  ${discountLine}`));
@@ -536,13 +511,14 @@ class ThermalPrinterService {
             commands.push(...this.ESC_POS.LINE_FEED);
 
             // Totals section
-            const subtotal = typeof receiptData.subtotal === 'string' ? parseFloat(receiptData.subtotal) || 0 : receiptData.subtotal;
+            // Subtotal
+            const subtotal = typeof receiptData.totals.total_amount === 'string' ? parseFloat(receiptData.totals.total_amount) || 0 : receiptData.totals.total_amount;
             commands.push(...this.stringToBytes(this.formatTotalLine('Subtotal:', subtotal)));
             commands.push(...this.ESC_POS.LINE_FEED);
 
             // Less Tax (matching ReceiptLayout naming)
-            if (receiptData.lessTax !== undefined && receiptData.lessTax !== null && receiptData.lessTax !== '') {
-                const lessTaxValue = typeof receiptData.lessTax === 'string' ? parseFloat(receiptData.lessTax) : receiptData.lessTax;
+            if (receiptData.totals?.less_tax !== undefined && receiptData.totals?.less_tax !== null && receiptData.totals?.less_tax !== '') {
+                const lessTaxValue = typeof receiptData.totals?.less_tax === 'string' ? parseFloat(receiptData.totals?.less_tax) : receiptData.totals?.less_tax;
                 if (lessTaxValue !== 0) {
                     commands.push(...this.stringToBytes(this.formatTotalLine('Less Tax:', -lessTaxValue)));
                     commands.push(...this.ESC_POS.LINE_FEED);
@@ -550,10 +526,19 @@ class ThermalPrinterService {
             }
 
             // Less Discount (matching ReceiptLayout naming)
-            if (receiptData.lessDiscount !== undefined && receiptData.lessDiscount !== null && receiptData.lessDiscount !== '') {
-                const lessDiscountValue = typeof receiptData.lessDiscount === 'string' ? parseFloat(receiptData.lessDiscount) : receiptData.lessDiscount;
+            if (receiptData.totals?.discount_amount !== undefined && receiptData.totals?.discount_amount !== null && receiptData.totals?.discount_amount !== '') {
+                const lessDiscountValue = typeof receiptData.totals?.discount_amount === 'string' ? parseFloat(receiptData.totals?.discount_amount) : receiptData.totals?.discount_amount;
                 if (lessDiscountValue !== 0) {
                     commands.push(...this.stringToBytes(this.formatTotalLine('Less Discount:', -lessDiscountValue)));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                }
+            }
+
+            // Service Charge (if applicable)
+            if (receiptData.totals.service_charge !== undefined && receiptData.totals.service_charge !== null && receiptData.totals.service_charge !== '') {
+                const serviceChargeValue = typeof receiptData.totals.service_charge === 'string' ? parseFloat(receiptData.totals.service_charge) : receiptData.totals.service_charge;
+                if (serviceChargeValue !== 0) {
+                    commands.push(...this.stringToBytes(this.formatTotalLine('+ Service Charge:', serviceChargeValue)));
                     commands.push(...this.ESC_POS.LINE_FEED);
                 }
             }
@@ -564,7 +549,7 @@ class ThermalPrinterService {
             commands.push(...this.ESC_POS.BOLD_ON);
 
             // Total with configurable font size
-            const total = typeof receiptData.total === 'string' ? parseFloat(receiptData.total) || 0 : receiptData.total;
+            const total = typeof receiptData.totals.total_due === 'string' ? parseFloat(receiptData.totals.total_due) || 0 : receiptData.totals.total_due;
             const totalSize = this.currentConfig?.font_sizes?.totals || 'medium';
             this.addTextWithSize(commands, this.formatTotalLine('TOTAL:', total), totalSize);
 
@@ -580,7 +565,7 @@ class ThermalPrinterService {
                 commands.push(...this.ESC_POS.ALIGN_LEFT);
                 commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
-                const paymentAmount = typeof receiptData.payment.amountPaid === 'string' ? parseFloat(receiptData.payment.amountPaid) || 0 : receiptData.payment.amountPaid;
+                const paymentAmount = typeof receiptData.payment.amount_paid === 'string' ? parseFloat(receiptData.payment.amount_paid) || 0 : receiptData.payment.amount_paid;
                 commands.push(...this.stringToBytes(this.formatTotalLine('Amount Paid:', paymentAmount)));
                 commands.push(...this.ESC_POS.LINE_FEED);
 
@@ -590,7 +575,27 @@ class ThermalPrinterService {
                     commands.push(...this.ESC_POS.LINE_FEED);
                 }
 
-                commands.push(...this.stringToBytes(this.formatTotalLine('Payment Method:', receiptData.payment.method)));
+                // if (receiptData.payment.method || receiptData.payment.method != null || receiptData.payment.method != undefined || receiptData.payment.method != '') {
+                //     commands.push(...this.stringToBytes(this.formatTotalLine('Payment Method:', receiptData.payment.method)));
+                //     commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+                // }
+            }
+
+            commands.push(...this.ESC_POS.BOLD_OFF);
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            // Tax info (matching ReceiptLayout format)
+            if (receiptData.totals) {
+                commands.push(...this.stringToBytes(this.formatTotalLine('Vatable Amount:', receiptData.totals.vat_amount)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+
+                commands.push(...this.stringToBytes(this.formatTotalLine('VAT Sales:', receiptData.totals.vatable_sales)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+
+                commands.push(...this.stringToBytes(this.formatTotalLine('Non-VAT Sales:', receiptData.totals.non_vat_sales)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+
+                commands.push(...this.stringToBytes(this.formatTotalLine('VAT Exempt Sales:', receiptData.totals.vat_exempt_sales)));
                 commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
             }
 
@@ -603,14 +608,6 @@ class ThermalPrinterService {
             const footerNotes = receiptData.receiptFooter?.footer_notes || 'Thank you for dining with us! Please settle your bill at the counter.';
             commands.push(...this.stringToBytes(footerNotes));
             commands.push(...this.ESC_POS.LINE_FEED);
-
-            // Receipt Footers (from branch configuration - displayed at bottom)
-            if (receiptData.receiptFooter && receiptData.receiptFooter.footer_text && Array.isArray(receiptData.receiptFooter.footer_text)) {
-                receiptData.receiptFooter.footer_text.forEach((footer: string) => {
-                    commands.push(...this.stringToBytes(footer));
-                    commands.push(...this.ESC_POS.LINE_FEED);
-                });
-            }
 
             commands.push(...this.ESC_POS.LINE_FEED);
 

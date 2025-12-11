@@ -120,6 +120,8 @@ import { httpGet } from "@/Utils/axiosHelper";
 import { route } from "ziggy-js";
 import { useTable } from "@/composables/useTable";
 import { thermalPrinter } from "@/Services/ThermalPrinterService";
+import Swal from "sweetalert2";
+import { formatMoney } from "@/Utils/FormatMoney";
 
 const props = defineProps<{
     cart: any;
@@ -286,6 +288,24 @@ const handleSettleBill = (response: any) => {
     receiptData.value = response?.data?.data || null;
     showSettleBillModal.value = false;
     if (receiptData.value) {
+
+        // Show change amount in Swal
+        // Swal.fire({
+        //     title: formatMoney(receiptData.value.payment.change),
+        //     text: "Change to return to customer",
+        //     icon: "success",
+        //     confirmButtonText: "OK",
+        //     didOpen: () => {
+        //         // Focus the OK button when Swal opens
+        //         const confirmButton = document.querySelector(
+        //             ".swal2-confirm"
+        //         ) as HTMLButtonElement;
+        //         if (confirmButton) {
+        //             confirmButton.focus();
+        //         }
+        //     },
+        // });
+
         showReceiptModal.value = true;
     }
 };
