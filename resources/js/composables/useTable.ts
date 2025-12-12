@@ -56,7 +56,7 @@ export const useTable = () => {
        return response;
     };
 
-    const takeOrder = async (tableId: number, data: { pax: number; guest_name: string; branch_id: number }) => {
+    const takeOrder = async (tableId: number, data: { pax: number; guest_name: string; }) => {
         if (!tableId ) {
             return { success: false, message: "Please select table", data: null };
         }
@@ -67,7 +67,6 @@ export const useTable = () => {
                 table_id: tableId,
                 pax: data.pax,
                 guest_name: data.guest_name || 'Guest',
-                branch_id: data.branch_id || null,
             }
         );
     };

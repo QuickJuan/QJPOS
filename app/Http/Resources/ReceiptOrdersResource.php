@@ -70,7 +70,7 @@ class ReceiptOrdersResource extends JsonResource
             'payment'      => [
                 'method'      => $this->payment_method,
                 'amount_paid' => (float) $this->amount_tendered,
-                'change'      => (float) ($this->amount_tendered - $this->total_due),
+                'change'      => (float) ($this->amount_tendered - ($this->total_due + $this->service_charge)),
                 'status'      => $this->payment_status,
             ],
 

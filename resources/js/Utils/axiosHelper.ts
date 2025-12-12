@@ -1,26 +1,4 @@
-import axios, { AxiosError, AxiosResponse } from 'axios';
-
-/**
- * Get CSRF token from meta tag
- */
-const getCsrfToken = (): string => {
-    const token = document.querySelector('meta[name="csrf-token"]');
-    return token ? token.getAttribute('content') || '' : '';
-};
-
-/**
- * Get axios instance with CSRF token already configured
- */
-const getAxiosInstance = () => {
-    const csrfToken = getCsrfToken();
-    const instance = axios.create({
-        withCredentials: true,
-        withXSRFToken: true,
-    });
-    instance.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken;
-    instance.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
-    return instance;
-};
+import axios from 'axios';
 
 /**
  * Format validation errors from server response
@@ -68,8 +46,8 @@ export const httpPost = async <T = any>(
     }
 ): Promise<any> => {
     try {
-        const axiosInstance = getAxiosInstance();
-        const response = await axiosInstance.post<T>(url, data, {
+        // Use the global axios instance (already configured in bootstrap.js)
+        const response = await axios.post<T>(url, data, {
             validateStatus: () => true,
         });
 

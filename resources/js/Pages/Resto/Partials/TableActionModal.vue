@@ -342,7 +342,6 @@ const confirmTakeOrder = async () => {
     const response = await takeOrder(props.table.id, {
         pax: pax.value,
         guest_name: guestName.value.trim(),
-        branch_id: page.props.active_branch?.id ?? null,
     });
 
     if (response.success) {
