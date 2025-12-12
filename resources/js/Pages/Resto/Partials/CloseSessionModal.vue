@@ -113,7 +113,9 @@ import { useToast } from "primevue";
 const props = defineProps<{
     showCloseDialog: boolean;
     openSession: CashieringSession | null;
-    currentUser?: any;
+    sessionSummary?: any;
+    // currentUser?: any;
+    // generalSettings: any;
 }>();
 
 const emit = defineEmits([

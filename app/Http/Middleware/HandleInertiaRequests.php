@@ -6,6 +6,7 @@ use App\Models\Cart;
 use App\Models\CashierSession;
 use App\Services\CartService;
 use App\Services\DiscountService;
+use App\Services\ModifierService;
 use App\Services\GeneralSettingsService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -149,8 +150,9 @@ class HandleInertiaRequests extends Middleware
 
         $sharedData = [
             // Tenant-specific services
-            'available_discounts' => $this->loadTenantDiscounts(),
-            'cart'                => $this->getCartByTableId($request),
+            'available_discounts' =>  $this->loadTenantDiscounts(),
+            'cart' => $this->getCartByTableId($request),
+            'availableModifiers' => $this->loadTenantModifiers(),
         ];
 
         return $sharedData;
@@ -179,6 +181,19 @@ class HandleInertiaRequests extends Middleware
     {
         try {
             return app(DiscountService::class)->getAvailableDiscounts() ?? [];
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Load available modifiers for tenant
+     */
+    public function loadTenantModifiers(): array
+    {
+        try {
+
+            return app(ModifierService::class)->getAvailableModifiers() ?? [];
         } catch (\Exception $e) {
             return [];
         }

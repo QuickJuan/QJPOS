@@ -30,18 +30,29 @@
                                 class="flex items-center gap-3"
                             >
                                 <div
-                                    v-for="option in parseModifierList(modifier.list)"
+                                    v-for="option in parseModifierList(
+                                        modifier.list
+                                    )"
                                     :key="option.name"
                                     class="flex items-center"
                                 >
                                     <RadioButton
                                         :name="`modifier-${modifier.id}`"
                                         :value="option.name"
-                                        v-model="selectedModifierValues[modifier.id]"
-                                        @change="selectModifierOption(modifier.name, option)"
+                                        v-model="
+                                            selectedModifierValues[modifier.id]
+                                        "
+                                        @change="
+                                            selectModifierOption(
+                                                modifier.name,
+                                                option
+                                            )
+                                        "
                                         class="mr-2"
                                     />
-                                    <label class="text-sm text-gray-700 cursor-pointer">
+                                    <label
+                                        class="text-sm text-gray-700 cursor-pointer"
+                                    >
                                         {{ option.name }}
                                         <span
                                             v-if="option.price"
@@ -95,12 +106,15 @@ import Button from "primevue/button";
 import Checkbox from "primevue/checkbox";
 import RadioButton from "primevue/radiobutton";
 import { formatMoney } from "@/Utils/FormatMoney";
+import { usePage } from "@inertiajs/vue3";
 
 const props = defineProps<{
     visible: boolean;
     selectedItems: any[];
-    modifiers: any[];
+    // modifiers: any[];
 }>();
+
+const page = usePage<any>();
 
 const emit = defineEmits<{
     add: [modifierData: any];
@@ -112,8 +126,12 @@ const selectedModifierOptions = ref<Record<string, any[]>>({});
 const selectedModifierValues = ref<Record<string, string>>({});
 const specialInstructions = ref("");
 
+const modifiers = computed(() => {
+    return page.props.availableModifiers;
+});
+
 const selectedModifierData = computed(() => {
-    return props.modifiers.find((m) => selectedModifiers.value.includes(m.id));
+    return modifiers.value.find((m) => selectedModifiers.value.includes(m.id));
 });
 
 watch(

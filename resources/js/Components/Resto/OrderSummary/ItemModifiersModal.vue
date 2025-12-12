@@ -10,17 +10,28 @@
     >
         <div class="space-y-6">
             <!-- Item Header -->
-            <div v-if="item" class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
+            <div
+                v-if="item"
+                class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100"
+            >
                 <div class="flex items-start gap-3">
-                    <div class="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <i class="pi pi-shopping-cart text-blue-600 text-lg"></i>
+                    <div
+                        class="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center"
+                    >
+                        <i
+                            class="pi pi-shopping-cart text-blue-600 text-lg"
+                        ></i>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <h3 class="font-semibold text-lg text-gray-900 truncate">
+                        <h3
+                            class="font-semibold text-lg text-gray-900 truncate"
+                        >
                             {{ item.name }}
                         </h3>
                         <div class="flex items-center gap-2 mt-1">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            <span
+                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                            >
                                 <i class="pi pi-hashtag mr-1"></i>
                                 Qty: {{ item.quantity }}
                             </span>
@@ -36,8 +47,12 @@
             <div v-if="modifiers && modifiers.length > 0" class="space-y-4">
                 <div class="flex items-center gap-2 mb-4">
                     <i class="pi pi-sliders-h text-gray-600"></i>
-                    <h4 class="font-semibold text-gray-900">Applied Modifiers</h4>
-                    <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs font-medium">
+                    <h4 class="font-semibold text-gray-900">
+                        Applied Modifiers
+                    </h4>
+                    <span
+                        class="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs font-medium"
+                    >
                         {{ modifiers.length }}
                     </span>
                 </div>
@@ -49,30 +64,46 @@
                         class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow duration-200"
                     >
                         <div class="flex items-start gap-3">
-                            <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                                <i class="pi pi-check-circle text-green-600"></i>
+                            <div
+                                class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center"
+                            >
+                                <i
+                                    class="pi pi-check-circle text-green-600"
+                                ></i>
                             </div>
                             <div class="flex-1 space-y-3">
                                 <div class="flex items-center justify-between">
                                     <h5 class="font-medium text-gray-900">
-                                        Modifier
+                                        Modifiersss
                                     </h5>
                                 </div>
 
                                 <div v-if="modifier.modifier" class="space-y-3">
                                     <!-- Special Instructions -->
                                     <div
-                                        v-if="modifier.modifier.specialInstructions"
+                                        v-if="
+                                            modifier.modifier
+                                                .specialInstructions
+                                        "
                                         class="bg-amber-50 border border-amber-200 rounded-lg p-3"
                                     >
                                         <div class="flex items-start gap-2">
-                                            <i class="pi pi-exclamation-triangle text-amber-600 mt-0.5 flex-shrink-0"></i>
+                                            <i
+                                                class="pi pi-exclamation-triangle text-amber-600 mt-0.5 flex-shrink-0"
+                                            ></i>
                                             <div class="flex-1">
-                                                <span class="font-medium text-amber-800 text-sm">
+                                                <span
+                                                    class="font-medium text-amber-800 text-sm"
+                                                >
                                                     Special Instructions
                                                 </span>
-                                                <p class="text-amber-700 mt-1 text-sm leading-relaxed">
-                                                    {{ modifier.modifier.specialInstructions }}
+                                                <p
+                                                    class="text-amber-700 mt-1 text-sm leading-relaxed"
+                                                >
+                                                    {{
+                                                        modifier.modifier
+                                                            .specialInstructions
+                                                    }}
                                                 </p>
                                             </div>
                                         </div>
@@ -82,37 +113,65 @@
                                     <div
                                         v-if="
                                             modifier.modifier &&
-                                            Object.keys(modifier.modifier).length > 1
+                                            Object.keys(modifier.modifier)
+                                                .length > 1
                                         "
                                         class="bg-gray-50 border border-gray-200 rounded-lg p-4"
                                     >
-                                        <div class="flex items-center gap-2 mb-3">
-                                            <i class="pi pi-cog text-gray-600"></i>
-                                            <span class="font-medium text-gray-800 text-sm">
+                                        <div
+                                            class="flex items-center gap-2 mb-3"
+                                        >
+                                            <i
+                                                class="pi pi-cog text-gray-600"
+                                            ></i>
+                                            <span
+                                                class="font-medium text-gray-800 text-sm"
+                                            >
                                                 Customization Details
                                             </span>
                                         </div>
 
                                         <div class="space-y-2">
                                             <div
-                                                v-for="(value, key) in modifier.modifier"
+                                                v-for="(
+                                                    value, key
+                                                ) in modifier.modifier"
                                                 :key="key"
-                                                v-show="String(key) !== 'specialInstructions'"
+                                                v-show="
+                                                    String(key) !==
+                                                    'specialInstructions'
+                                                "
                                                 class="flex items-start gap-3 py-2"
                                             >
-                                                <span class="font-medium text-gray-600 text-sm capitalize min-w-0 flex-shrink-0" style="width: 120px;">
+                                                <span
+                                                    class="font-medium text-gray-600 text-sm capitalize min-w-0 flex-shrink-0"
+                                                    style="width: 120px"
+                                                >
                                                     {{
                                                         String(key)
-                                                            .replace(/([A-Z])/g, " $1")
+                                                            .replace(
+                                                                /([A-Z])/g,
+                                                                " $1"
+                                                            )
                                                             .toLowerCase()
                                                     }}:
                                                 </span>
                                                 <div class="flex-1 min-w-0">
                                                     <span
-                                                        v-if="Array.isArray(value)"
+                                                        v-if="
+                                                            Array.isArray(value)
+                                                        "
                                                         class="text-gray-800 text-sm bg-white px-2 py-1 rounded border"
                                                     >
-                                                        {{ value.map(item => item.name || item).join(', ') }}
+                                                        {{
+                                                            value
+                                                                .map(
+                                                                    (item) =>
+                                                                        item.name ||
+                                                                        item
+                                                                )
+                                                                .join(", ")
+                                                        }}
                                                     </span>
                                                     <span
                                                         v-else
@@ -133,11 +192,15 @@
 
             <!-- Empty State -->
             <div v-else class="text-center py-12">
-                <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div
+                    class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4"
+                >
                     <i class="pi pi-sliders-h text-gray-400 text-2xl"></i>
                 </div>
                 <h4 class="font-medium text-gray-900 mb-2">No Modifiers</h4>
-                <p class="text-gray-500 text-sm">This item doesn't have any custom modifiers applied.</p>
+                <p class="text-gray-500 text-sm">
+                    This item doesn't have any custom modifiers applied.
+                </p>
             </div>
         </div>
 
