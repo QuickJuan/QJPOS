@@ -390,6 +390,31 @@ const handlePrintBill = async () => {
 
     billData.value = response.data;
 
+    if (billData.value) {
+        const thermalBillData = {
+            storeName: page.props.company_info?.company_name,
+            branch: billData.value.branch,
+            billNumber: billData.value.bill_number,
+            tableName: billData.value.table_number,
+            cashier: billData.value.cashier,
+            items: billData.value.cart_items || [],
+            totals: billData.value.totals || {},
+        };
+
+        try {
+            await thermalPrinter.printBill(thermalBillData);
+        } catch (error) {
+            console.log("Failed to print bill:", error);
+            showBillModal.value = true;
+            toast.add({
+                severity: "warn",
+                summary: "Printer Error",
+                detail: "Failed to print billl. Showing Bill modal instead.",
+                life: 3000,
+            });
+        }
+    }
+
     // Populate bill data
     // billData.value = {
     //     billNumber: responseData.bill_number,
@@ -402,8 +427,6 @@ const handlePrintBill = async () => {
     //     lessDiscount: responseData.totals.less_discount,
     //     totalAmount: parseFloat(props.total.toFixed(2)),
     // };
-
-    showBillModal.value = true;
 };
 
 // Handle view table

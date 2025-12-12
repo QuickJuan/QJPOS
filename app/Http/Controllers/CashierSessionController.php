@@ -1,22 +1,21 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CashierSessionRequest;
+use App\Http\Resources\ProductResource;
+use App\Models\Product;
+use App\Models\TableRoom;
+use App\Models\TableRoomLocation;
+use App\Models\User;
+use App\Services\CashierSessionService;
+use App\Services\ProductCategoryService;
 use Exception;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
-use App\Models\Product;
-use App\Models\Modifier;
-use App\Models\TableRoom;
-use Illuminate\Http\Request;
-use App\Models\TableRoomLocation;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\RedirectResponse;
-use App\Http\Resources\ProductResource;
-use App\Services\CashierSessionService;
-use App\Services\GeneralSettingsService;
-use App\Services\ProductCategoryService;
-use App\Http\Requests\CashierSessionRequest;
 
 class CashierSessionController extends Controller
 {
@@ -27,7 +26,7 @@ class CashierSessionController extends Controller
 
     public function index(Request $request): Response
     {
-        $categories   = $this->productCategoryService->getCategoriesWithProductsAsResources();
+        $categories = $this->productCategoryService->getCategoriesWithProductsAsResources();
         if ($request->has('tableId')) {
             $tableId      = $request->input('tableId');
             $currentTable = TableRoom::find($tableId);
@@ -37,12 +36,57 @@ class CashierSessionController extends Controller
 
         // Cart is now provided by HandleInertiaRequests middleware via shared props
         return Inertia::render('Resto/Index', [
-            'categories'         => $categories,
-            'currentTable'       => $currentTable,
+            'categories'   => $categories,
+            'currentTable' => $currentTable,
         ]);
     }
 
-    public function preview(Request $request): Response
+    public function reviewXTransactions(Request $request): Response
+    {
+        $activeBranch = session('active_branch');
+
+        $query = $this->cashierSessionService->model
+            ->with('cashier')
+            // ->where('branch_id', $request->user()->branch->id)
+            ->whereNotNull('closing_time');
+
+        // Apply filters
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('id', 'like', "%{$search}%")
+                  ->orWhereHas('cashier', function ($q) use ($search) {
+                      $q->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('closing_time', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('closing_time', '<=', $request->date_to);
+        }
+
+        if ($request->filled('cashier_id')) {
+            $query->where('cashier_id', $request->cashier_id);
+        }
+
+        // Status is always closed, so no need to filter
+
+        $sessions = $query->orderBy('closing_time', 'desc')->paginate(10);
+
+        $cashiers = User::select('id', 'name')->orderBy('name')->get();
+
+        return Inertia::render('Resto/ReviewXTransaction', [
+            'sessions' => $sessions,
+            'cashiers' => $cashiers,
+            'filters'  => $request->only(['search', 'date_from', 'date_to', 'status', 'cashier_id']),
+        ]);
+    }
+
+    public function preview(): Response
     {
         // Check if the current auth user has an open cashier session (closing_time is null)
         $openSession = $this->cashierSessionService->model
@@ -50,10 +94,8 @@ class CashierSessionController extends Controller
             ->with('cashier')
             ->first();
 
-
-        // dd($sessionSummary);
         return Inertia::render('Resto/Preview', [
-            'openSession'     => $openSession,
+            'openSession' => $openSession,
         ]);
     }
 
@@ -96,6 +138,18 @@ class CashierSessionController extends Controller
             // If no open session, get the latest session (just closed)
             $session = $this->cashierSessionService->model->where('cashier_id', Auth::id())->latest()->first();
         }
+
+        if ($session) {
+            $sessionSummary = $this->cashierSessionService->getSessionSummary($session);
+            return response()->json($sessionSummary);
+        }
+
+        return response()->json(null);
+    }
+
+    public function getSessionSummaryById(int $sessionId): JsonResponse
+    {
+        $session = $this->cashierSessionService->model->with('cashier')->find($sessionId);
 
         if ($session) {
             $sessionSummary = $this->cashierSessionService->getSessionSummary($session);

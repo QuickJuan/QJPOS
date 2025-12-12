@@ -1047,7 +1047,7 @@ class ThermalPrinterService {
             //only show the sub total if they are not equal with the total
             // Totals section - use the totals object from billData
             if (billData.totals.sub_total !== billData.totals.total_due) {
-                const subtotal = typeof billData.totals.sub_total === 'string' ? parseFloat(billData.totals.sub_total) || 0 : billData.totals.sub_total;
+                const subtotal = typeof billData.totals.total_amount === 'string' ? parseFloat(billData.totals.total_amount) || 0 : billData.totals.total_amount;
                 commands.push(...this.stringToBytes(this.formatTotalLine('Subtotal:', subtotal)));
                 commands.push(...this.ESC_POS.LINE_FEED);
             }

@@ -22,7 +22,7 @@ class CartResource extends JsonResource
         return [
             // Cart Information
             'id'           => $this->id,
-            'bill_number'  => $this->bill_no, // Bill number (generated when printing)
+            'bill_number'  => str_pad($this->bill_no, 4, '0', STR_PAD_LEFT), // Bill number (generated when printing)
             'cart_date'    => $this->created_at,
             'table_number' => $this->tableRoom?->name,
 

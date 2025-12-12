@@ -129,12 +129,21 @@
 
         <!-- Close Session Modal -->
         <CloseSessionModal
-            :session-summary="props.sessionSummary"
             :show-close-dialog="showCloseDialog"
-            :open-session="openSession"
+            :open-session="page.props.current_cashier_session"
             :current-user="props.currentUser"
             @confirm-close-session="handleConfirmCloseSession"
             @close-modal="showCloseDialog = false"
+        />
+
+        <!-- Session Summary Modal -->
+        <SessionSummaryModal
+            :show-session-summary-modal="showSessionSummaryModal"
+            :open-session="page.props.current_cashier_session"
+            :session-summary="sessionSummaryData"
+            :current-user="page.props.auth.user"
+            @close-modal="showSessionSummaryModal = false"
+            @confirm-close="showSessionSummaryModal = false"
         />
     </div>
 </template>
@@ -144,20 +153,15 @@ import { router, usePage } from "@inertiajs/vue3";
 import { route } from "ziggy-js";
 import { useConfirm } from "primevue";
 import { useToast } from "primevue";
-import Header from "@/Pages/Resto/Partials/Header.vue";
 import { ConfirmPopup, Toast } from "primevue";
 import CloseSessionModal from "@/Pages/Resto/Partials/CloseSessionModal.vue";
 import {
     QrCodeIcon,
     TableCellsIcon,
-    EllipsisHorizontalIcon,
-    ChartBarIcon,
-    CogIcon,
-    QuestionMarkCircleIcon,
-    Bars3Icon,
-    XMarkIcon,
     DocumentTextIcon,
 } from "@heroicons/vue/24/outline";
+import axios from "axios";
+import SessionSummaryModal from "@/Pages/Resto/Partials/SessionSummaryModal.vue";
 
 const page = usePage();
 const confirm = useConfirm();
@@ -175,6 +179,9 @@ const barcodeInput = ref("");
 const showMoreOptions = ref(false);
 const showSidebar = ref(false);
 const showCloseDialog = ref(false);
+
+const showSessionSummaryModal = ref(false);
+const sessionSummaryData = ref(null);
 
 // Computed properties
 const cashierName = computed(() => {
@@ -252,12 +259,24 @@ const handleConfirmCloseSession = (data: any) => {
     router.post(
         route("resto.session.close"),
         {
-            cash_denomination: data.denominationData,
-            closing_cash: data.totalCashCounted,
+            cash_denomination_details: data.denominationData,
+            cash_denomination: data.totalCashCounted,
         },
         {
             onSuccess: () => {
                 showCloseDialog.value = false;
+
+                // Fetch session summary after successful close
+                axios
+                    .get(route("resto.api.session-summary"))
+                    .then((response) => {
+                        sessionSummaryData.value = response.data;
+                        showSessionSummaryModal.value = true;
+                    })
+                    .catch((error) => {
+                        console.error("Failed to fetch session summary", error);
+                    });
+
                 toast.add({
                     severity: "success",
                     summary: "Success",
