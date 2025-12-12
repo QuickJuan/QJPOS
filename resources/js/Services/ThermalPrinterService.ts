@@ -71,16 +71,14 @@ interface ReceiptData {
     storePhone?: string;
     orderNumber: string;
     cashier: string;
-    date: string;
-    time?: string;
+    dateTime: string;
     tableNumber?: string;
     items: any;
     totals: any;
     payment?: any;
     receiptHeader?: any;
-    receiptFooter?: {
-        footer_notes?: string;
-    };
+    receiptFooter?: any;
+    birAccreditationFooter?: any;
     footerMessage?: string;
     isReprint?: boolean;
 }
@@ -417,10 +415,20 @@ class ThermalPrinterService {
                 commands.push(...this.ESC_POS.LINE_FEED);
             }
 
+            // Header (matching ReceiptLayout)
+            commands.push(...this.ESC_POS.ALIGN_CENTER);
+            if (receiptData.receiptHeader && Array.isArray(receiptData.receiptHeader)) {
+                receiptData.receiptHeader.forEach((header: string) => {
+                    commands.push(...this.stringToBytes(header));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                });
+            }
+
             // Header separator
             const separatorWidth = this.currentConfig?.character_width || 47;
             commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
             commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+            const separatorLine = '-'.repeat(separatorWidth);
 
             // Re-print label if this is a duplicate
             if (isReprint) {
@@ -429,13 +437,16 @@ class ThermalPrinterService {
                 commands.push(...this.stringToBytes('*** RE-PRINT ***'));
                 commands.push(...this.ESC_POS.BOLD_OFF);
                 commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+                commands.push(...this.stringToBytes(moment().tz('Asia/Manila').format('YYYY-MM-DD HH:mm:ss')));
+                commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+                commands.push(...this.stringToBytes(separatorLine));
             }
 
             // Receipt Info - left align
             commands.push(...this.ESC_POS.ALIGN_LEFT);
             commands.push(...this.stringToBytes(this.formatInfoLine('Invoice #:', receiptData.orderNumber)));
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatInfoLine('Date Time:', this.getCurrentDateTime())));
+            commands.push(...this.stringToBytes(this.formatInfoLine('Date Time:', receiptData.dateTime)));
             commands.push(...this.ESC_POS.LINE_FEED);
             if (receiptData.tableNumber) {
                 commands.push(...this.stringToBytes(this.formatInfoLine('Table:', receiptData.tableNumber)));
@@ -449,7 +460,7 @@ class ThermalPrinterService {
             commands.push(...this.ESC_POS.LINE_FEED);
 
             // Items separator
-            const separatorLine = '-'.repeat(separatorWidth);
+            // const separatorLine = '-'.repeat(separatorWidth);
             commands.push(...this.stringToBytes(separatorLine));
             commands.push(...this.ESC_POS.LINE_FEED);
 
@@ -458,8 +469,8 @@ class ThermalPrinterService {
             commands.push(...this.ESC_POS.BOLD_ON);
 
             // Headers with configurable font size
-            const headerSize = this.currentConfig?.font_sizes?.headers || 'small';
-            this.addTextWithSize(commands, 'ORDER ITEMS', headerSize);
+            // const headerSize = this.currentConfig?.font_sizes?.headers || 'small';
+            // this.addTextWithSize(commands, 'ORDER ITEMS', headerSize);
 
             commands.push(...this.ESC_POS.BOLD_OFF);
             commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
@@ -566,7 +577,7 @@ class ThermalPrinterService {
             commands.push(...this.ESC_POS.BOLD_ON);
 
             // Total with configurable font size
-            const total = typeof receiptData.totals.total_due === 'string' ? parseFloat(receiptData.totals.total_due) || 0 : receiptData.totals.total_due;
+            const total = parseFloat(receiptData.totals.total_due) + parseFloat(receiptData.totals.service_charge)
             const totalSize = this.currentConfig?.font_sizes?.totals || 'medium';
             this.addTextWithSize(commands, this.formatTotalLine('TOTAL:', total), totalSize);
 
@@ -582,12 +593,12 @@ class ThermalPrinterService {
                 commands.push(...this.ESC_POS.ALIGN_LEFT);
                 commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
-                const paymentAmount = typeof receiptData.payment.amount_paid === 'string' ? parseFloat(receiptData.payment.amount_paid) || 0 : receiptData.payment.amount_paid;
+                const paymentAmount =  parseFloat(receiptData.payment.amount_paid)
                 commands.push(...this.stringToBytes(this.formatTotalLine('Amount Paid:', paymentAmount)));
                 commands.push(...this.ESC_POS.LINE_FEED);
 
                 if (receiptData.payment.change && parseFloat(String(receiptData.payment.change)) > 0) {
-                    const change = typeof receiptData.payment.change === 'string' ? parseFloat(receiptData.payment.change) || 0 : receiptData.payment.change;
+                    const change =  paymentAmount - total
                     commands.push(...this.ESC_POS.BOLD_ON);
                     const changeSize = this.currentConfig?.font_sizes?.totals || 'medium';
                     this.addTextWithSize(commands, this.formatTotalLine('Change:', change), changeSize);
@@ -607,18 +618,22 @@ class ThermalPrinterService {
             // Tax info (matching ReceiptLayout format)
             if (receiptData.totals) {
 
-                commands.push(...this.stringToBytes(this.formatTotalLine('VATable Sales:', receiptData.totals.vatable_sales)));
-                commands.push(...this.ESC_POS.LINE_FEED);
+                if(parseFloat(receiptData.totals.vatable_sales) > 0) {
+                    commands.push(...this.stringToBytes(this.formatTotalLine('VATable Sales:', receiptData.totals.vatable_sales)));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                }
+
+                if (parseFloat(receiptData.totals.vat_amount) > 0) {
+                    commands.push(...this.stringToBytes(this.formatTotalLine('VAT Amount:', receiptData.totals.vat_amount)));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                }
 
 
-                commands.push(...this.stringToBytes(this.formatTotalLine('VAT Amount:', receiptData.totals.vat_amount)));
-                commands.push(...this.ESC_POS.LINE_FEED);
-
-                if (receiptData.totals.vat_amount !== undefined && receiptData.totals.vat_amount !== null && receiptData.totals.vat_amount !== '') {
+                if (parseFloat(receiptData.totals.non_vat_sales) > 0) {
                     commands.push(...this.stringToBytes(this.formatTotalLine('Non-VAT Sales:', receiptData.totals.non_vat_sales)));
                     commands.push(...this.ESC_POS.LINE_FEED);
                 }
-                if (receiptData.totals.vat_exempt_sales !== undefined && receiptData.totals.vat_exempt_sales !== null && receiptData.totals.vat_exempt_sales !== '') {
+                if (parseFloat(receiptData.totals.vat_exempt_sales) > 0) {
                     commands.push(...this.stringToBytes(this.formatTotalLine('VAT Exempt Sales:', receiptData.totals.vat_exempt_sales)));
                     commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
                 }
@@ -646,13 +661,30 @@ class ThermalPrinterService {
             commands.push(...this.stringToBytes(addressLabel + addressSeparator));
             commands.push(...this.ESC_POS.LINE_FEED);
 
-            // Footer (matching ReceiptLayout)
+            // BIR Accreditation Footer (before receipt footer)
             commands.push(...this.ESC_POS.ALIGN_CENTER);
-            const footerNotes = receiptData.receiptFooter?.footer_notes || 'Thank you for dining with us! Please settle your bill at the counter.';
-            commands.push(...this.stringToBytes(footerNotes));
-            commands.push(...this.ESC_POS.LINE_FEED);
+            if (receiptData.birAccreditationFooter && Array.isArray(receiptData.birAccreditationFooter)) {
+                commands.push(...this.ESC_POS.LINE_FEED);
+                receiptData.birAccreditationFooter.forEach((footer: string) => {
+                    commands.push(...this.stringToBytes(footer));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                });
+            }
 
             commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            // Footer (matching ReceiptLayout)
+            commands.push(...this.ESC_POS.ALIGN_CENTER);
+            if (receiptData.receiptFooter && Array.isArray(receiptData.receiptFooter)) {
+                receiptData.receiptFooter.forEach((footer: string) => {
+                    commands.push(...this.stringToBytes(footer));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                });
+            }
+
+            commands.push(...this.ESC_POS.LINE_FEED);
+
 
             if (receiptData.footerMessage) {
                 commands.push(...this.stringToBytes(receiptData.footerMessage));
@@ -1403,6 +1435,9 @@ class ThermalPrinterService {
 
             // Set character encoding to UTF-8
             commands.push(...this.ESC_POS.SET_UTF8);
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.ESC_POS.LINE_FEED);
 
             // Header - Table name and order number (centered and bold)
             commands.push(...this.ESC_POS.ALIGN_CENTER);

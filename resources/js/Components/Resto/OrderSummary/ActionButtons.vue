@@ -122,6 +122,7 @@ import { useTable } from "@/composables/useTable";
 import { thermalPrinter } from "@/Services/ThermalPrinterService";
 import Swal from "sweetalert2";
 import { formatMoney } from "@/Utils/FormatMoney";
+import moment from "moment-timezone";
 
 const props = defineProps<{
     cart: any;
@@ -282,31 +283,70 @@ const handleTransferOrderItems = () => {
 };
 
 // Handle settle bill form submission
-const handleSettleBill = (response: any) => {
+const handleSettleBill = async (response: any) => {
     // Update receipt data from settle bill modal
     // emit("settleBill", response.data);
-    receiptData.value = response?.data?.data || null;
+    receiptData.value = response?.data || null;
     showSettleBillModal.value = false;
     if (receiptData.value) {
+        // Format receipt data for thermal printer
+        const thermalReceiptData = {
+            storeName: page.props.company_info.company_name,
+            branch: receiptData.value.branch,
+            orderNumber: receiptData.value.invoice_no,
+            cashier: receiptData.value.cashier?.name,
+            dateTime: moment(receiptData.value.order_date)
+                .tz("Asia/Manila")
+                .format("MM/DD/YYYY hh:mm A"),
+            tableNumber: receiptData.value.table_number,
+            items: receiptData.value.order_items || [],
+            totals: receiptData.value.totals || 0,
+            payment: receiptData.value.payment,
+            receiptFooter: receiptData.value?.branch?.receipt_footer,
+            receiptHeader: receiptData.value?.branch?.receipt_headers,
+            birAccreditationFooter:
+                receiptData.value?.branch?.bir_accreditation_footer,
+            isReprint: false,
+        };
 
-        // Show change amount in Swal
-        // Swal.fire({
-        //     title: formatMoney(receiptData.value.payment.change),
-        //     text: "Change to return to customer",
-        //     icon: "success",
-        //     confirmButtonText: "OK",
-        //     didOpen: () => {
-        //         // Focus the OK button when Swal opens
-        //         const confirmButton = document.querySelector(
-        //             ".swal2-confirm"
-        //         ) as HTMLButtonElement;
-        //         if (confirmButton) {
-        //             confirmButton.focus();
-        //         }
-        //     },
-        // });
+        // Print to thermal printer
+        try {
+            await thermalPrinter.printReceipt(thermalReceiptData, false);
 
-        showReceiptModal.value = true;
+            // Show change amount in Swal only if print was successful
+            Swal.fire({
+                title: formatMoney(receiptData.value.payment.change),
+                text: "Change to return to customer",
+                icon: "success",
+                confirmButtonText: "OK",
+                didOpen: () => {
+                    // Focus the OK button when Swal opens
+                    const confirmButton = document.querySelector(
+                        ".swal2-confirm"
+                    ) as HTMLButtonElement;
+                    if (confirmButton) {
+                        confirmButton.focus();
+                    }
+                },
+            }).then((result) => {
+                // Redirect to table-rooms index when OK is clicked
+                if (result.isConfirmed) {
+                    router.visit(route("table-rooms.index"));
+                }
+            });
+        } catch (error) {
+            console.error("Failed to print receipt:", error);
+
+            // Show receipt modal only if thermal printer fails
+            showReceiptModal.value = true;
+
+            toast.add({
+                severity: "warn",
+                summary: "Printer Error",
+                detail: "Failed to print receipt. Showing receipt modal instead.",
+                life: 3000,
+            });
+        }
     }
 };
 

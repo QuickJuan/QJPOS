@@ -64,7 +64,7 @@ class PaymentService
         $totalAmount    = $cartItems->sum('amount');
         $lessTax        = $cartItems->sum('less_tax') ?? 0;
         $itemDiscount   = $cartItems->sum('discount_amount') ?? 0;
-        $totalDue       = $totalAmount - ($itemDiscount + $cart->total_discount ?? 0);
+        $totalDue       = $totalAmount - ($itemDiscount + $lessTax + $cart->total_discount ?? 0);
         $vatableSales   = $cartItems->sum('vatable_sales') ?? 0;
         $vatAmount      = $cartItems->sum('vat_amount') ?? 0;
         $vatExemptSales = $cartItems->sum('vat_exempt_sales') ?? 0;
@@ -76,7 +76,7 @@ class PaymentService
 
         // Get cart meta_data and add change and settled_at
         $metaData               = is_array($cart->meta_data) ? $cart->meta_data : [];
-        $metaData['change']     = $payload['amount_paid'] - $totalDue;
+        $metaData['change']     = $payload['amount_paid'] - ($totalDue + $serviceCharge);
         $metaData['settled_at'] = now();
 
         $invoiceNumber = $this->branchService->getNextInvoiceNumber($cart->cashierSession->branch_id);

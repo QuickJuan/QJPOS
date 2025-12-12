@@ -16,7 +16,7 @@ class ReceiptOrdersResource extends JsonResource
         return [
             // Order Information
             'id'           => $this->id,
-            'invoice_no'   => $this->invoice_no,
+            'invoice_no'   => str_pad($this->invoice_no, 6, '0', STR_PAD_LEFT),
             'bill_number'  => $this->bill_number,
             'order_date'   => $this->created_at,
             'status'       => $this->status,
@@ -47,6 +47,7 @@ class ReceiptOrdersResource extends JsonResource
                 'registration_number' => $this->cashierSession->branch?->registration_number,
                 'receipt_headers'     => $this->cashierSession->branch?->receipt_headers ?? [],
                 'receipt_footer'      => $this->cashierSession->branch?->receipt_footer ?? [],
+                'bir_accreditation_footer' => config('sales.bir_accreditation_footer') ? explode('|', config('sales.bir_accreditation_footer')) : [],
             ],
 
             // Financial Information
