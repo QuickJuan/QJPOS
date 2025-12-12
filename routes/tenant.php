@@ -129,13 +129,14 @@ if (!isCentralDomain()) {
                     Route::controller(CashierSessionController::class)
                         ->group(function () {
                             Route::get('/', 'index')->name('index');
-                            // Route::get('/tables', 'tables')->name('tables');
                             Route::get('/preview', 'preview')->name('preview');
+                            Route::get('/review-x-transactions', 'reviewXTransactions')->name('review-x-transactions');
                             Route::get('/product/{product}/options', 'productOptions')->name('product.options');
                             Route::get('/{categorySlug?}', 'index')->name('category');
                             Route::post('/session/start', 'startSession')->name('session.start');
                             Route::post('/session/close', 'closeSession')->name('session.close');
                             Route::get('/api/session-summary', 'getSessionSummary')->name('api.session-summary');
+                            Route::get('/api/session-summary/{sessionId}', 'getSessionSummaryById')->name('api.session-summary-by-id');
 
                             Route::put('/update-bill-no/{branchId}', 'updateBillNo')->name('update-bill-no');
                         });

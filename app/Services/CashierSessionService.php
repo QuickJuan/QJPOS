@@ -297,7 +297,7 @@ class CashierSessionService
             }
         }
 
-        return [
+        $sessionSummary = [
             'gross_sales'               => $grossSales,
             'net_sales'                 => $netSales,
             'items_settled'             => $itemsSettled,
@@ -326,5 +326,12 @@ class CashierSessionService
             'bill_number_start'         => $settledOrders->first()->bill_no ?? null,
             'bill_number_end'           => $settledOrders->last()->bill_no ?? null,
         ];
+
+        // Save the formatted data to the meta_data column for future use.
+        $session->update([
+            'meta_data' => $sessionSummary,
+        ]);
+
+        return $sessionSummary;
     }
 }

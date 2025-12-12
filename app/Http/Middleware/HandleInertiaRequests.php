@@ -1,14 +1,14 @@
 <?php
 namespace App\Http\Middleware;
 
-use App\Models\Cart;
 use App\Models\Branch;
-use Inertia\Middleware;
-use Illuminate\Http\Request;
-use App\Services\CartService;
+use App\Models\Cart;
 use App\Models\CashierSession;
+use App\Services\CartService;
 use App\Services\DiscountService;
 use App\Services\GeneralSettingsService;
+use Illuminate\Http\Request;
+use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -42,26 +42,28 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $activeBranch = $this->getActiveBranch($request);
+        $openSession  = CashierSession::openSession()->with('cashier')->first();
 
         return array_merge(parent::share($request), [
-            'flash'          => [
+            'flash'                   => [
                 'success' => fn() => $request->session()->get('success'),
                 'error'   => fn()   => $request->session()->get('error'),
             ],
-            'active_branch' => $activeBranch,
-            'auth' => [
+            'active_branch'           => $activeBranch,
+            'auth'                    => [
                 'user' => $request->user(),
             ],
+            'current_cashier_session' => $openSession,
             // Receipt Configuration
-            'receipt_headers' => fn() => $activeBranch['receipt_headers'] ?? [],
-            'receipt_footers' => fn() => $activeBranch['receipt_footer'] ?? [],
-            'bill_footer' => fn() => $activeBranch['receipt_footer'] ?? [],
+            'receipt_headers'         => fn()         => $activeBranch['receipt_headers'] ?? [],
+            'receipt_footers'         => fn()         => $activeBranch['receipt_footer'] ?? [],
+            'bill_footer'             => fn()             => $activeBranch['receipt_footer'] ?? [],
             // Company Information (Main Site)
-            'company_info' => fn() => $this->getCompanyInfo(),
+            'company_info'            => fn()            => $this->getCompanyInfo(),
             // Tenant-specific data
-            ...$this->getTenantSharedData($request),
+             ...$this->getTenantSharedData($request),
             // Main site data
-            ...$this->getMainSiteSharedData($request),
+             ...$this->getMainSiteSharedData($request),
             // 'tax_rate'            => config('sales.tax_rate'),
         ]);
     }
@@ -71,18 +73,16 @@ class HandleInertiaRequests extends Middleware
      */
     private function getActiveBranch(Request $request): ?array
     {
-        if (!$request->user()) {
+        if (! $request->user()) {
             return null;
         }
 
         // Get the current user's active cashier session
         $branch = Branch::find($request->user()->branch_id);
 
-
-        if (!$branch) {
+        if (! $branch) {
             return null;
         }
-
 
         return $branch->toArray();
     }
@@ -95,17 +95,17 @@ class HandleInertiaRequests extends Middleware
         try {
             $companySettings = app(GeneralSettingsService::class)->getCompanySettings();
             return [
-                'company_name' => $companySettings['company_name'] ?? '',
+                'company_name'    => $companySettings['company_name'] ?? '',
                 'company_address' => $companySettings['company_address'] ?? '',
-                'company_phone' => $companySettings['company_phone'] ?? '',
-                'company_logo' => $companySettings['company_logo'] ?? '',
+                'company_phone'   => $companySettings['company_phone'] ?? '',
+                'company_logo'    => $companySettings['company_logo'] ?? '',
             ];
         } catch (\Exception $e) {
             return [
-                'company_name' => '',
+                'company_name'    => '',
                 'company_address' => '',
-                'company_phone' => '',
-                'company_logo' => '',
+                'company_phone'   => '',
+                'company_logo'    => '',
             ];
         }
     }
@@ -116,13 +116,13 @@ class HandleInertiaRequests extends Middleware
     private function getCartByTableId(Request $request): ?array
     {
         $tableId = $request->query('tableId');
-        if (!$tableId) {
+        if (! $tableId) {
             return null;
         }
 
         try {
             // Always fetch fresh cart data with relationships
-            $cart = app(CartService::class)->getCartByTable((int)$tableId);
+            $cart = app(CartService::class)->getCartByTable((int) $tableId);
 
             if ($cart) {
                 // Refresh to ensure we have the latest data from database
@@ -136,7 +136,6 @@ class HandleInertiaRequests extends Middleware
         }
     }
 
-
     /**
      * Get shared data for tenant context
      * Add all tenant-specific services here
@@ -144,14 +143,14 @@ class HandleInertiaRequests extends Middleware
     private function getTenantSharedData(Request $request): array
     {
         // If not in tenant context, return empty array
-        if (!tenant()) {
+        if (! tenant()) {
             return [];
         }
 
         $sharedData = [
             // Tenant-specific services
-            'available_discounts' =>  $this->loadTenantDiscounts(),
-            'cart' => $this->getCartByTableId($request)
+            'available_discounts' => $this->loadTenantDiscounts(),
+            'cart'                => $this->getCartByTableId($request),
         ];
 
         return $sharedData;

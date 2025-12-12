@@ -102,9 +102,7 @@
         <!-- Close Session Dialog -->
         <CloseSessionModal
             :show-close-dialog="showCloseDialog"
-            :session-summary="props.sessionSummary"
             :open-session="props.openSession"
-            :general-settings="props.generalSettings"
             @close-modal="showCloseDialog = false"
             @confirm-close-session="confirmCloseSession"
         />
@@ -115,7 +113,6 @@
             :open-session="props.openSession"
             :session-summary="sessionSummaryData"
             :current-user="page.props.auth.user"
-            :general-settings="props.generalSettings"
             @close-modal="showSessionSummaryModal = false"
             @confirm-close="showSessionSummaryModal = false"
         />
