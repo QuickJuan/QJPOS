@@ -500,7 +500,10 @@ const handleThermalPrint = async () => {
             // Already connected - print immediately
             console.log("Printer already connected, printing...");
             try {
-                await thermalPrinter.printReceipt(thermalReceiptData.value);
+                await thermalPrinter.printReceipt(
+                    thermalReceiptData.value,
+                    true
+                );
                 console.log("✅ Receipt printed successfully");
             } catch (error) {
                 console.error("Print failed:", error);
@@ -517,7 +520,10 @@ const handleThermalPrint = async () => {
                 if (connected) {
                     // Successfully connected - now print
                     console.log("✅ Connected successfully, printing...");
-                    await thermalPrinter.printReceipt(thermalReceiptData.value);
+                    await thermalPrinter.printReceipt(
+                        thermalReceiptData.value,
+                        true
+                    );
                     console.log("✅ Receipt printed successfully");
                 } else {
                     // Connection failed - show modal for manual retry

@@ -3,9 +3,12 @@ namespace App\Services;
 
 use App\Models\Category;
 use App\Http\Resources\CategoryResource;
+use Illuminate\Support\Facades\Cache;
 
 class ProductCategoryService
 {
+    protected int $cacheTTL = 3600; // 1 hour in seconds
+
     public function __construct(protected Category $model)
     {
         $this->model = $model;
@@ -18,13 +21,15 @@ class ProductCategoryService
      */
     public function getCategoriesWithProducts()
     {
-        return $this->model->with([
-            'products' => fn($query) => $query
-                ->where('is_active', true)
-                ->with('productPackagings', 'options')
-        ])
-        ->whereHas('products', fn($query) => $query->where('is_active', true))
-        ->get();
+        return Cache::remember('categories_with_products', $this->cacheTTL, function () {
+            return $this->model->with([
+                'products' => fn($query) => $query
+                    ->where('is_active', true)
+                    ->with('productPackagings', 'options')
+            ])
+            ->whereHas('products', fn($query) => $query->where('is_active', true))
+            ->get();
+        });
     }
 
     /**
@@ -34,8 +39,10 @@ class ProductCategoryService
      */
     public function getCategoriesWithProductsAsResources()
     {
-        $categories = $this->getCategoriesWithProducts();
-        return CategoryResource::collection($categories);
+        return Cache::remember('categories_with_products_resources', $this->cacheTTL, function () {
+            $categories = $this->getCategoriesWithProducts();
+            return CategoryResource::collection($categories);
+        });
     }
 
     /**
@@ -66,5 +73,17 @@ class ProductCategoryService
                 ->where('is_active', true)
                 ->with('productPackagings', 'options')
         ])->where('slug', $slug)->first();
+    }
+
+    /**
+     * Clear categories cache
+     * Call this method when categories or products are updated
+     *
+     * @return void
+     */
+    public function clearCache(): void
+    {
+        Cache::forget('categories_with_products');
+        Cache::forget('categories_with_products_resources');
     }
 }

@@ -791,6 +791,7 @@ class CartService
 
                     $newOrderItems = new PreparationItemCollectionResource($cartItems);
 
+
                     return [
                         'orderNumber'      => $orderNumber,
                         'cart'             => $cart->fresh(['tableRoom']),
@@ -954,12 +955,8 @@ class CartService
             // Update the bill number for the cart
             $billNumber = $this->branchService->getNextBillNumber($branchId);
 
-            //calculate the service charge if applicable
-            $serviceCharge = $cart->tableRoom->calculateServiceCharge($cart);
-
             // Update Bill No.
             $cart->bill_no        = $billNumber;
-            $cart->service_charge = $serviceCharge;
             $cart->save();
         }
 

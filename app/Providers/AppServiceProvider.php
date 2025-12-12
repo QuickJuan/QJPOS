@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Models\User;
+use App\Models\CartItem;
+use App\Observers\CartItemObserver;
 use Laravel\Fortify\Fortify;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\ServiceProvider;
@@ -23,6 +25,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Register observers
+        CartItem::observe(CartItemObserver::class);
+
         // Dynamically add current host to sanctum.stateful for dynamic tenants
         if (app()->environment('local', 'development', 'production')) {
             $host = request()->getHost();

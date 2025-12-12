@@ -10,7 +10,7 @@
             <div v-if="props.lessTaxTotal" class="flex justify-between text-sm">
                 <span class="text-secondary-600">Less Tax:</span>
                 <span class="font-medium">
-                    {{ formatMoney(Number(lessTaxTotal || 0).toFixed(2)) }}
+                    - {{ formatMoney(Number(lessTaxTotal || 0).toFixed(2)) }}
                 </span>
             </div>
             <div
@@ -19,7 +19,18 @@
             >
                 <span class="text-secondary-600">Less Discount: </span>
                 <span class="font-medium">
+                    -
                     {{ formatMoney(Number(lessDiscountTotal || 0).toFixed(2)) }}
+                </span>
+            </div>
+            <div
+                v-if="props.serviceCharge"
+                class="flex justify-between text-sm"
+            >
+                <span class="text-secondary-600">+ Service Charge: </span>
+                <span class="font-medium">
+                    +
+                    {{ formatMoney(Number(serviceCharge || 0).toFixed(2)) }}
                 </span>
             </div>
             <hr class="border-gray-300" />
@@ -43,6 +54,7 @@ const props = defineProps<{
     finalTotal: number;
     lessTaxTotal: number;
     lessDiscountTotal: number;
+    serviceCharge: number;
     appliedDiscount: {
         discountName: string;
         discountAmount: number;

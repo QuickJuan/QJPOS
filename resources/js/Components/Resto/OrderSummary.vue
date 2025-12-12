@@ -31,6 +31,7 @@
                 :less-tax-total="orderItemLessTax"
                 :less-discount-total="orderItemLessDiscount"
                 :applied-discount="appliedDiscount"
+                :service-charge="serviceCharge"
             />
         </div>
 
@@ -126,13 +127,13 @@
         />
 
         <!-- Transfer Order Items -->
-         <TransferOrderItemsModal
+        <TransferOrderItemsModal
             v-model:visible="showTransferOrderItemsModal"
             :occupied-tables="occupiedTables"
             :selected-target="selectedTransferTarget"
             @selectTarget="selectTransferTarget"
             @confirmTransfer="confirmTransferOrderItems"
-         />
+        />
 
         <Toast />
         <ConfirmPopup />
@@ -194,6 +195,10 @@ const orderItems = computed(() => {
     return props.cart?.cart_items || page.props.sharedCart?.cart_items || [];
 });
 
+const serviceCharge = computed(() => {
+    return props.cart?.service_charge || page.props.cart?.service_charge || 0;
+});
+
 const orderItemSubTotal = computed(() => {
     return orderItems.value.reduce((sum, item) => {
         const itemPrice = parseFloat(item.price || "0");
@@ -218,7 +223,8 @@ const orderItemLessDiscount = computed(() => {
 
 const orderItemTotalDue = computed(() => {
     return (
-        orderItemSubTotal.value -
+        parseFloat(orderItemSubTotal.value) +
+        parseFloat(serviceCharge.value) -
         (orderItemLessTax.value + orderItemLessDiscount.value)
     );
 });
@@ -308,7 +314,7 @@ const total = computed(() => subtotal.value + tax.value - discountAmount.value);
 // Aliases for template compatibility
 const orderSubtotal = computed(() => subtotal.value);
 const taxAmount = computed(() => tax.value);
-const finalTotal = computed(() => total.value);
+const finalTotal = computed(() => total.value + serviceCharge.value);
 
 const selectedItemsForModal = computed(() =>
     orderItems.value.filter((item) =>
@@ -470,12 +476,13 @@ const handleTransferOrderItems = async () => {
     // Fetch occupied tables
     try {
         // Get all table rooms and extract occupied tables
-        const response = await axios.get(route('table-rooms.get-all-tables'));
+        const response = await axios.get(route("table-rooms.get-all-tables"));
         const tableRooms = response.data.data || [];
 
         // Flatten all tables from all locations and filter occupied ones, excluding current table
-        occupiedTables.value = tableRooms.filter((table: any) =>
-            table.status === 'occupied' && table.id !== tableInfo.value.id
+        occupiedTables.value = tableRooms.filter(
+            (table: any) =>
+                table.status === "occupied" && table.id !== tableInfo.value.id
         );
 
         selectedTransferTarget.value = null;
@@ -488,7 +495,7 @@ const handleTransferOrderItems = async () => {
             life: 3000,
         });
     }
-}
+};
 
 const handleModifierAdded = (modifierData: any) => {
     const selectedItemIds = modifierData.selectedCartItems.map(
@@ -715,7 +722,10 @@ const selectTransferTarget = (table: any) => {
 };
 
 const confirmTransferOrderItems = () => {
-    if (!selectedTransferTarget.value || selectedItemsForDiscount.value.length === 0) {
+    if (
+        !selectedTransferTarget.value ||
+        selectedItemsForDiscount.value.length === 0
+    ) {
         toast.add({
             severity: "error",
             summary: "Error",
