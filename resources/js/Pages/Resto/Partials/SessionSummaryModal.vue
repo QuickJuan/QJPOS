@@ -14,24 +14,24 @@
         >
             <!-- Header -->
             <div class="mb-2 flex flex-col items-center gap-2">
-                <div v-if="props.generalSettings?.company_logo">
+                <div v-if="currentBranch?.company_logo">
                     <img
-                        :src="props.generalSettings?.company_logo"
-                        :alt="props.generalSettings?.company_name"
+                        :src="currentBranch?.company_logo"
+                        :alt="page.props.company_info.company_name"
                         class="w-16 h-auto mx-auto mb-2"
                     />
                 </div>
-                <p class="font-bold text-sm">
-                    {{ props.generalSettings?.company_name }}
+                <p class="font-bold text-base">
+                    {{ page.props.company_info.company_name }}
                 </p>
                 <p class="text-xs">
-                    {{ props.generalSettings?.company_address }}
+                    {{ currentBranch?.name }}
                 </p>
                 <p class="text-xs">
-                    {{ props.generalSettings?.company_phone }}
+                    {{ currentBranch?.address }}
                 </p>
                 <p class="text-xs">
-                    {{ currentBranch?.address || "" }}
+                    {{ currentBranch?.phone }}
                 </p>
                 <p class="text-xs">
                     Operated By:
@@ -91,28 +91,42 @@
 
                 <div class="mt-2"></div>
 
-                <div class="flex justify-between" v-if="props.sessionSummary?.vat_sales > 0">
+                <div
+                    class="flex justify-between"
+                    v-if="props.sessionSummary?.vat_sales > 0"
+                >
                     <span>VAT Sales:</span>
                     <span>
                         {{ formatMoney(props.sessionSummary?.vat_sales) }}
                     </span>
                 </div>
-                <div class="flex justify-between" v-if="props.sessionSummary?.non_vat_sales > 0">
+                <div
+                    class="flex justify-between"
+                    v-if="props.sessionSummary?.non_vat_sales > 0"
+                >
                     <span>Non-VAT Sales:</span>
                     <span>
                         {{ formatMoney(props.sessionSummary?.non_vat_sales) }}
                     </span>
                 </div>
-                <div class="flex justify-between" v-if="props.sessionSummary?.vat_amount > 0">
+                <div
+                    class="flex justify-between"
+                    v-if="props.sessionSummary?.vat_amount > 0"
+                >
                     <span>VAT:</span>
                     <span>
                         {{ formatMoney(props.sessionSummary?.vat_amount) }}
                     </span>
                 </div>
-                <div class="flex justify-between" v-if="props.sessionSummary?.vat_amount > 0">
+                <div
+                    class="flex justify-between"
+                    v-if="props.sessionSummary?.vat_amount > 0"
+                >
                     <span>VAT Exempt Sales:</span>
                     <span>
-                        {{ formatMoney(props.sessionSummary?.vat_exempt_sales) }}
+                        {{
+                            formatMoney(props.sessionSummary?.vat_exempt_sales)
+                        }}
                     </span>
                 </div>
 
@@ -211,7 +225,7 @@
                 <div class="flex justify-between">
                     <span>Variance:</span>
                     <span>
-                        {{ props.sessionSummary?.variance > 0 ? "+" : "-" }}
+                        {{ props.sessionSummary?.variance > 0 ? "+" : "" }}
                         {{ formatMoney(props.sessionSummary?.variance || 0) }}
                     </span>
                 </div>
@@ -278,14 +292,13 @@
 <script setup lang="ts">
 import { formatMoney } from "@/Utils/FormatMoney";
 import { usePage } from "@inertiajs/vue3";
-import { Button, Dialog, ConfirmPopup, Toast } from "primevue";
-import { computed, ref } from "vue";
-import axios from "axios";
-import { route } from "ziggy-js";
-import { useConfirm, useToast } from "primevue";
+import { Button, Dialog, ConfirmPopup, Toast, useToast } from "primevue";
+import { computed } from "vue";
 import { thermalPrinter } from "@/Services/ThermalPrinterService";
+import Branch from "@/Types/Branch";
 
 const props = defineProps<{
+    branch?: Branch;
     showSessionSummaryModal: boolean;
     openSession: any;
     sessionSummary?: any;
@@ -293,7 +306,6 @@ const props = defineProps<{
     totalCashCounted?: number;
     operatorName?: string;
     merchantTin?: string;
-    generalSettings?: any;
 }>();
 
 const emit = defineEmits(["closeModal", "confirmClose"]);
