@@ -97,7 +97,7 @@ const props = defineProps<{
     categories: { data: Category[] } | Category[];
     selectedCategorySlug?: string | null;
     cachedCategories: Category[];
-    tableId: string | null;
+    tableId: string | number;
     locationType: string | null;
     selectedOrderType?: string;
 }>();

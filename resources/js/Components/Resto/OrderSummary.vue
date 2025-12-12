@@ -40,7 +40,7 @@
             :selected-order-type="selectedOrderType"
             :order-items="orderItems"
             :table-id="tableId"
-            :location-type="locationType"
+            :location-type="locationTypeValue"
             :selected-items-for-discount="selectedItemsForDiscount"
             :cart="cart"
             :total-amount="finalTotal"
@@ -164,11 +164,11 @@ import TransferOrderItemsModal from "@/Pages/Resto/Partials/TransferOrderItemsMo
 
 const props = defineProps<{
     cart: any;
-    tableId: number;
-    locationType: string;
+    tableId: number | string;
+    locationType: string | null;
     selectedOrderItem: any;
-    availableDiscounts: any[];
-    availableModifiers: any[];
+    // availableDiscounts: any[];
+    // availableModifiers: any[];
     tax_rate: number;
     currentTable: any;
     generalSettings: {
@@ -189,6 +189,12 @@ const emit = defineEmits<{
     selectTable: [];
     redirectToTables: [];
 }>();
+
+const locationTypeValue = computed(() => props.locationType || "dine-in");
+
+const availableDiscounts = computed(() => {
+    return page.props.available_discounts || [];
+});
 
 // Get order items from cart
 const orderItems = computed(() => {

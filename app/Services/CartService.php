@@ -42,7 +42,7 @@ class CartService
                 //find if ther is a cart that is associated with the table
                 $cart = Cart::firstOrCreate([
                     'cashier_id'         => Auth::id(),
-                    'cashier_session_id' => $payload->user()->cashierSession->id,
+                    'cashier_session_id' => Auth::user()->cashierSession->id,
                     'table_room_id'      => $table->id,
                     'branch_id'          => $payload['branch_id'],
                 ]);
@@ -71,12 +71,36 @@ class CartService
         //     throw new Exception('No active cashier session found.');
         // }
 
+
+
+         // Verify user is authenticated
+
         if (! $request->user()->id) {
             throw new Exception('No active cashier session found.');
         }
 
+        $tableId = $request->input('table_id');
+        $table = TableRoom::find($tableId);
+
+        if (! $table) {
+            throw new Exception('Table not found.');
+        }
+
+        $cart = $table->cart;
+
+        if (!$cart) {
+
+            $payload = [
+                'table_id'  => $tableId,
+                'branch_id' => $request->user()->branch_id,
+                'pax'       => $request->input('pax', 1),
+                'guest_name'=> $request->input('guest_name', 'Guest'),
+            ];
+           $cart =  $this->createCart($payload);
+        }
+
         // Get or create cart for current cashier session
-        $cart = $this->getOrCreateCart($request);
+        // $cart = $this->getOrCreateCart($request);
 
         // Fetch product and packaging information
         $product          = Product::findOrFail($request['product_id']);
@@ -116,7 +140,7 @@ class CartService
     private function getOrCreateCart( Request $request): Cart
     {
         $cartAttributes = [
-            'cashier_id'         => $request->user()->id,
+            // 'cashier_id'         => $request->user()->id,
             // 'cashier_session_id' => $request->user()->cashierSession->id,
             'branch_id'          => $request->user()->branch_id,
         ];
