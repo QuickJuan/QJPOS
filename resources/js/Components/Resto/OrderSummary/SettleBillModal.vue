@@ -160,7 +160,7 @@ const presetAmounts = [100, 200, 500, 1000];
 
 // Computed change amount
 const changeAmount = computed(() => {
-    return Math.max(0, amountPaid.value - props.totalAmount);
+    return Math.max(0, amountPaid.value - props.total);
 });
 
 const page = usePage();
@@ -219,12 +219,14 @@ const handleSettleBill = async () => {
             return;
         }
 
+        console.log("total due :", props.total);
         const response = await settlePayment({
             cart_id: props.cart.id,
             amount_paid: amountPaid.value,
             total_amount: props.total,
         });
 
+        console.log("settle response :", response);
         if (response.success) {
             toast.add({
                 severity: "success",
@@ -233,53 +235,8 @@ const handleSettleBill = async () => {
                 life: 3000,
             });
 
-            console.log("Settlement response:", response);
-
             emit("update:visible", false);
             emit("settle-bill", response);
-
-            // const responseData = response.data;
-
-            // // Populate receipt data
-            // receiptData.value = {
-            //     receiptNumber: responseData.invoice_no,
-            //     date: responseData.order_date,
-            //     tableNumber: responseData.table_number,
-            //     cashierName: responseData.cashier.name,
-            //     orderItems: responseData.order_items,
-            //     subtotal: responseData.totals.subtotal,
-            //     taxAmount: responseData.totals.tax_amount,
-            //     totalAmount: responseData.totals.total_amount,
-            //     paymentInfo: {
-            //         amountPaid: responseData.payment.amount_paid,
-            //         change: responseData.payment.change,
-            //     },
-            //     taxInfo: null,
-            // };
-
-            // Show change amount in Swal
-
-            // Swal.fire({
-            //     title: formatMoney(
-            //         amountPaid.value - responseData.totals.total_due
-            //     ),
-            //     text: "Change to return to customer",
-            //     icon: "success",
-            //     confirmButtonText: "OK",
-            //     didOpen: () => {
-            //         // Focus the OK button when Swal opens
-            //         const confirmButton = document.querySelector(
-            //             ".swal2-confirm"
-            //         ) as HTMLButtonElement;
-            //         if (confirmButton) {
-            //             confirmButton.focus();
-            //         }
-            //     },
-            // }).then(() => {
-            //     amountPaid.value = 0;
-            //     // Emit settle bill event to show receipt modal
-            //     emit("settle-bill", { receipt_data: receiptData.value });
-            // });
         } else {
             toast.add({
                 severity: "error",

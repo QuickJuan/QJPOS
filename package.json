@@ -28,6 +28,7 @@
         "escpos-buffer": "^4.1.0",
         "lodash": "^4.17.21",
         "moment": "^2.30.1",
+        "moment-timezone": "^0.6.0",
         "pinia": "^3.0.4",
         "primeicons": "^7.0.0",
         "primevue": "^4.3.5",

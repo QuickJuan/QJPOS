@@ -3,13 +3,12 @@ namespace App\Services;
 
 use App\Enums\TableRoomLocation\LocationType;
 use App\Enums\TableRoomStatusType;
-use App\Models\Branch;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\TableRoom;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -30,7 +29,6 @@ class PaymentService
                 $order = $this->saveCartToOrder($cart, $payload);
                 $this->saveCartItemsToOrderItems($cart->cartItems, $order);
 
-
                 // Update table status if applicable
                 if ($cart->table_room_id
                     && $cart->tableRoom
@@ -45,10 +43,9 @@ class PaymentService
                     ]);
                 }
 
-                                // Delete cart and its items
+                // Delete cart and its items
                 CartItem::where('cart_id', $cart->id)->delete();
                 $cart->delete();
-
 
                 return $order->load(['orderItems', 'orderItems.product', 'cashierSession.branch', 'customer']);
             });
@@ -58,31 +55,31 @@ class PaymentService
         }
     }
 
-
     private function saveCartToOrder($cart, $payload)
     {
         // Get cart items for processing
-        $cartItems = $cart->cartItems;
+        $serviceCharge = $cart->tableRoom->calculateServiceCharge($cart);
+        $cartItems     = $cart->cartItems;
 
-        $totalAmount = $cartItems->sum('amount');
-        $itemDiscount = $cartItems->sum('discount_amount') ?? 0;
-        $totalDue = $totalAmount - ($itemDiscount + $cart->total_discount ?? 0);
-        $vatableSales = $cartItems->sum('vatable_sales') ?? 0;
-        $vatAmount = $cartItems->sum('vat_amount') ?? 0;
+        $totalAmount    = $cartItems->sum('amount');
+        $lessTax        = $cartItems->sum('less_tax') ?? 0;
+        $itemDiscount   = $cartItems->sum('discount_amount') ?? 0;
+        $totalDue       = $totalAmount - ($itemDiscount + $lessTax + $cart->total_discount ?? 0);
+        $vatableSales   = $cartItems->sum('vatable_sales') ?? 0;
+        $vatAmount      = $cartItems->sum('vat_amount') ?? 0;
         $vatExemptSales = $cartItems->sum('vat_exempt_sales') ?? 0;
         $zeroRatedSales = $cartItems->sum('zero_rated_sales') ?? 0;
-        $nonVatSales = $cartItems->sum('non_vat_sales') ?? 0;
+        $nonVatSales    = $cartItems->sum('non_vat_sales') ?? 0;
 
         // Get current authenticated cashier
-        $cashier = auth()->user();
+        $cashier = Auth::user();
 
         // Get cart meta_data and add change and settled_at
-        $metaData = is_array($cart->meta_data) ? $cart->meta_data : [];
-        $metaData['change'] = $payload['amount_paid'] - $totalDue;
+        $metaData               = is_array($cart->meta_data) ? $cart->meta_data : [];
+        $metaData['change']     = $payload['amount_paid'] - ($totalDue + $serviceCharge);
         $metaData['settled_at'] = now();
 
         $invoiceNumber = $this->branchService->getNextInvoiceNumber($cart->cashierSession->branch_id);
-        info('Generated invoice number: ' . $invoiceNumber . ' for cart ID: ' . $cart->id);
 
         // Create the order
         return Order::create([
@@ -96,9 +93,11 @@ class PaymentService
             'coupon_code'        => $cart->coupon_code,
             'total_amount'       => $totalAmount,
             'total_discount'     => $payload['total_discount'] ?? 0,
+            'less_tax'           => $lessTax,
             'item_discount'      => $itemDiscount,
             'total_due'          => $totalDue,
             'amount_tendered'    => $payload['amount_paid'],
+            'service_charge'     => $serviceCharge,
             'notes'              => $cart->notes,
             'meta_data'          => $metaData,
             'vatable_sales'      => $vatableSales,
@@ -143,8 +142,5 @@ class PaymentService
         // Bulk insert - single INSERT query instead of N queries
         return OrderItem::insert($orderItemsData);
     }
-
-
-
 
 }

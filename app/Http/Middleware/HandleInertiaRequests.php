@@ -121,7 +121,15 @@ class HandleInertiaRequests extends Middleware
         }
 
         try {
+            // Always fetch fresh cart data with relationships
             $cart = app(CartService::class)->getCartByTable((int)$tableId);
+
+            if ($cart) {
+                // Refresh to ensure we have the latest data from database
+                $cart->refresh();
+                $cart->load(['cartItems', 'tableRoom']);
+            }
+
             return $cart ? $cart->toArray() : null;
         } catch (\Exception $e) {
             return null;

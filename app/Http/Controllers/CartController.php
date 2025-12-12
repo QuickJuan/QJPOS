@@ -226,11 +226,13 @@ class CartController extends Controller
 
             // return redirect()->back()->with('success', 'Bill settled successfully.');
             return response()->json([
+                'success' => true,
                 'message' => 'Bill settled successfully.',
                 'data'    => new ReceiptOrdersResource($order),
             ], 200);
         } catch (Exception $e) {
             return response()->json([
+                'success' => false,
                 'message' => 'There was an error settling the bill.',
                 'error'   => $e->getMessage(),
             ], 500);

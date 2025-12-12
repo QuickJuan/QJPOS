@@ -66,13 +66,17 @@ class CartService
     public function addToCart(Request $request)
     {
         // Verify cashier session is active
-        $cashierSession = $this->cashierSession->openSession()->first();
-        if (! $cashierSession) {
+        // $cashierSession = $this->cashierSession->openSession()->first();
+        // if (! $cashierSession) {
+        //     throw new Exception('No active cashier session found.');
+        // }
+
+        if (! $request->user()->id) {
             throw new Exception('No active cashier session found.');
         }
 
         // Get or create cart for current cashier session
-        $cart = $this->getOrCreateCart($cashierSession->id, $request);
+        $cart = $this->getOrCreateCart($request);
 
         // Fetch product and packaging information
         $product          = Product::findOrFail($request['product_id']);
@@ -109,11 +113,11 @@ class CartService
     /**
      * Get or create a cart for the current cashier session
      */
-    private function getOrCreateCart(int $cashierSessionId, Request $request): Cart
+    private function getOrCreateCart( Request $request): Cart
     {
         $cartAttributes = [
-            'cashier_id'         => Auth::id(),
-            'cashier_session_id' => $cashierSessionId,
+            'cashier_id'         => $request->user()->id,
+            // 'cashier_session_id' => $request->user()->cashierSession->id,
             'branch_id'          => $request->user()->branch_id,
         ];
 
@@ -787,6 +791,7 @@ class CartService
 
                     $newOrderItems = new PreparationItemCollectionResource($cartItems);
 
+
                     return [
                         'orderNumber'      => $orderNumber,
                         'cart'             => $cart->fresh(['tableRoom']),
@@ -950,12 +955,8 @@ class CartService
             // Update the bill number for the cart
             $billNumber = $this->branchService->getNextBillNumber($branchId);
 
-            //calculate the service charge if applicable
-            $serviceCharge = $cart->tableRoom->calculateServiceCharge($cart);
-
             // Update Bill No.
             $cart->bill_no        = $billNumber;
-            $cart->service_charge = $serviceCharge;
             $cart->save();
         }
 

@@ -168,12 +168,35 @@
                             class="px-4 py-5 md:px-6 md:py-6 space-y-8 flex-1 overflow-y-auto"
                         >
                             <div class="flex flex-col lg:flex-row gap-4">
-                                <Receipt
+                                <!-- <Receipt
                                     :receipt-id="activeOrder.id.toString()"
-                                    :embedded="true"
-                                    :order-data="activeOrder"
+                                    :receiptData="activeOrder"
                                     :receipt-footer="props.receiptFooter"
                                     :general-settings="props.generalSettings"
+                                /> -->
+                                <ReceiptLayout
+                                    :store-name="
+                                        props.generalSettings.company_name
+                                    "
+                                    :branch="activeOrder.branch"
+                                    :invoice-number="activeOrder.invoice_no"
+                                    :receipt-date="receiptDate"
+                                    :table-number="activeOrder.table_number"
+                                    :cashier="activeOrder.cashier?.name"
+                                    :items="activeOrder.order_items"
+                                    :totals="activeOrder.totals"
+                                    :payment="activeOrder.payment"
+                                    :receipt-footer="
+                                        activeOrder?.branch?.receipt_footer ||
+                                        props.receiptFooter
+                                    "
+                                    :receipt-header="
+                                        activeOrder?.branch?.receipt_headers
+                                    "
+                                    :bir-accreditation-footer="
+                                        activeOrder.branch
+                                            .bir_accreditation_footer
+                                    "
                                 />
                                 <div class="flex flex-col w-full lg:w-auto">
                                     <div
@@ -277,6 +300,8 @@ import ThermalPrinterManager from "@/Components/ThermalPrinter/ThermalPrinterMan
 import { thermalPrinter } from "@/Services/ThermalPrinterService";
 import debounce from "lodash/debounce";
 import filter from "lodash/filter";
+import ReceiptLayout from "@/Components/ReceiptLayout.vue";
+import moment from "moment-timezone";
 
 const props = defineProps<{
     orders: any;
@@ -349,108 +374,32 @@ const refundMeta = computed(() => activeOrder.value?.meta?.refund || null);
 const showActionMenu = ref(false);
 const showThermalPrinter = ref(false);
 
+const receiptDate = computed(() => {
+    if (!activeOrder.value) return null;
+    return moment(activeOrder.value.order_date)
+        .tz("Asia/Manila")
+        .format("MM/DD/YYYY hh:mm A");
+});
+
 // Thermal printer receipt data
 const thermalReceiptData = computed(() => {
     if (!activeOrder.value) return null;
 
-    // Format date and time from order_date
-    const orderDate = new Date(
-        activeOrder.value.order_date || activeOrder.value.created_at
-    );
-    const dateStr = orderDate.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-    });
-    const timeStr = orderDate.toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-    });
-
-    // Use branch info from the order if available, otherwise use general settings
-    const branchName =
-        activeOrder.value.branch?.name ||
-        props.generalSettings?.company_name ||
-        "Quick Juan Restaurant";
-    const branchAddress =
-        activeOrder.value.branch?.address ||
-        props.generalSettings?.company_address ||
-        "";
-    const branchPhone =
-        activeOrder.value.branch?.phone ||
-        props.generalSettings?.company_phone ||
-        "";
-    const receiptHeader =
-        activeOrder.value.branch?.receipt_headers ||
-        props.active_branch?.receipt_headers ||
-        [];
-    const receiptFooterData =
-        activeOrder.value.branch?.receipt_footer || props.receiptFooter;
-
-    // Flatten order items from the grouped structure
-    const flattenedItems =
-        activeOrder.value.order_items?.flatMap(
-            (group) =>
-                group.orderItems.map((item) => ({
-                    name: item.description,
-                    quantity: item.quantity,
-                    price: item.price,
-                    amount: item.amount,
-                    selectedOptions:
-                        item.modifiers?.map((mod) => ({
-                            name: mod,
-                            price: 0,
-                        })) || [],
-                    less_tax: parseFloat(String(item.lessTax || 0)),
-                    discount:
-                        item.discount === "N/A" ? 0 : item.discount_amount || 0,
-                    orderType: item.orderType || "dine-in",
-                })) || []
-        ) || [];
-
     return {
-        storeName: branchName,
-        branchName: activeOrder.value.branch?.name || "",
-        storeAddress: branchAddress,
-        storePhone: branchPhone,
-        orderNumber: activeOrder.value.invoice_no || "",
-        cashier: activeOrder.value.cashier?.name || "Unknown",
-        receiptHeader: receiptHeader,
-        date: dateStr,
-        time: timeStr,
-        tableNumber: activeOrder.value.table_number || null,
-        orderType: null,
-        items: flattenedItems,
-        subtotal: parseFloat(
-            String(activeOrder.value.totals?.total_amount || 0)
-        ),
-        lessTax: parseFloat(String(activeOrder.value.totals?.less_tax || 0)),
-        lessDiscount: parseFloat(
-            String(activeOrder.value.totals?.less_discount || 0)
-        ),
-        total: parseFloat(
-            String(
-                activeOrder.value.totals?.total_due ||
-                    activeOrder.value.totals?.total_amount ||
-                    0
-            )
-        ),
-        payment: activeOrder.value.payment
-            ? {
-                  method: activeOrder.value.payment.method || "Cash",
-                  amountPaid: activeOrder.value.payment.amount_paid,
-                  change: activeOrder.value.payment.change,
-              }
-            : {
-                  method: "Cash",
-                  amountPaid: parseFloat(
-                      String(activeOrder.value.totals?.total_due || 0)
-                  ),
-                  change: 0,
-              },
-        receiptFooter: receiptFooterData,
-        footerMessage: "Generated by Quick Juan POS System",
+        storeName: page.props.company_info.company_name,
+        branch: activeOrder.value.branch,
+        orderNumber: activeOrder.value.invoice_no,
+        cashier: activeOrder.value.cashier?.name,
+        dateTime: receiptDate.value,
+        tableNumber: activeOrder.value.table_number,
+        items: activeOrder.value.order_items || [],
+        totals: activeOrder.value.totals || 0,
+        payment: activeOrder.value.payment,
+        receiptFooter: activeOrder.value?.branch?.receipt_footer,
+        receiptHeader: activeOrder.value?.branch?.receipt_headers,
+        birAccreditationFooter:
+            activeOrder.value?.branch?.bir_accreditation_footer,
+        isReprint: true,
     };
 });
 
@@ -564,8 +513,6 @@ const handleThermalPrint = async () => {
             return;
         }
 
-        console.log("Printer config loaded:", printerConfig.name);
-
         // Check if already connected
         const isConnected = thermalPrinter.isConnected();
 
@@ -573,7 +520,10 @@ const handleThermalPrint = async () => {
             // Already connected - print immediately
             console.log("Printer already connected, printing...");
             try {
-                await thermalPrinter.printReceipt(thermalReceiptData.value);
+                await thermalPrinter.printReceipt(
+                    thermalReceiptData.value,
+                    true
+                );
                 console.log("✅ Receipt printed successfully");
             } catch (error) {
                 console.error("Print failed:", error);
@@ -590,7 +540,10 @@ const handleThermalPrint = async () => {
                 if (connected) {
                     // Successfully connected - now print
                     console.log("✅ Connected successfully, printing...");
-                    await thermalPrinter.printReceipt(thermalReceiptData.value);
+                    await thermalPrinter.printReceipt(
+                        thermalReceiptData.value,
+                        true
+                    );
                     console.log("✅ Receipt printed successfully");
                 } else {
                     // Connection failed - show modal for manual retry
