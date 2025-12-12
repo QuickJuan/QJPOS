@@ -1,21 +1,22 @@
 <?php
 namespace App\Http\Controllers;
 
-use App\Http\Requests\CashierSessionRequest;
-use App\Http\Resources\ProductResource;
-use App\Models\Modifier;
+use Exception;
+use Inertia\Inertia;
+use Inertia\Response;
 use App\Models\Product;
+use App\Models\Modifier;
 use App\Models\TableRoom;
+use Illuminate\Http\Request;
 use App\Models\TableRoomLocation;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\RedirectResponse;
+use App\Http\Resources\ProductResource;
 use App\Services\CashierSessionService;
 use App\Services\GeneralSettingsService;
 use App\Services\ProductCategoryService;
-use Exception;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Inertia\Inertia;
-use Inertia\Response;
+use App\Http\Requests\CashierSessionRequest;
 
 class CashierSessionController extends Controller
 {
@@ -87,7 +88,7 @@ class CashierSessionController extends Controller
         }
     }
 
-    public function getSessionSummary(Request $request)
+    public function getSessionSummary(): JsonResponse
     {
         $session = $this->cashierSessionService->model->openSession()->with('cashier')->first();
 

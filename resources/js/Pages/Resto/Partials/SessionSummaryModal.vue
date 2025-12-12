@@ -22,7 +22,7 @@
                     />
                 </div>
                 <p class="font-bold text-sm">
-                    {{ props.generalSettings?.company_name || "QUICKJUAN POS" }}
+                    {{ props.generalSettings?.company_name }}
                 </p>
                 <p class="text-xs">
                     {{ props.generalSettings?.company_address }}
@@ -82,24 +82,37 @@
                         {{ formatMoney(props.sessionSummary?.net_sales) }}
                     </span>
                 </div>
+                <div class="flex justify-between font-bold border-t pt-1 mt-1">
+                    <span>Service Charge:</span>
+                    <span>
+                        {{ formatMoney(props.sessionSummary?.service_charge) }}
+                    </span>
+                </div>
 
                 <div class="mt-2"></div>
-                <div class="flex justify-between">
+
+                <div class="flex justify-between" v-if="props.sessionSummary?.vat_sales > 0">
                     <span>VAT Sales:</span>
                     <span>
                         {{ formatMoney(props.sessionSummary?.vat_sales) }}
                     </span>
                 </div>
-                <div class="flex justify-between">
+                <div class="flex justify-between" v-if="props.sessionSummary?.non_vat_sales > 0">
                     <span>Non-VAT Sales:</span>
                     <span>
                         {{ formatMoney(props.sessionSummary?.non_vat_sales) }}
                     </span>
                 </div>
-                <div class="flex justify-between">
+                <div class="flex justify-between" v-if="props.sessionSummary?.vat_amount > 0">
                     <span>VAT:</span>
                     <span>
                         {{ formatMoney(props.sessionSummary?.vat_amount) }}
+                    </span>
+                </div>
+                <div class="flex justify-between" v-if="props.sessionSummary?.vat_amount > 0">
+                    <span>VAT Exempt Sales:</span>
+                    <span>
+                        {{ formatMoney(props.sessionSummary?.vat_exempt_sales) }}
                     </span>
                 </div>
 
@@ -133,19 +146,6 @@
                 <div class="border-t my-2"></div>
 
                 <div class="flex justify-between">
-                    <span>Counter ID Start:</span>
-                    <span>
-                        {{ props.openSession?.counter_id_start || "-" }}
-                    </span>
-                </div>
-                <div class="flex justify-between">
-                    <span>Counter ID End:</span>
-                    <span>{{ props.openSession?.counter_id_end || "-" }}</span>
-                </div>
-
-                <div class="border-t my-2"></div>
-
-                <div class="flex justify-between">
                     <span>Cancelled Amount:</span>
                     <span>
                         {{
@@ -174,17 +174,6 @@
                 </div>
 
                 <div class="border-t my-2"></div>
-
-                <!-- <div class="flex justify-between font-bold">
-                    <span>Net Sales:</span>
-                    <span>
-                        {{ formatMoney(props.sessionSummary?.net_sales) }}
-                    </span>
-                </div>
-                <div class="flex justify-between">
-                    <span>Running Total:</span>
-                    <span>{{ formatMoney(runningTotal) }}</span>
-                </div> -->
 
                 <div class="border-t my-2"></div>
 
@@ -222,12 +211,8 @@
                 <div class="flex justify-between">
                     <span>Variance:</span>
                     <span>
-                        {{ props.sessionSummary?.variance > 0 ? '+' : '-' }}
-                        {{
-                            formatMoney(
-                                props.sessionSummary?.variance || 0
-                            )
-                        }}
+                        {{ props.sessionSummary?.variance > 0 ? "+" : "-" }}
+                        {{ formatMoney(props.sessionSummary?.variance || 0) }}
                     </span>
                 </div>
 
@@ -313,14 +298,11 @@ const props = defineProps<{
 
 const emit = defineEmits(["closeModal", "confirmClose"]);
 const page = usePage();
-const confirm = useConfirm();
 const toast = useToast();
 
 const handleClose = () => {
     emit("closeModal");
 };
-
-const printArea = ref<HTMLElement | null>(null);
 
 const printReport = async () => {
     try {
@@ -346,7 +328,7 @@ const printReport = async () => {
         // Print session summary
         await thermalPrinter.printSessionSummary(
             props.sessionSummary,
-            props.generalSettings?.company_name || "QUICKJUAN POS",
+            page.props.company_info.company_name,
             currentBranch?.address || "",
             currentCashier || "",
             currentBranch?.tin || "",
@@ -376,58 +358,11 @@ const printReport = async () => {
 
 const reportDate = computed(() => new Date().toLocaleDateString());
 
-const grossSales = computed(
-    () =>
-        props.sessionSummary?.gross_sales ??
-        props.sessionSummary?.total_sales ??
-        0
-);
+const grossSales = computed(() => props.sessionSummary?.gross_sales ?? 0);
 const regularDiscount = computed(
-    () =>
-        props.sessionSummary?.regular_discount ??
-        props.sessionSummary?.regular_discount_amount ??
-        0
+    () => props.sessionSummary?.regular_discount ?? 0
 );
 const pwdDiscount = computed(() => props.sessionSummary?.pwd_discount ?? 0);
-
-const runningTotal = computed(() => props.sessionSummary?.running_total ?? 0);
-
-const refundOrder = async (orderId: number) => {
-    confirm.require({
-        message: "Are you sure you want to refund this order?",
-        header: "Refund Confirmation",
-        icon: "pi pi-exclamation-triangle",
-        rejectClass: "p-button-secondary p-button-outlined",
-        rejectLabel: "Cancel",
-        acceptLabel: "Refund",
-        accept: async () => {
-            try {
-                await axios.post(
-                    route("transactions.api.orders.refund", orderId),
-                    {
-                        supervisor_name:
-                            props.currentUser?.name || "Supervisor",
-                        notes: "Refund requested from session summary",
-                    }
-                );
-                toast.add({
-                    severity: "success",
-                    summary: "Success",
-                    detail: "Order refunded successfully",
-                    life: 3000,
-                });
-                // Optionally refetch summary or update UI
-            } catch (error) {
-                toast.add({
-                    severity: "error",
-                    summary: "Error",
-                    detail: "Failed to refund order",
-                    life: 3000,
-                });
-            }
-        },
-    });
-};
 
 const currentBranch = page.props.active_branch as any;
 const currentCashier = (page.props.auth as any)?.user?.name;
