@@ -112,6 +112,7 @@ interface SessionSummaryData {
     non_vat_sales: number | null;
     vat_sales: number | null;
     vat_amount: number | null;
+    vat_exempt_sales: number | null,
     less_tax: number | null;
     service_charge: number | null;
     cancelled_count: number | null;
@@ -374,7 +375,7 @@ class ThermalPrinterService {
             // Set character encoding to UTF-8
             commands.push(...this.ESC_POS.SET_UTF8);
 
-                        // Open cash drawer only for original receipts, not reprints
+            // Open cash drawer only for original receipts, not reprints
             if (!isReprint) {
                 commands.push(...this.ESC_POS.OPEN_DRAWER);
             }
@@ -593,12 +594,12 @@ class ThermalPrinterService {
                 commands.push(...this.ESC_POS.ALIGN_LEFT);
                 commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
-                const paymentAmount =  parseFloat(receiptData.payment.amount_paid)
+                const paymentAmount = parseFloat(receiptData.payment.amount_paid)
                 commands.push(...this.stringToBytes(this.formatTotalLine('Amount Paid:', paymentAmount)));
                 commands.push(...this.ESC_POS.LINE_FEED);
 
                 if (receiptData.payment.change && parseFloat(String(receiptData.payment.change)) > 0) {
-                    const change =  paymentAmount - total
+                    const change = paymentAmount - total
                     commands.push(...this.ESC_POS.BOLD_ON);
                     const changeSize = this.currentConfig?.font_sizes?.totals || 'medium';
                     this.addTextWithSize(commands, this.formatTotalLine('Change:', change), changeSize);
@@ -618,7 +619,7 @@ class ThermalPrinterService {
             // Tax info (matching ReceiptLayout format)
             if (receiptData.totals) {
 
-                if(parseFloat(receiptData.totals.vatable_sales) > 0) {
+                if (parseFloat(receiptData.totals.vatable_sales) > 0) {
                     commands.push(...this.stringToBytes(this.formatTotalLine('VATable Sales:', receiptData.totals.vatable_sales)));
                     commands.push(...this.ESC_POS.LINE_FEED);
                 }
@@ -1242,11 +1243,26 @@ class ThermalPrinterService {
             commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
             // VAT breakdown
-            commands.push(...this.stringToBytes(this.formatTotalLine('VAT Sales:', sessionSummary.vat_sales || 0)));
-            commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatTotalLine('Non-VAT Sales:', sessionSummary.non_vat_sales || 0)));
-            commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatTotalLine('VAT:', sessionSummary.vat_amount || 0)));
+            if (sessionSummary.vat_sales > 0) {
+                commands.push(...this.stringToBytes(this.formatTotalLine('VAT Sales:', sessionSummary.vat_sales || 0)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+            }
+
+            if (sessionSummary.non_vat_sales > 0) {
+                commands.push(...this.stringToBytes(this.formatTotalLine('Non-VAT Sales:', sessionSummary.non_vat_sales || 0)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+            }
+
+            if (sessionSummary.vat_amount > 0) {
+                commands.push(...this.stringToBytes(this.formatTotalLine('VAT:', sessionSummary.vat_amount || 0)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+            }
+
+
+            if (sessionSummary.vat_exempt_sales > 0) {
+                commands.push(...this.stringToBytes(this.formatTotalLine('VAT Exempt Sales:', sessionSummary.vat_exempt_sales || 0)));
+            }
+
             commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
             // Session details

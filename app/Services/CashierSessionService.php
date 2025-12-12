@@ -246,39 +246,33 @@ class CashierSessionService
 
     public function getSessionSummary(?CashierSession $session = null): array
     {
-        // Get all orders for this session with relationships
-        $orders         = $session->orders()->with(['orderItems', 'tableRoom'])->get();
+        // Get all orders for this session with relationships where the status
+        $settledOrders = $session->orders()->with(['orderItems', 'tableRoom'])->where('status', Status::SETTLED->value)->get();
+        $refundOrders  = $session->orders()->with(['orderItems', 'tableRoom'])->where('status', Status::REFUND->value)->get();
+
         $seniorDiscount = Discount::where('discount_type', DiscountType::SENIOR->value)->first() ?? null;
         $pwdDiscount    = Discount::where('discount_type', DiscountType::PWD->value)->first() ?? null;
 
-        $orderSummaries       = [];
-        $totalSales           = 0;
         $itemsSettled         = 0;
         $guestsServed         = 0;
-        $grossSales           = 0;
-        $netSales             = 0;
-        $totalLessTax         = 0;
-        $transactionsCount    = $orders->count();
         $totalQuantity        = 0;
-        $vatableSales         = 0;
-        $nonVatableSales      = 0;
-        $vatAmount            = 0;
         $regularDiscountTotal = 0;
         $seniorDiscountTotal  = 0;
         $pwdDiscountTotal     = 0;
-        $cancelledAmount      = $orders->where('status', Status::REFUND->value)->sum('total_due');
-        $serviceCharge        = $orders->sum('service_charge');
+        $transactionsCount    = $settledOrders->count();
+        $cancelledAmount      = $refundOrders->sum('total_due');
+        $grossSales           = $settledOrders->sum('total_amount');
+        $netSales             = $settledOrders->sum('total_due');
+        $serviceCharge        = $settledOrders->sum('service_charge');
+        $nonVatableSales      = $settledOrders->sum('non_vat');
+        $vatableSales         = $settledOrders->sum('vatable_sales');
+        $vatAmount            = $settledOrders->sum('vat_amount');
+        $vatExemptSales       = $settledOrders->sum('vat_exempt_sales');
+        $totalLessTax         = $settledOrders->sum('less_tax');
 
-        foreach ($orders as $order) {
+        foreach ($settledOrders as $order) {
             // Calculate order total from orderItems
-            $orderTotal = $order->orderItems->sum(fn($item) => ($item->price * $item->quantity) - $item->discount);
             $totalQuantity += $order->orderItems->sum('quantity');
-            $totalLessTax += $order->orderItems->sum('less_tax');
-            $vatableSales += $order->orderItems->sum('vatable_sales');
-            $nonVatableSales += $order->orderItems->sum('non_vat_sales');
-            $vatAmount += $order->orderItems->sum('vat_amount');
-            $grossSales += $order->orderItems->sum('amount');
-            $netSales += $order->orderItems->sum('sub_total');
 
             $seniorDiscountTotal += $seniorDiscount ? $order->orderItems
                 ->where('discount_id', $seniorDiscount->id)
@@ -295,13 +289,6 @@ class CashierSessionService
                 ->sum('discount_amount')
                 : 0;
 
-            $orderSummaries[] = [
-                'id'             => $order->id,
-                'invoice_number' => str_pad($order->id, 3, '0', STR_PAD_LEFT),
-                'amount'         => $orderTotal,
-            ];
-
-            $totalSales += $orderTotal;
             $itemsSettled += $order->orderItems->count();
 
             // Count guests - each order has a table with number_of_pax
@@ -311,8 +298,6 @@ class CashierSessionService
         }
 
         return [
-            'orders'                    => $orderSummaries,
-            'total_sales'               => $totalSales,
             'gross_sales'               => $grossSales,
             'net_sales'                 => $netSales,
             'items_settled'             => $itemsSettled,
@@ -327,19 +312,19 @@ class CashierSessionService
             'non_vat_sales'             => $nonVatableSales,
             'vat_sales'                 => $vatableSales,
             'vat_amount'                => $vatAmount,
+            'vat_exempt_sales'          => $vatExemptSales,
             'less_tax'                  => $totalLessTax,
             'service_charge'            => $serviceCharge,
-            'running_total'             => $totalSales,
             'session_number'            => str_pad($session->id, 4, '0', STR_PAD_LEFT),
             'beginning_cash'            => $session->beginning_cash ?? 0,
             'closing_cash'              => $session->closing_cash ?? 0,
             'cash_denomination'         => $session->cash_denomination,
-            'variance'                  => $session->closing_cash - $netSales,
+            'variance'                  => $session->cash_denomination - ($netSales + $serviceCharge),
             'cash_denomination_details' => $session->cash_denomination_details,
-            'or_number_start'           => $orders->first()->invoice_no ?? null,
-            'or_number_end'             => $orders->last()->invoice_no ?? null,
-            'bill_number_start'         => $orders->first()->bill_no ?? null,
-            'bill_number_end'           => $orders->last()->bill_no ?? null,
+            'or_number_start'           => $settledOrders->first()->invoice_no ?? null,
+            'or_number_end'             => $settledOrders->last()->invoice_no ?? null,
+            'bill_number_start'         => $settledOrders->first()->bill_no ?? null,
+            'bill_number_end'           => $settledOrders->last()->bill_no ?? null,
         ];
     }
 }

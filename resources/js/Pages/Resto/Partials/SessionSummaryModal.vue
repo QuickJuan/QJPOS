@@ -90,22 +90,29 @@
                 </div>
 
                 <div class="mt-2"></div>
-                <div class="flex justify-between">
+
+                <div class="flex justify-between" v-if="props.sessionSummary?.vat_sales > 0">
                     <span>VAT Sales:</span>
                     <span>
                         {{ formatMoney(props.sessionSummary?.vat_sales) }}
                     </span>
                 </div>
-                <div class="flex justify-between">
+                <div class="flex justify-between" v-if="props.sessionSummary?.non_vat_sales > 0">
                     <span>Non-VAT Sales:</span>
                     <span>
                         {{ formatMoney(props.sessionSummary?.non_vat_sales) }}
                     </span>
                 </div>
-                <div class="flex justify-between">
+                <div class="flex justify-between" v-if="props.sessionSummary?.vat_amount > 0">
                     <span>VAT:</span>
                     <span>
                         {{ formatMoney(props.sessionSummary?.vat_amount) }}
+                    </span>
+                </div>
+                <div class="flex justify-between" v-if="props.sessionSummary?.vat_amount > 0">
+                    <span>VAT Exempt Sales:</span>
+                    <span>
+                        {{ formatMoney(props.sessionSummary?.vat_exempt_sales) }}
                     </span>
                 </div>
 
@@ -139,19 +146,6 @@
                 <div class="border-t my-2"></div>
 
                 <div class="flex justify-between">
-                    <span>Counter ID Start:</span>
-                    <span>
-                        {{ props.openSession?.counter_id_start || "-" }}
-                    </span>
-                </div>
-                <div class="flex justify-between">
-                    <span>Counter ID End:</span>
-                    <span>{{ props.openSession?.counter_id_end || "-" }}</span>
-                </div>
-
-                <div class="border-t my-2"></div>
-
-                <div class="flex justify-between">
                     <span>Cancelled Amount:</span>
                     <span>
                         {{
@@ -180,17 +174,6 @@
                 </div>
 
                 <div class="border-t my-2"></div>
-
-                <!-- <div class="flex justify-between font-bold">
-                    <span>Net Sales:</span>
-                    <span>
-                        {{ formatMoney(props.sessionSummary?.net_sales) }}
-                    </span>
-                </div>
-                <div class="flex justify-between">
-                    <span>Running Total:</span>
-                    <span>{{ formatMoney(runningTotal) }}</span>
-                </div> -->
 
                 <div class="border-t my-2"></div>
 
@@ -228,12 +211,8 @@
                 <div class="flex justify-between">
                     <span>Variance:</span>
                     <span>
-                        {{ props.sessionSummary?.variance > 0 ? '+' : '-' }}
-                        {{
-                            formatMoney(
-                                props.sessionSummary?.variance || 0
-                            )
-                        }}
+                        {{ props.sessionSummary?.variance > 0 ? "+" : "-" }}
+                        {{ formatMoney(props.sessionSummary?.variance || 0) }}
                     </span>
                 </div>
 
@@ -319,7 +298,6 @@ const props = defineProps<{
 
 const emit = defineEmits(["closeModal", "confirmClose"]);
 const page = usePage();
-const confirm = useConfirm();
 const toast = useToast();
 
 const handleClose = () => {
@@ -380,17 +358,9 @@ const printReport = async () => {
 
 const reportDate = computed(() => new Date().toLocaleDateString());
 
-const grossSales = computed(
-    () =>
-        props.sessionSummary?.gross_sales ??
-        props.sessionSummary?.total_sales ??
-        0
-);
+const grossSales = computed(() => props.sessionSummary?.gross_sales ?? 0);
 const regularDiscount = computed(
-    () =>
-        props.sessionSummary?.regular_discount ??
-        props.sessionSummary?.regular_discount_amount ??
-        0
+    () => props.sessionSummary?.regular_discount ?? 0
 );
 const pwdDiscount = computed(() => props.sessionSummary?.pwd_discount ?? 0);
 
