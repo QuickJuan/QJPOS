@@ -115,6 +115,7 @@ interface SessionSummaryData {
     vat_sales: number | null;
     vat_amount: number | null;
     less_tax: number | null;
+    service_charge: number | null;
     cancelled_count: number | null;
     cancelled_amount: number | null;
     transactions_count: number | null;
@@ -1202,6 +1203,9 @@ class ThermalPrinterService {
             commands.push(...this.ESC_POS.LINE_FEED);
             commands.push(...this.ESC_POS.BOLD_ON);
             commands.push(...this.stringToBytes(this.formatTotalLine('Net Sales:', sessionSummary.net_sales || 0)));
+            commands.push(...this.ESC_POS.BOLD_OFF);
+            commands.push(...this.ESC_POS.BOLD_ON);
+            commands.push(...this.stringToBytes(this.formatTotalLine('Service Charge:', sessionSummary.service_charge || 0)));
             commands.push(...this.ESC_POS.BOLD_OFF);
             commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 

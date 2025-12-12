@@ -22,7 +22,7 @@
                     />
                 </div>
                 <p class="font-bold text-sm">
-                    {{ props.generalSettings?.company_name || "QUICKJUAN POS" }}
+                    {{ props.generalSettings?.company_name }}
                 </p>
                 <p class="text-xs">
                     {{ props.generalSettings?.company_address }}
@@ -80,6 +80,12 @@
                     <span>Net Sales:</span>
                     <span>
                         {{ formatMoney(props.sessionSummary?.net_sales) }}
+                    </span>
+                </div>
+                <div class="flex justify-between font-bold border-t pt-1 mt-1">
+                    <span>Service Charge:</span>
+                    <span>
+                        {{ formatMoney(props.sessionSummary?.service_charge) }}
                     </span>
                 </div>
 
@@ -320,8 +326,6 @@ const handleClose = () => {
     emit("closeModal");
 };
 
-const printArea = ref<HTMLElement | null>(null);
-
 const printReport = async () => {
     try {
         // Load receipt printer config (assuming session summary uses receipt printer)
@@ -346,7 +350,7 @@ const printReport = async () => {
         // Print session summary
         await thermalPrinter.printSessionSummary(
             props.sessionSummary,
-            props.generalSettings?.company_name || "QUICKJUAN POS",
+            page.props.company_info.company_name,
             currentBranch?.address || "",
             currentCashier || "",
             currentBranch?.tin || "",
@@ -389,45 +393,6 @@ const regularDiscount = computed(
         0
 );
 const pwdDiscount = computed(() => props.sessionSummary?.pwd_discount ?? 0);
-
-const runningTotal = computed(() => props.sessionSummary?.running_total ?? 0);
-
-const refundOrder = async (orderId: number) => {
-    confirm.require({
-        message: "Are you sure you want to refund this order?",
-        header: "Refund Confirmation",
-        icon: "pi pi-exclamation-triangle",
-        rejectClass: "p-button-secondary p-button-outlined",
-        rejectLabel: "Cancel",
-        acceptLabel: "Refund",
-        accept: async () => {
-            try {
-                await axios.post(
-                    route("transactions.api.orders.refund", orderId),
-                    {
-                        supervisor_name:
-                            props.currentUser?.name || "Supervisor",
-                        notes: "Refund requested from session summary",
-                    }
-                );
-                toast.add({
-                    severity: "success",
-                    summary: "Success",
-                    detail: "Order refunded successfully",
-                    life: 3000,
-                });
-                // Optionally refetch summary or update UI
-            } catch (error) {
-                toast.add({
-                    severity: "error",
-                    summary: "Error",
-                    detail: "Failed to refund order",
-                    life: 3000,
-                });
-            }
-        },
-    });
-};
 
 const currentBranch = page.props.active_branch as any;
 const currentCashier = (page.props.auth as any)?.user?.name;

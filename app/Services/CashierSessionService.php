@@ -24,7 +24,6 @@ class CashierSessionService
     public function startSession(Request $request): CashierSession
     {
 
-
         // Check if user already has an open session
         // $existingSession = $this->model
         //     ->openSession()
@@ -32,7 +31,6 @@ class CashierSessionService
         $existingSession = CashierSession::where('cashier_id', $request->user()->id)
             ->whereNull('closing_time')
             ->first();
-
 
         if ($existingSession) {
             throw new Exception('You already have an open session. Please continue or close it first before starting new one.');
@@ -269,6 +267,7 @@ class CashierSessionService
         $seniorDiscountTotal  = 0;
         $pwdDiscountTotal     = 0;
         $cancelledAmount      = $orders->where('status', Status::REFUND->value)->sum('total_due');
+        $serviceCharge        = $orders->sum('service_charge');
 
         foreach ($orders as $order) {
             // Calculate order total from orderItems
@@ -329,6 +328,7 @@ class CashierSessionService
             'vat_sales'                 => $vatableSales,
             'vat_amount'                => $vatAmount,
             'less_tax'                  => $totalLessTax,
+            'service_charge'            => $serviceCharge,
             'running_total'             => $totalSales,
             'session_number'            => str_pad($session->id, 4, '0', STR_PAD_LEFT),
             'beginning_cash'            => $session->beginning_cash ?? 0,
