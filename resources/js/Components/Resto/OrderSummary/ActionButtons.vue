@@ -346,6 +346,28 @@ const handleSettleBill = async (response: any) => {
                 detail: "Failed to print receipt. Showing receipt modal instead.",
                 life: 3000,
             });
+
+            // Show change amount in Swal only if print was successful
+            Swal.fire({
+                title: formatMoney(receiptData.value.payment.change),
+                text: "Change to return to customer",
+                icon: "success",
+                confirmButtonText: "OK",
+                didOpen: () => {
+                    // Focus the OK button when Swal opens
+                    const confirmButton = document.querySelector(
+                        ".swal2-confirm"
+                    ) as HTMLButtonElement;
+                    if (confirmButton) {
+                        confirmButton.focus();
+                    }
+                },
+            }).then((result) => {
+                // Redirect to table-rooms index when OK is clicked
+                if (result.isConfirmed) {
+                    router.visit(route("table-rooms.index"));
+                }
+            });
         }
     }
 };

@@ -498,7 +498,7 @@ import { useCashier } from "@/composables/useCashier";
 // Props
 const props = defineProps<{
     tableRooms: any[];
-    currentUser: any;
+    // currentUser: any;
 }>();
 
 // Reactive State
@@ -550,7 +550,8 @@ const availableTransferTargets = computed(() => {
 
     // Show only available tables from the same location as the source table
     const targets = filteredTables.value.filter(
-        (t) => t.status === "available" && t.id !== transferSourceTable.value?.id
+        (t) =>
+            t.status === "available" && t.id !== transferSourceTable.value?.id
     );
 
     return [...targets];
