@@ -16,26 +16,34 @@
             <p class="text-sm">{{ branch.name }}</p>
             <p class="text-sm">{{ branch.address }}</p>
             <p class="text-sm">{{ branch.phone }}</p>
+
+            <!-- loop through receipt header array of string -->
+            <div>
+                <p
+                    v-for="(line, index) in props.receiptHeader || []"
+                    :key="index"
+                    class="text-sm"
+                >
+                    {{ line }}
+                </p>
+            </div>
             <div class="border-b border-dashed mt-2"></div>
-            <h2 class="text-lg font-semibold mt-2" v-if="tableNumber">
+            <!-- <h2 class="text-lg font-semibold mt-2" v-if="tableNumber">
                 Table #: {{ tableNumber }}
-            </h2>
+            </h2> -->
         </div>
 
         <!-- Receipt Info -->
         <div class="mb-3">
             <div class="flex justify-between">
-                <span>Receipt #:</span>
-                <span>{{ props.receiptNumber }}</span>
+                <span>Invoice #:</span>
+                <span>{{ props.invoiceNumber }}</span>
             </div>
             <div class="flex justify-between">
-                <span>Date:</span>
-                <span>{{ formatDate(props.receiptDate) }}</span>
+                <span>Date Time:</span>
+                <span>{{ props.receiptDate }}</span>
             </div>
-            <div class="flex justify-between">
-                <span>Time:</span>
-                <span>{{ formatTime(props.receiptDate) }}</span>
-            </div>
+
             <div class="flex justify-between" v-if="tableNumber">
                 <span>Table:</span>
                 <span>{{ tableNumber }}</span>
@@ -50,7 +58,6 @@
 
         <!-- Order Items -->
         <div class="my-3">
-            <div class="text-center font-bold mb-2">ORDER ITEMS</div>
             <div
                 v-for="(items, itemsKey) in props.items"
                 :key="itemsKey"
@@ -92,9 +99,7 @@
                                 <span>Less Tax: </span>
                                 <span
                                     >-{{
-                                        formatMoney(
-                                            parseFloat(item.lessTax)
-                                        )
+                                        formatMoney(parseFloat(item.lessTax))
                                     }}
                                 </span>
                             </div>
@@ -145,14 +150,18 @@
             </div>
         </div>
 
-        <div class="border-b border-dashed my-3"
-            v-if="props.totals?.total_amount != props.totals.sub_total"
+        <div
+            class="border-b border-dashed my-3"
+            v-if="totalAmountDue != props.totals.sub_total"
         />
 
         <!-- Totals -->
         <div class="mt-3 mb-5">
             <!-- Subtotal -->
-            <div class="flex justify-between" v-if="props.totals?.total_amount != props.totals.total_due">
+            <div
+                class="flex justify-between"
+                v-if="totalAmountDue != props.totals.sub_total"
+            >
                 <span>Subtotal:</span>
                 <span>{{ formatMoney(props.totals?.total_amount) }}</span>
             </div>
@@ -164,7 +173,10 @@
             </div>
 
             <!-- Less Discount -->
-            <div class="flex justify-between" v-if="props.totals.discount_amount > 0">
+            <div
+                class="flex justify-between"
+                v-if="props.totals.discount_amount > 0"
+            >
                 <span>Less Discount:</span>
                 <span>-{{ formatMoney(props.totals.discount_amount) }}</span>
             </div>
@@ -177,13 +189,13 @@
                 <span>+ Service Charge:</span>
                 <span>{{ formatMoney(props.totals.service_charge) }}</span>
             </div>
-
+            <div class="border-b border-dashed mt-2"></div>
             <!-- Total -->
             <div
                 class="border-none pt-2 flex justify-between font-bold text-base"
             >
                 <span>TOTAL:</span>
-                <span>{{ formatMoney(props.totals?.total_due) }}</span>
+                <span>{{ formatMoney(totalAmountDue) }}</span>
             </div>
             <div class="flex justify-between" v-if="props.payment">
                 <span>Payment Received:</span>
@@ -191,25 +203,37 @@
             </div>
             <div class="flex justify-between" v-if="props.payment">
                 <span>Change:</span>
-                <span>{{ formatMoney(props.payment.change) }}</span>
+                <span>{{ formatMoney(customerChange) }}</span>
             </div>
         </div>
 
         <!-- Tax Info -->
         <div class="mb-3" v-if="props.totals">
-            <div class="flex justify-between">
-                <span>Vatable Amount:</span>
-                <span>{{ formatMoney(props.totals?.vat_amount) }}</span>
-            </div>
-            <div class="flex justify-between">
+            <div
+                v-if="props.totals.vatable_sales > 0"
+                class="flex justify-between"
+            >
                 <span>VAT Sales:</span>
                 <span>{{ formatMoney(props.totals?.vatable_sales) ?? 0 }}</span>
             </div>
-            <div class="flex justify-between">
+            <div
+                v-if="props.totals.vat_amount > 0"
+                class="flex justify-between"
+            >
+                <span>Vatable Amount:</span>
+                <span>{{ formatMoney(props.totals?.vat_amount) }}</span>
+            </div>
+            <div
+                v-if="props.totals.non_vat_sales > 0"
+                class="flex justify-between"
+            >
                 <span>Non-VAT Sales:</span>
                 <span>{{ formatMoney(props.totals?.non_vat_sales) ?? 0 }}</span>
             </div>
-            <div class="flex justify-between">
+            <div
+                v-if="props.totals.vat_exempt_sales > 0"
+                class="flex justify-between"
+            >
                 <span>VAT Exempt Sales:</span>
                 <span>{{ formatMoney(props.totals?.vat_exempt_sales) }}</span>
             </div>
@@ -217,15 +241,25 @@
 
         <div class="border-b border-dashed"></div>
 
-        <!-- Footer -->
-        <div class="text-center text-xs mt-10">
-            <p class="mb-1">
-                {{
-                    receiptFooter?.footer_notes ??
-                    "Thank you for dining with us! Please settle your bill at the counter."
-                }}
+        <!-- BIR ACCREDITATON NOTES -->
+        <div class="my-3" v-if="props.birAccreditationFooter">
+            <p
+                v-for="line in props.birAccreditationFooter"
+                class="text-center text-xs"
+            >
+                {{ line }}
             </p>
-            <p class="text-xs text-gray-500 mt-2">{{ footerMessage }}</p>
+        </div>
+
+        <!-- Receipt Footer loop through array-->
+        <div>
+            <p
+                v-for="(line, index) in props.receiptFooter || []"
+                :key="index"
+                class="text-sm text-center"
+            >
+                {{ line }}
+            </p>
         </div>
     </div>
 </template>
@@ -234,23 +268,25 @@
 import Branch from "@/Types/Branch";
 import { formatDate } from "@/Utils/FormatDate";
 import { formatMoney } from "@/Utils/FormatMoney";
+import { computed } from "vue";
+import moment from "moment-timezone";
 
 // Props
 const props = defineProps<{
     businessLogo?: string;
     storeName?: string;
     branch: Branch;
-    receiptNumber?: string;
+    invoiceNumber?: string | number;
     receiptDate?: string;
     tableNumber?: string;
     cashier?: any;
     items?: any[];
     totals?: any;
     payment?: any;
-    footerMessage?: string;
+    receiptHeader?: any;
     receiptFooter: any;
+    birAccreditationFooter?: any;
 }>();
-
 
 // Create helpers for this one
 const getOrderTypeLabel = (orderType: string) => {
@@ -262,22 +298,35 @@ const getOrderTypeLabel = (orderType: string) => {
     return labels[orderType] || orderType;
 };
 
-// This one, too.
-const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-    });
-};
+const totalAmountDue = computed(() => {
+    return (
+        parseFloat(props.totals?.total_due) +
+            parseFloat(props.totals?.service_charge) || 0
+    );
+});
+
+// const invoiceDate = computed(() => {
+//     return moment(props.receiptDate)
+//         .tz("Asia/Manila")
+//         .format("MM/DD/YYYY hh:mm A");
+// });
+
+const customerChange = computed(() => {
+    if (props.payment) {
+        return (
+            parseFloat(props.payment.amount_paid) -
+            parseFloat(totalAmountDue.value)
+        );
+    }
+    return 0;
+});
 </script>
 
 <style scoped>
 .receipt-container {
     font-family: "Monospace", monospace;
     line-height: 1.2;
-    max-width: 300px;
+    max-width: 400px;
 }
 
 /* Print styles */
@@ -288,6 +337,7 @@ const formatTime = (dateString: string) => {
         padding: 10px;
         font-size: 12px;
         border: none;
+        width: 400px;
     }
 
     .receipt-container img {

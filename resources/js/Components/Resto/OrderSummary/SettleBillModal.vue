@@ -160,7 +160,7 @@ const presetAmounts = [100, 200, 500, 1000];
 
 // Computed change amount
 const changeAmount = computed(() => {
-    return Math.max(0, amountPaid.value - props.totalAmount);
+    return Math.max(0, amountPaid.value - props.total);
 });
 
 const page = usePage();
@@ -219,12 +219,14 @@ const handleSettleBill = async () => {
             return;
         }
 
+        console.log("total due :", props.total);
         const response = await settlePayment({
             cart_id: props.cart.id,
             amount_paid: amountPaid.value,
             total_amount: props.total,
         });
 
+        console.log("settle response :", response);
         if (response.success) {
             toast.add({
                 severity: "success",
