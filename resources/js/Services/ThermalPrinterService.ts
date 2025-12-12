@@ -1,5 +1,6 @@
 import { Buffer } from 'buffer';
 import axios from 'axios';
+import moment from 'moment-timezone';
 
 interface BillData {
     storeName: string;
@@ -81,6 +82,7 @@ interface ReceiptData {
         footer_notes?: string;
     };
     footerMessage?: string;
+    isReprint?: boolean;
 }
 
 interface PrinterDevice {
@@ -189,6 +191,9 @@ class ThermalPrinterService {
         // Paper Control
         FULL_CUT: [0x1d, 0x56, 0x00],       // GS V 0 - Full cut
         PARTIAL_CUT: [0x1d, 0x56, 0x01],    // GS V 1 - Partial cut
+
+        // Cash Drawer
+        OPEN_DRAWER: [0x1b, 0x70, 0x00, 0x19, 0xfa], // ESC p 0 25 250 - Open cash drawer
 
         // Character Encoding
         SET_UTF8: [0x1b, 0x74, 0x06],       // ESC t 6 - Set UTF-8 encoding
@@ -355,7 +360,7 @@ class ThermalPrinterService {
     /**
      * Print receipt using ESC/POS commands
      */
-    public async printReceipt(receiptData: ReceiptData): Promise<void> {
+    public async printReceipt(receiptData: ReceiptData, isReprint: boolean = false): Promise<void> {
         if (!this.isConnected()) {
             throw new Error('Printer not connected. Please connect first.');
         }
@@ -369,6 +374,12 @@ class ThermalPrinterService {
 
             // Set character encoding to UTF-8
             commands.push(...this.ESC_POS.SET_UTF8);
+
+                        // Open cash drawer only for original receipts, not reprints
+            if (!isReprint) {
+                commands.push(...this.ESC_POS.OPEN_DRAWER);
+            }
+
 
             // Header - Business Info
             commands.push(...this.ESC_POS.ALIGN_CENTER);
@@ -410,16 +421,21 @@ class ThermalPrinterService {
             commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
             commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
+            // Re-print label if this is a duplicate
+            if (isReprint) {
+                commands.push(...this.ESC_POS.ALIGN_CENTER);
+                commands.push(...this.ESC_POS.BOLD_ON);
+                commands.push(...this.stringToBytes('*** RE-PRINT ***'));
+                commands.push(...this.ESC_POS.BOLD_OFF);
+                commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+            }
+
             // Receipt Info - left align
             commands.push(...this.ESC_POS.ALIGN_LEFT);
-            commands.push(...this.stringToBytes(this.formatInfoLine('Receipt #:', receiptData.orderNumber)));
+            commands.push(...this.stringToBytes(this.formatInfoLine('Invoice #:', receiptData.orderNumber)));
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatInfoLine('Date:', this.formatReceiptDate(receiptData.date))));
+            commands.push(...this.stringToBytes(this.formatInfoLine('Date Time:', this.getCurrentDateTime())));
             commands.push(...this.ESC_POS.LINE_FEED);
-            if (receiptData.time) {
-                commands.push(...this.stringToBytes(this.formatInfoLine('Time:', receiptData.time)));
-                commands.push(...this.ESC_POS.LINE_FEED);
-            }
             if (receiptData.tableNumber) {
                 commands.push(...this.stringToBytes(this.formatInfoLine('Table:', receiptData.tableNumber)));
                 commands.push(...this.ESC_POS.LINE_FEED);
@@ -571,7 +587,10 @@ class ThermalPrinterService {
 
                 if (receiptData.payment.change && parseFloat(String(receiptData.payment.change)) > 0) {
                     const change = typeof receiptData.payment.change === 'string' ? parseFloat(receiptData.payment.change) || 0 : receiptData.payment.change;
-                    commands.push(...this.stringToBytes(this.formatTotalLine('Change:', change)));
+                    commands.push(...this.ESC_POS.BOLD_ON);
+                    const changeSize = this.currentConfig?.font_sizes?.totals || 'medium';
+                    this.addTextWithSize(commands, this.formatTotalLine('Change:', change), changeSize);
+                    commands.push(...this.ESC_POS.BOLD_OFF);
                     commands.push(...this.ESC_POS.LINE_FEED);
                 }
 
@@ -586,22 +605,45 @@ class ThermalPrinterService {
 
             // Tax info (matching ReceiptLayout format)
             if (receiptData.totals) {
-                commands.push(...this.stringToBytes(this.formatTotalLine('Vatable Amount:', receiptData.totals.vat_amount)));
+
+                commands.push(...this.stringToBytes(this.formatTotalLine('VATable Sales:', receiptData.totals.vatable_sales)));
                 commands.push(...this.ESC_POS.LINE_FEED);
 
-                commands.push(...this.stringToBytes(this.formatTotalLine('VAT Sales:', receiptData.totals.vatable_sales)));
+
+                commands.push(...this.stringToBytes(this.formatTotalLine('VAT Amount:', receiptData.totals.vat_amount)));
                 commands.push(...this.ESC_POS.LINE_FEED);
 
-                commands.push(...this.stringToBytes(this.formatTotalLine('Non-VAT Sales:', receiptData.totals.non_vat_sales)));
-                commands.push(...this.ESC_POS.LINE_FEED);
-
-                commands.push(...this.stringToBytes(this.formatTotalLine('VAT Exempt Sales:', receiptData.totals.vat_exempt_sales)));
-                commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+                if (receiptData.totals.vat_amount !== undefined && receiptData.totals.vat_amount !== null && receiptData.totals.vat_amount !== '') {
+                    commands.push(...this.stringToBytes(this.formatTotalLine('Non-VAT Sales:', receiptData.totals.non_vat_sales)));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                }
+                if (receiptData.totals.vat_exempt_sales !== undefined && receiptData.totals.vat_exempt_sales !== null && receiptData.totals.vat_exempt_sales !== '') {
+                    commands.push(...this.stringToBytes(this.formatTotalLine('VAT Exempt Sales:', receiptData.totals.vat_exempt_sales)));
+                    commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+                }
             }
+
 
             // Final separator
             commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
             commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+
+
+            // Customer Name
+            const customerNameLabel = "Customer name:";
+            const customerNameSeparator = '_'.repeat(separatorWidth - customerNameLabel.length);
+            commands.push(...this.stringToBytes(customerNameLabel + customerNameSeparator));
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            const businessStyleLabel = "Business Style:";
+            const businessStyleSeparator = '_'.repeat(separatorWidth - businessStyleLabel.length);
+            commands.push(...this.stringToBytes(businessStyleLabel + businessStyleSeparator));
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            const addressLabel = "Address:";
+            const addressSeparator = '_'.repeat(separatorWidth - addressLabel.length);
+            commands.push(...this.stringToBytes(addressLabel + addressSeparator));
+            commands.push(...this.ESC_POS.LINE_FEED);
 
             // Footer (matching ReceiptLayout)
             commands.push(...this.ESC_POS.ALIGN_CENTER);
@@ -627,11 +669,12 @@ class ThermalPrinterService {
                 commands.push(...this.ESC_POS.FULL_CUT);
             }
 
+
             // Send to printer
             const data = new Uint8Array(commands);
             await this.sendToPrinter(data);
 
-            console.log('✅ Receipt printed successfully');
+            console.log(`✅ Receipt printed successfully${isReprint ? ' (RE-PRINT)' : ''}`);
         } catch (error) {
             console.error('❌ Failed to print receipt:', error);
             throw error;
@@ -806,15 +849,10 @@ class ThermalPrinterService {
     }
 
     /**
-     * Format date for receipt (matching ReceiptLayout)
+     * Get current date and time in Philippine timezone
      */
-    private formatReceiptDate(dateString: string): string {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
+    private getCurrentDateTime(): string {
+        return moment().tz('Asia/Manila').format('MM/DD/YYYY hh:mm A');
     }
 
     /**
@@ -882,12 +920,12 @@ class ThermalPrinterService {
 
             // Bill Info - left align
             commands.push(...this.ESC_POS.ALIGN_LEFT);
-            commands.push(...this.stringToBytes(this.formatInfoLine('Date:', this.formatReceiptDate(billData.date))));
+            commands.push(...this.stringToBytes(this.formatInfoLine('Date/Time:', this.getCurrentDateTime())));
             commands.push(...this.ESC_POS.LINE_FEED);
-            if (billData.time) {
-                commands.push(...this.stringToBytes(this.formatInfoLine('Time:', billData.time)));
-                commands.push(...this.ESC_POS.LINE_FEED);
-            }
+            // if (billData.time) {
+            //     commands.push(...this.stringToBytes(this.formatInfoLine('Time:', billData.time)));
+            //     commands.push(...this.ESC_POS.LINE_FEED);
+            // }
             commands.push(...this.stringToBytes(this.formatInfoLine('Bill #:', billData.billNumber)));
             commands.push(...this.ESC_POS.LINE_FEED);
             if (billData.cashier) {
