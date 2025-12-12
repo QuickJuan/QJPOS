@@ -32,14 +32,14 @@
                 >
                     Close
                 </button>
-                <button
+                <!-- <button
                     ref="printButtonRef"
                     type="button"
                     @click="printBill"
                     class="flex-1 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                 >
                     Print
-                </button>
+                </button> -->
             </div>
         </div>
     </Dialog>
