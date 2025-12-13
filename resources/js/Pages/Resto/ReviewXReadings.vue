@@ -215,70 +215,217 @@
                             <div class="flex flex-col lg:flex-row gap-4">
                                 <!-- Session Details -->
                                 <div class="flex flex-col w-full">
+                                    <!-- Session Summary Details -->
                                     <div
-                                        class="rounded-2xl border border-gray-100 bg-white p-6 space-y-3"
+                                        v-if="sessionSummary"
+                                        class="rounded-2xl border border-gray-100 bg-white p-6 space-y-6 mt-4"
                                     >
                                         <p
                                             class="text-xs uppercase tracking-wide text-gray-500"
                                         >
-                                            Session Details
+                                            Session Summary
                                         </p>
+
+                                        <!-- Cash Summary -->
+                                        <div>
+                                            <h4
+                                                class="text-sm font-semibold text-gray-700 mb-3"
+                                            >
+                                                Cash Summary
+                                            </h4>
+                                            <div
+                                                class="grid grid-cols-1 md:grid-cols-2 gap-4"
+                                            >
+                                                <div>
+                                                    <p
+                                                        class="text-sm text-gray-600"
+                                                    >
+                                                        Beginning Cash
+                                                    </p>
+                                                    <p class="font-semibold">
+                                                        ₱{{
+                                                            formatMoney(
+                                                                sessionSummary.beginning_cash ||
+                                                                    0
+                                                            )
+                                                        }}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p
+                                                        class="text-sm text-gray-600"
+                                                    >
+                                                        Cash Sales
+                                                    </p>
+                                                    <p class="font-semibold">
+                                                        ₱{{
+                                                            formatMoney(
+                                                                sessionSummary.cash_sales ||
+                                                                    0
+                                                            )
+                                                        }}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p
+                                                        class="text-sm text-gray-600"
+                                                    >
+                                                        Expected Cash
+                                                    </p>
+                                                    <p class="font-semibold">
+                                                        ₱{{
+                                                            formatMoney(
+                                                                sessionSummary.expected_cash ||
+                                                                    0
+                                                            )
+                                                        }}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p
+                                                        class="text-sm text-gray-600"
+                                                    >
+                                                        Actual Cash Count
+                                                    </p>
+                                                    <p class="font-semibold">
+                                                        ₱{{
+                                                            formatMoney(
+                                                                sessionSummary.actual_cash_count ||
+                                                                    0
+                                                            )
+                                                        }}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p
+                                                        class="text-sm text-gray-600"
+                                                    >
+                                                        Cash Variance
+                                                    </p>
+                                                    <p
+                                                        :class="[
+                                                            'font-semibold',
+                                                            (sessionSummary.cash_variance ||
+                                                                0) >= 0
+                                                                ? 'text-green-600'
+                                                                : 'text-red-600',
+                                                        ]"
+                                                    >
+                                                        ₱{{
+                                                            formatMoney(
+                                                                sessionSummary.cash_variance ||
+                                                                    0
+                                                            )
+                                                        }}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Payment Methods -->
                                         <div
-                                            class="grid grid-cols-1 md:grid-cols-2 gap-4"
+                                            v-if="
+                                                sessionSummary.payment_methods
+                                            "
                                         >
-                                            <div>
-                                                <p
-                                                    class="text-sm text-gray-600"
+                                            <h4
+                                                class="text-sm font-semibold text-gray-700 mb-3"
+                                            >
+                                                Payment Methods
+                                            </h4>
+                                            <div
+                                                class="grid grid-cols-1 md:grid-cols-2 gap-4"
+                                            >
+                                                <div
+                                                    v-for="(
+                                                        amount, method
+                                                    ) in sessionSummary.payment_methods"
+                                                    :key="method"
                                                 >
-                                                    Started At
-                                                </p>
-                                                <p class="font-semibold">
-                                                    {{
-                                                        formatDate(
-                                                            activeSession.started_time
-                                                        )
-                                                    }}
-                                                </p>
+                                                    <p
+                                                        class="text-sm text-gray-600 capitalize"
+                                                    >
+                                                        {{ method }}
+                                                    </p>
+                                                    <p class="font-semibold">
+                                                        ₱{{
+                                                            formatMoney(amount)
+                                                        }}
+                                                    </p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p
-                                                    class="text-sm text-gray-600"
-                                                >
-                                                    Ended At
-                                                </p>
-                                                <p class="font-semibold">
-                                                    {{
-                                                        activeSession.closing_time
-                                                            ? formatDate(
-                                                                  activeSession.closing_time
-                                                              )
-                                                            : "Ongoing"
-                                                    }}
-                                                </p>
-                                            </div>
-                                            <div>
-                                                <p
-                                                    class="text-sm text-gray-600"
-                                                >
-                                                    Total Sales
-                                                </p>
-                                                <p class="font-semibold">
-                                                    ₱{{
-                                                        activeSession.total_sales
-                                                    }}
-                                                </p>
-                                            </div>
-                                            <div>
-                                                <p
-                                                    class="text-sm text-gray-600"
-                                                >
-                                                    Beginning Cash
-                                                </p>
-                                                <p class="font-semibold">
-                                                    ₱{{
-                                                        activeSession.beginning_cash
-                                                    }}
-                                                </p>
+                                        </div>
+
+                                        <!-- Sales Summary -->
+                                        <div>
+                                            <h4
+                                                class="text-sm font-semibold text-gray-700 mb-3"
+                                            >
+                                                Sales Summary
+                                            </h4>
+                                            <div
+                                                class="grid grid-cols-1 md:grid-cols-2 gap-4"
+                                            >
+                                                <div>
+                                                    <p
+                                                        class="text-sm text-gray-600"
+                                                    >
+                                                        Total Transactions
+                                                    </p>
+                                                    <p class="font-semibold">
+                                                        {{
+                                                            sessionSummary.total_transactions ||
+                                                            0
+                                                        }}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p
+                                                        class="text-sm text-gray-600"
+                                                    >
+                                                        Gross Sales
+                                                    </p>
+                                                    <p class="font-semibold">
+                                                        ₱{{
+                                                            formatMoney(
+                                                                sessionSummary.gross_sales ||
+                                                                    0
+                                                            )
+                                                        }}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p
+                                                        class="text-sm text-gray-600"
+                                                    >
+                                                        Total Discounts
+                                                    </p>
+                                                    <p class="font-semibold">
+                                                        ₱{{
+                                                            formatMoney(
+                                                                sessionSummary.total_discounts ||
+                                                                    0
+                                                            )
+                                                        }}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p
+                                                        class="text-sm text-gray-600"
+                                                    >
+                                                        Net Sales
+                                                    </p>
+                                                    <p
+                                                        class="font-semibold text-green-600"
+                                                    >
+                                                        ₱{{
+                                                            formatMoney(
+                                                                sessionSummary.net_sales ||
+                                                                    0
+                                                            )
+                                                        }}
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -299,15 +446,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- Session Summary Modal -->
-        <SessionSummaryModal
-            :showSessionSummaryModal="showSessionSummaryModal"
-            :openSession="activeSession"
-            :sessionSummary="sessionSummary"
-            @closeModal="showSessionSummaryModal = false"
-            @confirmClose="showSessionSummaryModal = false"
-        />
     </CashieringLayout>
 </template>
 
@@ -319,7 +457,6 @@ import CashieringLayout from "@/Layouts/CashieringLayout.vue";
 import PageProps from "@/Types/PageProps";
 import CashieringSession from "@/Types/CashieringSession";
 import Button from "primevue/button";
-import SessionSummaryModal from "./Partials/SessionSummaryModal.vue";
 import debounce from "lodash/debounce";
 import axios from "axios";
 import CashierSessions from "./Partials/CashierSessions.vue";
@@ -393,9 +530,15 @@ const handleDateRangeChange = ([start, end]: [
 
 const activeSession = ref<CashieringSession | null>(null);
 const showActionMenu = ref(false);
-const showSessionSummaryModal = ref(false);
 const sessionSummary = ref<any>(null);
 
+const formatMoney = (amount: number | string) => {
+    const num = typeof amount === "string" ? parseFloat(amount) : amount;
+    return num.toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+};
 const toggleActionMenu = () => {
     showActionMenu.value = !showActionMenu.value;
 };
@@ -454,8 +597,19 @@ const goToPage = (url: string | null) => {
     }
 };
 
-const selectSession = (session: any) => {
+const selectSession = async (session: any) => {
     activeSession.value = session;
+
+    // Fetch session summary when a session is selected
+    try {
+        const response = await axios.get(
+            `/resto/api/session-summary/${session.id}`
+        );
+        sessionSummary.value = response.data;
+    } catch (error) {
+        console.error("Failed to fetch session summary:", error);
+        sessionSummary.value = null;
+    }
 };
 
 const handlePerPageChange = () => {
@@ -513,18 +667,11 @@ const clearFilters = () => {
 };
 
 const handlePrintReport = async () => {
-    if (!activeSession.value) return;
+    if (!activeSession.value || !sessionSummary.value) return;
 
-    try {
-        const response = await axios.get(
-            `/resto/api/session-summary/${activeSession.value.id}`
-        );
-        sessionSummary.value = response.data;
-        showSessionSummaryModal.value = true;
-    } catch (error) {
-        console.error("Failed to fetch session summary:", error);
-        alert("Failed to load session summary.");
-    }
+    // Print the session summary (you can implement thermal printer logic here)
+    console.log("Printing session summary:", sessionSummary.value);
+    alert("Print functionality to be implemented");
 };
 
 const subtleActionButtonClass =
