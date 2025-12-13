@@ -130,7 +130,7 @@ if (!isCentralDomain()) {
                         ->group(function () {
                             Route::get('/', 'index')->name('index');
                             Route::get('/preview', 'preview')->name('preview');
-                            Route::get('/review-x-transactions', 'reviewXTransactions')->name('review-x-transactions');
+                            Route::get('/review-x-readings', 'reviewXTransactions')->name('review-x-readings');
                             Route::get('/product/{product}/options', 'productOptions')->name('product.options');
                             Route::get('/{categorySlug?}', 'index')->name('category');
                             Route::post('/session/start', 'startSession')->name('session.start');

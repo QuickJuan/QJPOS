@@ -18,6 +18,52 @@
 
                     <!-- Right: Action Buttons -->
                     <div class="flex items-center gap-3">
+                        <!-- More Options Dropdown -->
+                        <div class="relative">
+                            <button
+                                @click="showMoreOptions = !showMoreOptions"
+                                class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium text-sm flex items-center gap-2"
+                            >
+                                More Options
+                                <ChevronDownIcon class="w-4 h-4" />
+                            </button>
+
+                            <!-- Dropdown Menu -->
+                            <div
+                                v-if="showMoreOptions"
+                                class="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50"
+                            >
+                                <button
+                                    @click="handleReviewTransactionsClick"
+                                    class="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-3"
+                                >
+                                    <DocumentTextIcon class="w-5 h-5" />
+                                    <span>Review Transactions</span>
+                                </button>
+                                <button
+                                    @click="handleReviewXReadingClick"
+                                    class="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-3"
+                                >
+                                    <DocumentChartBarIcon class="w-5 h-5" />
+                                    <span>Review X Reading</span>
+                                </button>
+                                <button
+                                    @click="handlePrinterConfigClick"
+                                    class="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-3"
+                                >
+                                    <PrinterIcon class="w-5 h-5" />
+                                    <span>Printer Configuration</span>
+                                </button>
+                                <button
+                                    @click="handleEndShiftClick"
+                                    class="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-3"
+                                >
+                                    <ClockIcon class="w-5 h-5" />
+                                    <span>End of Shift</span>
+                                </button>
+                            </div>
+                        </div>
+
                         <button
                             @click="handleCloseShift"
                             class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium text-sm"
@@ -159,6 +205,10 @@ import {
     QrCodeIcon,
     TableCellsIcon,
     DocumentTextIcon,
+    ChevronDownIcon,
+    PrinterIcon,
+    ClockIcon,
+    DocumentChartBarIcon,
 } from "@heroicons/vue/24/outline";
 import axios from "axios";
 import SessionSummaryModal from "@/Pages/Resto/Partials/SessionSummaryModal.vue";
@@ -231,7 +281,23 @@ const handleTablesClick = () => {
 
 const handleReviewTransactionsClick = () => {
     showSidebar.value = false;
+    showMoreOptions.value = false;
     router.visit(route("transactions.index"));
+};
+
+const handleReviewXReadingClick = () => {
+    showMoreOptions.value = false;
+    router.visit(route("resto.review-x-readings"));
+};
+
+const handlePrinterConfigClick = () => {
+    showMoreOptions.value = false;
+    router.visit(route("printer-config.index"));
+};
+
+const handleEndShiftClick = () => {
+    showMoreOptions.value = false;
+    handleCloseShift();
 };
 
 const handleCloseShift = () => {

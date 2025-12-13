@@ -75,14 +75,18 @@ class CashierSessionController extends Controller
 
         // Status is always closed, so no need to filter
 
-        $sessions = $query->orderBy('closing_time', 'desc')->paginate(10);
+        // Get per_page from request, default to 10
+        $perPage = $request->input('per_page', 10);
+
+        // Order by closing_time descending (latest first)
+        $sessions = $query->orderBy('closing_time', 'desc')->paginate($perPage);
 
         $cashiers = User::select('id', 'name')->orderBy('name')->get();
 
-        return Inertia::render('Resto/ReviewXTransaction', [
+        return Inertia::render('Resto/ReviewXReadings', [
             'sessions' => $sessions,
             'cashiers' => $cashiers,
-            'filters'  => $request->only(['search', 'date_from', 'date_to', 'status', 'cashier_id']),
+            'filters'  => $request->only(['search', 'date_from', 'date_to', 'status', 'cashier_id', 'per_page']),
         ]);
     }
 

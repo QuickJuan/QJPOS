@@ -56,17 +56,44 @@ export const useTable = () => {
        return response;
     };
 
-    const takeOrder = async (tableId: number, data: { pax: number; guest_name: string; }) => {
-        if (!tableId ) {
-            return { success: false, message: "Please select table", data: null };
+    const takeOrder = (tableId: number, data: { pax: number; guest_name: string; }) => {
+        if (!tableId) {
+            toast.add({
+                severity: "error",
+                summary: "Error",
+                detail: "Table ID is required",
+                life: 3000,
+            });
+            return;
         }
 
-        return await httpPost(
+        router.post(
             route("resto.cart.create-order"),
             {
                 table_id: tableId,
                 pax: data.pax,
                 guest_name: data.guest_name || 'Guest',
+            },
+            {
+                preserveScroll: false,
+                preserveState: false,
+                onSuccess: () => {
+                    toast.add({
+                        severity: "success",
+                        summary: "Success",
+                        detail: "Order created successfully",
+                        life: 3000,
+                    });
+                },
+                onError: (errors) => {
+                    const errorMessage = page.props.flash?.error || "Failed to create order";
+                    toast.add({
+                        severity: "error",
+                        summary: "Error",
+                        detail: errorMessage,
+                        life: 3000,
+                    });
+                },
             }
         );
     };

@@ -1,11 +1,5 @@
 <template>
-    <TransactionsLayout>
-        <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">
-                Printer Configuration
-            </h2>
-        </template>
-
+    <CashieringLayout>
         <div class="py-12">
             <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
                 <div class="overflow-hidden bg-white shadow-xl sm:rounded-lg">
@@ -877,13 +871,13 @@
                 </DangerButton>
             </div>
         </Dialog>
-    </TransactionsLayout>
+    </CashieringLayout>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted } from "vue";
 import { router } from "@inertiajs/vue3";
-import TransactionsLayout from "@/Layouts/TransactionsLayout.vue";
+import CashieringLayout from "@/Layouts/CashieringLayout.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import SecondaryButton from "@/Components/SecondaryButton.vue";
 import DangerButton from "@/Components/DangerButton.vue";
