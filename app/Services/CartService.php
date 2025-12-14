@@ -54,6 +54,9 @@ class CartService
                     'customer_name' => $payload['guest_name'],
                 ]);
 
+                // Load the tableRoom relationship
+                $cart->load('tableRoom');
+
                 return $cart;
             });
 

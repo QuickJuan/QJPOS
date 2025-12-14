@@ -338,39 +338,11 @@ const handleClose = () => {
     emit("close");
 };
 
-const confirmTakeOrder = async () => {
-    const response = await takeOrder(props.table.id, {
+const confirmTakeOrder = () => {
+    takeOrder(props.table.id, {
         pax: pax.value,
         guest_name: guestName.value.trim(),
     });
-
-    if (response.success) {
-        const { setSelectedCart } = useCashier();
-        if (response.data?.id) {
-            setSelectedCart(response.data?.id);
-        }
-        // alert("cart table id " + response.data?.table_room_id);
-        //redirect to cashier ordering page
-        router.visit(
-            route("resto.index", {
-                tableId: response.data?.table_room_id,
-                locationType: "dine-in",
-            })
-        );
-
-        handleClose();
-    }
-
-    if (!response.success) {
-        // show toast message about the error
-
-        toast.add({
-            severity: "error",
-            summary: "Error",
-            detail: response.message || "Failed to take order",
-            life: 3000,
-        });
-    }
 };
 
 const vacantTable = () => {
