@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -11,13 +12,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement('DROP VIEW IF EXISTS daily_sales_report_per_item_view');
+        DB::statement('DROP VIEW IF EXISTS hourly_sales_report_view');
 
         // Create the view
-        DB::statement("CREATE VIEW daily_sales_report_per_item_view AS
+        DB::statement("CREATE VIEW hourly_sales_report_view AS
         SELECT
             item.id AS id,
             item.created_at AS order_date,
+            DATE_FORMAT(ORD.created_at, '%H:%i:%s %p') AS order_time,
             prod.name AS item_name,
             item.quantity AS quantity,
             item.price AS price,
@@ -26,18 +28,19 @@ return new class extends Migration
             item.sub_total AS net_sales,
             prod.category_id AS category_id,
             prod.brand_id AS brand_id,
-            ord.status AS order_status
+            ORD.status AS order_status
         FROM
             order_items item
             JOIN products AS prod ON item.product_id = prod.id
-            JOIN orders AS ord ON item.order_id = ord.id
+            JOIN orders AS ORD ON item.order_id = ORD.id
         WHERE
-            DATE(item.created_at) = CURDATE()
-            AND (item.is_void = false OR item.is_void <> 1)
+            item.created_at >= DATE_FORMAT(UTC_TIMESTAMP(), '%Y-%m-%d %H:00:00')
+            AND item.created_at < DATE_FORMAT(UTC_TIMESTAMP(), '%Y-%m-%d %H:00:00') + INTERVAL 1 HOUR
             AND (
                 ORD.status <> 'refund'
                 OR ORD.status IS NULL
             )
+            AND (item.is_void = false OR item.is_void <> 1)
         GROUP BY
             item.id,
             item.created_at,
@@ -56,6 +59,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('daily_sales_report_per_item_view');
+        Schema::dropIfExists('hourly_sales_report_view');
     }
 };

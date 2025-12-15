@@ -22,7 +22,7 @@ return new class extends Migration
                 cust.customer_name AS customer,
                 ORD.invoice_no AS invoice_number,
                 ORD.total_amount AS gross_sales,
-                SUM(ORD.total_discount + ORD.less_tax) AS discount,
+                SUM(ORD.item_discount + ORD.less_tax) AS discount,
                 ORD.total_due AS net_sales,
                 ORD.status
             FROM
@@ -31,6 +31,11 @@ return new class extends Migration
                 LEFT JOIN customers AS cust ON ord.customer_id = cust.id
             WHERE
                 DATE(ORD.created_at) = CURDATE()
+                AND (item.is_void = false OR item.is_void <> 1)
+                AND (
+                    ORD.status <> 'refund'
+                    OR ORD.status IS NULL
+                )
             GROUP BY
                 ORD.id,
                 ORD.created_at,
