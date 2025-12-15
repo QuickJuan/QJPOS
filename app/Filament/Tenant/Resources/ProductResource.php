@@ -223,6 +223,9 @@ class ProductResource extends Resource
                     ->numeric()
                     ->label('Total Onhand'),
 
+                Toggle::make('is_active')
+                    ->default(true),
+
                 RichEditor::make('description')
                     ->maxLength(500)
                     ->ColumnSpan(2)

@@ -1,34 +1,36 @@
 <?php
 namespace App\Filament\Tenant\Resources\OrdersReport\DailySalesReport;
 
-use Carbon\Carbon;
-use Filament\Tables;
-use Filament\Forms\Form;
-use Filament\Tables\Table;
 use App\Enums\Order\Status;
+use App\Filament\Tenant\Exports\DailySalesReport\PerItemEmailExporter;
+use App\Filament\Tenant\Exports\DailySalesReport\PerItemExporter;
+use App\Filament\Tenant\Resources\OrdersReport\DailySalesReport\PerItemResource\Pages;
+use App\Jobs\OrdersReport\DailySalesReportPerItemJob;
+use App\Models\Brand;
+use App\Models\Category;
+use App\Models\OrdersReport\DailySalesReportPerItem;
+use Carbon\Carbon;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Tables;
 use Filament\Tables\Actions\Action;
-use Maatwebsite\Excel\Facades\Excel;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
-use Filament\Forms\Components\TextInput;
-use Filament\Notifications\Notification;
-use pxlrbt\FilamentExcel\Columns\Column;
-use Filament\Tables\Filters\SelectFilter;
-use App\Filament\Tenant\Exports\PerInvoiceExporter;
-use pxlrbt\FilamentExcel\Actions\Tables\ExportAction;
-use App\Models\OrdersReport\DailySalesReportPerInvoice;
-use App\Filament\Tenant\Exports\PerInvoiceEmailExporter;
-use App\Jobs\OrdersReport\DailySalesReportPerInvoiceJob;
+use Maatwebsite\Excel\Facades\Excel;
 use Malzariey\FilamentDaterangepickerFilter\Filters\DateRangeFilter;
-use App\Filament\Tenant\Resources\OrdersReport\DailySalesReport\PerInvoiceResource\Pages;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportAction;
+use pxlrbt\FilamentExcel\Columns\Column;
 
-class PerInvoiceResource extends Resource
+class PerItemResource extends Resource
 {
-    protected static ?string $model           = DailySalesReportPerInvoice::class;
+    protected static ?string $model           = DailySalesReportPerItem::class;
     protected static ?string $navigationGroup = "Order Reports";
-    protected static ?string $navigationLabel = "Daily Sales Report - Per Invoice";
+    protected static ?string $navigationLabel = "Daily Sales Report - Per Item";
     protected static ?string $navigationIcon  = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form
@@ -48,17 +50,16 @@ class PerInvoiceResource extends Resource
                     ->sortable()
                     ->date('F d, Y H:i a'),
 
-                TextColumn::make('cashier_shift_number')
-                    ->label('Cashier Shift Number')
+                TextColumn::make('item_name')
+                    ->label('Item Name')
                     ->sortable()
                     ->searchable(),
 
-                TextColumn::make('customer')
-                    ->sortable()
-                    ->searchable(),
+                TextColumn::make('quantity')
+                    ->sortable(),
 
-                TextColumn::make('invoice_number')
-                    ->label('Invoice Number')
+                TextColumn::make('price')
+                    ->money('php')
                     ->sortable()
                     ->searchable(),
 
@@ -75,38 +76,47 @@ class PerInvoiceResource extends Resource
                     ->label('Net Sales')
                     ->money('php')
                     ->sortable(),
-
-                TextColumn::make('status')
-                    ->searchable()
-                    ->sortable(),
             ])
             ->filters([
                 DateRangeFilter::make('order_date'),
 
-                SelectFilter::make('status')
-                    ->options(Status::filamentOptions())
+                SelectFilter::make('category_id')
+                    ->label('Category')
+                    ->options(Category::pluck('name', 'id')),
+
+                SelectFilter::make('brand_id')
+                    ->label('Brand')
+                    ->options(Brand::pluck('name', 'id')),
+
+                SelectFilter::make('order_status')
+                    ->options(Status::filamentOptions()),
+            ])
+            ->actions([
+                Tables\Actions\EditAction::make(),
             ])
             ->headerActions([
                 ExportAction::make()
                     ->exports([
-                        PerInvoiceExporter::make()
+                        PerItemExporter::make()
                             ->withColumns([
                                 Column::make('order_date')
                                     ->formatStateUsing(fn($state) => Carbon::parse($state)->format("F d, Y H:i A"))
                                     ->heading('Order Date'),
 
-                                Column::make('cashier_shift_number')
-                                    ->heading('Cashier Shift Number'),
+                                Column::make('item_name')
+                                    ->heading('Item Name'),
 
-                                Column::make('customer'),
+                                Column::make('quantity')
+                                    ->heading('Quantity'),
 
-                                Column::make('invoice_number')
-                                    ->heading('Invoice Number'),
+                                Column::make('price')
+                                    ->heading('Price'),
 
                                 Column::make('gross_sales')
                                     ->heading('Gross Sales'),
 
-                                Column::make('discount'),
+                                Column::make('discount')
+                                    ->heading('Discount'),
 
                                 Column::make('net_sales')
                                     ->heading('Net Sales'),
@@ -132,9 +142,9 @@ class PerInvoiceResource extends Resource
                     ->action(function (array $data, Table $table) {
                         $query = $table->getQuery();
 
-                        $exporter = new PerInvoiceEmailExporter($query);
+                        $exporter = new PerItemEmailExporter($query);
 
-                        $fileName = 'daily_sales_report_per_invoice.xlsx';
+                        $fileName = 'daily_sales_report_per_item.xlsx';
                         $path     = "exports/{$fileName}";
 
                         Excel::store($exporter, $path, 'public');
@@ -170,7 +180,7 @@ class PerInvoiceResource extends Resource
                             }
                         }
 
-                        dispatch(new DailySalesReportPerInvoiceJob(
+                        dispatch(new DailySalesReportPerItemJob(
                             $emails,
                             $ccEmails,
                             Storage::disk('public')->path($path)
@@ -182,9 +192,6 @@ class PerInvoiceResource extends Resource
                             ->success()
                             ->send();
                     }),
-            ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -203,9 +210,9 @@ class PerInvoiceResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListPerInvoices::route('/'),
-            'create' => Pages\CreatePerInvoice::route('/create'),
-            'edit'   => Pages\EditPerInvoice::route('/{record}/edit'),
+            'index'  => Pages\ListPerItems::route('/'),
+            'create' => Pages\CreatePerItem::route('/create'),
+            'edit'   => Pages\EditPerItem::route('/{record}/edit'),
         ];
     }
 

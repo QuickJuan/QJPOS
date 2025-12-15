@@ -15,11 +15,11 @@ return new class extends Migration
 
         // Create the view
         DB::statement("CREATE VIEW daily_sales_report_per_invoice_view AS
-          SELECT
+            SELECT
                 ORD.id AS id,
                 ORD.created_at AS order_date,
-                CONCAT(cashier.name, ' - ', cashier_session.id) AS cashier_shift_number,
-                table_room.customer_name AS customer,
+                CONCAT(cashier.name, ' - ', ORD.cashier_session_id) AS cashier_shift_number,
+                cust.customer_name AS customer,
                 ORD.invoice_no AS invoice_number,
                 ORD.total_amount AS gross_sales,
                 SUM(ORD.total_discount + ORD.less_tax) AS discount,
@@ -27,17 +27,14 @@ return new class extends Migration
                 ORD.status
             FROM
                 orders ORD
-                JOIN users AS cashier ON ORD.cashier_id = cashier.id
-                JOIN cashier_sessions AS cashier_session ON ORD.cashier_session_id = cashier_session.id
-                JOIN table_rooms AS table_room ON ORD.table_room_id = table_room.id
+                LEFT JOIN users AS cashier ON ORD.cashier_id = cashier.id
+                LEFT JOIN customers AS cust ON ord.customer_id = cust.id
             WHERE
-                DATE(ord.created_at) = CURDATE()
+                DATE(ORD.created_at) = CURDATE()
             GROUP BY
                 ORD.id,
                 ORD.created_at,
                 cashier.name,
-                cashier_session.id,
-                table_room.customer_name,
                 ORD.invoice_no,
                 ORD.total_amount,
                 ORD.total_due,
