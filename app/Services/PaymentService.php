@@ -86,6 +86,7 @@ class PaymentService
             'invoice_no'         => $invoiceNumber,
             'cashier_id'         => $cashier->id,
             'cashier_session_id' => $cashier->cashierSession->id,
+            'bill_no'            => $cart->bill_no,
             'table_room_id'      => $cart->table_room_id,
             'customer_id'        => $cart->customer_id,
             'discount_id'        => $cart->discount_id,

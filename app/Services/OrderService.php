@@ -37,4 +37,74 @@ class OrderService
             ->paginate(perPage: $perPage)
             ->withQueryString();
     }
+
+    /**
+     * Get Total Orders per shift
+     * Get total Count of orders for a specific cashier shift
+     * Get total sum of total_amount for a specific cashier shift
+     * Get total sum of total_due for a specific cashier shift
+     * Get total sum of item_discount for a specific cashier shift
+     * Get total sum of service_charge for a specific cashier shift
+     * Get total sum of less_tax for a specific cashier shift
+     * Get total sum of vat_amount for a specific cashier shift
+     * Get total sum of vat_exempt_sales for a specific cashier shift
+     * Get total sum of zero_rated_sales for a specific cashier shift
+     * Get total sum of non_vat_sales for a specific cashier shift
+     * Get Min and Max of Invoice_no for a specific cashier shift
+     * Get Min and Max of bill_no for a specific cashier shift
+     */
+    public function getTotalOrdersPerShift(int $shiftId)
+    {
+        //use DB query to get count and sum of total_amount total orders for a specific shift
+        $orders = \DB::table('orders')
+            ->where('cashier_session_id', $shiftId)
+            ->where('status', '=', 'settled')
+            ->selectRaw('COUNT(*) as total_orders, SUM(total_amount) as total_amount,
+                SUM(total_due) as total_due, SUM(item_discount) as item_discount,
+                SUM(service_charge) as service_charge, SUM(less_tax) as less_tax,
+                SUM(vat_amount) as vat_amount, SUM(vat_exempt_sales) as vat_exempt_sales,
+                SUM(zero_rated_sales) as zero_rated_sales, SUM(non_vat) as non_vat_sales,
+                MIN(invoice_no) as min_invoice_no, MAX(invoice_no) as max_invoice_no,
+                MIN(bill_no) as min_bill_no, MAX(bill_no) as max_bill_no')
+            ->first();
+        return $orders;
+    }
+
+
+    /**
+     * Get count of product and total qty from order items
+     */
+    public function getOrderItemsCount(int $shiftId)
+    {
+        //use DB query to get count and sum of quantity of order items for a specific shift
+        $orderItems = \DB::table('order_items')
+            ->join('orders', 'order_items.order_id', '=', 'orders.id')
+            ->where('orders.cashier_session_id', $shiftId)
+            ->where('is_void', '=', false)
+            ->selectRaw(' count(product_id) total_sku, SUM(quantity) as total_quantity')
+            ->orderBy('total_quantity', 'desc')
+            ->first();
+
+        return $orderItems ;
+    }
+
+
+    /**
+     * Get void order items per shift
+     * Get total Count of void order items for a specific cashier shift
+     * Get total sum of amount for void order items for a specific cashier shift
+     */
+    public function getVoidOrderItemsPerShift(int $shiftId)
+    {
+        //use DB query to get count and sum of amount of void order items for a specific shift
+        $voidItems = \DB::table('order_items')
+            ->join('orders', 'order_items.order_id', '=', 'orders.id')
+            ->where('orders.cashier_session_id', $shiftId)
+            ->where('is_void', '=', true)
+            ->selectRaw('product_id, description, SUM(quantity) as void_quantity, SUM(amount) as void_amount')
+            ->groupBy('product_id', 'description')
+            ->orderBy('void_quantity', 'desc')
+            ->get();
+        return $voidItems;
+    }
 }

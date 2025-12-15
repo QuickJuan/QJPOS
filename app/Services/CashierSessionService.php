@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Auth;
 
 class CashierSessionService
 {
-    public function __construct(public CashierSession $model)
+    public function __construct(public CashierSession $model, private OrderService $orderService)
     {
         $this->model = $model;
     }
@@ -58,15 +58,32 @@ class CashierSessionService
         return $session;
     }
 
-    public function closeSession(Request $request)
+    public function closeShift(Request $request)
     {
-        $session = $this->model->openSession()->first();
+        $session = null;
+
+        $shiftId = $request->input('shift_no');
+        if ($shiftId) {
+            $session = $this->model->find($shiftId);
+        }
 
         if (! $session) {
             throw new Exception('No open session found');
         }
 
         $closingCash = $session->beginning_cash + $request->cash_denomination;
+
+        $ordersTotals = $this->orderService->getTotalOrdersPerShift($session->id);
+        $productCounts = $this->orderService->getOrderItemsCount($session->id);
+        $voidOrderItems = $this->orderService->getVoidOrderItemsPerShift($session->id);
+
+        info('------- order totals -------');
+        info(json_encode($ordersTotals));
+        info('------- product counts -------');
+        info(json_encode($productCounts));
+        info('------- void order items -------');
+        info(json_encode($voidOrderItems));
+        dd(" testing close shift ");
 
         $closeSession = $session->update([
             'closing_time'              => now(),

@@ -977,6 +977,9 @@ class CartService
         }
 
         $branchId = $cart->branch_id;
+        if ($branchId === null) {
+            $branchId = $cart->tableRoom->branch_id;
+        }
 
         if ($branchId) {
             // Update the bill number for the cart

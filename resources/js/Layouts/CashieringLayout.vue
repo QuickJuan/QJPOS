@@ -210,7 +210,7 @@ import {
     ClockIcon,
     DocumentChartBarIcon,
 } from "@heroicons/vue/24/outline";
-import axios from "axios";
+import { httpPost } from "@/Utils/axiosHelper";
 import SessionSummaryModal from "@/Pages/Resto/Partials/SessionSummaryModal.vue";
 
 const page = usePage();
@@ -320,46 +320,44 @@ const handleLogout = () => {
     });
 };
 
-const handleConfirmCloseSession = (data: any) => {
-    console.log(data);
-    router.post(
-        route("resto.session.close"),
-        {
-            cash_denomination_details: data.denominationData,
-            cash_denomination: data.totalCashCounted,
-        },
-        {
-            onSuccess: () => {
-                showCloseDialog.value = false;
+const handleConfirmCloseSession = async (data: any) => {
+    let payload = {
+        cash_denomination_details: data.denominationData,
+        cash_denomination: data.totalCashCounted,
+        shift_no: page.props.current_cashier_session?.id,
+        cashier_id: page.props.current_cashier_session?.cashier_id,
+    };
 
-                // Fetch session summary after successful close
-                axios
-                    .get(route("resto.api.session-summary"))
-                    .then((response) => {
-                        sessionSummaryData.value = response.data;
-                        showSessionSummaryModal.value = true;
-                    })
-                    .catch((error) => {
-                        console.error("Failed to fetch session summary", error);
-                    });
+    const response = await httpPost(route("resto.session.close"), payload);
 
-                toast.add({
-                    severity: "success",
-                    summary: "Success",
-                    detail: "Session closed successfully",
-                    life: 3000,
-                });
-            },
-            onError: (errors) => {
-                toast.add({
-                    severity: "error",
-                    summary: "Error",
-                    detail: errors.error || "Failed to close session",
-                    life: 3000,
-                });
-            },
+    if (response.success) {
+        showCloseDialog.value = false;
+
+        // If the response includes session summary, display it
+        if (response.data?.sessionSummary) {
+            sessionSummaryData.value = response.data.sessionSummary;
+            showSessionSummaryModal.value = true;
         }
-    );
+
+        toast.add({
+            severity: "success",
+            summary: "Success",
+            detail: response.data?.message || "Session closed successfully",
+            life: 3000,
+        });
+
+        // Redirect to home after closing session
+        setTimeout(() => {
+            router.visit(route("home"));
+        }, 1500);
+    } else {
+        toast.add({
+            severity: "error",
+            summary: "Error",
+            detail: response.error || "Failed to close session",
+            life: 3000,
+        });
+    }
 };
 
 // Close dropdown when clicking outside
