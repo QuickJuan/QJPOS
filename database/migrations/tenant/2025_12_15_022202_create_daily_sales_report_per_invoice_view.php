@@ -30,7 +30,6 @@ return new class extends Migration
                 LEFT JOIN users AS cashier ON ORD.cashier_id = cashier.id
                 LEFT JOIN customers AS cust ON ord.customer_id = cust.id
             WHERE
-                DATE(ORD.created_at) = CURDATE()
                 AND (item.is_void = false OR item.is_void <> 1)
                 AND (
                     ORD.status <> 'refund'

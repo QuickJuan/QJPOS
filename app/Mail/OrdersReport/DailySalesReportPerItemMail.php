@@ -38,7 +38,7 @@ class DailySalesReportPerItemMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.daily_sales.daily_sales_report_per_item',
+            markdown: 'emails.order_sales.daily_sales_report_per_item',
         );
     }
 

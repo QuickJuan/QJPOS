@@ -1,12 +1,13 @@
 <?php
-namespace App\Filament\Tenant\Resources\OrdersReport\DailySalesReport;
+namespace App\Filament\Tenant\Resources\OrdersReport\BestSellerReportResource;
 
-use App\Enums\Order\Status;
-use App\Filament\Tenant\Exports\DailySalesReport\PerInvoiceEmailExporter;
-use App\Filament\Tenant\Exports\DailySalesReport\PerInvoiceExporter;
-use App\Filament\Tenant\Resources\OrdersReport\DailySalesReport\PerInvoiceResource\Pages;
-use App\Jobs\OrdersReport\DailySalesReportPerInvoiceJob;
-use App\Models\OrdersReport\DailySalesReportPerInvoice;
+use App\Filament\Tenant\Exports\BestSellerReport\BestSellerReportEmailExporter;
+use App\Filament\Tenant\Exports\BestSellerReport\BestSellerReportExporter;
+use App\Filament\Tenant\Resources\OrdersReport\BestSellerReportResource\Pages\CreateBestSellerReport;
+use App\Filament\Tenant\Resources\OrdersReport\BestSellerReportResource\Pages\EditBestSellerReport;
+use App\Filament\Tenant\Resources\OrdersReport\BestSellerReportResource\Pages\ListBestSellerReports;
+use App\Jobs\OrdersReport\BestSellerReportJob;
+use App\Models\OrdersReport\BestSellerReport;
 use Carbon\Carbon;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
@@ -15,7 +16,6 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
@@ -24,11 +24,11 @@ use Malzariey\FilamentDaterangepickerFilter\Filters\DateRangeFilter;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportAction;
 use pxlrbt\FilamentExcel\Columns\Column;
 
-class PerInvoiceResource extends Resource
+class BestSellerReportResource extends Resource
 {
-    protected static ?string $model           = DailySalesReportPerInvoice::class;
+    protected static ?string $model           = BestSellerReport::class;
     protected static ?string $navigationGroup = "Order Reports";
-    protected static ?string $navigationLabel = "Daily Sales Report - Per Invoice";
+    protected static ?string $navigationLabel = "Best Seller Report";
     protected static ?string $navigationIcon  = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form
@@ -42,78 +42,52 @@ class PerInvoiceResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->defaultSort('qty', 'desc')
             ->columns([
                 TextColumn::make('order_date')
                     ->label('Order Date')
                     ->sortable()
-                    ->date('F d, Y H:i a'),
+                    ->date('F d, Y h:i A'),
 
-                TextColumn::make('cashier_shift_number')
-                    ->label('Cashier Shift Number')
+                TextColumn::make('product')
+                    ->label('Product')
                     ->sortable()
                     ->searchable(),
 
-                TextColumn::make('customer')
-                    ->sortable()
-                    ->searchable(),
-
-                TextColumn::make('invoice_number')
-                    ->label('Invoice Number')
-                    ->sortable()
-                    ->searchable(),
-
-                TextColumn::make('gross_sales')
-                    ->label('Gross Sales')
-                    ->money('php')
-                    ->sortable(),
-
-                TextColumn::make('discount')
-                    ->money('php')
+                TextColumn::make('qty')
+                    ->label('Quantity')
+                    ->numeric(0)
                     ->sortable(),
 
                 TextColumn::make('net_sales')
                     ->label('Net Sales')
                     ->money('php')
                     ->sortable(),
-
-                TextColumn::make('status')
-                    ->searchable()
-                    ->sortable(),
             ])
             ->filters([
                 DateRangeFilter::make('order_date'),
-
-                SelectFilter::make('status')
-                    ->options(Status::filamentOptions()),
+            ])
+            ->actions([
+                Tables\Actions\EditAction::make(),
             ])
             ->headerActions([
                 ExportAction::make()
                     ->exports([
-                        PerInvoiceExporter::make()
+                        BestSellerReportExporter::make()
                             ->fromTable()
                             ->withColumns([
                                 Column::make('order_date')
                                     ->formatStateUsing(fn($state) => Carbon::parse($state)->format("F d, Y H:i A"))
                                     ->heading('Order Date'),
 
-                                Column::make('cashier_shift_number')
-                                    ->heading('Cashier Shift Number'),
+                                Column::make('product')
+                                    ->heading('Product'),
 
-                                Column::make('customer'),
-
-                                Column::make('invoice_number')
-                                    ->heading('Invoice Number'),
-
-                                Column::make('gross_sales')
-                                    ->heading('Gross Sales'),
-
-                                Column::make('discount'),
+                                Column::make('qty')
+                                    ->heading('Quantity'),
 
                                 Column::make('net_sales')
                                     ->heading('Net Sales'),
-
-                                Column::make('status')
-                                    ->heading('Status'),
                             ]),
                     ]),
 
@@ -131,11 +105,10 @@ class PerInvoiceResource extends Resource
                             ->placeholder('Enter CC email addresses (comma separated)'),
                     ])
                     ->action(function (array $data, Table $table) {
-                        $query = $table->getQuery();
+                        $query    = $table->getQuery();
+                        $exporter = new BestSellerReportEmailExporter($query);
 
-                        $exporter = new PerInvoiceEmailExporter($query);
-
-                        $fileName = 'daily_sales_report_per_invoice.xlsx';
+                        $fileName = 'best_seller_report.xlsx';
                         $path     = "exports/{$fileName}";
 
                         Excel::store($exporter, $path, 'public');
@@ -171,7 +144,7 @@ class PerInvoiceResource extends Resource
                             }
                         }
 
-                        dispatch(new DailySalesReportPerInvoiceJob(
+                        dispatch(new BestSellerReportJob(
                             $emails,
                             $ccEmails,
                             Storage::disk('public')->path($path)
@@ -183,9 +156,6 @@ class PerInvoiceResource extends Resource
                             ->success()
                             ->send();
                     }),
-            ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -204,9 +174,9 @@ class PerInvoiceResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListPerInvoices::route('/'),
-            'create' => Pages\CreatePerInvoice::route('/create'),
-            'edit'   => Pages\EditPerInvoice::route('/{record}/edit'),
+            'index'  => ListBestSellerReports::route('/'),
+            'create' => CreateBestSellerReport::route('/create'),
+            'edit'   => EditBestSellerReport::route('/{record}/edit'),
         ];
     }
 

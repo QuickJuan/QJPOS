@@ -98,6 +98,7 @@ class PerItemResource extends Resource
                 ExportAction::make()
                     ->exports([
                         PerItemExporter::make()
+                            ->fromTable()
                             ->withColumns([
                                 Column::make('order_date')
                                     ->formatStateUsing(fn($state) => Carbon::parse($state)->format("F d, Y H:i A"))

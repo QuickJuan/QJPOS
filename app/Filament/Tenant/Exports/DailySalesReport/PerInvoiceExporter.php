@@ -1,5 +1,5 @@
 <?php
-namespace App\Filament\Tenant\Exports;
+namespace App\Filament\Tenant\Exports\DailySalesReport;
 
 use Maatwebsite\Excel\Concerns\WithCustomStartCell;
 use Maatwebsite\Excel\Concerns\WithEvents;

@@ -8,7 +8,7 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class DailySalesReportPerInvoiceMail extends Mailable
+class HourlySalesReportMail extends Mailable
 {
     use Queueable, SerializesModels;
 
@@ -28,7 +28,7 @@ class DailySalesReportPerInvoiceMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Daily Sales Report Per Invoice - ' . now()->format('Y-m-d'),
+            subject: 'Hourly Sales Report - ' . now()->format('Y-m-d'),
         );
     }
 
@@ -38,7 +38,7 @@ class DailySalesReportPerInvoiceMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.order_sales.daily_sales_report_per_invoice',
+            markdown: 'emails.order_sales.hourly_sales_report',
         );
     }
 
@@ -51,7 +51,7 @@ class DailySalesReportPerInvoiceMail extends Mailable
     {
         return [
             Attachment::fromPath($this->filePath)
-                ->as('daily_sales_report_per_invoice.xlsx'),
+                ->as('hourly_sales_report.xlsx'),
         ];
     }
 }

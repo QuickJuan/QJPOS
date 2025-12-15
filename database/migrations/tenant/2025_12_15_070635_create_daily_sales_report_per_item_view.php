@@ -32,7 +32,6 @@ return new class extends Migration
             JOIN products AS prod ON item.product_id = prod.id
             JOIN orders AS ord ON item.order_id = ord.id
         WHERE
-            DATE(item.created_at) = CURDATE()
             AND (item.is_void = false OR item.is_void <> 1)
             AND (
                 ORD.status <> 'refund'
