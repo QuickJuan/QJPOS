@@ -265,7 +265,7 @@
                     label="Close"
                     severity="secondary"
                     outlined
-                    @click="emit('closeModal')"
+                    @click="emit('confirmClose')"
                 />
                 <div class="flex gap-3">
                     <Button
