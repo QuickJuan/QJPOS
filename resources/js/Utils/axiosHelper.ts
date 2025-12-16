@@ -1,5 +1,3 @@
-import axios from 'axios';
-
 /**
  * Format validation errors from server response
  * @param errors - Errors object from server
@@ -47,7 +45,7 @@ export const httpPost = async <T = any>(
 ): Promise<any> => {
     try {
         // Use the global axios instance (already configured in bootstrap.js)
-        const response = await axios.post<T>(url, data, {
+        const response = await window.axios.post<T>(url, data, {
             validateStatus: () => true,
         });
 
@@ -101,7 +99,7 @@ export const httpGet = async <T = any>(
     }
 ): Promise<{ success: boolean; data?: T; error?: string }> => {
     try {
-        const response = await axios.get<T>(url, {
+        const response = await window.axios.get<T>(url, {
             validateStatus: () => true,
         });
 
@@ -153,7 +151,7 @@ export const httpPut = async <T = any>(
     }
 ): Promise<{ success: boolean; data?: T; error?: string }> => {
     try {
-        const response = await axios.put<T>(url, data, {
+        const response = await window.axios.put<T>(url, data, {
             validateStatus: () => true,
         });
 
@@ -205,7 +203,7 @@ export const httpPatch = async <T = any>(
     }
 ): Promise<{ success: boolean; data?: T; error?: string }> => {
     try {
-        const response = await axios.patch<T>(url, data, {
+        const response = await window.axios.patch<T>(url, data, {
             validateStatus: () => true,
         });
 
@@ -255,7 +253,7 @@ export const httpDelete = async <T = any>(
     }
 ): Promise<{ success: boolean; data?: T; error?: string }> => {
     try {
-        const response = await axios.delete<T>(url, {
+        const response = await window.axios.delete<T>(url, {
             validateStatus: () => true,
         });
 

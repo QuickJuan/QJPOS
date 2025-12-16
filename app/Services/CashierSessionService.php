@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Auth;
 
 class CashierSessionService
 {
-    public function __construct(public CashierSession $model)
+    public function __construct(public CashierSession $model, private OrderService $orderService)
     {
         $this->model = $model;
     }
@@ -58,9 +58,14 @@ class CashierSessionService
         return $session;
     }
 
-    public function closeSession(Request $request)
+    public function closeShift(Request $request)
     {
-        $session = $this->model->openSession()->first();
+        $session = null;
+
+        $shiftId = $request->input('shift_no');
+        if ($shiftId) {
+            $session = $this->model->find($shiftId);
+        }
 
         if (! $session) {
             throw new Exception('No open session found');
@@ -68,14 +73,45 @@ class CashierSessionService
 
         $closingCash = $session->beginning_cash + $request->cash_denomination;
 
-        $closeSession = $session->update([
+        $ordersTotals = $this->orderService->getTotalOrdersPerShift($session->id);
+        $productCounts = $this->orderService->getOrderItemsCount($session->id);
+        $voidOrderItems = $this->orderService->getVoidOrderItemsPerShift($session->id);
+        $refundOrders = $this->orderService->getRefundOrdersPerShift($session->id);
+        $refundfromOtherShifts = $this->orderService->getRefundAFromOtherShiftOrders($session->cashier_id);
+
+
+        $session->update([
             'closing_time'              => now(),
-            'closing_cash'              => $closingCash,
+            'closing_cash'              => (float) $closingCash,
             'cash_denomination_details' => $request->cash_denomination_details,
-            'cash_denomination'         => $request->cash_denomination,
+            'cash_denomination'         => (float) $request->cash_denomination,
+            'total_sales'              => (float) $ordersTotals->total_due,
+            'meta_data'                 => [
+                'total_orders'   => (float) $ordersTotals->total_orders,
+                'gross_sales'  => (float) $ordersTotals->total_amount,
+                'item_discount'=> (float) $ordersTotals->item_discount,
+                'less_tax'     => (float) $ordersTotals->less_tax,
+                'net_sales'    => (float) $ordersTotals->total_due,
+                'vatable_sales' => (float) $ordersTotals->vatable_sales,
+                'vat_amount'    => (float) $ordersTotals->vat_amount,
+                'vat_exempt_sales' => (float) $ordersTotals->vat_exempt_sales,
+                'zero_rated_sales' => (float) $ordersTotals->zero_rated_sales,
+                'non_vat_sales' => (float) $ordersTotals->non_vat_sales,
+                'min_invoice_no' => (int)  $ordersTotals->min_invoice_no,
+                'max_invoice_no' => (int) $ordersTotals->max_invoice_no,
+                'min_bill_no'    => (int) $ordersTotals->min_bill_no,
+                'max_bill_no'    => (int) $ordersTotals->max_bill_no,
+                'total_sku'      => (int) $productCounts->total_sku,
+                'total_quantity' => (float) $productCounts->total_quantity,
+                'void_order_items' => $voidOrderItems,
+                'refund_count'    => (int) $refundOrders->total_refunded_orders,
+                'refund_amount'    => (float) $refundOrders->total_refunded_amount,
+                'refund_from_other_shifts_amount' => (float) $refundfromOtherShifts->total_refunded_amount,
+                'refund_from_other_shifts_count' => (int) $refundfromOtherShifts->total_refunded_orders,
+            ],
         ]);
 
-        return $closeSession;
+        return $session->fresh();
     }
 
     public function createOrder(Request $request)

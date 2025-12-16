@@ -33,7 +33,7 @@ class CashierSessionController extends Controller
         } else {
             $currentTable = null;
         }
-
+        // dd($categories);
         // Cart is now provided by HandleInertiaRequests middleware via shared props
         return Inertia::render('Resto/Index', [
             'categories'   => $categories,
@@ -123,14 +123,26 @@ class CashierSessionController extends Controller
         ]);
     }
 
-    public function closeSession(CashierSessionRequest $request): RedirectResponse
+    public function closeShift(CashierSessionRequest $request)
     {
         try {
-            $this->cashierSessionService->closeSession($request);
+            // Close the shift and get the session
+            $session = $this->cashierSessionService->closeShift($request);
 
-            return redirect()->back()->with('success', 'Session closed successfully');
+            // Return back with session to show modal first
+            // The frontend will handle logout after user closes the modal
+
+            return response()->json([
+                'message' => 'Cashier Shift closed successfully.',
+                'session' => $session,
+                'success' => true,
+            ]);
+
         } catch (Exception $e) {
-            return redirect()->back()->with('error', 'There was an error while closing the session.');
+               return response()->json([
+                'message' => 'There was an error while closing the shift: ' . $e->getMessage(),
+                'success' => false,
+            ], 500);
         }
     }
 

@@ -45,9 +45,11 @@ class OrderController extends Controller
 
         $order->update([
             'status'    => 'refund',
+            'refunded_cashier_id' => $request->user()->id,
+            'refunded_at' => now(),
             'meta_data' => array_merge($order->meta_data ?? [], [
                 'refund' => [
-                    'requested_by' => Auth::user()->name,
+                    'requested_by' => $request->user()->name,
                     'supervisor'   => $request->supervisor_name,
                     'notes'        => $request->notes,
                     'refunded_at'  => now(),

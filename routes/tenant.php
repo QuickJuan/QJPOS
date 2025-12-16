@@ -134,7 +134,7 @@ if (!isCentralDomain()) {
                             Route::get('/product/{product}/options', 'productOptions')->name('product.options');
                             Route::get('/{categorySlug?}', 'index')->name('category');
                             Route::post('/session/start', 'startSession')->name('session.start');
-                            Route::post('/session/close', 'closeSession')->name('session.close');
+                            Route::post('/session/close', 'closeShift')->name('session.close');
                             Route::get('/api/session-summary', 'getSessionSummary')->name('api.session-summary');
                             Route::get('/api/session-summary/{sessionId}', 'getSessionSummaryById')->name('api.session-summary-by-id');
 

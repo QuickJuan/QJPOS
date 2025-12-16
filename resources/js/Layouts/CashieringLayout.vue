@@ -188,8 +188,8 @@
             :open-session="page.props.current_cashier_session"
             :session-summary="sessionSummaryData"
             :current-user="page.props.auth.user"
-            @close-modal="showSessionSummaryModal = false"
-            @confirm-close="showSessionSummaryModal = false"
+            @close-modal="handleCloseSummaryModal"
+            @confirm-close="handleCloseSummaryModal"
         />
     </div>
 </template>
@@ -201,6 +201,7 @@ import { useConfirm } from "primevue";
 import { useToast } from "primevue";
 import { ConfirmPopup, Toast } from "primevue";
 import CloseSessionModal from "@/Pages/Resto/Partials/CloseSessionModal.vue";
+import { useCashier } from "@/composables/useCashier";
 import {
     QrCodeIcon,
     TableCellsIcon,
@@ -210,12 +211,12 @@ import {
     ClockIcon,
     DocumentChartBarIcon,
 } from "@heroicons/vue/24/outline";
-import axios from "axios";
 import SessionSummaryModal from "@/Pages/Resto/Partials/SessionSummaryModal.vue";
 
 const page = usePage();
 const confirm = useConfirm();
 const toast = useToast();
+const { closeShift } = useCashier();
 
 // Props for cashier info (can be passed from parent components)
 const props = defineProps<{
@@ -232,6 +233,7 @@ const showCloseDialog = ref(false);
 
 const showSessionSummaryModal = ref(false);
 const sessionSummaryData = ref(null);
+const shouldLogoutAfterSummary = ref(false);
 
 // Computed properties
 const cashierName = computed(() => {
@@ -320,46 +322,48 @@ const handleLogout = () => {
     });
 };
 
-const handleConfirmCloseSession = (data: any) => {
-    console.log(data);
-    router.post(
-        route("resto.session.close"),
-        {
-            cash_denomination_details: data.denominationData,
-            cash_denomination: data.totalCashCounted,
-        },
-        {
-            onSuccess: () => {
-                showCloseDialog.value = false;
+const handleConfirmCloseSession = async (data: any) => {
+    let payload = {
+        cash_denomination_details: data.denominationData,
+        cash_denomination: data.totalCashCounted,
+        shift_no: page.props.current_cashier_session?.id,
+        cashier_id: page.props.current_cashier_session?.cashier_id,
+    };
 
-                // Fetch session summary after successful close
-                axios
-                    .get(route("resto.api.session-summary"))
-                    .then((response) => {
-                        sessionSummaryData.value = response.data;
-                        showSessionSummaryModal.value = true;
-                    })
-                    .catch((error) => {
-                        console.error("Failed to fetch session summary", error);
-                    });
+    const result = await closeShift(payload);
 
-                toast.add({
-                    severity: "success",
-                    summary: "Success",
-                    detail: "Session closed successfully",
-                    life: 3000,
-                });
-            },
-            onError: (errors) => {
-                toast.add({
-                    severity: "error",
-                    summary: "Error",
-                    detail: errors.error || "Failed to close session",
-                    life: 3000,
-                });
-            },
-        }
-    );
+    console.log("close shift result :", result);
+
+    showCloseDialog.value = false;
+
+    if (result.success) {
+        sessionSummaryData.value = result.session;
+        showSessionSummaryModal.value = true;
+
+        toast.add({
+            severity: "success",
+            summary: "Success",
+            detail: result.data.message || "Session closed successfully",
+            life: 3000,
+        });
+    } else {
+        toast.add({
+            severity: "error",
+            summary: "Error",
+            detail: result.error,
+            life: 3000,
+        });
+    }
+};
+
+const handleCloseSummaryModal = () => {
+    showSessionSummaryModal.value = false;
+
+    // If we should logout after viewing summary, do it now
+    if (shouldLogoutAfterSummary.value) {
+        shouldLogoutAfterSummary.value = false;
+        router.post(route("logout"));
+    }
 };
 
 // Close dropdown when clicking outside

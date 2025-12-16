@@ -111,6 +111,7 @@ class CartController extends Controller
                 return redirect()->back()->with('error', 'Cart item ID is empty.');
             }
 
+
             $this->cartService->voidCartItem($request, $cartItemId);
 
             return redirect()->back()->with('success', 'Cart item removed successfully.');
@@ -223,6 +224,7 @@ class CartController extends Controller
                 'data'    => new ReceiptOrdersResource($order),
             ], 200);
         } catch (Exception $e) {
+            info('Settle bill error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'There was an error settling the bill.',

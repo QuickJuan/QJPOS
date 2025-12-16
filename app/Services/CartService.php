@@ -561,24 +561,20 @@ class CartService
 
     public function voidCartItem(Request $request, int $cartItemId): mixed
     {
-        $cashierSession = $this->cashierSession->openSession()->first();
 
-        if (! $cashierSession) {
-            throw new Exception('No active cashier session found.');
+        try {
+            $cartItem = CartItem::find($cartItemId);
+            if (! $cartItem) {
+                throw new Exception('Cart item not found.');
+            }
+            return $cartItem->update([
+                'is_void' => true,
+                'reason'  => $request->reason,
+            ]);
+        } catch (Exception $e) {
+            throw new Exception('Error voiding cart item.');
         }
 
-        $cart = Cart::authCashier()->cashierOpenSession($cashierSession->id)->first();
-
-        if (! $cart) {
-            throw new Exception('Cart not found.');
-        }
-
-        $cartItem = CartItem::find($cartItemId);
-
-        return $cartItem->update([
-            'is_void' => true,
-            'reason'  => $request->reason,
-        ]);
     }
 
     public function applyDiscountToCartItem(Request $request): mixed
@@ -977,6 +973,9 @@ class CartService
         }
 
         $branchId = $cart->branch_id;
+        if ($branchId === null) {
+            $branchId = $cart->tableRoom->branch_id;
+        }
 
         if ($branchId) {
             // Update the bill number for the cart

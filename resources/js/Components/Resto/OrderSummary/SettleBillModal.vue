@@ -241,7 +241,7 @@ const handleSettleBill = async () => {
             toast.add({
                 severity: "error",
                 summary: "Error",
-                detail: response.message || "Failed to settle bill",
+                detail: response.error || "Failed to settle bill",
                 life: 3000,
             });
         }
