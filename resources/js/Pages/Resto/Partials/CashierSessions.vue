@@ -2,13 +2,17 @@
     <div class="flex-grow h-full">
         <!-- Pagination at Top -->
         <div
-            v-if="paginatedSessions?.links"
+            v-if="
+                paginatedSessions?.links && paginatedSessions.links.length > 0
+            "
             class="flex justify-center mb-4 px-4 sm:px-0"
         >
             <div class="flex flex-wrap gap-1 justify-center">
                 <button
-                    v-for="link in paginatedSessions.links"
-                    :key="link.label"
+                    v-for="(link, index) in paginatedSessions.links.filter(
+                        (l) => l !== null
+                    )"
+                    :key="index"
                     :class="[
                         'px-3 py-2 text-sm border rounded',
                         link.active
@@ -17,7 +21,7 @@
                         !link.url ? 'opacity-50 cursor-not-allowed' : '',
                     ]"
                     :disabled="!link.url"
-                    v-html="link.label"
+                    v-html="link.label || ''"
                     @click="handlePageClick(link.url)"
                 />
             </div>
@@ -29,7 +33,7 @@
             <div
                 class="hidden sm:grid sm:grid-cols-12 gap-4 px-4 py-3 bg-gray-50 border-b border-gray-200 text-sm font-medium text-gray-700"
             >
-                <div class="col-span-2">Session #</div>
+                <div class="col-span-2">Shift #</div>
                 <div class="col-span-3">Cashier</div>
                 <div class="col-span-3">Closed At</div>
                 <div class="col-span-2 text-right">Total Sales</div>
@@ -56,10 +60,10 @@
                     <div class="flex items-start justify-between mb-2">
                         <div>
                             <p class="font-medium text-gray-900">
-                                Session #{{ session.id }}
+                                Shift #{{ session.id }}
                             </p>
                             <p class="text-sm text-gray-600">
-                                {{ session.cashier?.name || "Unknown Cashier" }}
+                                {{ session.cashier || "Unknown Cashier" }}
                             </p>
                         </div>
                         <span
@@ -86,10 +90,10 @@
                         #{{ session.id }}
                     </div>
                     <div class="col-span-3 text-gray-900">
-                        {{ session.cashier?.name || "Unknown Cashier" }}
+                        {{ session.cashier || "Unknown Cashier" }}
                     </div>
                     <div class="col-span-3 text-gray-600">
-                        {{ formatDate(session.closing_time) }}
+                        {{ formatDate(session.shift_end) }}
                     </div>
                     <div
                         class="col-span-2 text-right font-medium text-gray-900"

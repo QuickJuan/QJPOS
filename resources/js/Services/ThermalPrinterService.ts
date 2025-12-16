@@ -99,36 +99,58 @@ interface BluetoothPrintService {
 }
 
 interface SessionSummaryData {
-    session_number: string | null;
-    or_number_start: string | null;
-    or_number_end: string | null;
-    bill_number_start: string | null;
-    bill_number_end: string | null;
-    gross_sales: number | null;
-    regular_discount: number | null;
-    senior_discount: number | null;
-    pwd_discount: number | null;
-    net_sales: number | null;
-    non_vat_sales: number | null;
-    vat_sales: number | null;
-    vat_amount: number | null;
-    vat_exempt_sales: number | null,
-    less_tax: number | null;
-    service_charge: number | null;
-    cancelled_count: number | null;
-    cancelled_amount: number | null;
-    transactions_count: number | null;
-    sku_count: number | null;
-    total_quantity: number | null;
-    previous_reading: number | null;
-    running_total: number | null;
-    beginning_cash: number | null;
-    closing_cash: number | null;
-    cash_denomination: number | null;
-    variance: number | null;
-    cash_denomination_details?: Record<string, number> | null;
-    counter_id_start?: string | null;
-    counter_id_end?: string | null;
+    id: number;
+    shift_start: string;
+    shift_end: string;
+    branch: {
+        id: number;
+        branch_code: string;
+        name: string;
+        address: string;
+        phone: string;
+        email: string;
+        contact_person: string;
+        tin?: string | null;
+        registration_number?: string | null;
+        or_number?: string | null;
+        bill_no: number;
+        order_number: number;
+        receipt_headers?: string[];
+        receipt_footer?: string[];
+    };
+    cashier: string;
+    beginning_cash: number;
+    total_sales: number;
+    cash_denomination_total: number;
+    cash_denomination_details: Record<string, number>;
+    meta_data: {
+        less_tax: number;
+        net_sales: number;
+        total_sku: number;
+        vat_amount: number;
+        gross_sales: number;
+        max_bill_no: number;
+        min_bill_no: number;
+        refund_count: number;
+        total_orders: number;
+        item_discount: number;
+        non_vat_sales: number;
+        refund_amount: number;
+        vatable_sales: number;
+        max_invoice_no: number;
+        min_invoice_no: number;
+        total_quantity: number;
+        vat_exempt_sales: number;
+        void_order_items: Array<{
+            product_id: number;
+            description: string | null;
+            void_amount: string;
+            void_quantity: string;
+        }>;
+        zero_rated_sales: number;
+        refund_from_other_shifts_count: number;
+        refund_from_other_shifts_amount: number;
+    };
 }
 
 interface PrinterConfig {
@@ -1152,14 +1174,7 @@ class ThermalPrinterService {
     /**
      * Print session summary (X Reading Report)
      */
-    public async printSessionSummary(
-        sessionSummary: SessionSummaryData,
-        merchantName: string = 'QUICKJUAN POS',
-        merchantAddress: string = '',
-        operatorName: string = '',
-        merchantTin: string = '',
-        registrationNumber: string = ''
-    ): Promise<void> {
+    public async printSessionSummary(sessionData: SessionSummaryData): Promise<void> {
         if (!this.isConnected()) {
             throw new Error('Printer not connected. Please connect first.');
         }
@@ -1180,190 +1195,229 @@ class ThermalPrinterService {
 
             // Company name
             const companyNameSize = this.currentConfig?.font_sizes?.company_name || 'medium';
-            this.addTextWithSize(commands, merchantName, companyNameSize);
+            this.addTextWithSize(commands, sessionData.branch.name, companyNameSize);
             commands.push(...this.ESC_POS.LINE_FEED);
 
             // Store address
             commands.push(...this.ESC_POS.BOLD_OFF);
-            if (merchantAddress) {
-                commands.push(...this.stringToBytes(merchantAddress));
+            if (sessionData.branch.address) {
+                commands.push(...this.stringToBytes(sessionData.branch.address));
                 commands.push(...this.ESC_POS.LINE_FEED);
             }
 
-            // Operator name
-            if (operatorName) {
-                commands.push(...this.stringToBytes(`Operated By: ${operatorName}`));
+            // Phone
+            if (sessionData.branch.phone) {
+                commands.push(...this.stringToBytes(`Phone: ${sessionData.branch.phone}`));
                 commands.push(...this.ESC_POS.LINE_FEED);
             }
 
             // TIN and Registration
-            if (merchantTin) {
-                commands.push(...this.stringToBytes(`TIN: ${merchantTin}`));
+            if (sessionData.branch.tin) {
+                commands.push(...this.stringToBytes(`TIN: ${sessionData.branch.tin}`));
                 commands.push(...this.ESC_POS.LINE_FEED);
             }
-            if (registrationNumber) {
-                commands.push(...this.stringToBytes(`Registration No.: ${registrationNumber}`));
+            if (sessionData.branch.registration_number) {
+                commands.push(...this.stringToBytes(`Registration No.: ${sessionData.branch.registration_number}`));
                 commands.push(...this.ESC_POS.LINE_FEED);
+            }
+
+            // Receipt headers
+            if (sessionData.branch.receipt_headers && sessionData.branch.receipt_headers.length > 0) {
+                commands.push(...this.ESC_POS.LINE_FEED);
+                sessionData.branch.receipt_headers.forEach(header => {
+                    commands.push(...this.stringToBytes(header));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                });
             }
 
             // Header separator
             const separatorWidth = this.currentConfig?.character_width || 47;
-            commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
+            commands.push(...this.stringToBytes('='.repeat(separatorWidth)));
             commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
             // X Reading Report header
             commands.push(...this.ESC_POS.ALIGN_CENTER);
             commands.push(...this.ESC_POS.BOLD_ON);
-            commands.push(...this.stringToBytes('X Reading Report'));
+            commands.push(...this.stringToBytes('X READING REPORT'));
             commands.push(...this.ESC_POS.BOLD_OFF);
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(new Date().toLocaleDateString()));
+            commands.push(...this.stringToBytes(`Shift No: ${sessionData.id}`));
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.stringToBytes(`Cashier: ${sessionData.cashier}`));
             commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+
+            // Date and time
+            commands.push(...this.stringToBytes(`Shift Start: ${moment(sessionData.shift_start).format('MM/DD/YYYY hh:mm A')}`));
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.stringToBytes(`Shift End: ${moment(sessionData.shift_end).format('MM/DD/YYYY hh:mm A')}`));
+            commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+
+            commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
+            commands.push(...this.ESC_POS.LINE_FEED);
 
             // Left align for details
             commands.push(...this.ESC_POS.ALIGN_LEFT);
 
             // Sales summary
-            commands.push(...this.stringToBytes(this.formatTotalLine('Gross Sales:', sessionSummary.gross_sales || 0)));
+            commands.push(...this.stringToBytes(this.formatTotalLine('Gross Sales:', sessionData.meta_data.gross_sales)));
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatTotalLine('Regular Discount:', sessionSummary.regular_discount || 0)));
+            commands.push(...this.stringToBytes(this.formatTotalLine('Item Discount:', sessionData.meta_data.item_discount)));
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatTotalLine('Senior Discount:', sessionSummary.senior_discount || 0)));
+            commands.push(...this.stringToBytes(this.formatTotalLine('Less Tax:', sessionData.meta_data.less_tax)));
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatTotalLine('PWD Discount:', sessionSummary.pwd_discount || 0)));
-            commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatTotalLine('Less Tax:', sessionSummary.less_tax || 0)));
+            commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
             commands.push(...this.ESC_POS.LINE_FEED);
             commands.push(...this.ESC_POS.BOLD_ON);
-            commands.push(...this.stringToBytes(this.formatTotalLine('Net Sales:', sessionSummary.net_sales || 0)));
-            commands.push(...this.ESC_POS.BOLD_OFF);
-            commands.push(...this.ESC_POS.BOLD_ON);
-            commands.push(...this.stringToBytes(this.formatTotalLine('Service Charge:', sessionSummary.service_charge || 0)));
+            commands.push(...this.stringToBytes(this.formatTotalLine('Net Sales:', sessionData.meta_data.net_sales)));
             commands.push(...this.ESC_POS.BOLD_OFF);
             commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
             // VAT breakdown
-            if (sessionSummary.vat_sales > 0) {
-                commands.push(...this.stringToBytes(this.formatTotalLine('VAT Sales:', sessionSummary.vat_sales || 0)));
-                commands.push(...this.ESC_POS.LINE_FEED);
-            }
+            commands.push(...this.stringToBytes('VAT BREAKDOWN'));
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
+            commands.push(...this.ESC_POS.LINE_FEED);
 
-            if (sessionSummary.non_vat_sales > 0) {
-                commands.push(...this.stringToBytes(this.formatTotalLine('Non-VAT Sales:', sessionSummary.non_vat_sales || 0)));
-                commands.push(...this.ESC_POS.LINE_FEED);
-            }
-
-            if (sessionSummary.vat_amount > 0) {
-                commands.push(...this.stringToBytes(this.formatTotalLine('VAT:', sessionSummary.vat_amount || 0)));
-                commands.push(...this.ESC_POS.LINE_FEED);
-            }
-
-
-            if (sessionSummary.vat_exempt_sales > 0) {
-                commands.push(...this.stringToBytes(this.formatTotalLine('VAT Exempt Sales:', sessionSummary.vat_exempt_sales || 0)));
-            }
-
+            commands.push(...this.stringToBytes(this.formatTotalLine('VATable Sales:', sessionData.meta_data.vatable_sales)));
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.stringToBytes(this.formatTotalLine('VAT Amount:', sessionData.meta_data.vat_amount)));
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.stringToBytes(this.formatTotalLine('VAT Exempt Sales:', sessionData.meta_data.vat_exempt_sales)));
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.stringToBytes(this.formatTotalLine('Non-VAT Sales:', sessionData.meta_data.non_vat_sales)));
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.stringToBytes(this.formatTotalLine('Zero-Rated Sales:', sessionData.meta_data.zero_rated_sales)));
             commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
-            // Session details
-            commands.push(...this.stringToBytes(this.formatInfoLine('Session Number:', sessionSummary.session_number || '')));
+            // Invoice/Bill range
+            commands.push(...this.stringToBytes('TRANSACTION DETAILS'));
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatInfoLine('OR Number Start:', sessionSummary.or_number_start || '')));
+            commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatInfoLine('OR Number End:', sessionSummary.or_number_end || '')));
+            commands.push(...this.stringToBytes(this.formatInfoLine('Invoice Start:', sessionData.meta_data.min_invoice_no.toString())));
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatInfoLine('Bill Number Start:', sessionSummary.bill_number_start || '')));
+            commands.push(...this.stringToBytes(this.formatInfoLine('Invoice End:', sessionData.meta_data.max_invoice_no.toString())));
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatInfoLine('Bill Number End:', sessionSummary.bill_number_end || '')));
-            commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
-
-            // Counter IDs
-            if (sessionSummary.counter_id_start || sessionSummary.counter_id_end) {
-                commands.push(...this.stringToBytes(this.formatInfoLine('Counter ID Start:', sessionSummary.counter_id_start || '-')));
-                commands.push(...this.ESC_POS.LINE_FEED);
-                commands.push(...this.stringToBytes(this.formatInfoLine('Counter ID End:', sessionSummary.counter_id_end || '-')));
-                commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
-            }
-
-            // Cancellation info
-            commands.push(...this.stringToBytes(this.formatTotalLine('Cancelled Amount:', sessionSummary.cancelled_amount || 0)));
+            commands.push(...this.stringToBytes(this.formatInfoLine('Bill Start:', sessionData.meta_data.min_bill_no.toString())));
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.stringToBytes(this.formatInfoLine('Bill End:', sessionData.meta_data.max_bill_no.toString())));
             commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
             // Transaction summary
-            commands.push(...this.stringToBytes(this.formatTotalLine('No of Transactions:', sessionSummary.transactions_count || 0)));
+            commands.push(...this.stringToBytes(this.formatInfoLine('No. of Orders:', sessionData.meta_data.total_orders.toString())));
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatTotalLine('Number of SKU:', sessionSummary.sku_count || 0)));
+            commands.push(...this.stringToBytes(this.formatInfoLine('Total SKU:', sessionData.meta_data.total_sku.toString())));
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatTotalLine('Total Quantity:', sessionSummary.total_quantity || 0)));
+            commands.push(...this.stringToBytes(this.formatInfoLine('Total Quantity:', sessionData.meta_data.total_quantity.toString())));
             commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
-            // Reading summary
-            // commands.push(...this.stringToBytes(this.formatTotalLine('Previous Reading:', sessionSummary.previous_reading || 0)));
-            // commands.push(...this.ESC_POS.LINE_FEED);
-            // commands.push(...this.ESC_POS.BOLD_ON);
-            // commands.push(...this.stringToBytes(this.formatTotalLine('Net Sales:', sessionSummary.net_sales || 0)));
-            // commands.push(...this.ESC_POS.BOLD_OFF);
-            // commands.push(...this.ESC_POS.LINE_FEED);
-            // commands.push(...this.stringToBytes(this.formatTotalLine('Running Total:', sessionSummary.running_total || 0)));
-            // commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+            // Void items
+            if (sessionData.meta_data.void_order_items && sessionData.meta_data.void_order_items.length > 0) {
+                commands.push(...this.stringToBytes('VOID ITEMS'));
+                commands.push(...this.ESC_POS.LINE_FEED);
+                commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
+                commands.push(...this.ESC_POS.LINE_FEED);
 
-            // Cash summary
-            commands.push(...this.stringToBytes(this.formatTotalLine('Beginning Cash:', sessionSummary.beginning_cash || 0)));
+                sessionData.meta_data.void_order_items.forEach(item => {
+                    commands.push(...this.stringToBytes(`Product ID: ${item.product_id}`));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                    commands.push(...this.stringToBytes(this.formatTotalLine(`  Qty: ${item.void_quantity}`, parseFloat(item.void_amount))));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                });
+                commands.push(...this.ESC_POS.LINE_FEED);
+            }
+
+            // Refund summary
+            if (sessionData.meta_data.refund_count > 0 || sessionData.meta_data.refund_from_other_shifts_count > 0) {
+                commands.push(...this.stringToBytes('REFUND SUMMARY'));
+                commands.push(...this.ESC_POS.LINE_FEED);
+                commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+                commands.push(...this.stringToBytes(this.formatInfoLine('Refund Count:', sessionData.meta_data.refund_count.toString())));
+                commands.push(...this.ESC_POS.LINE_FEED);
+                commands.push(...this.stringToBytes(this.formatTotalLine('Refund Amount:', sessionData.meta_data.refund_amount)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+                commands.push(...this.stringToBytes(this.formatInfoLine('Other Shifts Refund:', sessionData.meta_data.refund_from_other_shifts_count.toString())));
+                commands.push(...this.ESC_POS.LINE_FEED);
+                commands.push(...this.stringToBytes(this.formatTotalLine('Other Shifts Amount:', sessionData.meta_data.refund_from_other_shifts_amount)));
+                commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+            }
+
+            // Cash denomination
+            commands.push(...this.stringToBytes('CASH DENOMINATION'));
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatTotalLine('Closing Cash:', sessionSummary.closing_cash || 0)));
+            commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatTotalLine('Cash Denomination:', sessionSummary.cash_denomination || 0)));
+            commands.push(...this.stringToBytes(this.formatTotalLine('Beginning Cash:', sessionData.beginning_cash)));
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.stringToBytes(this.formatTotalLine('Total Sales:', sessionData.total_sales)));
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.stringToBytes(this.formatTotalLine('Expected Cash:', sessionData.beginning_cash + sessionData.total_sales)));
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.ESC_POS.BOLD_ON);
+            commands.push(...this.stringToBytes(this.formatTotalLine('Actual Cash Count:', sessionData.cash_denomination_total)));
+            commands.push(...this.ESC_POS.BOLD_OFF);
             commands.push(...this.ESC_POS.LINE_FEED);
 
-            const variance = sessionSummary.variance ?? 0;
-            const varianceLabel =
-                variance > 0 ? `+${variance}` :
-                    variance < 0 ? `${variance}` :
-                        `0`;
-            commands.push(...this.stringToBytes(this.formatTotalLine('Variance:', varianceLabel || 0)));
-            commands.push(...this.ESC_POS.LINE_FEED);
+            const variance = sessionData.cash_denomination_total - (sessionData.beginning_cash + sessionData.total_sales);
+            const varianceLabel = variance >= 0 ? 'Overage:' : 'Shortage:';
+            commands.push(...this.stringToBytes(this.formatTotalLine(varianceLabel, Math.abs(variance))));
+            commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
             // Cash denomination details
-            if (sessionSummary.cash_denomination_details) {
-                commands.push(...this.stringToBytes('Cash Breakdown:'));
+            if (sessionData.cash_denomination_details) {
+                commands.push(...this.stringToBytes('DENOMINATION BREAKDOWN'));
                 commands.push(...this.ESC_POS.LINE_FEED);
-                Object.entries(sessionSummary.cash_denomination_details).forEach(([denom, count]) => {
-                    const numDenom = parseFloat(denom);
-                    const numCount = count as number;
-                    if (numCount > 0) {
-                        const line = `${numCount} x ${this.formatNumberWithComma(numDenom.toFixed(2))} = ${this.formatNumberWithComma((numDenom * numCount).toFixed(2))}`;
-                        commands.push(...this.stringToBytes(`  ${line}`));
+                commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+
+                const denominations = ['1000', '500', '200', '100', '50', '20', '10', '5', '1', '0.5', '0.25'];
+                denominations.forEach(denom => {
+                    const count = sessionData.cash_denomination_details[denom];
+                    if (count && count > 0) {
+                        const total = parseFloat(denom) * count;
+                        commands.push(...this.stringToBytes(this.formatInfoLine(`₱${denom} x ${count}:`, this.formatMoney(total))));
                         commands.push(...this.ESC_POS.LINE_FEED);
                     }
                 });
                 commands.push(...this.ESC_POS.LINE_FEED);
             }
 
-            // End marker
-            commands.push(...this.ESC_POS.ALIGN_CENTER);
-            commands.push(...this.ESC_POS.BOLD_ON);
-            commands.push(...this.stringToBytes('X Reading End'));
-            commands.push(...this.ESC_POS.BOLD_OFF);
+            // Footer separator
+            commands.push(...this.stringToBytes('='.repeat(separatorWidth)));
             commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
-            // Add spacing before cut based on printer configuration
-            const cutSpacing = this.currentConfig?.cut_spacing || 5;
-            for (let i = 0; i < cutSpacing; i++) {
-                commands.push(...this.ESC_POS.LINE_FEED);
+            // Receipt footer
+            commands.push(...this.ESC_POS.ALIGN_CENTER);
+            if (sessionData.branch.receipt_footer && sessionData.branch.receipt_footer.length > 0) {
+                sessionData.branch.receipt_footer.forEach(footer => {
+                    commands.push(...this.stringToBytes(footer));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                });
             }
 
-            // Cut paper if auto_cut is enabled
-            if (this.currentConfig?.auto_cut !== false) {
-                commands.push(...this.ESC_POS.FULL_CUT);
+            // Print timestamp
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.stringToBytes(`Printed: ${moment().format('MM/DD/YYYY hh:mm A')}`));
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            // Auto cut if enabled
+            if (this.currentConfig?.auto_cut) {
+                const cutSpacing = this.currentConfig.cut_spacing || 4;
+                for (let i = 0; i < cutSpacing; i++) {
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                }
+                commands.push(...this.ESC_POS.CUT);
+            } else {
+                // Add some spacing at the end
+                commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
             }
 
             // Send to printer
             const data = new Uint8Array(commands);
             await this.sendToPrinter(data);
-
-            console.log('✅ Session summary printed successfully');
         } catch (error) {
-            console.error('❌ Failed to print session summary:', error);
+            console.error('Failed to print session summary:', error);
             throw error;
         }
     }

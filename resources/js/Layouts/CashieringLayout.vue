@@ -338,14 +338,56 @@ const handleConfirmCloseSession = async (data: any) => {
 
     if (result.success) {
         sessionSummaryData.value = result.session;
-        showSessionSummaryModal.value = true;
 
-        toast.add({
-            severity: "success",
-            summary: "Success",
-            detail: result.data.message || "Session closed successfully",
-            life: 3000,
-        });
+        // Try to print using thermal printer first
+        try {
+            // Load receipt printer config
+            await thermalPrinter.loadPrinterConfig("receipt");
+
+            // Connect to printer if not already connected
+            if (!thermalPrinter.isConnected()) {
+                const connected = await thermalPrinter.connectToPrinterType(
+                    "receipt"
+                );
+                if (!connected) {
+                    // Printer not available, show modal
+                    showSessionSummaryModal.value = true;
+                    toast.add({
+                        severity: "warn",
+                        summary: "Printer Unavailable",
+                        detail: "Session closed successfully. Printer not available - please print manually.",
+                        life: 5000,
+                    });
+                    return;
+                }
+            }
+
+            // Print session summary
+            await thermalPrinter.printSessionSummary(result.session);
+
+            // Show success message and logout
+            toast.add({
+                severity: "success",
+                summary: "Success",
+                detail: "Session closed and printed successfully",
+                life: 3000,
+            });
+
+            // Logout after successful print
+            setTimeout(() => {
+                router.post(route("logout"));
+            }, 1500);
+        } catch (error) {
+            console.error("Failed to print session summary:", error);
+            // Show modal as fallback
+            showSessionSummaryModal.value = true;
+            toast.add({
+                severity: "warn",
+                summary: "Print Failed",
+                detail: "Session closed successfully. Failed to print - please print manually.",
+                life: 5000,
+            });
+        }
     } else {
         toast.add({
             severity: "error",
@@ -358,12 +400,8 @@ const handleConfirmCloseSession = async (data: any) => {
 
 const handleCloseSummaryModal = () => {
     showSessionSummaryModal.value = false;
-
-    // If we should logout after viewing summary, do it now
-    if (shouldLogoutAfterSummary.value) {
-        shouldLogoutAfterSummary.value = false;
-        router.post(route("logout"));
-    }
+    // Logout after closing modal
+    router.post(route("logout"));
 };
 
 // Close dropdown when clicking outside

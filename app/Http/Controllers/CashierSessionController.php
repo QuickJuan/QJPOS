@@ -1,21 +1,23 @@
 <?php
 namespace App\Http\Controllers;
 
-use App\Http\Requests\CashierSessionRequest;
-use App\Http\Resources\ProductResource;
-use App\Models\Product;
-use App\Models\TableRoom;
-use App\Models\TableRoomLocation;
-use App\Models\User;
-use App\Services\CashierSessionService;
-use App\Services\ProductCategoryService;
 use Exception;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Models\User;
+use App\Models\Branch;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Models\Product;
+use App\Models\TableRoom;
+use Illuminate\Http\Request;
+use App\Models\TableRoomLocation;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\RedirectResponse;
+use App\Http\Resources\ProductResource;
+use App\Services\CashierSessionService;
+use App\Http\Resources\XReadingResource;
+use App\Services\ProductCategoryService;
+use App\Http\Requests\CashierSessionRequest;
 
 class CashierSessionController extends Controller
 {
@@ -43,7 +45,7 @@ class CashierSessionController extends Controller
 
     public function reviewXTransactions(Request $request): Response
     {
-        $activeBranch = session('active_branch');
+        $activeBranch = Branch::find($request->user()->branch->id);
 
         $query = $this->cashierSessionService->model
             ->with('cashier')
@@ -84,7 +86,7 @@ class CashierSessionController extends Controller
         $cashiers = User::select('id', 'name')->orderBy('name')->get();
 
         return Inertia::render('Resto/ReviewXReadings', [
-            'sessions' => $sessions,
+            'sessions' => XReadingResource::collection($sessions),
             'cashiers' => $cashiers,
             'filters'  => $request->only(['search', 'date_from', 'date_to', 'status', 'cashier_id', 'per_page']),
         ]);
@@ -128,13 +130,12 @@ class CashierSessionController extends Controller
         try {
             // Close the shift and get the session
             $session = $this->cashierSessionService->closeShift($request);
-
             // Return back with session to show modal first
             // The frontend will handle logout after user closes the modal
 
             return response()->json([
                 'message' => 'Cashier Shift closed successfully.',
-                'session' => $session,
+                'session' => new XReadingResource($session),
                 'success' => true,
             ]);
 
