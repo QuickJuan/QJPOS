@@ -22,27 +22,27 @@ return new class extends Migration
                 cust.customer_name AS customer,
                 ORD.invoice_no AS invoice_number,
                 ORD.total_amount AS gross_sales,
-                SUM(ORD.item_discount + ORD.less_tax) AS discount,
+                (ORD.item_discount + ORD.less_tax) AS discount,
                 ORD.total_due AS net_sales,
                 ORD.status
             FROM
                 orders ORD
                 LEFT JOIN users AS cashier ON ORD.cashier_id = cashier.id
-                LEFT JOIN customers AS cust ON ord.customer_id = cust.id
+                LEFT JOIN customers AS cust ON ORD.customer_id = cust.id
             WHERE
-                AND (item.is_void = false OR item.is_void <> 1)
-                AND (
-                    ORD.status <> 'refund'
-                    OR ORD.status IS NULL
-                )
+                (ORD.status <> 'refund' OR ORD.status IS NULL)
             GROUP BY
                 ORD.id,
                 ORD.created_at,
                 cashier.name,
+                ORD.cashier_session_id,
+                cust.customer_name,
                 ORD.invoice_no,
                 ORD.total_amount,
+                ORD.item_discount,
+                ORD.less_tax,
                 ORD.total_due,
-                ORD.status;
+                ORD.status
             ");
     }
 

@@ -22,7 +22,7 @@ return new class extends Migration
             item.quantity AS quantity,
             item.price AS price,
             item.amount AS gross_sales,
-            SUM(item.discount_amount + item.less_tax) AS discount,
+            (item.discount_amount + item.less_tax) AS discount,
             item.sub_total AS net_sales,
             prod.category_id AS category_id,
             prod.brand_id AS brand_id,
@@ -32,10 +32,10 @@ return new class extends Migration
             JOIN products AS prod ON item.product_id = prod.id
             JOIN orders AS ord ON item.order_id = ord.id
         WHERE
-            AND (item.is_void = false OR item.is_void <> 1)
+            (item.is_void = false OR item.is_void IS NULL)
             AND (
-                ORD.status <> 'refund'
-                OR ORD.status IS NULL
+                ord.status <> 'refund'
+                OR ord.status IS NULL
             )
         GROUP BY
             item.id,
@@ -44,9 +44,12 @@ return new class extends Migration
             item.quantity,
             item.price,
             item.amount,
+            item.discount_amount,
+            item.less_tax,
             item.sub_total,
             prod.category_id,
-            prod.brand_id;
+            prod.brand_id,
+            ord.status;
             ");
     }
 

@@ -49,6 +49,9 @@ class HandleInertiaRequests extends Middleware
             'flash'                   => [
                 'success' => fn() => $request->session()->get('success'),
                 'error'   => fn()   => $request->session()->get('error'),
+                'message' => fn() => $request->session()->get('message'),
+                'sessionSummary' => fn() => $request->session()->get('sessionSummary'),
+                'shouldLogout' => fn() => $request->session()->get('shouldLogout'),
             ],
             'active_branch'           => $activeBranch,
             'auth'                    => [

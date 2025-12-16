@@ -201,6 +201,7 @@ import { useConfirm } from "primevue";
 import { useToast } from "primevue";
 import { ConfirmPopup, Toast } from "primevue";
 import CloseSessionModal from "@/Pages/Resto/Partials/CloseSessionModal.vue";
+import { useCashier } from "@/composables/useCashier";
 import {
     QrCodeIcon,
     TableCellsIcon,
@@ -215,6 +216,7 @@ import SessionSummaryModal from "@/Pages/Resto/Partials/SessionSummaryModal.vue"
 const page = usePage();
 const confirm = useConfirm();
 const toast = useToast();
+const { closeShift } = useCashier();
 
 // Props for cashier info (can be passed from parent components)
 const props = defineProps<{
@@ -320,7 +322,7 @@ const handleLogout = () => {
     });
 };
 
-const handleConfirmCloseSession = (data: any) => {
+const handleConfirmCloseSession = async (data: any) => {
     let payload = {
         cash_denomination_details: data.denominationData,
         cash_denomination: data.totalCashCounted,
@@ -328,42 +330,30 @@ const handleConfirmCloseSession = (data: any) => {
         cashier_id: page.props.current_cashier_session?.cashier_id,
     };
 
-    router.post(route("resto.session.close"), payload, {
-        preserveState: false,
-        onSuccess: (response) => {
-            showCloseDialog.value = false;
+    const result = await closeShift(payload);
 
-            // Access session summary from response props (flash data)
-            const responseProps = response.props as any;
+    console.log("close shift result :", result);
 
-            console.log("Close session response props:", responseProps);
+    showCloseDialog.value = false;
 
-            if (responseProps.sessionSummary) {
-                sessionSummaryData.value = responseProps.sessionSummary;
-                showSessionSummaryModal.value = true;
+    if (result.success) {
+        sessionSummaryData.value = result.session;
+        showSessionSummaryModal.value = true;
 
-                // Check if we should logout after closing the summary modal
-                if (responseProps.shouldLogout) {
-                    shouldLogoutAfterSummary.value = true;
-                }
-            }
-
-            toast.add({
-                severity: "success",
-                summary: "Success",
-                detail: responseProps.message || "Session closed successfully",
-                life: 3000,
-            });
-        },
-        onError: (errors) => {
-            toast.add({
-                severity: "error",
-                summary: "Error",
-                detail: errors.message || "Failed to close session",
-                life: 3000,
-            });
-        },
-    });
+        toast.add({
+            severity: "success",
+            summary: "Success",
+            detail: result.data.message || "Session closed successfully",
+            life: 3000,
+        });
+    } else {
+        toast.add({
+            severity: "error",
+            summary: "Error",
+            detail: result.error,
+            life: 3000,
+        });
+    }
 };
 
 const handleCloseSummaryModal = () => {

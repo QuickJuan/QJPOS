@@ -116,6 +116,7 @@ class PaymentService
             return [
                 'order_id'             => $order->id,
                 'product_id'           => $cartItem->product_id,
+                'description'          => $cartItem->description,
                 'product_packaging_id' => $cartItem->product_packaging_id,
                 'quantity'             => $cartItem->quantity,
                 'price'                => $cartItem->price,
@@ -150,7 +151,6 @@ class PaymentService
         // Get void cart items
         $voidCartItems = CartItem::where('cart_id', $cart->id)
             ->where('is_void', true)
-            ->withTrashed() // Include soft deleted items if using soft deletes
             ->get();
 
         if ($voidCartItems->isEmpty()) {
@@ -161,6 +161,7 @@ class PaymentService
             return [
                 'order_id'             => $order->id,
                 'product_id'           => $cartItem->product_id,
+                'description'          => $cartItem->description,
                 'product_packaging_id' => $cartItem->product_packaging_id,
                 'quantity'             => $cartItem->quantity,
                 'price'                => $cartItem->price,

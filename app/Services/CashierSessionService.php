@@ -76,42 +76,42 @@ class CashierSessionService
         $ordersTotals = $this->orderService->getTotalOrdersPerShift($session->id);
         $productCounts = $this->orderService->getOrderItemsCount($session->id);
         $voidOrderItems = $this->orderService->getVoidOrderItemsPerShift($session->id);
+        $refundOrders = $this->orderService->getRefundOrdersPerShift($session->id);
+        $refundfromOtherShifts = $this->orderService->getRefundAFromOtherShiftOrders($session->cashier_id);
 
-        info('------- order totals -------');
-        info(json_encode($ordersTotals));
-        info('------- product counts -------');
-        info(json_encode($productCounts));
-        info('------- void order items -------');
-        info(json_encode($voidOrderItems));
-        dd(" testing close shift ");
 
-        $closeSession = $session->update([
+        $session->update([
             'closing_time'              => now(),
-            'closing_cash'              => $closingCash,
+            'closing_cash'              => (float) $closingCash,
             'cash_denomination_details' => $request->cash_denomination_details,
-            'cash_denomination'         => $request->cash_denomination,
+            'cash_denomination'         => (float) $request->cash_denomination,
+            'total_sales'              => (float) $ordersTotals->total_due,
             'meta_data'                 => [
-                'total_orders'   => $ordersTotals["total_orders"],
-                'gross_sales'  => $ordersTotals["total_amount"],
-                'item_discount'=> $ordersTotals["item_discount"],
-                'less_tax'     => $ordersTotals["less_tax"],
-                'net_sales'    => $ordersTotals["total_due"],
-                'vatable_sales' => $ordersTotals["vatable_sales"],
-                'vat_amount'    => $ordersTotals["vat_amount"],
-                'vat_exempt_sales' => $ordersTotals["vat_exempt_sales"],
-                'zero_rated_sales' => $ordersTotals["zero_rated_sales"],
-                'non_vat_sales' => $ordersTotals["non_vat_sales"],
-                'min_invoice_no' => $ordersTotals["min_invoice_no"],
-                'max_invoice_no' => $ordersTotals["max_invoice_no"],
-                'min_bill_no'    => $ordersTotals["min_bill_no"],
-                'max_bill_no'    => $ordersTotals["max_bill_no"],
-                'total_sku'      => $productCounts["total_sku"],
-                'total_quantity' => $productCounts["total_quantity"],
+                'total_orders'   => (float) $ordersTotals->total_orders,
+                'gross_sales'  => (float) $ordersTotals->total_amount,
+                'item_discount'=> (float) $ordersTotals->item_discount,
+                'less_tax'     => (float) $ordersTotals->less_tax,
+                'net_sales'    => (float) $ordersTotals->total_due,
+                'vatable_sales' => (float) $ordersTotals->vatable_sales,
+                'vat_amount'    => (float) $ordersTotals->vat_amount,
+                'vat_exempt_sales' => (float) $ordersTotals->vat_exempt_sales,
+                'zero_rated_sales' => (float) $ordersTotals->zero_rated_sales,
+                'non_vat_sales' => (float) $ordersTotals->non_vat_sales,
+                'min_invoice_no' => (int)  $ordersTotals->min_invoice_no,
+                'max_invoice_no' => (int) $ordersTotals->max_invoice_no,
+                'min_bill_no'    => (int) $ordersTotals->min_bill_no,
+                'max_bill_no'    => (int) $ordersTotals->max_bill_no,
+                'total_sku'      => (int) $productCounts->total_sku,
+                'total_quantity' => (float) $productCounts->total_quantity,
                 'void_order_items' => $voidOrderItems,
+                'refund_count'    => (int) $refundOrders->total_refunded_orders,
+                'refund_amount'    => (float) $refundOrders->total_refunded_amount,
+                'refund_from_other_shifts_amount' => (float) $refundfromOtherShifts->total_refunded_amount,
+                'refund_from_other_shifts_count' => (int) $refundfromOtherShifts->total_refunded_orders,
             ],
         ]);
 
-        return $closeSession;
+        return $session->fresh();
     }
 
     public function createOrder(Request $request)

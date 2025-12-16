@@ -115,4 +115,64 @@ class OrderService
             ->get();
         return $voidItems;
     }
+
+
+    /**
+     * Get list sum of orders with refund status
+     * Get count of orders with refund status
+     * Get total sum of total_due for orders with refund status
+     */
+    public function getRefundOrdersPerShift(int $shiftId)
+    {
+        //use DB query to get count and sum of total_due of refunded orders for a specific shift
+        $refundedOrders = \DB::table('orders')
+            ->where('cashier_session_id', $shiftId)
+            ->where('status', '=', 'refunded')
+            ->selectRaw('COUNT(*) as total_refunded_orders,
+                SUM(total_due) as total_refunded_amount')
+            ->first();
+        return $refundedOrders;
+    }
+
+    /**
+     * Get list sum of orders with refund status by other cashier using the refunded_cashier_id
+     * Get count of orders with refund status
+     * Get total sum of total_due for orders with refund status
+     */
+    public function getRefundAfterShiftOrders(int $shiftId)
+    {
+        //use DB query to get count and sum of total_due of refunded orders for a specific shift
+        $refundAfterShiftOrders = \DB::table('orders')
+            ->where('cashier_session_id', $shiftId)
+            ->where('status', '=', 'refund')
+            ->where('refunded_cashier_id', '!=', 'cashier_id')
+            ->where('refunded_cashier_id', '!=', null)
+            ->selectRaw('COUNT(*) as total_refunded_orders,
+                SUM(total_due) as total_refunded_amount')
+            ->first();
+
+        return $refundAfterShiftOrders;
+    }
+
+
+    /**
+     * Get list sum of orders with refund status from other cashier using the refunded_cashier_id
+     * Get count of orders with refund status
+     * Get total sum of total_due for orders with refund status
+     */
+    public function getRefundAFromOtherShiftOrders(int $cashierId)
+    {
+        //use DB query to get count and sum of total_due of refunded orders for a specific shift
+        $refundAfterShiftOrders = \DB::table('orders')
+            ->where('refunded_cashier_id', $cashierId)
+            ->where('status', '=', 'refund')
+            ->where('refunded_cashier_id', '!=', 'cashier_id')
+            ->where('refunded_cashier_id', '!=', null)
+            ->selectRaw('COUNT(*) as total_refunded_orders,
+                SUM(total_due) as total_refunded_amount')
+            ->first();
+
+        return $refundAfterShiftOrders;
+    }
+
 }

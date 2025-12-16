@@ -126,23 +126,23 @@ class CashierSessionController extends Controller
     public function closeShift(CashierSessionRequest $request)
     {
         try {
-            $shift = $this->cashierSessionService->closeShift($request);
+            // Close the shift and get the session
+            $session = $this->cashierSessionService->closeShift($request);
 
-            // Get session summary for display
-            $sessionSummary = $this->cashierSessionService->getSessionSummary($shift);
-
-            // Return back with session summary to show modal first
+            // Return back with session to show modal first
             // The frontend will handle logout after user closes the modal
-            return back()->with([
-                'sessionSummary' => $sessionSummary,
-                'message' => 'Session closed successfully.',
-                'shouldLogout' => true // Flag to tell frontend to logout after viewing summary
+
+            return response()->json([
+                'message' => 'Cashier Shift closed successfully.',
+                'session' => $session,
+                'success' => true,
             ]);
 
         } catch (Exception $e) {
-            return back()->withErrors([
-                'message' => 'There was an error while closing the session: ' . $e->getMessage(),
-            ]);
+               return response()->json([
+                'message' => 'There was an error while closing the shift: ' . $e->getMessage(),
+                'success' => false,
+            ], 500);
         }
     }
 

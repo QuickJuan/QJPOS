@@ -370,6 +370,7 @@ const handleDelete = (orderItem: any) => {
 };
 
 const removeOrder = (orderItem: any) => {
+    alert("removing order item id: " + orderItem.id);
     router.delete(route("resto.cart.delete", { cartItemId: orderItem.id }), {
         onSuccess: () => {
             toast.add({
@@ -671,6 +672,8 @@ const handleEndOfShift = () => {
 };
 
 const handleConfirmCloseSession = (data: any) => {
+    alert("here");
+    return;
     router.post(
         route("resto.session.close"),
         {

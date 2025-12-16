@@ -230,25 +230,21 @@ export const useCashier = () => {
         amount_paid: number;
         total_amount: number;
     }) => {
-        try {
-            const response = await httpPost(
-                route("resto.cart.settle-bill"),
-                {
-                    cart_id: paymentData.cart_id,
-                    amount_paid: paymentData.amount_paid,
-                    total_amount: paymentData.total_amount,
-                }
-            );
-           return response;
+        const response = await httpPost(
+            route("resto.cart.settle-bill"),
+            {
+                cart_id: paymentData.cart_id,
+                amount_paid: paymentData.amount_paid,
+                total_amount: paymentData.total_amount,
+            }
+        );
 
-        } catch (error) {
-            console.error("Error settling payment:", error);
-            return {
-                success: false,
-                message: "Error settling payment",
-                data: null,
-            };
+        // Remove the settled cart from open carts if successful
+        if (response.success) {
+            removeCart(paymentData.cart_id);
         }
+
+        return response;
     };
 
     // Initialize from server data if provided
@@ -262,6 +258,16 @@ export const useCashier = () => {
                 setSelectedCart(serverCarts[0].id);
             }
         }
+    };
+
+    // Close cashier shift
+    const closeShift = async (payload: {
+        cash_denomination_details: any;
+        cash_denomination: number;
+        shift_no: number;
+        cashier_id: number;
+    }) => {
+        return await httpPost(route("resto.session.close"), payload);
     };
 
     return {
@@ -288,6 +294,7 @@ export const useCashier = () => {
         getCartsByOrderType,
         settlePayment,
         initializeFromServerData,
+        closeShift,
 
         // Raw state access
         openCarts: computed(() => cashierState.value.openCarts),

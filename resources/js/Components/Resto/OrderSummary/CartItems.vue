@@ -157,7 +157,11 @@
                                                 v-if="item.discount_amount > 0"
                                                 class="text-xs text-gray-600 font-medium"
                                             >
-                                                {{ formatMoney(item.discount_amount) }}
+                                                {{
+                                                    formatMoney(
+                                                        item.discount_amount
+                                                    )
+                                                }}
                                             </p>
                                         </div>
                                     </div>
@@ -310,7 +314,7 @@ const emit = defineEmits<{
 const tableSelected = computed(() => !props.tableId);
 
 const redirectToTablePage = () => {
-    router.visit("/resto/tables");
+    router.visit("table-rooms.index");
 };
 
 // Helper functions for discount display
