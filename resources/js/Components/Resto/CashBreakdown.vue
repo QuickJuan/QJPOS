@@ -8,7 +8,7 @@
                 class="flex justify-between"
             >
                 <span class="text-gray-600"
-                    >₱{{ formatMoney(denom) }} x {{ count }}:</span
+                    >{{ count }} x ₱{{ formatMoney(denom) }} =</span
                 >
                 <span class="font-semibold"
                     >₱{{ formatMoney(parseFloat(denom) * Number(count)) }}</span

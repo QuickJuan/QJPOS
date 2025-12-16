@@ -297,13 +297,12 @@
                                                         >
                                                             ₱{{
                                                                 formatMoney(
-                                                                    sessionSummary.total_sales +
-                                                                        sessionSummary.net_sales ||
-                                                                        0
+                                                                    netSalesWithServiceCharge
                                                                 )
                                                             }}
                                                         </p>
                                                     </div>
+                                                    <hr />
                                                     <div
                                                         class="flex flex-col lg:flex-row lg:justify-between"
                                                     >
@@ -315,38 +314,15 @@
                                                         <p
                                                             :class="[
                                                                 'font-semibold',
-                                                                (sessionSummary.cash_denomination_total ||
-                                                                    0) -
-                                                                    (sessionSummary.beginning_cash ||
-                                                                        0) -
-                                                                    (sessionSummary.total_sales ||
-                                                                        0) >=
+                                                                varianceOver >=
                                                                 0
                                                                     ? 'text-green-600'
                                                                     : 'text-red-600',
                                                             ]"
                                                         >
-                                                            {{
-                                                                (sessionSummary.cash_denomination_total ||
-                                                                    0) -
-                                                                    (sessionSummary.beginning_cash ||
-                                                                        0) -
-                                                                    (sessionSummary.total_sales ||
-                                                                        0) >
-                                                                0
-                                                                    ? "+"
-                                                                    : ""
-                                                            }}
                                                             ₱{{
                                                                 formatMoney(
-                                                                    Math.abs(
-                                                                        (sessionSummary.cash_denomination_total ||
-                                                                            0) -
-                                                                            (sessionSummary.beginning_cash ||
-                                                                                0) -
-                                                                            (sessionSummary.total_sales ||
-                                                                                0)
-                                                                    )
+                                                                    varianceOver
                                                                 )
                                                             }}
                                                         </p>
@@ -608,6 +584,50 @@
                                                                 </p>
                                                             </div>
                                                         </div>
+
+                                                        <div>
+                                                            <div
+                                                                class="flex flex-col lg:flex-row lg:justify-between"
+                                                            >
+                                                                <p
+                                                                    class="text-sm text-gray-600"
+                                                                >
+                                                                    Total
+                                                                    Service
+                                                                    Charge
+                                                                </p>
+                                                                <p>
+                                                                    ₱{{
+                                                                        formatMoney(
+                                                                            sessionSummary
+                                                                                .meta_data
+                                                                                ?.total_service_charge ||
+                                                                                0
+                                                                        )
+                                                                    }}
+                                                                </p>
+                                                            </div>
+                                                            <div
+                                                                class="flex flex-col lg:flex-row lg:justify-between"
+                                                            >
+                                                                <p
+                                                                    class="text-sm text-gray-600"
+                                                                >
+                                                                    Total
+                                                                    Refunds
+                                                                </p>
+                                                                <p>
+                                                                    ₱{{
+                                                                        formatMoney(
+                                                                            sessionSummary
+                                                                                .meta_data
+                                                                                ?.refund_amount ||
+                                                                                0
+                                                                        )
+                                                                    }}
+                                                                </p>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -670,6 +690,24 @@ const perPage = ref(props.filters.per_page || 10);
 // Date filters
 const selectedMonth = ref("");
 const selectedYear = ref("");
+
+const netSalesWithServiceCharge = computed(() => {
+    if (!activeSession.value) return 0;
+    const netSales =
+        activeSession.value.meta_data?.net_sales ||
+        activeSession.value.net_sales ||
+        0;
+    const serviceCharge =
+        activeSession.value.meta_data?.total_service_charge || 0;
+    return netSales + serviceCharge;
+});
+
+const varianceOver = computed(() => {
+    return (
+        (activeSession.value?.cash_denomination_total || 0) -
+            netSalesWithServiceCharge.value || 0
+    );
+});
 
 // Generate year options (current year and 5 years back)
 const yearOptions = computed(() => {
