@@ -28,7 +28,7 @@ class CashierSession extends Model
         'business_date'             => 'datetime',
         'started_time'              => 'datetime',
         'closing_time'              => 'datetime',
-        'cash_denomination_details' => 'array',
+        'cash_denomination_details' => 'object',
         'meta_data'                 => 'array',
     ];
 

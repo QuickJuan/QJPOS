@@ -241,7 +241,7 @@
                     <div
                         v-for="[denom, count] in Object.entries(
                             props.sessionSummary.cash_denomination_details
-                        )"
+                        ).sort((a, b) => parseFloat(b[0]) - parseFloat(a[0]))"
                         :key="denom"
                         class="flex justify-between text-xs ml-2"
                     >
@@ -259,28 +259,20 @@
         </div>
 
         <template #footer>
-            <div class="flex justify-between gap-3">
+            <div class="flex justify-end gap-3">
                 <Button
                     type="button"
                     label="Close"
                     severity="secondary"
                     outlined
-                    @click="emit('confirmClose')"
+                    @click="emit('closeModal')"
                 />
-                <div class="flex gap-3">
-                    <Button
-                        type="button"
-                        label="Confirm Close"
-                        @click="emit('confirmClose')"
-                        class="bg-green-600 hover:bg-green-700 text-white border-green-600"
-                    />
-                    <Button
-                        type="button"
-                        label="Print & Close"
-                        @click="printReport"
-                        class="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
-                    />
-                </div>
+                <Button
+                    type="button"
+                    label="Print"
+                    @click="printReport"
+                    class="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+                />
             </div>
         </template>
     </Dialog>
@@ -308,7 +300,7 @@ const props = defineProps<{
     merchantTin?: string;
 }>();
 
-const emit = defineEmits(["closeModal", "confirmClose"]);
+const emit = defineEmits(["closeModal"]);
 const page = usePage();
 const toast = useToast();
 
@@ -355,8 +347,8 @@ const printReport = async () => {
             life: 3000,
         });
 
-        // Close the session after successful printing
-        emit("confirmClose");
+        // Close the modal after successful printing
+        emit("closeModal");
     } catch (error) {
         console.error("Failed to print session summary:", error);
         toast.add({

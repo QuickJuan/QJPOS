@@ -120,8 +120,7 @@
             :session-summary="sessionSummaryData"
             :current-user="page.props.auth.user"
             :general-settings="props.generalSettings"
-            @close-modal="showSessionSummaryModal = false"
-            @confirm-close="handleConfirmSessionSummary"
+            @close-modal="handleConfirmSessionSummary"
         />
 
         <!-- Transfer Order Items -->
@@ -159,6 +158,8 @@ import CloseSessionModal from "@/Pages/Resto/Partials/CloseSessionModal.vue";
 import SessionSummaryModal from "@/Pages/Resto/Partials/SessionSummaryModal.vue";
 import axios from "axios";
 import TransferOrderItemsModal from "@/Pages/Resto/Partials/TransferOrderItemsModal.vue";
+import { thermalPrinter } from "@/Services/ThermalPrinterService";
+import { useCashier } from "@/composables/useCashier";
 
 const props = defineProps<{
     cart: any;
@@ -180,6 +181,7 @@ const props = defineProps<{
 const toast = useToast();
 const page = usePage<PageProps>();
 const confirm = useConfirm();
+const { closeShift } = useCashier();
 const emit = defineEmits<{
     changeOrderType: [value: string];
     showReceipt: [data: any];
@@ -671,56 +673,85 @@ const handleEndOfShift = () => {
     showCloseSessionModal.value = true;
 };
 
-const handleConfirmCloseSession = (data: any) => {
-    alert("here");
-    return;
-    router.post(
-        route("resto.session.close"),
-        {
-            cash_denomination_details: data.denominationData,
-            cash_denomination: data.totalCashCounted,
-        },
-        {
-            onSuccess: () => {
-                showCloseSessionModal.value = false;
-                // Fetch session summary after successful close
-                axios
-                    .get(route("resto.api.session-summary"))
-                    .then((response) => {
-                        sessionSummaryData.value = response.data;
-                        showSessionSummaryModal.value = true;
-                        toast.add({
-                            severity: "success",
-                            summary: "Success",
-                            detail: "Session closed successfully",
-                            life: 3000,
-                        });
-                    })
-                    .catch((error) => {
-                        console.error("Failed to fetch session summary", error);
-                        toast.add({
-                            severity: "error",
-                            summary: "Error",
-                            detail: "Session closed but failed to load summary",
-                            life: 3000,
-                        });
+const handleConfirmCloseSession = async (data: any) => {
+    let payload = {
+        cash_denomination_details: data.denominationData,
+        cash_denomination: data.totalCashCounted,
+        shift_no: page.props.current_cashier_session?.id,
+        cashier_id: page.props.current_cashier_session?.cashier_id,
+    };
+
+    const result = await closeShift(payload);
+
+    console.log("close shift result :", result);
+
+    showCloseSessionModal.value = false;
+
+    if (result.success) {
+        sessionSummaryData.value = result.session;
+
+        // Try to print using thermal printer first
+        try {
+            // Load receipt printer config
+            await thermalPrinter.loadPrinterConfig("receipt");
+
+            // Connect to printer if not already connected
+            if (!thermalPrinter.isConnected()) {
+                const connected = await thermalPrinter.connectToPrinterType(
+                    "receipt"
+                );
+                if (!connected) {
+                    // Printer not available, show modal
+                    showSessionSummaryModal.value = true;
+                    toast.add({
+                        severity: "warn",
+                        summary: "Printer Unavailable",
+                        detail: "Session closed successfully. Printer not available - please print manually.",
+                        life: 5000,
                     });
-            },
-            onError: (errors) => {
-                toast.add({
-                    severity: "error",
-                    summary: "Error",
-                    detail: errors.error || "Failed to close session",
-                    life: 3000,
-                });
-            },
+                    return;
+                }
+            }
+
+            // Print session summary
+            await thermalPrinter.printSessionSummary(result.session);
+
+            // Show success message and redirect to home
+            toast.add({
+                severity: "success",
+                summary: "Success",
+                detail: "Session closed and printed successfully",
+                life: 3000,
+            });
+
+            // Redirect to home after successful print
+            setTimeout(() => {
+                router.visit(route("home"));
+            }, 1500);
+        } catch (error) {
+            console.error("Failed to print session summary:", error);
+            // Show modal as fallback
+            showSessionSummaryModal.value = true;
+            toast.add({
+                severity: "warn",
+                summary: "Print Failed",
+                detail: "Session closed successfully. Failed to print - please print manually.",
+                life: 5000,
+            });
         }
-    );
+    } else {
+        toast.add({
+            severity: "error",
+            summary: "Error",
+            detail: result.error,
+            life: 3000,
+        });
+    }
 };
 
 const handleConfirmSessionSummary = () => {
     showSessionSummaryModal.value = false;
-    // Redirect to home after confirming the session summary
+    // Redirect to home after closing modal
     router.visit(route("home"));
 };
 

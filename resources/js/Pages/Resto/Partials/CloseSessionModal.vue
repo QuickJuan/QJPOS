@@ -2,7 +2,7 @@
     <Dialog
         v-model:visible="props.showCloseDialog"
         modal
-        header="Close Cashier Session"
+        header="End of Shift - Cash Denomination"
         :style="{ width: '50rem' }"
         class="bg-white"
         @hide="handleClose"
@@ -10,74 +10,99 @@
     >
         <div class="space-y-6">
             <!-- Sales Summary - Updated -->
-            <div class="bg-gray-50 rounded-lg p-4 border">
-                <h4 class="text-lg font-semibold text-gray-900 mb-4">
-                    Sales Summary
-                </h4>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <p class="text-sm text-gray-600">Beginning Cash</p>
-                        <p class="text-xl font-bold text-gray-900">
-                            {{
-                                formatMoney(
-                                    (
-                                        props.openSession?.beginning_cash || 0
-                                    ).toFixed(2)
-                                )
-                            }}
-                        </p>
-                    </div>
+            <div
+                class="flex md:flex-row md:justify-between bg-gray-50 rounded-lg p-4 border"
+            >
+                <div>
+                    <p class="text-sm text-gray-600">Beginning Cash</p>
+                    <p class="text-xl font-bold text-gray-900">
+                        {{
+                            formatMoney(
+                                (
+                                    props.openSession?.beginning_cash || 0
+                                ).toFixed(2)
+                            )
+                        }}
+                    </p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-600">Cash Denomination Total</p>
+                    <p class="text-xl font-bold text-gray-900">
+                        {{ formatMoney(totalCashCounted.toFixed(2)) }}
+                    </p>
                 </div>
             </div>
 
             <!-- Cash Denomination Input -->
             <div class="bg-white border rounded-lg p-4">
-                <h4 class="text-lg font-semibold text-gray-900 mb-4">
-                    Cash Count
-                </h4>
-                <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
-                    <div
-                        class="grid grid-cols-3 gap-2 font-semibold text-sm mb-2 text-center"
-                    >
-                        <span>Quantity</span>
-                        <span>Money Value</span>
-                        <span>Total</span>
+                <div class="grid grid-cols-1 md:grid-cols-2 md:gap-20">
+                    <!-- First Column -->
+                    <div class="space-y-2">
+                        <div
+                            class="grid grid-cols-3 gap-2 font-semibold text-sm text-right mb-2"
+                        >
+                            <span class="text-center">Quantity</span>
+                            <span>Money Value</span>
+                            <span>Total</span>
+                        </div>
+                        <div
+                            v-for="[denom, count] in denominationsFirstColumn"
+                            :key="denom"
+                            class="grid grid-cols-3 gap-2 items-center"
+                        >
+                            <TextField
+                                v-model.number="cashDenominations[denom]"
+                                type="number"
+                                min="0"
+                                :placeholder="`Count of ₱${denom}`"
+                                class="w-full"
+                            />
+                            <p class="text-sm text-gray-900 text-right">
+                                {{ formatMoney(denom) }}
+                            </p>
+                            <p class="text-sm text-gray-900 text-right">
+                                {{
+                                    formatMoney(
+                                        (parseFloat(denom) * count).toFixed(2)
+                                    )
+                                }}
+                            </p>
+                        </div>
                     </div>
-                    <div
-                        v-for="[denom, count] in Object.entries(
-                            cashDenominations
-                        ).sort(([a], [b]) => parseFloat(b) - parseFloat(a))"
-                        :key="denom"
-                        class="grid grid-cols-3 gap-2 items-center"
-                    >
-                        <TextField
-                            v-model.number="cashDenominations[denom]"
-                            type="number"
-                            min="0"
-                            :placeholder="`Count of ₱${denom}`"
-                            class="w-full"
-                        />
-                        <p class="text-sm text-gray-900 text-center">
-                            {{ formatMoney(denom) }}
-                        </p>
-                        <p class="text-sm text-gray-900 text-center">
-                            {{
-                                formatMoney(
-                                    (parseFloat(denom) * count).toFixed(2)
-                                )
-                            }}
-                        </p>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Summary -->
-            <div class="bg-gray-50 rounded-lg p-4 border">
-                <div class="text-center">
-                    <p class="text-sm text-gray-600">Total Cash Counted</p>
-                    <p class="text-xl font-bold text-gray-900">
-                        {{ formatMoney(totalCashCounted.toFixed(2)) }}
-                    </p>
+                    <!-- Second Column -->
+                    <div class="space-y-2">
+                        <div
+                            class="hidden md:grid grid-cols-3 gap-2 font-semibold text-sm text-right mb-2"
+                        >
+                            <span class="text-center">Quantity</span>
+                            <span>Money Value</span>
+                            <span>Total</span>
+                        </div>
+                        <div
+                            v-for="[denom, count] in denominationsSecondColumn"
+                            :key="denom"
+                            class="grid grid-cols-3 gap-2 items-center"
+                        >
+                            <TextField
+                                v-model.number="cashDenominations[denom]"
+                                type="number"
+                                min="0"
+                                :placeholder="`Count of ₱${denom}`"
+                                class="w-full"
+                            />
+                            <p class="text-sm text-gray-900 text-right">
+                                {{ formatMoney(denom) }}
+                            </p>
+                            <p class="text-sm text-gray-900 text-right">
+                                {{
+                                    formatMoney(
+                                        (parseFloat(denom) * count).toFixed(2)
+                                    )
+                                }}
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -92,7 +117,7 @@
                 />
                 <Button
                     type="button"
-                    label="Proceed"
+                    label="Submit & Close Shift"
                     @click="handleConfirmCloseSession"
                     :disabled="totalCashCounted === 0"
                     class="bg-red-600 hover:bg-red-700"
@@ -146,6 +171,23 @@ const cashDenominations = ref({
     "1": 0,
     "0.25": 0,
     "0.5": 0,
+});
+
+// Split denominations into two columns for display
+const denominationsFirstColumn = computed(() => {
+    const entries = Object.entries(cashDenominations.value).sort(
+        ([a], [b]) => parseFloat(b) - parseFloat(a)
+    );
+    const half = Math.ceil(entries.length / 2);
+    return entries.slice(0, half);
+});
+
+const denominationsSecondColumn = computed(() => {
+    const entries = Object.entries(cashDenominations.value).sort(
+        ([a], [b]) => parseFloat(b) - parseFloat(a)
+    );
+    const half = Math.ceil(entries.length / 2);
+    return entries.slice(half);
 });
 
 const totalCashCounted = computed(() => {
