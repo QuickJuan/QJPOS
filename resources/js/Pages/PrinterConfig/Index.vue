@@ -19,10 +19,16 @@
                                     bar, and receipt printing.
                                 </p>
                             </div>
-                            <PrimaryButton @click="showAddDialog = true">
-                                <i class="pi pi-plus mr-2"></i>
-                                Add Printer
-                            </PrimaryButton>
+                            <div class="gap-4 flex">
+                                <PrimaryButton @click="backPage">
+                                    <i class="pi pi-arrow-left mr-2"></i>
+                                    Back to Tables / Rooms
+                                </PrimaryButton>
+                                <PrimaryButton @click="showAddDialog = true">
+                                    <i class="pi pi-plus mr-2"></i>
+                                    Add Printer
+                                </PrimaryButton>
+                            </div>
                         </div>
                     </div>
 
@@ -999,6 +1005,10 @@ const cancelEdit = () => {
     showAddDialog.value = false;
     editingPrinter.value = null;
     resetForm();
+};
+
+const backPage = () => {
+    router.visit(route("table-rooms.index"));
 };
 
 const savePrinter = () => {

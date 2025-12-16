@@ -15,22 +15,18 @@
                     <!-- Filters in Header -->
                     <div class="flex flex-wrap items-center gap-3">
                         <!-- Per Page Selection -->
-                        <select
+                        <CustomSelect
                             v-model="perPage"
-                            class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             @change="handlePerPageChange"
                         >
                             <option :value="5">5 per page</option>
                             <option :value="10">10 per page</option>
                             <option :value="20">20 per page</option>
                             <option :value="50">50 per page</option>
-                        </select>
+                        </CustomSelect>
 
                         <!-- Cashier Filter -->
-                        <select
-                            v-model="filters.cashier_id"
-                            class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
+                        <CustomSelect v-model="filters.cashier_id">
                             <option value="">All Cashiers</option>
                             <option
                                 v-for="cashier in cashierOptions"
@@ -39,12 +35,11 @@
                             >
                                 {{ cashier.name }}
                             </option>
-                        </select>
+                        </CustomSelect>
 
                         <!-- Month Filter -->
-                        <select
+                        <CustomSelect
                             v-model="selectedMonth"
-                            class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             @change="handleMonthYearChange"
                         >
                             <option value="">All Months</option>
@@ -60,12 +55,11 @@
                             <option value="10">October</option>
                             <option value="11">November</option>
                             <option value="12">December</option>
-                        </select>
+                        </CustomSelect>
 
                         <!-- Year Filter -->
-                        <select
+                        <CustomSelect
                             v-model="selectedYear"
-                            class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             @change="handleMonthYearChange"
                         >
                             <option value="">All Years</option>
@@ -76,7 +70,7 @@
                             >
                                 {{ year }}
                             </option>
-                        </select>
+                        </CustomSelect>
 
                         <!-- Clear Filters Button -->
                         <button
@@ -102,7 +96,7 @@
                         <CashierSessions
                             :sessions="props.sessions.data"
                             :activeSession="activeSession"
-                            :paginatedSessions="props.sessions"
+                            :paginatedSessions="props.sessions.meta"
                             @selectSession="selectSession"
                             @goToPage="goToPage"
                         />
@@ -297,13 +291,12 @@
                                                         >
                                                             ₱{{
                                                                 formatMoney(
-                                                                    sessionSummary.total_sales +
-                                                                        sessionSummary.net_sales ||
-                                                                        0
+                                                                    netSalesWithServiceCharge
                                                                 )
                                                             }}
                                                         </p>
                                                     </div>
+                                                    <hr />
                                                     <div
                                                         class="flex flex-col lg:flex-row lg:justify-between"
                                                     >
@@ -315,38 +308,15 @@
                                                         <p
                                                             :class="[
                                                                 'font-semibold',
-                                                                (sessionSummary.cash_denomination_total ||
-                                                                    0) -
-                                                                    (sessionSummary.beginning_cash ||
-                                                                        0) -
-                                                                    (sessionSummary.total_sales ||
-                                                                        0) >=
+                                                                varianceOver >=
                                                                 0
                                                                     ? 'text-green-600'
                                                                     : 'text-red-600',
                                                             ]"
                                                         >
-                                                            {{
-                                                                (sessionSummary.cash_denomination_total ||
-                                                                    0) -
-                                                                    (sessionSummary.beginning_cash ||
-                                                                        0) -
-                                                                    (sessionSummary.total_sales ||
-                                                                        0) >
-                                                                0
-                                                                    ? "+"
-                                                                    : ""
-                                                            }}
                                                             ₱{{
                                                                 formatMoney(
-                                                                    Math.abs(
-                                                                        (sessionSummary.cash_denomination_total ||
-                                                                            0) -
-                                                                            (sessionSummary.beginning_cash ||
-                                                                                0) -
-                                                                            (sessionSummary.total_sales ||
-                                                                                0)
-                                                                    )
+                                                                    varianceOver
                                                                 )
                                                             }}
                                                         </p>
@@ -608,6 +578,121 @@
                                                                 </p>
                                                             </div>
                                                         </div>
+
+                                                        <div>
+                                                            <div
+                                                                class="flex flex-col lg:flex-row lg:justify-between"
+                                                            >
+                                                                <p
+                                                                    class="text-sm text-gray-600"
+                                                                >
+                                                                    Starting
+                                                                    Bill No.
+                                                                </p>
+                                                                <p>
+                                                                    {{
+                                                                        sessionSummary
+                                                                            .meta_data
+                                                                            ?.min_bill_no
+                                                                    }}
+                                                                </p>
+                                                            </div>
+
+                                                            <div
+                                                                class="flex flex-col lg:flex-row lg:justify-between"
+                                                            >
+                                                                <p
+                                                                    class="text-sm text-gray-600"
+                                                                >
+                                                                    Ending Bill
+                                                                    No.
+                                                                </p>
+                                                                <p>
+                                                                    {{
+                                                                        sessionSummary
+                                                                            .meta_data
+                                                                            ?.max_bill_no
+                                                                    }}
+                                                                </p>
+                                                            </div>
+                                                            <div
+                                                                class="flex flex-col lg:flex-row lg:justify-between"
+                                                            >
+                                                                <p
+                                                                    class="text-sm text-gray-600"
+                                                                >
+                                                                    Starting
+                                                                    Invoice No.
+                                                                </p>
+                                                                <p>
+                                                                    {{
+                                                                        sessionSummary
+                                                                            .meta_data
+                                                                            ?.min_invoice_no
+                                                                    }}
+                                                                </p>
+                                                            </div>
+
+                                                            <div
+                                                                class="flex flex-col lg:flex-row lg:justify-between"
+                                                            >
+                                                                <p
+                                                                    class="text-sm text-gray-600"
+                                                                >
+                                                                    Ending Bill
+                                                                    No.
+                                                                </p>
+                                                                <p>
+                                                                    {{
+                                                                        sessionSummary
+                                                                            .meta_data
+                                                                            ?.max_invoice_no
+                                                                    }}
+                                                                </p>
+                                                            </div>
+
+                                                            <div
+                                                                class="flex flex-col lg:flex-row lg:justify-between"
+                                                            >
+                                                                <p
+                                                                    class="text-sm text-gray-600"
+                                                                >
+                                                                    Total
+                                                                    Service
+                                                                    Charge
+                                                                </p>
+                                                                <p>
+                                                                    ₱{{
+                                                                        formatMoney(
+                                                                            sessionSummary
+                                                                                .meta_data
+                                                                                ?.total_service_charge ||
+                                                                                0
+                                                                        )
+                                                                    }}
+                                                                </p>
+                                                            </div>
+                                                            <div
+                                                                class="flex flex-col lg:flex-row lg:justify-between"
+                                                            >
+                                                                <p
+                                                                    class="text-sm text-gray-600"
+                                                                >
+                                                                    Total
+                                                                    Refunds
+                                                                </p>
+                                                                <p>
+                                                                    ₱{{
+                                                                        formatMoney(
+                                                                            sessionSummary
+                                                                                .meta_data
+                                                                                ?.refund_amount ||
+                                                                                0
+                                                                        )
+                                                                    }}
+                                                                </p>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -647,6 +732,7 @@ import CashierSessions from "./Partials/CashierSessions.vue";
 import { thermalPrinter } from "@/Services/ThermalPrinterService";
 import { useToast } from "primevue";
 import CashBreakdown from "@/Components/Resto/CashBreakdown.vue";
+import CustomSelect from "@/Components/Resto/CustomSelect.vue";
 
 const props = defineProps<{
     sessions: any;
@@ -670,6 +756,24 @@ const perPage = ref(props.filters.per_page || 10);
 // Date filters
 const selectedMonth = ref("");
 const selectedYear = ref("");
+
+const netSalesWithServiceCharge = computed(() => {
+    if (!activeSession.value) return 0;
+    const netSales =
+        activeSession.value.meta_data?.net_sales ||
+        activeSession.value.net_sales ||
+        0;
+    const serviceCharge =
+        activeSession.value.meta_data?.total_service_charge || 0;
+    return netSales + serviceCharge;
+});
+
+const varianceOver = computed(() => {
+    return (
+        (activeSession.value?.cash_denomination_total || 0) -
+            netSalesWithServiceCharge.value || 0
+    );
+});
 
 // Generate year options (current year and 5 years back)
 const yearOptions = computed(() => {
@@ -863,6 +967,7 @@ const handlePrintReport = async () => {
             }
         }
 
+        console.log("session summary to print :", sessionSummary.value);
         // Print session summary
         await thermalPrinter.printSessionSummary(sessionSummary.value);
 

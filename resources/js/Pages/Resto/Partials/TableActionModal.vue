@@ -169,8 +169,8 @@
                     @click="handleUnmergeTables"
                 />
 
-                <!-- Reserve/Unreserve -->
-                <Button
+                <!-- Reserve/Unreserve hide reserve button for now-->
+                <!-- <Button
                     v-if="!isTakeoutOccupied"
                     :label="
                         table && table.status === 'reserved'
@@ -190,7 +190,7 @@
                     "
                     @click="handleReserveTable"
                     :disabled="!table"
-                />
+                /> -->
             </div>
 
             <!-- Pax/Guest Input for Available Tables: show immediately -->
@@ -201,7 +201,7 @@
                 <h4 class="font-medium text-gray-900">Guest Count</h4>
                 <div class="flex flex-wrap gap-2 mb-2">
                     <button
-                        v-for="n in [1, 2, 3, 4, 6, 8, 9, 0]"
+                        v-for="n in [1, 2, 3, 4, 6, 7, 8, 9, 0]"
                         :key="n"
                         type="button"
                         class="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-800 font-semibold hover:bg-primary hover:text-white transition-colors"
@@ -233,12 +233,6 @@
                 </div>
 
                 <div class="flex gap-4">
-                    <Button
-                        label="Cancel"
-                        severity="secondary"
-                        class="flex-1"
-                        @click="handleClose"
-                    />
                     <Button
                         label="Start Order"
                         severity="success"
