@@ -188,8 +188,8 @@
             :open-session="page.props.current_cashier_session"
             :session-summary="sessionSummaryData"
             :current-user="page.props.auth.user"
-            @close-modal="showSessionSummaryModal = false"
-            @confirm-close="showSessionSummaryModal = false"
+            @close-modal="handleCloseSummaryModal"
+            @confirm-close="handleCloseSummaryModal"
         />
     </div>
 </template>
@@ -210,7 +210,6 @@ import {
     ClockIcon,
     DocumentChartBarIcon,
 } from "@heroicons/vue/24/outline";
-import { httpPost } from "@/Utils/axiosHelper";
 import SessionSummaryModal from "@/Pages/Resto/Partials/SessionSummaryModal.vue";
 
 const page = usePage();
@@ -232,6 +231,7 @@ const showCloseDialog = ref(false);
 
 const showSessionSummaryModal = ref(false);
 const sessionSummaryData = ref(null);
+const shouldLogoutAfterSummary = ref(false);
 
 // Computed properties
 const cashierName = computed(() => {
@@ -320,7 +320,7 @@ const handleLogout = () => {
     });
 };
 
-const handleConfirmCloseSession = async (data: any) => {
+const handleConfirmCloseSession = (data: any) => {
     let payload = {
         cash_denomination_details: data.denominationData,
         cash_denomination: data.totalCashCounted,
@@ -328,35 +328,51 @@ const handleConfirmCloseSession = async (data: any) => {
         cashier_id: page.props.current_cashier_session?.cashier_id,
     };
 
-    const response = await httpPost(route("resto.session.close"), payload);
+    router.post(route("resto.session.close"), payload, {
+        preserveState: false,
+        onSuccess: (response) => {
+            showCloseDialog.value = false;
 
-    if (response.success) {
-        showCloseDialog.value = false;
+            // Access session summary from response props (flash data)
+            const responseProps = response.props as any;
 
-        // If the response includes session summary, display it
-        if (response.data?.sessionSummary) {
-            sessionSummaryData.value = response.data.sessionSummary;
-            showSessionSummaryModal.value = true;
-        }
+            console.log("Close session response props:", responseProps);
 
-        toast.add({
-            severity: "success",
-            summary: "Success",
-            detail: response.data?.message || "Session closed successfully",
-            life: 3000,
-        });
+            if (responseProps.sessionSummary) {
+                sessionSummaryData.value = responseProps.sessionSummary;
+                showSessionSummaryModal.value = true;
 
-        // Redirect to home after closing session
-        setTimeout(() => {
-            router.visit(route("home"));
-        }, 1500);
-    } else {
-        toast.add({
-            severity: "error",
-            summary: "Error",
-            detail: response.error || "Failed to close session",
-            life: 3000,
-        });
+                // Check if we should logout after closing the summary modal
+                if (responseProps.shouldLogout) {
+                    shouldLogoutAfterSummary.value = true;
+                }
+            }
+
+            toast.add({
+                severity: "success",
+                summary: "Success",
+                detail: responseProps.message || "Session closed successfully",
+                life: 3000,
+            });
+        },
+        onError: (errors) => {
+            toast.add({
+                severity: "error",
+                summary: "Error",
+                detail: errors.message || "Failed to close session",
+                life: 3000,
+            });
+        },
+    });
+};
+
+const handleCloseSummaryModal = () => {
+    showSessionSummaryModal.value = false;
+
+    // If we should logout after viewing summary, do it now
+    if (shouldLogoutAfterSummary.value) {
+        shouldLogoutAfterSummary.value = false;
+        router.post(route("logout"));
     }
 };
 

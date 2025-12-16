@@ -28,6 +28,7 @@ class PaymentService
                 // Save cart and cart items to order (will throw exception if fails)
                 $order = $this->saveCartToOrder($cart, $payload);
                 $this->saveCartItemsToOrderItems($cart->cartItems, $order);
+                $this->saveVoidCartItemsToOrderItems($cart, $order);
 
                 // Update table status if applicable
                 if ($cart->table_room_id
@@ -142,6 +143,51 @@ class PaymentService
 
         // Bulk insert - single INSERT query instead of N queries
         return OrderItem::insert($orderItemsData);
+    }
+
+    private function saveVoidCartItemsToOrderItems($cart, $order)
+    {
+        // Get void cart items
+        $voidCartItems = CartItem::where('cart_id', $cart->id)
+            ->where('is_void', true)
+            ->withTrashed() // Include soft deleted items if using soft deletes
+            ->get();
+
+        if ($voidCartItems->isEmpty()) {
+            return;
+        }
+
+        $voidOrderItemsData = $voidCartItems->map(function ($cartItem) use ($order) {
+            return [
+                'order_id'             => $order->id,
+                'product_id'           => $cartItem->product_id,
+                'product_packaging_id' => $cartItem->product_packaging_id,
+                'quantity'             => $cartItem->quantity,
+                'price'                => $cartItem->price,
+                'discount_amount'      => $cartItem->discount_amount ?? 0,
+                'vatable_sales'        => $cartItem->vatable_sales ?? 0,
+                'vat_exempt_sales'     => $cartItem->vat_exempt_sales ?? 0,
+                'vat_amount'           => $cartItem->vat_amount ?? 0,
+                'non_vat_sales'        => $cartItem->non_vat_sales ?? 0,
+                'less_tax'             => $cartItem->less_tax ?? 0,
+                'amount'               => $cartItem->amount,
+                'order_type'           => $cartItem->order_type,
+                'discount_id'          => $cartItem->discount_id,
+                'coupon_code'          => $cartItem->coupon_code,
+                'sub_total'            => $cartItem->sub_total,
+                'is_served'            => $cartItem->is_served,
+                'placed_order'         => $cartItem->placed_order,
+                'is_void'              => true,
+                'reason'               => $cartItem->reason,
+                'notes'                => $cartItem->notes,
+                'meta_data'            => json_encode($cartItem->meta_data ?? []),
+                'created_at'           => now(),
+                'updated_at'           => now(),
+            ];
+        })->toArray();
+
+        // Bulk insert void items
+        return OrderItem::insert($voidOrderItemsData);
     }
 
 }

@@ -123,24 +123,26 @@ class CashierSessionController extends Controller
         ]);
     }
 
-    public function closeShift(CashierSessionRequest $request): JsonResponse
+    public function closeShift(CashierSessionRequest $request)
     {
         try {
             $shift = $this->cashierSessionService->closeShift($request);
 
-            $response = [
-                'success' => true,
+            // Get session summary for display
+            $sessionSummary = $this->cashierSessionService->getSessionSummary($shift);
+
+            // Return back with session summary to show modal first
+            // The frontend will handle logout after user closes the modal
+            return back()->with([
+                'sessionSummary' => $sessionSummary,
                 'message' => 'Session closed successfully.',
-                'shift'   => $shift,
-            ];
-            return response()->json($response);
+                'shouldLogout' => true // Flag to tell frontend to logout after viewing summary
+            ]);
 
         } catch (Exception $e) {
-
-            return response()->json([
-                'success' => false,
+            return back()->withErrors([
                 'message' => 'There was an error while closing the session: ' . $e->getMessage(),
-            ], 500);
+            ]);
         }
     }
 

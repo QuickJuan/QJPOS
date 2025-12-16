@@ -90,6 +90,25 @@ class CashierSessionService
             'closing_cash'              => $closingCash,
             'cash_denomination_details' => $request->cash_denomination_details,
             'cash_denomination'         => $request->cash_denomination,
+            'meta_data'                 => [
+                'total_orders'   => $ordersTotals["total_orders"],
+                'gross_sales'  => $ordersTotals["total_amount"],
+                'item_discount'=> $ordersTotals["item_discount"],
+                'less_tax'     => $ordersTotals["less_tax"],
+                'net_sales'    => $ordersTotals["total_due"],
+                'vatable_sales' => $ordersTotals["vatable_sales"],
+                'vat_amount'    => $ordersTotals["vat_amount"],
+                'vat_exempt_sales' => $ordersTotals["vat_exempt_sales"],
+                'zero_rated_sales' => $ordersTotals["zero_rated_sales"],
+                'non_vat_sales' => $ordersTotals["non_vat_sales"],
+                'min_invoice_no' => $ordersTotals["min_invoice_no"],
+                'max_invoice_no' => $ordersTotals["max_invoice_no"],
+                'min_bill_no'    => $ordersTotals["min_bill_no"],
+                'max_bill_no'    => $ordersTotals["max_bill_no"],
+                'total_sku'      => $productCounts["total_sku"],
+                'total_quantity' => $productCounts["total_quantity"],
+                'void_order_items' => $voidOrderItems,
+            ],
         ]);
 
         return $closeSession;

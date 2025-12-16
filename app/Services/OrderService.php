@@ -59,13 +59,21 @@ class OrderService
         $orders = \DB::table('orders')
             ->where('cashier_session_id', $shiftId)
             ->where('status', '=', 'settled')
-            ->selectRaw('COUNT(*) as total_orders, SUM(total_amount) as total_amount,
-                SUM(total_due) as total_due, SUM(item_discount) as item_discount,
-                SUM(service_charge) as service_charge, SUM(less_tax) as less_tax,
-                SUM(vat_amount) as vat_amount, SUM(vat_exempt_sales) as vat_exempt_sales,
-                SUM(zero_rated_sales) as zero_rated_sales, SUM(non_vat) as non_vat_sales,
-                MIN(invoice_no) as min_invoice_no, MAX(invoice_no) as max_invoice_no,
-                MIN(bill_no) as min_bill_no, MAX(bill_no) as max_bill_no')
+            ->selectRaw('COUNT(*) as total_orders,
+                SUM(total_amount) as total_amount,
+                SUM(total_due) as total_due,
+                SUM(item_discount) as item_discount,
+                SUM(service_charge) as service_charge,
+                SUM(less_tax) as less_tax,
+                SUM(vatable_sales) as vatable_sales,
+                SUM(vat_amount) as vat_amount,
+                SUM(vat_exempt_sales) as vat_exempt_sales,
+                SUM(zero_rated_sales) as zero_rated_sales,
+                SUM(non_vat) as non_vat_sales,
+                MIN(invoice_no) as min_invoice_no,
+                MAX(invoice_no) as max_invoice_no,
+                MIN(bill_no) as min_bill_no,
+                MAX(bill_no) as max_bill_no')
             ->first();
         return $orders;
     }
