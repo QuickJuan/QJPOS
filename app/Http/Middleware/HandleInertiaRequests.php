@@ -42,8 +42,8 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        $activeBranch = $this->getActiveBranch($request);
-        $openSession  = CashierSession::openSession()->with('cashier')->first();
+
+        // $openSession  = CashierSession::openSession()->with('cashier')->first();
 
         return array_merge(parent::share($request), [
             'flash'                   => [
@@ -53,17 +53,12 @@ class HandleInertiaRequests extends Middleware
                 'sessionSummary' => fn() => $request->session()->get('sessionSummary'),
                 'shouldLogout' => fn() => $request->session()->get('shouldLogout'),
             ],
-            'active_branch'           => $activeBranch,
+
             'auth'                    => [
                 'user' => $request->user(),
             ],
-            'current_cashier_session' => $openSession,
+
             // Receipt Configuration
-            'receipt_headers'         => fn()         => $activeBranch['receipt_headers'] ?? [],
-            'receipt_footers'         => fn()         => $activeBranch['receipt_footer'] ?? [],
-            'bill_footer'             => fn()             => $activeBranch['receipt_footer'] ?? [],
-            // Company Information (Main Site)
-            'company_info'            => fn()            => $this->getCompanyInfo(),
             // Tenant-specific data
              ...$this->getTenantSharedData($request),
             // Main site data
@@ -151,8 +146,17 @@ class HandleInertiaRequests extends Middleware
             return [];
         }
 
+        $activeBranch = $this->getActiveBranch($request);
+        $openSession  = CashierSession::openSession()->with('cashier')->first();
+
         $sharedData = [
             // Tenant-specific services
+            'active_branch'           => $activeBranch,
+            'receipt_headers'         => fn() => $activeBranch['receipt_headers'] ?? [],
+            'receipt_footers'         => fn() => $activeBranch['receipt_footer'] ?? [],
+            'bill_footer'             => fn() => $activeBranch['receipt_footer'] ?? [],
+            'company_info'            => fn() => $this->getCompanyInfo(),
+            'current_cashier_session' => $openSession,
             'available_discounts' =>  $this->loadTenantDiscounts(),
             'cart' => $this->getCartByTableId($request),
             'availableModifiers' => $this->loadTenantModifiers(),

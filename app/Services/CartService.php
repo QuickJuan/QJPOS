@@ -793,13 +793,14 @@ class CartService
                 }
 
                 if ($cart) {
-                    // Update cart items to placed_order
+                    // Update cart items to placed_order and set served_by
                     $cart->cartItems()
                         ->where('placed_order', false)
                         ->where('batch_number', null)
                         ->update([
                             'placed_order' => true,
                             'batch_number' => $orderNumber,
+                            'served_by' => $payload['served_by'],
                         ]);
 
                     $cart->update([
@@ -809,7 +810,7 @@ class CartService
                     // Get only necessary columns to prevent memory exhaustion
                     $cartItems = CartItem::where('cart_id', $cart->id)
                         ->where('batch_number', $orderNumber)
-                        ->select('id', 'cart_id', 'product_id', 'quantity', 'price', 'order_type', 'notes', 'meta_data', 'placed_order', 'batch_number')
+                        ->select('id', 'cart_id', 'product_id', 'quantity', 'price', 'order_type', 'notes', 'meta_data', 'placed_order', 'batch_number', 'served_by')
                         ->get();
 
                     $newOrderItems = new PreparationItemCollectionResource($cartItems);

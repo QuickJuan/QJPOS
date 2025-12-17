@@ -189,6 +189,7 @@ class CartController extends Controller
             $payload = [
                 'cart_id'  => $request->input('cart_id'),
                 'table_id' => $request->input('table_id'),
+                'served_by' => $request->input('served_by'),
             ];
 
             $response = $this->cartService->placeOrder($payload);
@@ -308,6 +309,32 @@ class CartController extends Controller
 
         } catch (Exception $e) {
             return response()->json(['message' => 'There was an error in fetching print bill data' . $e->getMessage()], 400);
+        }
+    }
+
+    public function getServers(): JsonResponse
+    {
+        try {
+            // Fetch users with server/waiter role
+            $servers = \App\Models\User::whereHas('roles', function($query) {
+                $query->whereIn('name', ['Server', 'Waiter', 'server', 'waiter']);
+            })
+            ->select('id', 'name')
+            ->orderBy('name')
+            ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $servers,
+            ], 200);
+
+        } catch (Exception $e) {
+            Log::error('Get servers error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch servers.',
+                'error' => $e->getMessage(),
+            ], 500);
         }
     }
 }

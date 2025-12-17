@@ -94,6 +94,13 @@
             :bill-data="billData"
             :general-settings="generalSettings"
         />
+
+        <!-- Server Selection Modal -->
+        <ServerSelectionModal
+            v-model:visible="showServerSelectionModal"
+            @confirm="handleServerConfirm"
+            @cancel="showServerSelectionModal = false"
+        />
     </div>
 
     <ConfirmPopup />
@@ -113,6 +120,7 @@ import MoreOptionsModal from "./MoreOptionsModal.vue";
 import SettleBillModal from "./SettleBillModal.vue";
 import ReceiptModal from "./ReceiptModal.vue";
 import BillModal from "./BillModal.vue";
+import ServerSelectionModal from "./ServerSelectionModal.vue";
 import { useBillNumber } from "@/composables/useBillNumber";
 import { usePage, router } from "@inertiajs/vue3";
 import { ConfirmPopup, useConfirm } from "primevue";
@@ -186,6 +194,8 @@ const showMoreOptionsModal = ref(false);
 const showSettleBillModal = ref(false);
 const showReceiptModal = ref(false);
 const showBillModal = ref(false);
+const showServerSelectionModal = ref(false);
+const selectedServerId = ref<number | null>(null);
 const { getNextBillNumber } = useBillNumber();
 
 // Receipt data
@@ -446,7 +456,13 @@ const handleEndOfShift = () => {
 
 // Handle place order with response handling
 const handlePlaceOrder = async () => {
-    const response = await placeOrder(props.tableId, props.cart?.id);
+    // Show server selection modal first
+    showServerSelectionModal.value = true;
+};
+
+const handleServerConfirm = async (serverId: number) => {
+    selectedServerId.value = serverId;
+    const response = await placeOrder(props.tableId, props.cart?.id, serverId);
 
     if (response.success) {
         toast.add({

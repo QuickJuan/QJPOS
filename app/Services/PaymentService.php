@@ -137,6 +137,7 @@ class PaymentService
                 'reason'               => $cartItem->reason,
                 'notes'                => $cartItem->notes,
                 'meta_data'            => json_encode($cartItem->meta_data ?? []),
+                'served_by'            => $cartItem->served_by,
                 'created_at'           => now(),
                 'updated_at'           => now(),
             ];
@@ -182,6 +183,7 @@ class PaymentService
                 'reason'               => $cartItem->reason,
                 'notes'                => $cartItem->notes,
                 'meta_data'            => json_encode($cartItem->meta_data ?? []),
+                'served_by'            => $cartItem->served_by,
                 'created_at'           => now(),
                 'updated_at'           => now(),
             ];

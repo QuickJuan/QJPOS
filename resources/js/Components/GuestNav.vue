@@ -69,8 +69,8 @@
                                 ? 'text-gray-900 hover:text-primary bg-primary text-white px-4 py-2 rounded-lg font-semibold'
                                 : 'text-primary hover:text-third'
                         "
-                        class="transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                        >Try for FREE</Link
+                        class="bg-blue-100 p-2 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                        >Start for FREE</Link
                     >
                 </li>
                 <li>
@@ -97,7 +97,7 @@
                         >Contact Us</a
                     >
                 </li>
-                <li>
+                <!-- <li>
                     <Link
                         :href="
                             $page.props.auth.user
@@ -117,7 +117,7 @@
                                 : "Sign in"
                         }}
                     </Link>
-                </li>
+                </li> -->
             </ul>
         </nav>
         <!-- Mobile Nav Dropdown -->
@@ -156,7 +156,7 @@
                             Contact Us
                         </a>
                     </li>
-                    <li>
+                    <!-- <li>
                         <Link
                             :href="
                                 $page.props.auth.user
@@ -172,7 +172,7 @@
                                     : "Sign in"
                             }}
                         </Link>
-                    </li>
+                    </li> -->
                 </ul>
             </nav>
         </transition>

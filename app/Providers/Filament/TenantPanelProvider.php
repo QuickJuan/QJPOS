@@ -66,28 +66,28 @@ class TenantPanelProvider extends PanelProvider
     // Register middlewares depending when the domain is central or tenant
     private function registerMiddlewares(): array
     {
-        $defaultMiddlewares = [
-            PreventAccessFromCentralDomains::class,
-            InitializeTenancyBySubdomain::class,
+        $baseMiddlewares = [
             EncryptCookies::class,
             AddQueuedCookiesToResponse::class,
             StartSession::class,
             AuthenticateSession::class,
             ShareErrorsFromSession::class,
+            VerifyCsrfToken::class,
             SubstituteBindings::class,
             DisableBladeIconComponents::class,
             DispatchServingFilamentEvent::class,
-            VerifyCsrfToken::class,
         ];
 
+        // Only apply tenant middleware on tenant domains
         if (!isCentralDomain()) {
-            // return array_merge($defaultMiddlewares, [
-            //     PreventAccessFromCentralDomains::class,
-            //     InitializeTenancyBySubdomain::class,
-            // ]);
+            return array_merge([
+                PreventAccessFromCentralDomains::class,
+                InitializeTenancyBySubdomain::class,
+            ], $baseMiddlewares);
         }
 
-        return $defaultMiddlewares;
+        // On central domain, don't apply tenant middleware
+        return $baseMiddlewares;
     }
 
 }
