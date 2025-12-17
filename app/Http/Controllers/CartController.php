@@ -315,13 +315,11 @@ class CartController extends Controller
     public function getServers(): JsonResponse
     {
         try {
-            // Fetch users with server/waiter role
-            $servers = \App\Models\User::whereHas('roles', function($query) {
-                $query->whereIn('name', ['Server', 'Waiter', 'server', 'waiter']);
-            })
-            ->select('id', 'name')
-            ->orderBy('name')
-            ->get();
+            // Fetch users with server or waiter role using Spatie Permission
+            $servers = \App\Models\User::role(['Server', 'Waiter'])
+                ->select('id', 'name')
+                ->orderBy('name')
+                ->get();
 
             return response()->json([
                 'success' => true,

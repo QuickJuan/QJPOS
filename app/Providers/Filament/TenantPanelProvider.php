@@ -17,6 +17,7 @@ use Filament\Http\Middleware\DisableBladeIconComponents;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use ShuvroRoy\FilamentSpatieLaravelBackup\FilamentSpatieLaravelBackupPlugin;
+use Althinect\FilamentSpatieRolesPermissions\FilamentSpatieRolesPermissionsPlugin;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -48,6 +49,7 @@ class TenantPanelProvider extends PanelProvider
                 FilamentSpatieLaravelBackupPlugin::make()
                     ->usingQueue('backups') // Optional: use queue for backups
                     ->usingPolingInterval('30s'), // Optional: polling interval
+                FilamentSpatieRolesPermissionsPlugin::make(),
             ])
             ->middleware($this->registerMiddlewares())
             ->login()
