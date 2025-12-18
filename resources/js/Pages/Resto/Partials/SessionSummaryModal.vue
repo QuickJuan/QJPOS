@@ -45,6 +45,10 @@
 
             <!-- Body / Content -->
             <div class="text-center font-bold">X Reading Report</div>
+            <div>
+                <p>Shift No: {{ sessionSummary?.id }}</p>
+                <p>Cashier: {{ sessionSummary?.cashier }}</p>
+            </div>
             <div class="text-center text-xs mb-2">
                 {{ sessionSummary?.shift_start }} -
                 {{ sessionSummary?.shift_end }}
@@ -74,17 +78,18 @@
                         >
                             <span>{{ discount.discount_name }}:</span>
                             <span>
-                                {{ formatMoney(discount.total_discount) }}
+                                {{ formatMoney(discount.total_discount * -1) }}
                             </span>
                         </div>
                     </div>
                 </div>
 
                 <div class="flex justify-between mt-2">
-                    <span>Item Discount:</span>
+                    <span>Total Discount:</span>
                     <span>{{
                         formatMoney(
-                            props.sessionSummary?.meta_data?.item_discount || 0
+                            (props.sessionSummary?.meta_data?.item_discount ||
+                                0) * -1
                         )
                     }}</span>
                 </div>
@@ -93,7 +98,8 @@
                     <span>
                         {{
                             formatMoney(
-                                props.sessionSummary?.meta_data?.less_tax || 0
+                                (props.sessionSummary?.meta_data?.less_tax ||
+                                    0) * -1
                             )
                         }}
                     </span>
@@ -104,6 +110,30 @@
                         {{
                             formatMoney(
                                 props.sessionSummary?.meta_data?.net_sales
+                            )
+                        }}
+                    </span>
+                </div>
+                <div class="flex justify-between font-bold border-b pt-1 mt-1">
+                    <span>Service Charge:</span>
+                    <span>
+                        {{
+                            formatMoney(
+                                props.sessionSummary?.meta_data?.service_charge
+                            )
+                        }}
+                    </span>
+                </div>
+                <!-- total cash net sales + service_charge -->
+                <div class="flex justify-between font-bold border-b py-1 mt-1">
+                    <span>Total Cash :</span>
+                    <span>
+                        {{
+                            formatMoney(
+                                (props.sessionSummary?.meta_data?.net_sales ||
+                                    0) +
+                                    (props.sessionSummary?.meta_data
+                                        ?.service_charge || 0)
                             )
                         }}
                     </span>
@@ -256,12 +286,6 @@
                         props.sessionSummary?.meta_data?.total_quantity || 0
                     }}</span>
                 </div>
-                <div class="flex justify-between">
-                    <span>Total Quantity:</span>
-                    <span>{{ props.sessionSummary?.total_quantity || 0 }}</span>
-                </div>
-
-                <div class="border-t my-2"></div>
 
                 <div class="border-t my-2"></div>
 
@@ -277,30 +301,29 @@
                 </div>
 
                 <div class="flex justify-between">
-                    <span>Closing Cash:</span>
-                    <span>
-                        {{
-                            formatMoney(props.sessionSummary?.closing_cash || 0)
-                        }}
-                    </span>
-                </div>
-
-                <div class="flex justify-between">
                     <span>Cash Denomination:</span>
                     <span>
                         {{
                             formatMoney(
-                                props.sessionSummary?.cash_denomination || 0
+                                props.sessionSummary?.cash_denomination_total ||
+                                    0
                             )
                         }}
                     </span>
                 </div>
 
                 <div class="flex justify-between">
+                    <span>Expected Cash:</span>
+                    <span>
+                        {{ formatMoney(expectedCash) }}
+                    </span>
+                </div>
+                <div class="border-t my-2"></div>
+                <div class="flex justify-between">
                     <span>Variance:</span>
                     <span>
-                        {{ props.sessionSummary?.variance > 0 ? "+" : "" }}
-                        {{ formatMoney(props.sessionSummary?.variance || 0) }}
+                        {{ variance < 0 ? "-" : "" }}
+                        {{ formatMoney(variance) }}
                     </span>
                 </div>
 
@@ -369,4 +392,19 @@ const grossSales = computed(
 
 const currentBranch = computed(() => props.sessionSummary.branch as Branch);
 const currentCashier = (page.props.auth as any)?.user?.name;
+
+const expectedCash = computed(() => {
+    const netSales = props.sessionSummary?.meta_data?.net_sales || 0;
+    const serviceCharge = props.sessionSummary?.meta_data?.service_charge || 0;
+    return netSales + serviceCharge;
+});
+
+const variance = computed(() => {
+    const cashDenominationTotal =
+        props.sessionSummary?.cash_denomination_total || 0;
+    const beginningCash = props.sessionSummary?.beginning_cash || 0;
+    const expectedCashValue = expectedCash.value;
+
+    return cashDenominationTotal - expectedCashValue;
+});
 </script>

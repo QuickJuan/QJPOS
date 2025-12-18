@@ -1305,7 +1305,7 @@ class ThermalPrinterService {
             //
 
             // VAT breakdown
-            commands.push(...this.stringToBytes('VAT BREAKDOWN'));
+            commands.push(...this.stringToBytes('TAX BREAKDOWN'));
             commands.push(...this.ESC_POS.LINE_FEED);
             commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
             commands.push(...this.ESC_POS.LINE_FEED);
@@ -1382,16 +1382,15 @@ class ThermalPrinterService {
             commands.push(...this.ESC_POS.LINE_FEED);
             commands.push(...this.stringToBytes(this.formatTotalLine('Beginning Cash:', sessionData.beginning_cash)));
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatTotalLine('Total Sales:', sessionData.total_sales)));
-            commands.push(...this.ESC_POS.LINE_FEED);
             commands.push(...this.stringToBytes(this.formatTotalLine('Actual Cash Count:', sessionData.cash_denomination_total)));
             commands.push(...this.ESC_POS.BOLD_OFF);
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatTotalLine('Expected Cash:', sessionData.beginning_cash + sessionData.total_sales)));
+            let expectedCash = parseFloat(sessionData.meta_data.net_sales) + parseFloat(sessionData.meta_data.service_charge)
+            commands.push(...this.stringToBytes(this.formatTotalLine('Expected Cash:', expectedCash )));
             commands.push(...this.ESC_POS.LINE_FEED);
             commands.push(...this.ESC_POS.BOLD_ON);
             commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
-            const variance = sessionData.cash_denomination_total - (sessionData.beginning_cash + sessionData.total_sales);
+            const variance = sessionData.cash_denomination_total - (expectedCash);
             const varianceLabel = variance >= 0 ? 'Overage:' : 'Shortage:';
             commands.push(...this.stringToBytes(this.formatTotalLine(varianceLabel, Math.abs(variance))));
             commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
