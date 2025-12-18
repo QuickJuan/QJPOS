@@ -127,7 +127,7 @@ const selectedModifierValues = ref<Record<string, string>>({});
 const specialInstructions = ref("");
 
 const modifiers = computed(() => {
-    return page.props.availableModifiers;
+    return page.props.available_modifiers || [];
 });
 
 const selectedModifierData = computed(() => {

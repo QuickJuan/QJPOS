@@ -17,6 +17,7 @@ use Filament\Http\Middleware\DisableBladeIconComponents;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use ShuvroRoy\FilamentSpatieLaravelBackup\FilamentSpatieLaravelBackupPlugin;
+use Althinect\FilamentSpatieRolesPermissions\FilamentSpatieRolesPermissionsPlugin;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -48,6 +49,7 @@ class TenantPanelProvider extends PanelProvider
                 FilamentSpatieLaravelBackupPlugin::make()
                     ->usingQueue('backups') // Optional: use queue for backups
                     ->usingPolingInterval('30s'), // Optional: polling interval
+                FilamentSpatieRolesPermissionsPlugin::make(),
             ])
             ->middleware($this->registerMiddlewares())
             ->login()
@@ -66,28 +68,28 @@ class TenantPanelProvider extends PanelProvider
     // Register middlewares depending when the domain is central or tenant
     private function registerMiddlewares(): array
     {
-        $defaultMiddlewares = [
-            PreventAccessFromCentralDomains::class,
-            InitializeTenancyBySubdomain::class,
+        $baseMiddlewares = [
             EncryptCookies::class,
             AddQueuedCookiesToResponse::class,
             StartSession::class,
             AuthenticateSession::class,
             ShareErrorsFromSession::class,
+            VerifyCsrfToken::class,
             SubstituteBindings::class,
             DisableBladeIconComponents::class,
             DispatchServingFilamentEvent::class,
-            VerifyCsrfToken::class,
         ];
 
+        // Only apply tenant middleware on tenant domains
         if (!isCentralDomain()) {
-            // return array_merge($defaultMiddlewares, [
-            //     PreventAccessFromCentralDomains::class,
-            //     InitializeTenancyBySubdomain::class,
-            // ]);
+            return array_merge([
+                PreventAccessFromCentralDomains::class,
+                InitializeTenancyBySubdomain::class,
+            ], $baseMiddlewares);
         }
 
-        return $defaultMiddlewares;
+        // On central domain, don't apply tenant middleware
+        return $baseMiddlewares;
     }
 
 }

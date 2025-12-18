@@ -175,4 +175,23 @@ class OrderService
         return $refundAfterShiftOrders;
     }
 
+
+    /**
+     * get the Discount breadown per discount type for a specific shift
+     */
+    public function getDiscountBreakdownPerShift(int $shiftId)
+    {
+        //use DB query to get sum of discount amount per discount type for a specific shift
+        $discounts = \DB::table('order_items')
+            ->join('orders', 'order_items.order_id', '=', 'orders.id')
+            ->join('discounts', 'order_items.discount_id', '=', 'discounts.id')
+            ->where('orders.cashier_session_id', $shiftId)
+            ->where('order_items.discount_amount', '!=', null)
+            ->selectRaw('discounts.discount_name, SUM(order_items.discount_amount) as total_discount')
+            ->groupBy('discounts.discount_name', 'discounts.sort_order')
+            ->orderBy('discounts.sort_order', 'asc')
+            ->get();
+        return $discounts;
+    }
+
 }

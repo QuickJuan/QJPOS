@@ -102,6 +102,7 @@ class CashierSessionController extends Controller
 
         return Inertia::render('Resto/Preview', [
             'openSession' => $openSession,
+            'timestamp' => now()->timestamp, // Force fresh render
         ]);
     }
 

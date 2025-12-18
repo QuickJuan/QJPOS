@@ -21,6 +21,7 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 use ShuvroRoy\FilamentSpatieLaravelBackup\FilamentSpatieLaravelBackupPlugin;
+use Althinect\FilamentSpatieRolesPermissions\FilamentSpatieRolesPermissionsPlugin;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -47,6 +48,7 @@ class AdminPanelProvider extends PanelProvider
             ->plugins([
                 FilamentSpatieLaravelBackupPlugin::make()
                     ->usingQueue('central-backups'),
+                FilamentSpatieRolesPermissionsPlugin::make(),
             ])
             ->middleware([
                 EncryptCookies::class,

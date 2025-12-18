@@ -7,9 +7,12 @@ use App\Filament\Resources\Central\UserResource\RelationManagers;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
@@ -17,13 +20,45 @@ class UserResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-users';
+
+    protected static ?string $navigationGroup = 'Central Management';
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                //
+                TextInput::make('name')
+                    ->required()
+                    ->maxLength(255),
+
+                TextInput::make('email')
+                    ->email()
+                    ->required()
+                    ->unique('users', 'email', ignoreRecord: true)
+                    ->maxLength(255),
+
+                TextInput::make('employee_code')
+                    ->label('Employee Code')
+                    ->maxLength(255)
+                    ->unique('users', 'employee_code', ignoreRecord: true),
+
+                TextInput::make('password')
+                    ->password()
+                    ->required()
+                    ->minLength(8)
+                    ->maxLength(255)
+                    ->dehydrateStateUsing(fn($state) => bcrypt($state))
+                    ->visibleOn('create'),
+
+                Select::make('roles')
+                    ->label('Roles')
+                    ->relationship('roles', 'name')
+                    ->multiple()
+                    ->preload()
+                    ->searchable()
+                    ->placeholder('Select roles')
+                    ->helperText('Assign one or more roles to this user'),
             ]);
     }
 
@@ -31,13 +66,41 @@ class UserResource extends Resource
     {
         return $table
             ->columns([
-                //
+                TextColumn::make('name')
+                    ->sortable()
+                    ->searchable(),
+
+                TextColumn::make('email')
+                    ->sortable()
+                    ->searchable(),
+
+                TextColumn::make('employee_code')
+                    ->label('Employee Code')
+                    ->sortable()
+                    ->searchable()
+                    ->toggleable(),
+
+                TextColumn::make('roles.name')
+                    ->label('Roles')
+                    ->badge()
+                    ->color('success')
+                    ->sortable()
+                    ->searchable(),
+
+                TextColumn::make('created_at')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('roles')
+                    ->relationship('roles', 'name')
+                    ->multiple()
+                    ->label('Filter by Role'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

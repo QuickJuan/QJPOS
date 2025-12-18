@@ -13,7 +13,7 @@
             ref="printArea"
         >
             <!-- Header -->
-            <div class="mb-2 flex flex-col items-center gap-2">
+            <div class="mb-2 flex flex-col items-center">
                 <div v-if="currentBranch?.company_logo">
                     <img
                         :src="currentBranch?.company_logo"
@@ -33,10 +33,6 @@
                 <p class="text-xs">
                     {{ currentBranch?.phone }}
                 </p>
-                <p class="text-xs">
-                    Operated By:
-                    {{ currentCashier || "" }}
-                </p>
                 <p class="text-xs" v-if="currentBranch?.tin">
                     TIN: {{ currentBranch?.tin }}
                 </p>
@@ -49,43 +45,97 @@
 
             <!-- Body / Content -->
             <div class="text-center font-bold">X Reading Report</div>
-            <div class="text-center text-xs mb-2">{{ reportDate }}</div>
+            <div>
+                <p>Shift No: {{ sessionSummary?.id }}</p>
+                <p>Cashier: {{ sessionSummary?.cashier }}</p>
+            </div>
+            <div class="text-center text-xs mb-2">
+                {{ sessionSummary?.shift_start }} -
+                {{ sessionSummary?.shift_end }}
+            </div>
 
             <div class="text-left text-xs">
                 <div class="flex justify-between">
-                    <span>Gross Sales:</span>
+                    <span class="font-bold">Gross Sales:</span>
                     <span>{{ formatMoney(grossSales) }}</span>
                 </div>
-                <div class="flex justify-between">
-                    <span>Regular Discount:</span>
-                    <span>{{ formatMoney(regularDiscount) }}</span>
+
+                <!-- Discount Breakdown -->
+                <div
+                    v-if="
+                        props.sessionSummary?.meta_data?.discounts &&
+                        props.sessionSummary.meta_data.discounts.length > 0
+                    "
+                    class="mt-2"
+                >
+                    <div class="font-bold mb-1">DISCOUNT BREAKDOWN</div>
+                    <div class="border-t border-b py-1">
+                        <div
+                            v-for="discount in props.sessionSummary.meta_data
+                                .discounts"
+                            :key="discount.discount_name"
+                            class="flex justify-between ml-2"
+                        >
+                            <span>{{ discount.discount_name }}:</span>
+                            <span>
+                                {{ formatMoney(discount.total_discount * -1) }}
+                            </span>
+                        </div>
+                    </div>
                 </div>
-                <div class="flex justify-between">
-                    <span>Senior Discount:</span>
+
+                <div class="flex justify-between mt-2">
+                    <span>Total Discount:</span>
                     <span>{{
-                        formatMoney(props.sessionSummary?.senior_discount)
+                        formatMoney(
+                            (props.sessionSummary?.meta_data?.item_discount ||
+                                0) * -1
+                        )
                     }}</span>
-                </div>
-                <div class="flex justify-between">
-                    <span>PWD Discount:</span>
-                    <span>{{ formatMoney(pwdDiscount) }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span>Less Tax:</span>
                     <span>
-                        {{ formatMoney(props.sessionSummary?.less_tax || 0) }}
+                        {{
+                            formatMoney(
+                                (props.sessionSummary?.meta_data?.less_tax ||
+                                    0) * -1
+                            )
+                        }}
                     </span>
                 </div>
                 <div class="flex justify-between font-bold border-t pt-1 mt-1">
                     <span>Net Sales:</span>
                     <span>
-                        {{ formatMoney(props.sessionSummary?.net_sales) }}
+                        {{
+                            formatMoney(
+                                props.sessionSummary?.meta_data?.net_sales
+                            )
+                        }}
                     </span>
                 </div>
-                <div class="flex justify-between font-bold border-t pt-1 mt-1">
+                <div class="flex justify-between font-bold border-b pt-1 mt-1">
                     <span>Service Charge:</span>
                     <span>
-                        {{ formatMoney(props.sessionSummary?.service_charge) }}
+                        {{
+                            formatMoney(
+                                props.sessionSummary?.meta_data?.service_charge
+                            )
+                        }}
+                    </span>
+                </div>
+                <!-- total cash net sales + service_charge -->
+                <div class="flex justify-between font-bold border-b py-1 mt-1">
+                    <span>Total Cash :</span>
+                    <span>
+                        {{
+                            formatMoney(
+                                (props.sessionSummary?.meta_data?.net_sales ||
+                                    0) +
+                                    (props.sessionSummary?.meta_data
+                                        ?.service_charge || 0)
+                            )
+                        }}
                     </span>
                 </div>
 
@@ -93,39 +143,68 @@
 
                 <div
                     class="flex justify-between"
-                    v-if="props.sessionSummary?.vat_sales > 0"
+                    v-if="props.sessionSummary?.meta_data?.vatable_sales > 0"
                 >
-                    <span>VAT Sales:</span>
+                    <span>VATable Sales:</span>
                     <span>
-                        {{ formatMoney(props.sessionSummary?.vat_sales) }}
+                        {{
+                            formatMoney(
+                                props.sessionSummary?.meta_data?.vatable_sales
+                            )
+                        }}
                     </span>
                 </div>
                 <div
                     class="flex justify-between"
-                    v-if="props.sessionSummary?.non_vat_sales > 0"
+                    v-if="props.sessionSummary?.meta_data?.vat_amount > 0"
                 >
-                    <span>Non-VAT Sales:</span>
+                    <span>VAT Amount:</span>
                     <span>
-                        {{ formatMoney(props.sessionSummary?.non_vat_sales) }}
+                        {{
+                            formatMoney(
+                                props.sessionSummary?.meta_data?.vat_amount
+                            )
+                        }}
                     </span>
                 </div>
                 <div
                     class="flex justify-between"
-                    v-if="props.sessionSummary?.vat_amount > 0"
-                >
-                    <span>VAT:</span>
-                    <span>
-                        {{ formatMoney(props.sessionSummary?.vat_amount) }}
-                    </span>
-                </div>
-                <div
-                    class="flex justify-between"
-                    v-if="props.sessionSummary?.vat_amount > 0"
+                    v-if="props.sessionSummary?.meta_data?.vat_exempt_sales > 0"
                 >
                     <span>VAT Exempt Sales:</span>
                     <span>
                         {{
-                            formatMoney(props.sessionSummary?.vat_exempt_sales)
+                            formatMoney(
+                                props.sessionSummary?.meta_data
+                                    ?.vat_exempt_sales
+                            )
+                        }}
+                    </span>
+                </div>
+                <div
+                    class="flex justify-between"
+                    v-if="props.sessionSummary?.meta_data?.non_vat_sales > 0"
+                >
+                    <span>Non-VAT Sales:</span>
+                    <span>
+                        {{
+                            formatMoney(
+                                props.sessionSummary?.meta_data?.non_vat_sales
+                            )
+                        }}
+                    </span>
+                </div>
+                <div
+                    class="flex justify-between"
+                    v-if="props.sessionSummary?.meta_data?.zero_rated_sales > 0"
+                >
+                    <span>Zero-Rated Sales:</span>
+                    <span>
+                        {{
+                            formatMoney(
+                                props.sessionSummary?.meta_data
+                                    ?.zero_rated_sales
+                            )
                         }}
                     </span>
                 </div>
@@ -134,37 +213,54 @@
 
                 <div class="text-left text-xs">
                     <div class="flex justify-between">
-                        <span>Session Number:</span>
-                        <span>{{ props.sessionSummary?.session_number }}</span>
+                        <span>Shift No:</span>
+                        <span>{{ props.sessionSummary?.id }}</span>
                     </div>
                     <div class="flex justify-between">
-                        <span>OR Number Start:</span>
-                        <span>{{ props.sessionSummary?.or_number_start }}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span>OR Number End:</span>
-                        <span>{{ props.sessionSummary?.or_number_end }}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span>Bill Number Start:</span>
+                        <span>Invoice Start:</span>
                         <span>{{
-                            props.sessionSummary?.bill_number_start
+                            props.sessionSummary?.meta_data?.min_invoice_no ||
+                            "N/A"
                         }}</span>
                     </div>
                     <div class="flex justify-between">
-                        <span>Bill Number End:</span>
-                        <span>{{ props.sessionSummary?.bill_number_end }}</span>
+                        <span>Invoice End:</span>
+                        <span>{{
+                            props.sessionSummary?.meta_data?.max_invoice_no ||
+                            "N/A"
+                        }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Bill Start:</span>
+                        <span>{{
+                            props.sessionSummary?.meta_data?.min_bill_no ||
+                            "N/A"
+                        }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Bill End:</span>
+                        <span>{{
+                            props.sessionSummary?.meta_data?.max_bill_no ||
+                            "N/A"
+                        }}</span>
                     </div>
                 </div>
 
                 <div class="border-t my-2"></div>
 
                 <div class="flex justify-between">
-                    <span>Cancelled Amount:</span>
+                    <span>Refund Count:</span>
+                    <span>
+                        {{ props.sessionSummary?.meta_data?.refund_count || 0 }}
+                    </span>
+                </div>
+                <div class="flex justify-between">
+                    <span>Refund Amount:</span>
                     <span>
                         {{
                             formatMoney(
-                                props.sessionSummary?.cancelled_amount || 0
+                                props.sessionSummary?.meta_data
+                                    ?.refund_amount || 0
                             )
                         }}
                     </span>
@@ -173,21 +269,23 @@
                 <div class="border-t my-2"></div>
 
                 <div class="flex justify-between">
-                    <span>No of Transactions:</span>
+                    <span>Total Orders:</span>
                     <span>
-                        {{ props.sessionSummary?.transactions_count || 0 }}
+                        {{ props.sessionSummary?.meta_data?.total_orders || 0 }}
                     </span>
                 </div>
                 <div class="flex justify-between">
-                    <span>Number of SKU:</span>
-                    <span>{{ props.sessionSummary?.sku_count || 0 }}</span>
+                    <span>Total SKU:</span>
+                    <span>{{
+                        props.sessionSummary?.meta_data?.total_sku || 0
+                    }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span>Total Quantity:</span>
-                    <span>{{ props.sessionSummary?.total_quantity || 0 }}</span>
+                    <span>{{
+                        props.sessionSummary?.meta_data?.total_quantity || 0
+                    }}</span>
                 </div>
-
-                <div class="border-t my-2"></div>
 
                 <div class="border-t my-2"></div>
 
@@ -203,30 +301,29 @@
                 </div>
 
                 <div class="flex justify-between">
-                    <span>Closing Cash:</span>
-                    <span>
-                        {{
-                            formatMoney(props.sessionSummary?.closing_cash || 0)
-                        }}
-                    </span>
-                </div>
-
-                <div class="flex justify-between">
                     <span>Cash Denomination:</span>
                     <span>
                         {{
                             formatMoney(
-                                props.sessionSummary?.cash_denomination || 0
+                                props.sessionSummary?.cash_denomination_total ||
+                                    0
                             )
                         }}
                     </span>
                 </div>
 
                 <div class="flex justify-between">
+                    <span>Expected Cash:</span>
+                    <span>
+                        {{ formatMoney(expectedCash) }}
+                    </span>
+                </div>
+                <div class="border-t my-2"></div>
+                <div class="flex justify-between">
                     <span>Variance:</span>
                     <span>
-                        {{ props.sessionSummary?.variance > 0 ? "+" : "" }}
-                        {{ formatMoney(props.sessionSummary?.variance || 0) }}
+                        {{ variance < 0 ? "-" : "" }}
+                        {{ formatMoney(variance) }}
                     </span>
                 </div>
 
@@ -247,7 +344,11 @@
                     >
                         <span>{{ formatMoney(denom) }} x {{ count }}:</span>
                         <span>
-                            {{ formatMoney(parseFloat(denom) * Number(count)) }}
+                            {{
+                                formatMoney(
+                                    parseFloat(String(denom)) * Number(count)
+                                )
+                            }}
                         </span>
                     </div>
                 </div>
@@ -257,24 +358,6 @@
                 <div class="text-center font-bold">X Reading End</div>
             </div>
         </div>
-
-        <template #footer>
-            <div class="flex justify-end gap-3">
-                <Button
-                    type="button"
-                    label="Close"
-                    severity="secondary"
-                    outlined
-                    @click="emit('closeModal')"
-                />
-                <Button
-                    type="button"
-                    label="Print"
-                    @click="printReport"
-                    class="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
-                />
-            </div>
-        </template>
     </Dialog>
 
     <ConfirmPopup />
@@ -290,84 +373,38 @@ import { thermalPrinter } from "@/Services/ThermalPrinterService";
 import Branch from "@/Types/Branch";
 
 const props = defineProps<{
-    branch?: Branch;
     showSessionSummaryModal: boolean;
-    openSession: any;
     sessionSummary?: any;
-    currentUser?: any;
-    totalCashCounted?: number;
-    operatorName?: string;
-    merchantTin?: string;
 }>();
 
 const emit = defineEmits(["closeModal"]);
 const page = usePage();
-const toast = useToast();
 
 const handleClose = () => {
     emit("closeModal");
 };
 
-const printReport = async () => {
-    try {
-        // Load receipt printer config (assuming session summary uses receipt printer)
-        await thermalPrinter.loadPrinterConfig("receipt");
-
-        // Connect to printer if not already connected
-        if (!thermalPrinter.isConnected()) {
-            const connected = await thermalPrinter.connectToPrinterType(
-                "receipt"
-            );
-            if (!connected) {
-                toast.add({
-                    severity: "error",
-                    summary: "Printer Error",
-                    detail: "Failed to connect to printer. Please check printer configuration.",
-                    life: 5000,
-                });
-                return;
-            }
-        }
-
-        // Print session summary
-        await thermalPrinter.printSessionSummary(
-            props.sessionSummary,
-            page.props.company_info.company_name,
-            currentBranch?.address || "",
-            currentCashier || "",
-            currentBranch?.tin || "",
-            currentBranch?.registration_number || ""
-        );
-
-        // Show success message
-        toast.add({
-            severity: "success",
-            summary: "Print Success",
-            detail: "Session summary printed successfully",
-            life: 3000,
-        });
-
-        // Close the modal after successful printing
-        emit("closeModal");
-    } catch (error) {
-        console.error("Failed to print session summary:", error);
-        toast.add({
-            severity: "error",
-            summary: "Print Error",
-            detail: "Failed to print session summary. Please try again.",
-            life: 5000,
-        });
-    }
-};
-
 const reportDate = computed(() => new Date().toLocaleDateString());
 
-const grossSales = computed(() => props.sessionSummary?.gross_sales ?? 0);
-const regularDiscount = computed(
-    () => props.sessionSummary?.regular_discount ?? 0
+const grossSales = computed(
+    () => props.sessionSummary?.meta_data?.gross_sales ?? 0
 );
-const pwdDiscount = computed(() => props.sessionSummary?.pwd_discount ?? 0);
 
-const currentBranch = page.props.active_branch as any;
+const currentBranch = computed(() => props.sessionSummary.branch as Branch);
 const currentCashier = (page.props.auth as any)?.user?.name;
+
+const expectedCash = computed(() => {
+    const netSales = props.sessionSummary?.meta_data?.net_sales || 0;
+    const serviceCharge = props.sessionSummary?.meta_data?.service_charge || 0;
+    return netSales + serviceCharge;
+});
+
+const variance = computed(() => {
+    const cashDenominationTotal =
+        props.sessionSummary?.cash_denomination_total || 0;
+    const beginningCash = props.sessionSummary?.beginning_cash || 0;
+    const expectedCashValue = expectedCash.value;
+
+    return cashDenominationTotal - expectedCashValue;
+});
 </script>

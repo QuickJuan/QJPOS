@@ -4,11 +4,13 @@ namespace App\Http\Middleware;
 use App\Models\Branch;
 use App\Models\Cart;
 use App\Models\CashierSession;
+use App\Models\User;
 use App\Services\CartService;
 use App\Services\DiscountService;
 use App\Services\ModifierService;
 use App\Services\GeneralSettingsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -42,8 +44,8 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        $activeBranch = $this->getActiveBranch($request);
-        $openSession  = CashierSession::openSession()->with('cashier')->first();
+
+        // $openSession  = CashierSession::openSession()->with('cashier')->first();
 
         return array_merge(parent::share($request), [
             'flash'                   => [
@@ -53,17 +55,12 @@ class HandleInertiaRequests extends Middleware
                 'sessionSummary' => fn() => $request->session()->get('sessionSummary'),
                 'shouldLogout' => fn() => $request->session()->get('shouldLogout'),
             ],
-            'active_branch'           => $activeBranch,
+
             'auth'                    => [
                 'user' => $request->user(),
             ],
-            'current_cashier_session' => $openSession,
+
             // Receipt Configuration
-            'receipt_headers'         => fn()         => $activeBranch['receipt_headers'] ?? [],
-            'receipt_footers'         => fn()         => $activeBranch['receipt_footer'] ?? [],
-            'bill_footer'             => fn()             => $activeBranch['receipt_footer'] ?? [],
-            // Company Information (Main Site)
-            'company_info'            => fn()            => $this->getCompanyInfo(),
             // Tenant-specific data
              ...$this->getTenantSharedData($request),
             // Main site data
@@ -151,11 +148,21 @@ class HandleInertiaRequests extends Middleware
             return [];
         }
 
+        $activeBranch = $this->getActiveBranch($request);
+        $openSession  = CashierSession::openSession()->with('cashier')->first();
+
         $sharedData = [
             // Tenant-specific services
+            'active_branch'           => $activeBranch,
+            'receipt_headers'         => fn() => $activeBranch['receipt_headers'] ?? [],
+            'receipt_footers'         => fn() => $activeBranch['receipt_footer'] ?? [],
+            'bill_footer'             => fn() => $activeBranch['receipt_footer'] ?? [],
+            'company_info'            => fn() => $this->getCompanyInfo(),
+            'current_cashier_session' => $openSession,
             'available_discounts' =>  $this->loadTenantDiscounts(),
             'cart' => $this->getCartByTableId($request),
-            'availableModifiers' => $this->loadTenantModifiers(),
+            'available_modifiers' => $this->loadTenantModifiers(),
+            'available_servers' => $this->getAvailableServers(),
         ];
 
         return $sharedData;
@@ -200,5 +207,32 @@ class HandleInertiaRequests extends Middleware
         } catch (\Exception $e) {
             return [];
         }
+    }
+
+    /**
+     * Get available servers/waiters with daily cache
+     * Cache key includes tenant ID to ensure tenant isolation
+     */
+    private function getAvailableServers(): array
+    {
+        if (!tenant()) {
+            return [];
+        }
+
+        $tenantId = tenant()->id;
+        $cacheKey = "tenant_{$tenantId}_servers_" . now()->format('Y-m-d');
+
+        return Cache::remember($cacheKey, now()->endOfDay(), function () {
+            try {
+                return User::role(['Server', 'Waiter'])
+                    ->select('id', 'name', 'employee_code')
+                    ->orderBy('name')
+                    ->get()
+                    ->toArray();
+            } catch (\Exception $e) {
+                \Log::error('Failed to load servers: ' . $e->getMessage());
+                return [];
+            }
+        });
     }
 }

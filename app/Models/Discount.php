@@ -14,6 +14,7 @@ class Discount extends Model
         'remove_tax',
         'discount_type',
         'require_customer_info',
+        'sort_order',
     ];
 
     protected $casts = [

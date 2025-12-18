@@ -117,7 +117,8 @@ class DiscountService
 
     public function getAvailableDiscounts()
     {
-        $query = Discount::select('id', 'discount_name', 'type', 'amount', 'discount_type', 'remove_tax', 'require_customer_info');
+        $query = Discount::select('id', 'discount_name', 'type', 'amount', 'discount_type', 'remove_tax', 'require_customer_info', 'sort_order')
+            ->orderBy('sort_order', 'asc');
         return $query->get()->toArray();
     }
 }

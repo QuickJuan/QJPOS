@@ -1047,8 +1047,36 @@ const deletePrinter = () => {
 
 const testPrinter = async (printer) => {
     try {
-        // Update thermal printer service with this printer's config
-        const success = await thermalPrinter.connectToPrinter();
+        // Check if this is a USB printer
+        // USB printers are identified by having no bluetooth_name but having other printer details
+        const isUSBPrinter =
+            !printer.bluetooth_name && !printer.bluetooth_address;
+
+        if (isUSBPrinter) {
+            alert(
+                "USB printer testing is not yet supported. The thermal printer service currently only supports Bluetooth printers.\n\nUSB printer support will be added in a future update."
+            );
+            return;
+        }
+
+        // Load the specific printer configuration into the service
+        await thermalPrinter.loadPrinterConfig(printer.type);
+
+        // Connect to the Bluetooth printer with its configuration
+        const success = await thermalPrinter.connectToPrinter({
+            name: printer.name,
+            type: printer.type,
+            bluetooth_name: printer.bluetooth_name,
+            bluetooth_address: printer.bluetooth_address,
+            service_uuid: printer.service_uuid,
+            characteristic_uuid: printer.characteristic_uuid,
+            paper_size: printer.paper_size,
+            character_width: printer.character_width,
+            is_active: printer.is_active,
+            auto_cut: printer.auto_cut,
+            cut_spacing: printer.cut_spacing,
+        });
+
         if (success) {
             await thermalPrinter.testPrint();
             alert("Test print sent successfully!");
@@ -1161,18 +1189,10 @@ const scanUSBDevices = async () => {
     hasScanned.value = true;
 
     try {
-        // Request USB device with printer vendor IDs
+        // Request USB device - show ALL USB devices by using empty filters
+        // This allows any USB printer to be detected regardless of manufacturer
         const device = await navigator.usb.requestDevice({
-            filters: [
-                { vendorId: 0x04b8 }, // Epson
-                { vendorId: 0x154f }, // Citizen
-                { vendorId: 0x0fe6 }, // ICS Advent (Star Micronics)
-                { vendorId: 0x0519 }, // Star Micronics
-                { vendorId: 0x2730 }, // Rugtek
-                { vendorId: 0x20d1 }, // Rongta
-                { vendorId: 0x0dd4 }, // Deltec
-                // Add more printer vendor IDs as needed
-            ],
+            filters: [], // Empty filters = show all USB devices in the picker
         });
 
         if (device) {

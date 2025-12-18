@@ -1,22 +1,23 @@
 <?php
 namespace App\Services;
 
-use App\Enums\TableRoomStatusType;
-use App\Http\Resources\CartResource;
-use App\Http\Resources\PreparationItemCollectionResource;
-use App\Models\Branch;
-use App\Models\Cart;
-use App\Models\CartItem;
-use App\Models\CashierSession;
-use App\Models\Discount;
-use App\Models\Order;
-use App\Models\Product;
-use App\Models\ProductPackaging;
-use App\Models\TableRoom;
 use Exception;
+use App\Models\Cart;
+use App\Models\User;
+use App\Models\Order;
+use App\Models\Branch;
+use App\Models\Product;
+use App\Models\CartItem;
+use App\Models\Discount;
+use App\Models\TableRoom;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Models\CashierSession;
+use App\Models\ProductPackaging;
+use App\Enums\TableRoomStatusType;
 use Illuminate\Support\Facades\DB;
+use App\Http\Resources\CartResource;
+use Illuminate\Support\Facades\Auth;
+use App\Http\Resources\PreparationItemCollectionResource;
 
 class CartService
 {
@@ -793,13 +794,14 @@ class CartService
                 }
 
                 if ($cart) {
-                    // Update cart items to placed_order
+                    // Update cart items to placed_order and set served_by
                     $cart->cartItems()
                         ->where('placed_order', false)
                         ->where('batch_number', null)
                         ->update([
                             'placed_order' => true,
                             'batch_number' => $orderNumber,
+                            'served_by' => $payload['served_by'],
                         ]);
 
                     $cart->update([
@@ -809,15 +811,20 @@ class CartService
                     // Get only necessary columns to prevent memory exhaustion
                     $cartItems = CartItem::where('cart_id', $cart->id)
                         ->where('batch_number', $orderNumber)
-                        ->select('id', 'cart_id', 'product_id', 'quantity', 'price', 'order_type', 'notes', 'meta_data', 'placed_order', 'batch_number')
+                        ->select('id', 'cart_id', 'product_id', 'quantity', 'price', 'order_type', 'notes', 'meta_data', 'placed_order', 'batch_number', 'served_by')
                         ->get();
 
                     $newOrderItems = new PreparationItemCollectionResource($cartItems);
+
+                    //get served by user where batch number is equal to order number
+
+                    $servedBy = User::where('id', $payload['served_by'])->first() ?? null;
 
 
                     return [
                         'orderNumber'      => $orderNumber,
                         'cart'             => $cart->fresh(['tableRoom']),
+                        'servedBy'         => $servedBy->name ?? 'N/A',
                         'placedOrderItems' => $newOrderItems,
                         'tableRoom'        => $cart->tableRoom,
                         'success'          => true,
@@ -962,6 +969,7 @@ class CartService
             ->with([
                 'cartItems',
                 'cartItems.product',
+                'cartItems.servedBy:id,name',
                 'cashierSession.branch',
                 'customer',
                 'tableRoom.tableRoomLocation',

@@ -37,6 +37,13 @@ Route::middleware([
                 Route::get('/{cartId}/print-bill', 'printBill')->name('print-bill');
             });
 
+        // Users API Routes
+        Route::prefix('/users')
+            ->controller(CartController::class)
+            ->group(function () {
+                Route::get('/servers', 'getServers');
+            });
+
         // Receipt API Routes
         Route::as('receipts.')
             ->prefix('/receipts')

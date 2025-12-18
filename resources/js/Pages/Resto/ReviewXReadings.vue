@@ -666,7 +666,7 @@
                                                                         formatMoney(
                                                                             sessionSummary
                                                                                 .meta_data
-                                                                                ?.total_service_charge ||
+                                                                                ?.service_charge ||
                                                                                 0
                                                                         )
                                                                     }}
@@ -715,6 +715,16 @@
                 </div>
             </div>
         </div>
+
+        <!-- Session Summary Modal -->
+        <SessionSummaryModal
+            :show-session-summary-modal="showSessionSummaryModal"
+            :open-session="activeSession"
+            :session-summary="sessionSummary"
+            :current-user="page.props.auth.user"
+            :general-settings="page.props.company_info"
+            @close-modal="showSessionSummaryModal = false"
+        />
     </CashieringLayout>
 </template>
 
@@ -727,8 +737,8 @@ import PageProps from "@/Types/PageProps";
 import CashieringSession from "@/Types/CashieringSession";
 import Button from "primevue/button";
 import debounce from "lodash/debounce";
-import axios from "axios";
 import CashierSessions from "./Partials/CashierSessions.vue";
+import SessionSummaryModal from "./Partials/SessionSummaryModal.vue";
 import { thermalPrinter } from "@/Services/ThermalPrinterService";
 import { useToast } from "primevue";
 import CashBreakdown from "@/Components/Resto/CashBreakdown.vue";
@@ -822,6 +832,7 @@ const handleDateRangeChange = ([start, end]: [
 
 const activeSession = ref<CashieringSession | null>(null);
 const showActionMenu = ref(false);
+const showSessionSummaryModal = ref(false);
 const sessionSummary = ref<any>(null);
 
 const formatMoney = (amount: number | string) => {
@@ -957,12 +968,14 @@ const handlePrintReport = async () => {
                 "receipt"
             );
             if (!connected) {
+                // Show preview modal instead when printer is not available
                 toast.add({
-                    severity: "error",
-                    summary: "Printer Error",
-                    detail: "Failed to connect to printer. Please check printer configuration.",
-                    life: 5000,
+                    severity: "warn",
+                    summary: "No Printer Available",
+                    detail: "Showing session summary preview instead.",
+                    life: 3000,
                 });
+                showSessionSummaryModal.value = true;
                 return;
             }
         }
@@ -979,12 +992,14 @@ const handlePrintReport = async () => {
         });
     } catch (error) {
         console.error("Failed to print session summary:", error);
+        // Show preview modal on print error
         toast.add({
-            severity: "error",
+            severity: "warn",
             summary: "Print Error",
-            detail: "Failed to print session summary. Please try again.",
-            life: 5000,
+            detail: "Showing session summary preview instead.",
+            life: 3000,
         });
+        showSessionSummaryModal.value = true;
     }
 };
 

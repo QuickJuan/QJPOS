@@ -1,40 +1,3 @@
-<script setup lang="ts">
-import { Head, router, usePage } from "@inertiajs/vue3";
-import { ConfirmPopup, Toast, useToast } from "primevue";
-import { computed } from "vue";
-import { route } from "ziggy-js";
-
-const page = usePage();
-const toast = useToast();
-const activeBranch = computed(() => page.props.active_branch);
-const user = computed(() => page.props.auth.user);
-
-const logout = () => {
-    router.post(
-        route("logout"),
-        {},
-        {
-            onSuccess: () => {
-                toast.add({
-                    severity: "success",
-                    summary: "Logged out",
-                    detail: "You have been successfully logged out.",
-                    life: 3000,
-                });
-            },
-            onError: () => {
-                toast.add({
-                    severity: "error",
-                    summary: "Error",
-                    detail: "There was an error logging out. Please try again.",
-                    life: 4000,
-                });
-            },
-        }
-    );
-};
-</script>
-
 <template>
     <Head title="Home - QJPOS" />
 
@@ -132,3 +95,40 @@ const logout = () => {
         <ConfirmPopup />
     </div>
 </template>
+
+<script setup lang="ts">
+import { Head, router, usePage } from "@inertiajs/vue3";
+import { ConfirmPopup, Toast, useToast } from "primevue";
+import { computed } from "vue";
+import { route } from "ziggy-js";
+
+const page = usePage();
+const toast = useToast();
+const activeBranch = computed(() => page.props.active_branch);
+const user = computed(() => page.props.auth.user);
+
+const logout = () => {
+    router.post(
+        route("logout"),
+        {},
+        {
+            onSuccess: () => {
+                toast.add({
+                    severity: "success",
+                    summary: "Logged out",
+                    detail: "You have been successfully logged out.",
+                    life: 3000,
+                });
+            },
+            onError: () => {
+                toast.add({
+                    severity: "error",
+                    summary: "Error",
+                    detail: "There was an error logging out. Please try again.",
+                    life: 4000,
+                });
+            },
+        }
+    );
+};
+</script>

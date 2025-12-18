@@ -44,15 +44,15 @@ export const useTable = () => {
         );
     };
 
-    const placeOrder = async (tableId: number, cartId: number) => {
+    const placeOrder = async (tableId: number, cartId: number, servedBy: number) => {
         const response = await httpPost(
             route("resto.cart.place-order"),
             {
                 cart_id: cartId,
                 table_id: tableId,
+                served_by: servedBy,
             }
         );
-        console.log("Place Order Response:", response);
        return response;
     };
 

@@ -39,10 +39,10 @@ class ProductCategoryService
      */
     public function getCategoriesWithProductsAsResources()
     {
-        return Cache::remember('categories_with_products_resources', $this->cacheTTL, function () {
-            $categories = $this->getCategoriesWithProducts();
-            return CategoryResource::collection($categories);
-        });
+        // Don't cache the resource collection - only cache the raw data
+        // Resources contain request-specific data and can cause serialization issues
+        $categories = $this->getCategoriesWithProducts();
+        return CategoryResource::collection($categories);
     }
 
     /**
@@ -84,6 +84,6 @@ class ProductCategoryService
     public function clearCache(): void
     {
         Cache::forget('categories_with_products');
-        Cache::forget('categories_with_products_resources');
+        // Removed categories_with_products_resources as it's no longer cached
     }
 }

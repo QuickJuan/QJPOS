@@ -34,6 +34,7 @@ class CartItem extends Model
         'reason',
         'notes',
         'meta_data',
+        'served_by',
     ];
 
     protected $casts = [
@@ -65,6 +66,11 @@ class CartItem extends Model
     public function itemDiscount(): BelongsTo
     {
         return $this->belongsTo(Discount::class);
+    }
+
+    public function servedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'served_by');
     }
 
     public function children(): HasMany

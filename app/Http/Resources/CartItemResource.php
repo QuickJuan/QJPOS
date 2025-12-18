@@ -46,6 +46,7 @@ class CartItemResource extends JsonResource
                         'non_vat_sales'    => $item->non_vat_sales ?? 0,
                         'is_served'        => $item->is_served ?? false,
                         'placed_order'     => $item->placed_order ?? false,
+                        'served_by'        => $item->servedBy?->name ?? null,
                         'selectedOptions'  => $item->meta_data['selected_options'] ?? [],
                         'modifiers'        => $item->meta_data['modifier'] ?? [],
                         'sub_items'        => $this->getSubItems($item->id),

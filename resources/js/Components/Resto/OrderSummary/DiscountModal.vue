@@ -475,6 +475,9 @@ const applyDiscount = () => {
                     detail: page.props.flash.success,
                     life: 3000,
                 });
+
+                // Emit apply event to clear selected items in parent
+                emit("apply", discountData);
             },
             onError: () => {
                 toast.add({

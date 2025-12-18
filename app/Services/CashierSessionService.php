@@ -78,6 +78,15 @@ class CashierSessionService
         $voidOrderItems = $this->orderService->getVoidOrderItemsPerShift($session->id);
         $refundOrders = $this->orderService->getRefundOrdersPerShift($session->id);
         $refundfromOtherShifts = $this->orderService->getRefundAFromOtherShiftOrders($session->cashier_id);
+        $discounts = $this->orderService->getDiscountBreakdownPerShift($session->id);
+
+
+        /**
+         * break down discount base form discount types from order items
+         * use DB query to get sum of discount amount per discount type for a specific shift
+         */
+
+
 
 
         $session->update([
@@ -90,6 +99,8 @@ class CashierSessionService
                 'total_orders'   => (float) $ordersTotals->total_orders,
                 'gross_sales'  => (float) $ordersTotals->total_amount,
                 'item_discount'=> (float) $ordersTotals->item_discount,
+                'discounts'    => $discounts,
+                'service_charge' => (float) $ordersTotals->service_charge,
                 'less_tax'     => (float) $ordersTotals->less_tax,
                 'net_sales'    => (float) $ordersTotals->total_due,
                 'vatable_sales' => (float) $ordersTotals->vatable_sales,
