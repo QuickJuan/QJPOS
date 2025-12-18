@@ -488,7 +488,8 @@ const handleServerConfirm = async (serverId: number) => {
                         await thermalPrinter.printPlacedOrder(
                             response.orderNumber,
                             response.tableRoom?.name || "Table",
-                            response.placedOrderItems
+                            response.placedOrderItems,
+                            response.servedBy
                         );
                     }
                 } else {

@@ -4,11 +4,13 @@ namespace App\Http\Middleware;
 use App\Models\Branch;
 use App\Models\Cart;
 use App\Models\CashierSession;
+use App\Models\User;
 use App\Services\CartService;
 use App\Services\DiscountService;
 use App\Services\ModifierService;
 use App\Services\GeneralSettingsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -159,7 +161,8 @@ class HandleInertiaRequests extends Middleware
             'current_cashier_session' => $openSession,
             'available_discounts' =>  $this->loadTenantDiscounts(),
             'cart' => $this->getCartByTableId($request),
-            'availableModifiers' => $this->loadTenantModifiers(),
+            'available_modifiers' => $this->loadTenantModifiers(),
+            'available_servers' => $this->getAvailableServers(),
         ];
 
         return $sharedData;
@@ -204,5 +207,32 @@ class HandleInertiaRequests extends Middleware
         } catch (\Exception $e) {
             return [];
         }
+    }
+
+    /**
+     * Get available servers/waiters with daily cache
+     * Cache key includes tenant ID to ensure tenant isolation
+     */
+    private function getAvailableServers(): array
+    {
+        if (!tenant()) {
+            return [];
+        }
+
+        $tenantId = tenant()->id;
+        $cacheKey = "tenant_{$tenantId}_servers_" . now()->format('Y-m-d');
+
+        return Cache::remember($cacheKey, now()->endOfDay(), function () {
+            try {
+                return User::role(['Server', 'Waiter'])
+                    ->select('id', 'name', 'employee_code')
+                    ->orderBy('name')
+                    ->get()
+                    ->toArray();
+            } catch (\Exception $e) {
+                \Log::error('Failed to load servers: ' . $e->getMessage());
+                return [];
+            }
+        });
     }
 }

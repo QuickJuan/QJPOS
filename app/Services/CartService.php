@@ -1,22 +1,23 @@
 <?php
 namespace App\Services;
 
-use App\Enums\TableRoomStatusType;
-use App\Http\Resources\CartResource;
-use App\Http\Resources\PreparationItemCollectionResource;
-use App\Models\Branch;
-use App\Models\Cart;
-use App\Models\CartItem;
-use App\Models\CashierSession;
-use App\Models\Discount;
-use App\Models\Order;
-use App\Models\Product;
-use App\Models\ProductPackaging;
-use App\Models\TableRoom;
 use Exception;
+use App\Models\Cart;
+use App\Models\User;
+use App\Models\Order;
+use App\Models\Branch;
+use App\Models\Product;
+use App\Models\CartItem;
+use App\Models\Discount;
+use App\Models\TableRoom;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Models\CashierSession;
+use App\Models\ProductPackaging;
+use App\Enums\TableRoomStatusType;
 use Illuminate\Support\Facades\DB;
+use App\Http\Resources\CartResource;
+use Illuminate\Support\Facades\Auth;
+use App\Http\Resources\PreparationItemCollectionResource;
 
 class CartService
 {
@@ -815,10 +816,15 @@ class CartService
 
                     $newOrderItems = new PreparationItemCollectionResource($cartItems);
 
+                    //get served by user where batch number is equal to order number
+
+                    $servedBy = User::where('id', $payload['served_by'])->first() ?? null;
+
 
                     return [
                         'orderNumber'      => $orderNumber,
                         'cart'             => $cart->fresh(['tableRoom']),
+                        'servedBy'         => $servedBy->name ?? 'N/A',
                         'placedOrderItems' => $newOrderItems,
                         'tableRoom'        => $cart->tableRoom,
                         'success'          => true,
@@ -963,6 +969,7 @@ class CartService
             ->with([
                 'cartItems',
                 'cartItems.product',
+                'cartItems.servedBy:id,name',
                 'cashierSession.branch',
                 'customer',
                 'tableRoom.tableRoomLocation',

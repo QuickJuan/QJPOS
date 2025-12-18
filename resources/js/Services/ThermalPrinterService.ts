@@ -1,6 +1,7 @@
 import { Buffer } from 'buffer';
 import axios from 'axios';
 import moment from 'moment-timezone';
+import { formatMoney } from '@/Utils/FormatMoney';
 
 interface BillData {
     storeName: string;
@@ -34,6 +35,7 @@ interface BillData {
             lessTax?: number | string;
             discount?: number | string;
             discount_amount?: number | string;
+            served_by?: string | null;
             selectedOptions?: Array<{
                 name: string;
                 price: number | string;
@@ -141,6 +143,10 @@ interface SessionSummaryData {
         min_invoice_no: number;
         total_quantity: number;
         vat_exempt_sales: number;
+        discounts?: Array<{
+            discount_name: string;
+            total_discount: string;
+        }>;
         void_order_items: Array<{
             product_id: number;
             description: string | null;
@@ -418,15 +424,6 @@ class ThermalPrinterService {
                 commands.push(...this.stringToBytes(receiptData.branch.name));
                 commands.push(...this.ESC_POS.LINE_FEED);
                 commands.push(...this.ESC_POS.BOLD_ON);
-            }
-
-            // Receipt Headers (from branch configuration)
-            if (receiptData.receiptHeader && Array.isArray(receiptData.receiptHeader)) {
-                commands.push(...this.ESC_POS.BOLD_OFF);
-                receiptData.receiptHeader.forEach((header: string) => {
-                    commands.push(...this.stringToBytes(header));
-                    commands.push(...this.ESC_POS.LINE_FEED);
-                });
             }
 
             // Store address and phone - small size
@@ -982,7 +979,7 @@ class ThermalPrinterService {
             //     commands.push(...this.stringToBytes(this.formatInfoLine('Time:', billData.time)));
             //     commands.push(...this.ESC_POS.LINE_FEED);
             // }
-            commands.push(...this.stringToBytes(this.formatInfoLine('Bill #:', billData.billNumber)));
+            commands.push(...this.stringToBytes(this.formatInfoLine('Bill #:', String(billData.billNumber))));
             commands.push(...this.ESC_POS.LINE_FEED);
             if (billData.cashier) {
                 commands.push(...this.stringToBytes(this.formatInfoLine('Cashier:', billData.cashier.name)));
@@ -1020,6 +1017,12 @@ class ThermalPrinterService {
                     // Main item line
                     commands.push(...this.stringToBytes(item.name));
                     commands.push(...this.ESC_POS.LINE_FEED);
+
+                    // Server name (if available)
+                    if (item.served_by) {
+                        commands.push(...this.stringToBytes(`  Server: ${item.served_by}`));
+                        commands.push(...this.ESC_POS.LINE_FEED);
+                    }
 
                     // Quantity and price line (indented) - always show if we have price and amount
                     const quantity = typeof item.quantity === 'string' ? parseInt(item.quantity) || 1 : (item.quantity || 1);
@@ -1261,16 +1264,45 @@ class ThermalPrinterService {
             // Sales summary
             commands.push(...this.stringToBytes(this.formatTotalLine('Gross Sales:', sessionData.meta_data.gross_sales)));
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatTotalLine('Item Discount:', sessionData.meta_data.item_discount)));
+
+            // Discount breakdown
+            if (sessionData.meta_data.discounts && sessionData.meta_data.discounts.length > 0) {
+                commands.push(...this.ESC_POS.LINE_FEED);
+                commands.push(...this.stringToBytes('DISCOUNT BREAKDOWN'));
+                commands.push(...this.ESC_POS.LINE_FEED);
+                commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+
+                sessionData.meta_data.discounts.forEach(discount => {
+                    const discountAmount = parseFloat(discount.total_discount);
+                    commands.push(...this.stringToBytes(this.formatTotalLine(`  ${discount.discount_name}:`, discountAmount * -1)));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                });
+                commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+            }
+
+            commands.push(...this.stringToBytes(this.formatTotalLine('Total Discount:', sessionData.meta_data.item_discount * -1)));
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatTotalLine('Less Tax:', sessionData.meta_data.less_tax)));
+            commands.push(...this.stringToBytes(this.formatTotalLine('Less Tax:', sessionData.meta_data.less_tax * -1)));
             commands.push(...this.ESC_POS.LINE_FEED);
             commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
             commands.push(...this.ESC_POS.LINE_FEED);
             commands.push(...this.ESC_POS.BOLD_ON);
             commands.push(...this.stringToBytes(this.formatTotalLine('Net Sales:', sessionData.meta_data.net_sales)));
             commands.push(...this.ESC_POS.BOLD_OFF);
+            // Service Charge
+            if (sessionData.meta_data.service_charge && parseFloat(sessionData.meta_data.service_charge) > 0) {
+                commands.push(...this.stringToBytes(this.formatTotalLine('Service Charge:', sessionData.meta_data.service_charge)));
+            }
+
+            //total cash net sales + service charge
+            commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
+            const totalCash = (parseFloat(sessionData.meta_data.net_sales) || 0) + (parseFloat(sessionData.meta_data.service_charge) || 0);
+            commands.push(...this.stringToBytes(this.formatTotalLine('Total Cash:', totalCash)));
             commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+
+            //
 
             // VAT breakdown
             commands.push(...this.stringToBytes('VAT BREAKDOWN'));
@@ -1352,13 +1384,13 @@ class ThermalPrinterService {
             commands.push(...this.ESC_POS.LINE_FEED);
             commands.push(...this.stringToBytes(this.formatTotalLine('Total Sales:', sessionData.total_sales)));
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatTotalLine('Expected Cash:', sessionData.beginning_cash + sessionData.total_sales)));
-            commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.ESC_POS.BOLD_ON);
             commands.push(...this.stringToBytes(this.formatTotalLine('Actual Cash Count:', sessionData.cash_denomination_total)));
             commands.push(...this.ESC_POS.BOLD_OFF);
             commands.push(...this.ESC_POS.LINE_FEED);
-
+            commands.push(...this.stringToBytes(this.formatTotalLine('Expected Cash:', sessionData.beginning_cash + sessionData.total_sales)));
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.ESC_POS.BOLD_ON);
+            commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
             const variance = sessionData.cash_denomination_total - (sessionData.beginning_cash + sessionData.total_sales);
             const varianceLabel = variance >= 0 ? 'Overage:' : 'Shortage:';
             commands.push(...this.stringToBytes(this.formatTotalLine(varianceLabel, Math.abs(variance))));
@@ -1376,7 +1408,7 @@ class ThermalPrinterService {
                     const count = sessionData.cash_denomination_details[denom];
                     if (count && count > 0) {
                         const total = parseFloat(denom) * count;
-                        commands.push(...this.stringToBytes(this.formatInfoLine(`₱${denom} x ${count}:`, this.formatMoney(total))));
+                        commands.push(...this.stringToBytes(this.formatInfoLine(`${denom} x ${count}:`, total.toFixed(2))));
                         commands.push(...this.ESC_POS.LINE_FEED);
                     }
                 });
@@ -1407,7 +1439,7 @@ class ThermalPrinterService {
                 for (let i = 0; i < cutSpacing; i++) {
                     commands.push(...this.ESC_POS.LINE_FEED);
                 }
-                commands.push(...this.ESC_POS.CUT);
+                commands.push(...this.ESC_POS.FULL_CUT);
             } else {
                 // Add some spacing at the end
                 commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
@@ -1492,7 +1524,7 @@ class ThermalPrinterService {
             notes: string;
         }>;
         totalItems: number;
-    }>): Promise<void> {
+    }>, servedBy: string): Promise<void> {
         if (!this.isConnected()) {
             throw new Error('Printer not connected. Please connect first.');
         }
@@ -1519,6 +1551,8 @@ class ThermalPrinterService {
             // Order number
             commands.push(...this.ESC_POS.BOLD_ON);
             commands.push(...this.stringToBytes(`Order #${orderNumber}`));
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.stringToBytes(`Server ${servedBy}`));
             commands.push(...this.ESC_POS.BOLD_OFF);
             commands.push(...this.ESC_POS.LINE_FEED);
 

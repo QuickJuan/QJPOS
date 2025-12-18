@@ -23,7 +23,7 @@ class PaymentService
     {
         try {
             return DB::transaction(function () use ($payload) {
-                $cart = Cart::with(['cartItems', 'tableRoom.tableRoomLocation'])->findOrFail($payload['cart_id']);
+                $cart = Cart::with(['cartItems', 'tableRoom.tableRoomLocation', 'cashierSession'])->findOrFail($payload['cart_id']);
 
                 // Save cart and cart items to order (will throw exception if fails)
                 $order = $this->saveCartToOrder($cart, $payload);
@@ -51,6 +51,7 @@ class PaymentService
                 return $order->load(['orderItems', 'orderItems.product', 'cashierSession.branch', 'customer']);
             });
         } catch (\Exception $e) {
+             info('Settle bill failed', ['error' => $e->getMessage(), 'cartId' => $payload['cart_id']]);
             Log::error('Settle bill failed', ['error' => $e->getMessage(), 'cartId' => $payload['cart_id']]);
             throw $e;
         }
@@ -80,13 +81,20 @@ class PaymentService
         $metaData['change']     = $payload['amount_paid'] - ($totalDue + $serviceCharge);
         $metaData['settled_at'] = now();
 
-        $invoiceNumber = $this->branchService->getNextInvoiceNumber($cart->cashierSession->branch_id);
+        // Get branch_id from cart's cashier session, or fallback to current user's branch
+        $branchId = $cart->cashierSession?->branch_id ?? $cashier->branch_id ?? $cart->branch_id;
+
+        if (!$branchId) {
+            throw new \Exception('Unable to determine branch_id for invoice generation');
+        }
+
+        $invoiceNumber = $this->branchService->getNextInvoiceNumber($branchId);
 
         // Create the order
         return Order::create([
             'invoice_no'         => $invoiceNumber,
             'cashier_id'         => $cashier->id,
-            'cashier_session_id' => $cashier->cashierSession->id,
+            'cashier_session_id' => $cashier->cashierSession?->id ?? $cart->cashier_session_id,
             'bill_no'            => $cart->bill_no,
             'table_room_id'      => $cart->table_room_id,
             'customer_id'        => $cart->customer_id,

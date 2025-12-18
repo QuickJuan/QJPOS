@@ -93,7 +93,6 @@
         <AddModifierModal
             v-model:visible="showAddModifierModal"
             :selected-items="selectedItemsForModal"
-            :modifiers="props.availableModifiers"
             @add="handleModifierAdded"
         />
 
@@ -167,7 +166,7 @@ const props = defineProps<{
     locationType: string | null;
     selectedOrderItem: any;
     // availableDiscounts: any[];
-    // availableModifiers: any[];
+    // available_modifiers: any[];
     tax_rate: number;
     currentTable: any;
     generalSettings: {
@@ -572,6 +571,7 @@ const handleRequiredReason = (data: any) => {
 
 const handleApplyDiscount = (discountData: any) => {
     appliedDiscount.value = discountData;
+    // Clear selected items after applying discount
     selectedItemsForDiscount.value = [];
 };
 

@@ -53,7 +53,6 @@ export const useTable = () => {
                 served_by: servedBy,
             }
         );
-        console.log("Place Order Response:", response);
        return response;
     };
 

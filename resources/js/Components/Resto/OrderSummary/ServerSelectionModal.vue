@@ -25,7 +25,6 @@
                     option-value="id"
                     placeholder="Select a server"
                     class="w-full"
-                    :loading="loading"
                     filter
                     show-clear
                 />
@@ -55,11 +54,12 @@
 import { ref, computed, watch } from "vue";
 import Dialog from "primevue/dialog";
 import Select from "primevue/select";
-import { httpGet } from "@/Utils/axiosHelper";
+import { usePage } from "@inertiajs/vue3";
 
 interface Server {
     id: number;
     name: string;
+    employee_code?: string;
 }
 
 const props = defineProps<{
@@ -72,42 +72,29 @@ const emit = defineEmits<{
     cancel: [];
 }>();
 
+const page = usePage();
+
 const visible = computed({
     get: () => props.visible,
     set: (value) => emit("update:visible", value),
 });
 
 const selectedServerId = ref<number | null>(null);
-const servers = ref<Server[]>([]);
-const loading = ref(false);
 
-// Fetch servers when modal opens
+// Get servers from shared Inertia data (cached daily)
+const servers = computed<Server[]>(() => {
+    return (page.props.available_servers as Server[]) || [];
+});
+
+// Reset selection when modal closes
 watch(
     () => props.visible,
-    async (isVisible) => {
-        if (isVisible && servers.value.length === 0) {
-            await fetchServers();
-        }
+    (isVisible) => {
         if (!isVisible) {
-            // Reset selection when modal closes
             selectedServerId.value = null;
         }
     }
 );
-
-const fetchServers = async () => {
-    loading.value = true;
-    try {
-        const response = await httpGet("/api/users/servers");
-        if (response.success) {
-            servers.value = response.data;
-        }
-    } catch (error) {
-        console.error("Failed to fetch servers:", error);
-    } finally {
-        loading.value = false;
-    }
-};
 
 const handleConfirm = () => {
     if (selectedServerId.value) {

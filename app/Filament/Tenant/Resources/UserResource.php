@@ -10,12 +10,15 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Spatie\Permission\Models\Role;
 
 class UserResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-users';
+
+    protected static ?string $navigationGroup = 'System';
 
     public static function form(Form $form): Form
     {
@@ -30,6 +33,11 @@ class UserResource extends Resource
                     ->required()
                     ->unique('users', 'email', ignoreRecord: true)
                     ->maxLength(255),
+
+                TextInput::make('employee_code')
+                    ->label('Employee Code')
+                    ->maxLength(255)
+                    ->unique('users', 'employee_code', ignoreRecord: true),
 
                 TextInput::make('password')
                     ->password()
@@ -47,6 +55,15 @@ class UserResource extends Resource
                     ->searchable()
                     ->preload()
                     ->placeholder('Select a branch'),
+
+                Select::make('roles')
+                    ->label('Roles')
+                    ->relationship('roles', 'name')
+                    ->multiple()
+                    ->preload()
+                    ->searchable()
+                    ->placeholder('Select roles')
+                    ->helperText('Assign one or more roles to this user'),
             ]);
     }
 
@@ -62,15 +79,44 @@ class UserResource extends Resource
                     ->sortable()
                     ->searchable(),
 
-                TextColumn::make('branches.name')
+                TextColumn::make('employee_code')
+                    ->label('Employee Code')
+                    ->sortable()
+                    ->searchable()
+                    ->toggleable(),
+
+                TextColumn::make('roles.name')
+                    ->label('Roles')
+                    ->badge()
+                    ->color('success')
                     ->sortable()
                     ->searchable(),
+
+                TextColumn::make('branches.name')
+                    ->label('Branches')
+                    ->badge()
+                    ->sortable()
+                    ->searchable(),
+
+                TextColumn::make('created_at')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('roles')
+                    ->relationship('roles', 'name')
+                    ->multiple()
+                    ->label('Filter by Role'),
+
+                Tables\Filters\SelectFilter::make('branches')
+                    ->relationship('branches', 'name')
+                    ->multiple()
+                    ->label('Filter by Branch'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

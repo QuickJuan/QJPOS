@@ -48,6 +48,13 @@ class DiscountResource extends Resource
 
                 Toggle::make('require_customer_info')
                     ->default(false),
+
+                TextInput::make('sort_order')
+                    ->label('Sort Order')
+                    ->numeric()
+                    ->default(0)
+                    ->minValue(0)
+                    ->required(),
             ]);
     }
 
@@ -77,7 +84,13 @@ class DiscountResource extends Resource
 
                 IconColumn::make('require_customer_info')
                     ->sortable(),
+
+                TextColumn::make('sort_order')
+                    ->label('Sort Order')
+                    ->sortable()
+                    ->toggleable(),
             ])
+            ->defaultSort('sort_order', 'asc')
             ->filters([
                 //
             ])

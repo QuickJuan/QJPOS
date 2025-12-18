@@ -81,8 +81,8 @@ class BranchResource extends Resource
                     ->searchable()
                     ->preload(),
 
-                TextInput::make('or_number')
-                    ->label('OR Number')
+                TextInput::make('invoice_no')
+                    ->label('Invoice Number')
                     ->nullable()
                     ->maxLength(100),
 
