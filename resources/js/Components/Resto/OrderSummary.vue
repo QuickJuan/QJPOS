@@ -37,7 +37,6 @@
 
         <!-- Action Buttons -->
         <ActionButtons
-            :selected-order-type="selectedOrderType"
             :order-items="orderItems"
             :table-id="tableId"
             :location-type="locationTypeValue"

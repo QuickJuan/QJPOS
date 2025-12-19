@@ -197,6 +197,11 @@ const confirmCloseSession = async (data: any) => {
             detail: result.data.message || "Session closed successfully",
             life: 3000,
         });
+
+        // Logout after showing the summary modal
+        setTimeout(() => {
+            router.post(route("logout"));
+        }, 2000);
     } else {
         toast.add({
             severity: "error",

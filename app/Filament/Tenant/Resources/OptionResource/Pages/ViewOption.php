@@ -33,25 +33,29 @@ class ViewOption extends ViewRecord
                         TextEntry::make('option_name')
                             ->label('Option Name'),
 
+                        TextEntry::make('product.name')
+                            ->label('Product')
+                            ->badge()
+                            ->color('primary'),
+
+                        TextEntry::make('max_quantity')
+                            ->label('Max Quantity')
+                            ->badge()
+                            ->color('info'),
+
+                        TextEntry::make('is_default')
+                            ->label('Is Default')
+                            ->badge()
+                            ->formatStateUsing(fn ($state) => $state ? 'Yes' : 'No')
+                            ->color(fn ($state) => $state ? 'success' : 'gray'),
+
                         ImageEntry::make('featured_image')
                             ->label('Featured Image')
                             ->getStateUsing(fn($record) => $record->getFirstMediaUrl('featured_image'))
-                            ->square(),
+                            ->square()
+                            ->columnSpanFull(),
                     ])
-                    ->columns(1),
-
-                Section::make('Associated Products')
-                    ->schema([
-                        TextEntry::make('products')
-                            ->label('Products')
-                            ->formatStateUsing(fn($record) =>
-                                $record->products
-                                    ->unique('id')
-                                    ->pluck('name')
-                                    ->implode('<br>')
-                            )
-                            ->html(),
-                    ]),
+                    ->columns(2),
             ]);
     }
 }

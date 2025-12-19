@@ -3,10 +3,12 @@ import { router, usePage } from "@inertiajs/vue3";
 import { route } from "ziggy-js";
 import { useToast } from "primevue";
 import PageProps from "@/Types/PageProps";
+import { useOrderStore } from "@/stores/orderStore";
 
 export const useProduct = () => {
     const page = usePage<PageProps>();
     const toast = useToast();
+    const orderStore = useOrderStore();
 
     const showPackagingModal = ref(false);
     const selectedProductForPackaging = ref<any>(null);
@@ -19,12 +21,28 @@ export const useProduct = () => {
             selectedOrderType?: string;
         } = {}
     ) => {
-        const { tableId = null, selectedOrderType = "dine-in" } = options;
+        // Use order type from store, fallback to options parameter, then default to dine-in
+        const selectedOrderType = orderStore.selectedOrderType || options.selectedOrderType || "dine-in";
+        const { tableId = null } = options;
+
+        // Check if product has options that require user selection (is_default = false)
+        const hasNonDefaultOptions = product.options?.some((option: any) => !option.is_default);
+
+        // Prepare default options to auto-add
+        const defaultOptions = product.options
+            ?.filter((option: any) => option.is_default)
+            .map((option: any) => ({
+                option_id: option.id,
+                option_name: option.option_name,
+                max_quantity: option.max_quantity,
+                is_default: true,
+                items: option.optionItems || [],
+            })) || [];
 
         if (packaging) {
             // Packaging already selected, proceed
-            if (product.options && product.options.length > 0) {
-                // Has options, redirect to options page with packaging
+            if (hasNonDefaultOptions) {
+                // Has options that need user selection, redirect to options page with packaging
                 router.visit(
                     route("resto.product.options", {
                         product: product.id,
@@ -34,7 +52,7 @@ export const useProduct = () => {
                     })
                 );
             } else {
-                // No options, add to cart with packaging
+                // No user-selectable options or only default options, add to cart with packaging
                 router.post(
                     route("resto.cart.add"),
                     {
@@ -44,7 +62,7 @@ export const useProduct = () => {
                         table_id: tableId,
                         total_price: parseFloat(packaging.price || 0),
                         order_type: selectedOrderType,
-                        selected_options: [],
+                        selected_options: defaultOptions,
                     },
                     {
                         preserveScroll: false,
@@ -72,8 +90,8 @@ export const useProduct = () => {
                 if (product.product_packagings.length === 1) {
                     // Auto-select the single packaging
                     const packaging = product.product_packagings[0];
-                    if (product.options && product.options.length > 0) {
-                        // Has options, redirect to options page with packaging
+                    if (hasNonDefaultOptions) {
+                        // Has options that need user selection, redirect to options page with packaging
                         router.visit(
                             route("resto.product.options", {
                                 product: product.id,
@@ -83,7 +101,7 @@ export const useProduct = () => {
                             })
                         );
                     } else {
-                        // No options, add to cart with packaging
+                        // No user-selectable options or only default options, add to cart with packaging
                         router.post(
                             route("resto.cart.add"),
                             {
@@ -93,7 +111,7 @@ export const useProduct = () => {
                                 table_id: tableId,
                                 total_price: parseFloat(packaging.price || 0),
                                 order_type: selectedOrderType,
-                                selected_options: [],
+                                selected_options: defaultOptions,
                             },
                             {
                                 preserveScroll: false,
@@ -121,7 +139,7 @@ export const useProduct = () => {
                 }
             } else {
                 // No packaging, check options
-                if (product.options && product.options.length > 0) {
+                if (hasNonDefaultOptions) {
                     // Redirect to options page
                     router.visit(
                         route("resto.product.options", {
@@ -131,7 +149,7 @@ export const useProduct = () => {
                         })
                     );
                 } else {
-                    // No options, add to cart without packaging
+                    // No user-selectable options or only default options, add to cart without packaging
                     router.post(
                         route("resto.cart.add"),
                         {
@@ -141,7 +159,7 @@ export const useProduct = () => {
                             table_id: tableId,
                             total_price: parseFloat(product.average_cost || "0"),
                             order_type: selectedOrderType,
-                            selected_options: [],
+                            selected_options: defaultOptions,
                         },
                         {
                             preserveScroll: false,

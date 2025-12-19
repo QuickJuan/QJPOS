@@ -16,9 +16,10 @@ class OptionResource extends JsonResource
         return [
             'id'           => $this->id,
             'option_name'  => $this->option_name,
-            'max_quantity' => $this->products->max('pivot.max_quantity'),
-            'is_default'   => (bool) $this->products->max('pivot.is_default'),
-            'products'     => $this->products,
+            'product_id'   => $this->product_id,
+            'max_quantity' => $this->max_quantity,
+            'is_default'   => (bool) $this->is_default,
+            'product'      => $this->whenLoaded('product'),
             'optionItems'  => $this->whenLoaded('optionItems'),
             'optionImage'  => $this->getFirstMediaUrl('featured_image'),
         ];

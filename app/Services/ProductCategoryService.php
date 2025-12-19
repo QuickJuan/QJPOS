@@ -15,6 +15,22 @@ class ProductCategoryService
     }
 
     /**
+     * Get only categories (without products) for lightweight initial load
+     *
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function getCategoriesOnly()
+    {
+        return Cache::remember('categories_only', $this->cacheTTL, function () {
+            return $this->model
+                ->select('id', 'name', 'slug')
+                ->with('media')
+                ->whereHas('products', fn($query) => $query->where('is_active', true))
+                ->get();
+        });
+    }
+
+    /**
      * Get all categories with active products
      *
      * @return \Illuminate\Database\Eloquent\Collection
@@ -86,6 +102,37 @@ class ProductCategoryService
     }
 
     /**
+     * Get products for a specific category with all necessary relations
+     *
+     * @param string $categorySlug
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function getProductsForCategory($categorySlug)
+    {
+        $cacheKey = "category_{$categorySlug}_products";
+
+        return Cache::remember($cacheKey, $this->cacheTTL, function () use ($categorySlug) {
+            $category = $this->model->where('slug', $categorySlug)->first();
+
+            if (!$category) {
+                return collect([]);
+            }
+
+            return $category->products()
+                ->where('is_active', true)
+                ->select('id', 'name', 'average_cost', 'receipt_alias', 'description', 'category_id', 'brand_id', 'total_onhand', 'price', 'unit_measure', 'multiple_packaging', 'uuid')
+                ->with([
+                    'productPackagings' => fn($q) => $q->with('media'),
+                    'options.optionItems.product.media',
+                    'options.optionItems.product.productPackagings',
+                    'options.optionItems.productPackaging',
+                    'media'
+                ])
+                ->get();
+        });
+    }
+
+    /**
      * Clear categories cache
      * Call this method when categories or products are updated
      *
@@ -94,6 +141,12 @@ class ProductCategoryService
     public function clearCache(): void
     {
         Cache::forget('categories_with_products');
-        // Removed categories_with_products_resources as it's no longer cached
+        Cache::forget('categories_only');
+
+        // Clear individual category product caches (use slug)
+        $categories = $this->model->select('slug')->get();
+        foreach ($categories as $category) {
+            Cache::forget("category_{$category->slug}_products");
+        }
     }
 }

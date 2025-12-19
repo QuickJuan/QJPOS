@@ -2,7 +2,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
@@ -13,6 +13,13 @@ class Option extends Model implements HasMedia
 
     protected $fillable = [
         'option_name',
+        'product_id',
+        'max_quantity',
+        'is_default',
+    ];
+
+    protected $casts = [
+        'is_default' => 'boolean',
     ];
 
     public function registerMediaCollections(): void
@@ -25,10 +32,8 @@ class Option extends Model implements HasMedia
         return $this->hasMany(OptionItem::class);
     }
 
-    public function products(): BelongsToMany
+    public function product(): BelongsTo
     {
-        return $this->belongsToMany(Product::class, 'option_product')
-            ->withPivot(['max_quantity', 'is_default'])
-            ->withTimestamps();
+        return $this->belongsTo(Product::class);
     }
 }

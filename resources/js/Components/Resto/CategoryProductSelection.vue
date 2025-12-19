@@ -8,7 +8,7 @@
     >
         <!-- Categories View - Full Screen -->
         <div
-            v-if="selectedCategoryId === null"
+            v-if="!selectedCategorySlug"
             class="h-full overflow-y-auto p-3 sm:p-4 lg:p-6"
         >
             <h2
@@ -61,6 +61,7 @@
 
         <!-- Products View - Shown when category selected -->
         <div v-else class="h-full overflow-y-auto">
+            <!-- Products Display -->
             <ProductThumbnails
                 :products="filteredProducts"
                 :category-name="selectedCategoryName"
@@ -83,6 +84,7 @@
 import { computed, ref } from "vue";
 import { router } from "@inertiajs/vue3";
 import { route } from "ziggy-js";
+import { useToast } from "primevue/usetoast";
 import Category from "@/Types/Category";
 import ProductThumbnails from "@/Components/Resto/ProductThumbnails.vue";
 import PackagingSelectionModal from "@/Components/Resto/PackagingSelectionModal.vue";
@@ -92,10 +94,13 @@ import DessertIcon from "@/Components/icons/CashierIcons/DessertIcon.vue";
 import ShoppingBagIcon from "@/Components/icons/CashierIcons/ShoppingBagIcon.vue";
 import { useProduct } from "@/composables/useProduct";
 import { useProductStore } from "@/stores/productStore";
+import { useOrderStore } from "@/stores/orderStore";
 
 const props = defineProps<{
     categories: { data: Category[] } | Category[];
     selectedCategorySlug?: string | null;
+    products?: any[];
+    categoryName?: string;
     cachedCategories: Category[];
     tableId: string | number;
     locationType: string | null;
@@ -104,6 +109,8 @@ const props = defineProps<{
 
 // Initialize stores and composables
 const productStore = useProductStore();
+const orderStore = useOrderStore();
+const toast = useToast();
 const {
     addToCart,
     showPackagingModal,
@@ -158,45 +165,62 @@ const selectedCategoryId = computed(() => {
     return category?.id || null;
 });
 
-// Get filtered products based on selected category
+// Get filtered products from props
 const filteredProducts = computed(() => {
-    if (selectedCategoryId.value === null) {
-        return activeCategories.value.flatMap(
-            (category) => category.products || []
-        );
+    // Handle both direct array and data wrapper from API resources
+    if (Array.isArray(props.products)) {
+        return props.products;
+    } else if (
+        props.products &&
+        typeof props.products === "object" &&
+        "data" in props.products
+    ) {
+        return props.products.data;
     }
-    const selectedCategory = activeCategories.value.find(
-        (cat) => cat.id === selectedCategoryId.value
-    );
-    return selectedCategory?.products || [];
+    return [];
 });
 
 // Get selected category name
 const selectedCategoryName = computed(() => {
-    if (selectedCategoryId.value === null) {
-        return null;
-    }
-    const category = activeCategories.value.find(
-        (cat) => cat.id === selectedCategoryId.value
-    );
-    return category?.name || "Unknown Category";
+    return props.categoryName || "Unknown Category";
 });
 
-// Handle category selection - NO backend fetch, just update local state
+// Handle category selection - Navigate via Inertia
 const handleCategorySelection = (category: Category) => {
-    selectedCategorySlug.value = category.slug;
+    if (category.slug) {
+        router.get(
+            route("resto.category", { categorySlug: category.slug }),
+            {
+                tableId: props.tableId,
+                orderType: orderStore.selectedOrderType || "dine-in",
+            },
+            {
+                preserveState: false,
+                preserveScroll: false,
+            }
+        );
+    }
 };
 
-// Back to categories - NO backend fetch, just clear selection
+// Back to categories - Navigate back to main resto page
 const backToCategories = () => {
-    selectedCategorySlug.value = null;
+    router.get(
+        route("resto.index"),
+        {
+            tableId: props.tableId,
+            orderType: orderStore.selectedOrderType || "dine-in",
+        },
+        {
+            preserveState: false,
+            preserveScroll: false,
+        }
+    );
 };
 
 // Handle adding product to cart
 const handleAddToCart = (product: any, packaging?: any) => {
     addToCart(product, packaging, {
         tableId: props.tableId,
-        selectedOrderType: props.selectedOrderType || "dine-in",
     });
 };
 
@@ -206,7 +230,6 @@ const handlePackagingConfirm = (packaging: any) => {
     if (product) {
         addToCart(product, packaging, {
             tableId: props.tableId,
-            selectedOrderType: props.selectedOrderType || "dine-in",
         });
     }
     showPackagingModal.value = false;

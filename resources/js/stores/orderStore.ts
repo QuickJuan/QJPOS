@@ -61,6 +61,7 @@ export const useOrderStore = defineStore('order', () => {
         const params = new URLSearchParams(window.location.search);
         const urlTableId = params.get('tableId');
         const urlLocationType = params.get('locationType');
+        const urlOrderType = params.get('orderType');
 
         if (urlTableId) {
             tableId.value = parseInt(urlTableId);
@@ -68,6 +69,26 @@ export const useOrderStore = defineStore('order', () => {
         if (urlLocationType) {
             locationType.value = urlLocationType;
         }
+        if (urlOrderType) {
+            selectedOrderType.value = urlOrderType;
+        } else {
+            // Default to dine-in if not specified
+            selectedOrderType.value = 'dine-in';
+        }
+    }
+
+    function updateUrlParams() {
+        const params = new URLSearchParams(window.location.search);
+
+        if (selectedOrderType.value) {
+            params.set('orderType', selectedOrderType.value);
+        }
+        if (tableId.value) {
+            params.set('tableId', tableId.value.toString());
+        }
+
+        const newUrl = `${window.location.pathname}?${params.toString()}`;
+        window.history.replaceState({}, '', newUrl);
     }
 
     function reset() {
@@ -98,6 +119,7 @@ export const useOrderStore = defineStore('order', () => {
         setLocationType,
         setSelectedOrderItem,
         initializeFromUrl,
+        updateUrlParams,
         reset,
     };
 });

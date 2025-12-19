@@ -34,6 +34,14 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
+
+        // Debug logging
+        \Log::info('Login attempt', [
+            'session_id' => $request->session()->getId(),
+            'csrf_token' => $request->session()->token(),
+            'has_user' => (bool) $request->user(),
+        ]);
+
         $request->validate([
             'email'    => 'required|email',
             'password' => 'required',
@@ -81,19 +89,23 @@ class AuthController extends Controller
         }
 
         // Invalidate all other sessions for this user (logout from other devices)
-        $this->invalidateUserSessions($user);
+        // Commented out for file-based sessions - only works with database sessions
+        // $this->invalidateUserSessions($user);
 
         // Update the user's current branch_id
         $user->update(['branch_id' => $branch->id]);
 
         Auth::login($user);
 
-        // // Regenerate session to prevent session fixation and refresh CSRF token
-        // session()->regenerate();
+        // Save session explicitly before redirecting
+        $request->session()->save();
 
-        // // Save the selected branch ID in the session
-        // session(['active_branch' => $branch]);
+        \Log::info('Login successful', [
+            'user_id' => $user->id,
+            'session_id' => $request->session()->getId(),
+        ]);
 
+        // Use standard redirect - session is already persisted
         return redirect()->route('home');
     }
 

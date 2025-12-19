@@ -186,10 +186,12 @@
                 v-if="tableId"
                 :categories="props.categories"
                 :selected-category-slug="props.selectedCategorySlug"
+                :products="props.products"
+                :category-name="props.categoryName"
                 :cached-categories="cachedCategories"
                 :table-id="tableId"
                 :location-type="locationType"
-                :selected-order-type="selectedOrderType"
+                :selected-order-type="orderStore.selectedOrderType"
             />
 
             <!-- Right: Order Summary - Sidebar on mobile/tablet, fixed position on desktop -->
@@ -232,16 +234,24 @@ import OrderSummary from "@/Components/Resto/OrderSummary.vue";
 import CashieringLayout from "@/Layouts/CashieringLayout.vue";
 import CategoryProductSelection from "@/Components/Resto/CategoryProductSelection.vue";
 import { useCashierCache } from "@/composables/useCashierCache";
+import { useOrderStore } from "@/stores/orderStore";
 import { ShoppingCartIcon } from "@heroicons/vue/24/outline";
 
 const props = defineProps<{
     categories: { data: Category[] } | Category[];
     selectedCategorySlug?: string | null;
+    products?: any[];
+    categoryName?: string;
     currentTable: any;
+    tableId?: string | number;
+    orderType?: string;
 }>();
 
 const page = usePage<PageProps>();
 const toast = useToast();
+
+// Use order store for managing order type and other order-related state
+const orderStore = useOrderStore();
 
 // Get company settings from shared data
 const generalSettings = computed(
@@ -256,9 +266,8 @@ const generalSettings = computed(
 
 // Get cart from shared data
 const sharedCart = computed(() => page.props.cart);
-const tableId = ref(null);
+const tableId = ref(props.tableId || null);
 const locationType = ref(null);
-const selectedOrderType = ref<string | null>(null);
 const selectedOrderItem = ref<any>(null);
 const showOrderSummary = ref(false);
 const receiptData = ref({
@@ -291,7 +300,8 @@ const cartCount = computed(() => {
 });
 // handle order type selection
 const handleOrderType = (type: string) => {
-    selectedOrderType.value = type;
+    orderStore.setOrderType(type);
+    orderStore.updateUrlParams();
 };
 
 // Toggle order summary sidebar
@@ -346,6 +356,21 @@ const handleShowReceipt = (data: any) => {
 
 // Check for pending cashiering on mount
 onMounted(() => {
+    // Initialize order store from URL params
+    orderStore.initializeFromUrl();
+
+    // Get the tableId and locationType from URL if available (only if not already set from props)
+    const params = new URLSearchParams(window.location.search);
+    const urlTableId = params.get("tableId");
+    const urlLocationType = params.get("locationType");
+
+    if (!tableId.value && urlTableId) {
+        tableId.value = urlTableId;
+    }
+    if (!locationType.value && urlLocationType) {
+        locationType.value = urlLocationType;
+    }
+
     const getCategoriesData = (): Category[] => {
         if (Array.isArray(props.categories)) {
             return props.categories;
@@ -376,13 +401,5 @@ onMounted(() => {
     if (props.availableDiscounts && props.availableDiscounts.length > 0) {
         loadDiscounts(props.availableDiscounts);
     }
-
-    // Get the tableId in URL if available
-    const params = new URLSearchParams(window.location.search);
-    const urlTableId = params.get("tableId");
-    const urlLocationType = params.get("locationType");
-
-    tableId.value = urlTableId;
-    locationType.value = urlLocationType;
 });
 </script>

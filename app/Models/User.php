@@ -93,6 +93,78 @@ class User extends Authenticatable
         return $this->branches()->where('branches.id', $branch->id)->exists();
     }
 
+    /**
+     * Override roles relationship to only work in tenant context
+     */
+    public function roles(): BelongsToMany
+    {
+        if (!function_exists('tenancy') || !tenancy()->initialized) {
+            return $this->belongsToMany(
+                config('permission.models.role'),
+                config('permission.table_names.model_has_roles'),
+                'model_id',
+                'role_id'
+            )->where('id', 0); // Return empty relationship
+        }
+
+        // Call the trait's roles method
+        return $this->morphToMany(
+            config('permission.models.role'),
+            'model',
+            config('permission.table_names.model_has_roles'),
+            config('permission.column_names.model_morph_key'),
+            'role_id'
+        );
+    }
+
+    /**
+     * Override permissions relationship to only work in tenant context
+     */
+    public function permissions(): BelongsToMany
+    {
+        if (!function_exists('tenancy') || !tenancy()->initialized) {
+            return $this->belongsToMany(
+                config('permission.models.permission'),
+                config('permission.table_names.model_has_permissions'),
+                'model_id',
+                'permission_id'
+            )->where('id', 0); // Return empty relationship
+        }
+
+        // Call the trait's permissions method
+        return $this->morphToMany(
+            config('permission.models.permission'),
+            'model',
+            config('permission.table_names.model_has_permissions'),
+            config('permission.column_names.model_morph_key'),
+            'permission_id'
+        );
+    }
+
+    /**
+     * Safe hasRole method for central domain
+     */
+    public function hasRole($roles, string $guard = null): bool
+    {
+        if (!function_exists('tenancy') || !tenancy()->initialized) {
+            return false;
+        }
+
+        return parent::hasRole($roles, $guard);
+    }
+
+    /**
+     * Safe hasPermissionTo method for central domain
+     */
+    public function hasPermissionTo($permission, $guardName = null): bool
+    {
+        if (!function_exists('tenancy') || !tenancy()->initialized) {
+            return false;
+        }
+
+        return parent::hasPermissionTo($permission, $guardName);
+    }
+
     public function inventoryLogs(): HasMany
     {
         return $this->hasMany(InventoryLog::class);
