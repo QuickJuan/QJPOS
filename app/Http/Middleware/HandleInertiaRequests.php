@@ -74,18 +74,26 @@ class HandleInertiaRequests extends Middleware
      */
     private function getActiveBranch(Request $request): ?array
     {
-        if (! $request->user()) {
+        try {
+            if (! $request->user()) {
+                return null;
+            }
+
+            // Get the current user's active cashier session
+            $branch = Branch::find($request->user()->branch_id);
+
+            if (! $branch) {
+                return null;
+            }
+
+            return $branch->toArray();
+        } catch (\Exception $e) {
+            \Log::error('Failed to load active branch in HandleInertiaRequests: ' . $e->getMessage(), [
+                'user_id' => $request->user()?->id,
+                'line' => $e->getLine(),
+            ]);
             return null;
         }
-
-        // Get the current user's active cashier session
-        $branch = Branch::find($request->user()->branch_id);
-
-        if (! $branch) {
-            return null;
-        }
-
-        return $branch->toArray();
     }
 
     /**
@@ -133,6 +141,10 @@ class HandleInertiaRequests extends Middleware
 
             return $cart ? $cart->toArray() : null;
         } catch (\Exception $e) {
+            \Log::error('Failed to load cart in HandleInertiaRequests: ' . $e->getMessage(), [
+                'tableId' => $tableId,
+                'line' => $e->getLine(),
+            ]);
             return null;
         }
     }
@@ -148,21 +160,34 @@ class HandleInertiaRequests extends Middleware
             return [];
         }
 
-        $activeBranch = $this->getActiveBranch($request);
-        $openSession  = CashierSession::openSession()->with('cashier')->first();
-
         $sharedData = [
-            // Tenant-specific services
-            'active_branch'           => $activeBranch,
-            'receipt_headers'         => fn() => $activeBranch['receipt_headers'] ?? [],
-            'receipt_footers'         => fn() => $activeBranch['receipt_footer'] ?? [],
-            'bill_footer'             => fn() => $activeBranch['receipt_footer'] ?? [],
+            // Tenant-specific services - wrap in closures to lazy load
+            'active_branch'           => fn() => $this->getActiveBranch($request),
+            'receipt_headers'         => function() use ($request) {
+                $branch = $this->getActiveBranch($request);
+                return $branch['receipt_headers'] ?? [];
+            },
+            'receipt_footers'         => function() use ($request) {
+                $branch = $this->getActiveBranch($request);
+                return $branch['receipt_footer'] ?? [];
+            },
+            'bill_footer'             => function() use ($request) {
+                $branch = $this->getActiveBranch($request);
+                return $branch['receipt_footer'] ?? [];
+            },
             'company_info'            => fn() => $this->getCompanyInfo(),
-            'current_cashier_session' => $openSession,
-            'available_discounts' =>  $this->loadTenantDiscounts(),
-            'cart' => $this->getCartByTableId($request),
-            'available_modifiers' => $this->loadTenantModifiers(),
-            'available_servers' => $this->getAvailableServers(),
+            'current_cashier_session' => function() {
+                try {
+                    return CashierSession::openSession()->with('cashier')->first();
+                } catch (\Exception $e) {
+                    \Log::error('Failed to load cashier session: ' . $e->getMessage());
+                    return null;
+                }
+            },
+            'available_discounts' => fn() => $this->loadTenantDiscounts(),
+            'cart' => fn() => $this->getCartByTableId($request),
+            'available_modifiers' => fn() => $this->loadTenantModifiers(),
+            'available_servers' => fn() => $this->getAvailableServers(),
         ];
 
         return $sharedData;
@@ -192,6 +217,7 @@ class HandleInertiaRequests extends Middleware
         try {
             return app(DiscountService::class)->getAvailableDiscounts() ?? [];
         } catch (\Exception $e) {
+            \Log::error('Failed to load discounts in HandleInertiaRequests: ' . $e->getMessage());
             return [];
         }
     }
@@ -202,16 +228,16 @@ class HandleInertiaRequests extends Middleware
     public function loadTenantModifiers(): array
     {
         try {
-
             return app(ModifierService::class)->getAvailableModifiers() ?? [];
         } catch (\Exception $e) {
+            \Log::error('Failed to load modifiers in HandleInertiaRequests: ' . $e->getMessage());
             return [];
         }
     }
 
     /**
      * Get available servers/waiters
-     * Direct query from User model with Server/Waiter roles
+     * Use direct database query to avoid Spatie Permission scope issues
      */
     private function getAvailableServers(): array
     {
@@ -220,13 +246,19 @@ class HandleInertiaRequests extends Middleware
         }
 
         try {
-            return User::role(['Server', 'Waiter'])
+            return User::whereHas('roles', function($query) {
+                    $query->whereIn('name', ['Server', 'Waiter']);
+                })
                 ->select('id', 'name', 'employee_code')
                 ->orderBy('name')
                 ->get()
                 ->toArray();
         } catch (\Exception $e) {
-            \Log::error('Failed to load servers: ' . $e->getMessage());
+            \Log::error('Failed to load servers in HandleInertiaRequests: ' . $e->getMessage(), [
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+            // Return empty array on error to prevent 502
             return [];
         }
     }
