@@ -21,11 +21,21 @@ class ProductCategoryService
      */
     public function getCategoriesWithProducts()
     {
+        // Increase memory limit and execution time for this operation
+        ini_set('memory_limit', '512M');
+        set_time_limit(120);
+
         return Cache::remember('categories_with_products', $this->cacheTTL, function () {
             return $this->model->with([
+                'media', // Eager load category media
                 'products' => fn($query) => $query
                     ->where('is_active', true)
-                    ->with('productPackagings', 'options')
+                    ->select('id', 'name', 'average_cost', 'receipt_alias', 'description', 'category_id', 'brand_id', 'total_onhand', 'price', 'unit_measure', 'multiple_packaging', 'uuid')
+                    ->with([
+                        'productPackagings' => fn($q) => $q->with('media'), // Eager load packaging media
+                        'options',
+                        'media' // Eager load product media
+                    ])
             ])
             ->whereHas('products', fn($query) => $query->where('is_active', true))
             ->get();
