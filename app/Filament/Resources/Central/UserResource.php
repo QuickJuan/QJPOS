@@ -50,17 +50,9 @@ class UserResource extends Resource
                     ->maxLength(255)
                     ->dehydrateStateUsing(fn($state) => bcrypt($state))
                     ->visibleOn('create'),
-
-                Select::make('roles')
-                    ->label('Roles')
-                    ->relationship('roles', 'name')
-                    ->multiple()
-                    ->preload()
-                    ->searchable()
-                    ->placeholder('Select roles')
-                    ->helperText('Assign one or more roles to this user'),
             ]);
     }
+
 
     public static function table(Table $table): Table
     {
@@ -80,23 +72,13 @@ class UserResource extends Resource
                     ->searchable()
                     ->toggleable(),
 
-                TextColumn::make('roles.name')
-                    ->label('Roles')
-                    ->badge()
-                    ->color('success')
-                    ->sortable()
-                    ->searchable(),
-
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('roles')
-                    ->relationship('roles', 'name')
-                    ->multiple()
-                    ->label('Filter by Role'),
+                // No filters in central context
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

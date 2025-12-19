@@ -210,8 +210,8 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * Get available servers/waiters with daily cache
-     * Cache key includes tenant ID to ensure tenant isolation
+     * Get available servers/waiters
+     * Direct query from User model with Server/Waiter roles
      */
     private function getAvailableServers(): array
     {
@@ -219,26 +219,15 @@ class HandleInertiaRequests extends Middleware
             return [];
         }
 
-        $tenantId = tenant()->id;
-        $cacheKey = "tenant_{$tenantId}_servers_" . now()->format('Y-m-d');
-
-        return Cache::remember($cacheKey, now()->endOfDay(), function () {
-            try {
-                // Check if HasRoles trait is available before using role method
-                if (!method_exists(User::class, 'role')) {
-                    \Log::warning('Spatie Permission not available - returning empty servers list');
-                    return [];
-                }
-
-                return User::role(['Server', 'Waiter'])
-                    ->select('id', 'name', 'employee_code')
-                    ->orderBy('name')
-                    ->get()
-                    ->toArray();
-            } catch (\Exception $e) {
-                \Log::error('Failed to load servers: ' . $e->getMessage());
-                return [];
-            }
-        });
+        try {
+            return User::role(['Server', 'Waiter'])
+                ->select('id', 'name', 'employee_code')
+                ->orderBy('name')
+                ->get()
+                ->toArray();
+        } catch (\Exception $e) {
+            \Log::error('Failed to load servers: ' . $e->getMessage());
+            return [];
+        }
     }
 }
