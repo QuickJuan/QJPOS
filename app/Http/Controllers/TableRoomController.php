@@ -26,6 +26,10 @@ class TableRoomController extends Controller
         // Get the active branch using user cashier id from session
         $cashierSession = $request->user()->cashierSession;
 
+        if (!$cashierSession) {
+            return redirect()->route('resto.index')->with('error', 'No active cashier session found. Please start a cashier session first.');
+        }
+
         $tableRooms = $this->tableRoomService->list($cashierSession->branch_id);
 
         return Inertia::render('Resto/Tables', [
