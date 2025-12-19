@@ -126,18 +126,11 @@ if (!isCentralDomain()) {
             Route::as('resto.')
                 ->prefix('/resto')
                 ->group(function () {
-                    // Category routes
-                    Route::controller(\App\Http\Controllers\CategoryController::class)
-                        ->group(function () {
-                            Route::get('/', 'index')->name('index');
-                            Route::get('/{categorySlug}', 'show')->name('category');
-                        });
-
-                    // Cashier session routes
+                    // Cashier session routes (must come before category routes to avoid slug conflicts)
                     Route::controller(CashierSessionController::class)
                         ->group(function () {
                             Route::get('/preview', 'preview')->name('preview');
-                            Route::get('/review-x-readings', 'reviewXTransactions')->name('review-x-readings');
+                            Route::get('/review/x-readings', 'reviewXTransactions')->name('review-x-readings');
                             Route::get('/product/{product}/options', 'productOptions')->name('product.options');
                             Route::post('/session/start', 'startSession')->name('session.start');
                             Route::post('/session/close', 'closeShift')->name('session.close');
@@ -145,6 +138,13 @@ if (!isCentralDomain()) {
                             Route::get('/api/session-summary/{sessionId}', 'getSessionSummaryById')->name('api.session-summary-by-id');
 
                             Route::put('/update-bill-no/{branchId}', 'updateBillNo')->name('update-bill-no');
+                        });
+
+                    // Category routes (wildcard routes should come last)
+                    Route::controller(\App\Http\Controllers\CategoryController::class)
+                        ->group(function () {
+                            Route::get('/', 'index')->name('index');
+                            Route::get('/{categorySlug}', 'show')->name('category');
                         });
 
                     Route::controller(CartController::class)

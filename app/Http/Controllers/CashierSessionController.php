@@ -28,6 +28,7 @@ class CashierSessionController extends Controller
 
     public function index(Request $request): Response
     {
+
         // Load only category metadata initially for better performance
         $categories = $this->productCategoryService->getCategoriesOnly();
 
@@ -95,7 +96,7 @@ class CashierSessionController extends Controller
     }
     public function reviewXTransactions(Request $request): Response
     {
-        $activeBranch = Branch::find($request->user()->branch->id);
+        $activeBranch = Branch::find($request->user()->branch_id);
 
         $query = $this->cashierSessionService->model
             ->with('cashier')
