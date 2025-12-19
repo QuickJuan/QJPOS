@@ -28,21 +28,71 @@ class CashierSessionController extends Controller
 
     public function index(Request $request): Response
     {
-        $categories = $this->productCategoryService->getCategoriesWithProductsAsResources();
+        // Load only category metadata initially for better performance
+        $categories = $this->productCategoryService->getCategoriesOnly();
+
+        $currentTable = null;
         if ($request->has('tableId')) {
             $tableId      = $request->input('tableId');
             $currentTable = TableRoom::find($tableId);
-        } else {
-            $currentTable = null;
         }
-        // dd($categories);
+
         // Cart is now provided by HandleInertiaRequests middleware via shared props
         return Inertia::render('Resto/Index', [
-            'categories'   => $categories,
-            'currentTable' => $currentTable,
+            'categories'             => $categories,
+            'currentTable'           => $currentTable,
+            'selectedCategorySlug'   => null,
+            'products'               => [],
+            'categoryName'           => null,
+            'tableId'                => $request->input('tableId'),
+            'orderType'              => $request->input('orderType', 'dine-in'),
         ]);
     }
 
+    /**
+     * Get products for a specific category (API endpoint)
+     */
+    public function getCategoryProducts(Request $request, $categorySlug): JsonResponse
+    {
+        try {
+            $products = $this->productCategoryService->getProductsForCategory($categorySlug);
+
+            return response()->json([
+                'success' => true,
+                'data' => ProductResource::collection($products)
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load products: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    /**
+     * Show products for a specific category via Inertia
+     */
+    public function showCategory(Request $request, $categorySlug): Response
+    {
+        $categories = $this->productCategoryService->getCategoriesOnly();
+        $products = $this->productCategoryService->getProductsForCategory($categorySlug);
+        $category = $categories->firstWhere('slug', $categorySlug);
+
+        $currentTable = null;
+        if ($request->has('tableId')) {
+            $tableId = $request->input('tableId');
+            $currentTable = TableRoom::find($tableId);
+        }
+
+        return Inertia::render('Resto/Index', [
+            'categories'           => $categories,
+            'currentTable'         => $currentTable,
+            'selectedCategorySlug' => $categorySlug,
+            'products'             => ProductResource::collection($products),
+            'categoryName'         => $category?->name ?? 'Unknown Category',
+            'tableId'              => $request->input('tableId'),
+            'orderType'            => $request->input('orderType', 'dine-in'),
+        ]);
+    }
     public function reviewXTransactions(Request $request): Response
     {
         $activeBranch = Branch::find($request->user()->branch->id);
@@ -119,7 +169,7 @@ class CashierSessionController extends Controller
 
     public function productOptions(int $productId): Response
     {
-        $product = Product::with(['options.products', 'options.optionItems.productPackaging', 'options.optionItems.product.media', 'options.optionItems.product.productPackagings'])->findOrFail($productId);
+        $product = Product::with(['options.optionItems.productPackaging', 'options.optionItems.product.media', 'options.optionItems.product.productPackagings'])->findOrFail($productId);
 
         return Inertia::render('Resto/ProductOption', [
             'product' => ProductResource::make($product),

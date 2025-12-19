@@ -127,7 +127,7 @@
                 </div>
             </button>
 
-            <button
+            <!-- <button
                 @click="handlePrinterConfig"
                 class="w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center gap-3 bg-gray-100 text-secondary-700 hover:bg-gray-200"
             >
@@ -138,9 +138,9 @@
                         Configure thermal printers
                     </div>
                 </div>
-            </button>
+            </button> -->
 
-            <button
+            <!-- <button
                 @click="handleEndOfShift"
                 class="w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center gap-3 bg-red-100 text-red-700 hover:bg-red-200"
             >
@@ -149,7 +149,7 @@
                     <div class="font-semibold">End of Shift</div>
                     <div class="text-xs opacity-75">Close cashier session</div>
                 </div>
-            </button>
+            </button> -->
         </div>
     </Dialog>
 </template>

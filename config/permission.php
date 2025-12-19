@@ -162,6 +162,13 @@ return [
     'display_role_in_exception' => false,
 
     /*
+     * When set to false, permission check methods will not be registered
+     * This is useful for multi-tenancy where permissions only exist in tenant databases
+     */
+
+    'register_permission_check_method' => true,
+
+    /*
      * By default wildcard permission lookups are disabled.
      * See documentation to understand supported syntax.
      */

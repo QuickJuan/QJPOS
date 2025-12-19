@@ -153,49 +153,16 @@ class ProductResource extends Resource
                     ->label('Unit of Measure')
                     ->hidden(fn(Get $get) => $get('multiple_packaging') === true),
 
-                Repeater::make('optionsPivot')
+                Repeater::make('options')
                     ->label('Product Options')
+                    ->relationship('options')
                     ->schema([
-                        Select::make('option_id')
-                            ->label('Option')
-                            ->options(\App\Models\Option::pluck('option_name', 'id'))
+                        TextInput::make('option_name')
+                            ->label('Option Name')
                             ->required()
-                            ->searchable()
-                            ->preload()
-                            ->live()
-                            ->disableOptionsWhenSelectedInSiblingRepeaterItems()
-                            ->helperText(function (Get $get): ?HtmlString {
-                                $optionId = $get('option_id');
-
-                                if (! $optionId) {
-                                    return null;
-                                }
-
-                                $option = \App\Models\Option::with(['optionItems.product', 'optionItems.productPackaging'])->find($optionId);
-
-                                if (! $option || $option->optionItems->isEmpty()) {
-                                    return new HtmlString('<span class="text-sm text-gray-500">No option items available</span>');
-                                }
-
-                                $items = $option->optionItems->map(function ($item) {
-                                    $productName = $item->product?->name ?? 'Unknown';
-                                    $packaging   = $item->productPackaging?->unit_measure ?? '';
-                                    $price       = '₱' . number_format($item->price, 2);
-
-                                    $itemText = $packaging
-                                        ? "{$productName} ({$packaging}) - {$price}"
-                                        : "{$productName} - {$price}";
-
-                                    return "<li class='text-sm'>{$itemText}</li>";
-                                })->join('');
-
-                                return new HtmlString(
-                                    "<div class='mt-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg'>
-                                        <p class='text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>Available Option Items:</p>
-                                        <ul class='list-disc list-inside text-gray-600 dark:text-gray-400 space-y-1'>{$items}</ul>
-                                    </div>"
-                                );
-                            }),
+                            ->maxLength(255)
+                            ->placeholder('e.g., Size, Flavor, Add-ons')
+                            ->helperText('Name of the option group'),
 
                         TextInput::make('max_quantity')
                             ->label('Max Quantity')
@@ -209,13 +176,89 @@ class ProductResource extends Resource
                             ->label('Is Default')
                             ->default(false)
                             ->helperText('Set as default option'),
+
+                        Repeater::make('optionItems')
+                            ->label('Option Items')
+                            ->relationship('optionItems')
+                            ->schema([
+                                Select::make('product_id')
+                                    ->label('Item Product')
+                                    ->relationship('product', 'name')
+                                    ->required()
+                                    ->searchable()
+                                    ->preload()
+                                    ->live()
+                                    ->afterStateUpdated(function ($state, callable $set) {
+                                        $set('product_packaging_id', null);
+                                    }),
+
+                                Select::make('product_packaging_id')
+                                    ->label('Product Packaging')
+                                    ->searchable()
+                                    ->preload()
+                                    ->options(function (Get $get) {
+                                        $productId = $get('product_id');
+
+                                        if (!$productId) {
+                                            return [];
+                                        }
+
+                                        return \App\Models\ProductPackaging::where('product_id', $productId)
+                                            ->get()
+                                            ->mapWithKeys(fn($packaging) => [
+                                                $packaging->id => $packaging->name . ' - ' . $packaging->qty . ' ' . $packaging->unit_measure,
+                                            ]);
+                                    })
+                                    ->visible(function (Get $get) {
+                                        $productId = $get('product_id');
+
+                                        if (!$productId) {
+                                            return false;
+                                        }
+
+                                        $product = \App\Models\Product::find($productId);
+                                        return $product?->multiple_packaging === true;
+                                    })
+                                    ->required(function (Get $get) {
+                                        $productId = $get('product_id');
+
+                                        if (!$productId) {
+                                            return false;
+                                        }
+
+                                        $product = \App\Models\Product::find($productId);
+                                        return $product?->multiple_packaging === true;
+                                    }),
+
+                                TextInput::make('price')
+                                    ->label('Additional Price')
+                                    ->numeric()
+                                    ->required()
+                                    ->minValue(0)
+                                    ->default(0)
+                                    ->prefix('₱')
+                                    ->helperText('Additional price for this option item'),
+
+                                TextInput::make('quantity')
+                                    ->label('Quantity')
+                                    ->numeric()
+                                    ->default(0)
+                                    ->minValue(0),
+                            ])
+                            ->columns(2)
+                            ->reorderable()
+                            ->collapsible()
+                            ->itemLabel(fn (array $state): ?string => \App\Models\Product::find($state['product_id'])?->name ?? 'New Item')
+                            ->addActionLabel('Add Option Item')
+                            ->defaultItems(0),
                     ])
-                    ->columns(3)
+                    ->columns(1)
                     ->reorderable(false)
                     ->collapsible()
-                    ->itemLabel(fn(array $state): ?string => \App\Models\Option::find($state['option_id'])?->option_name ?? null)
+                    ->itemLabel(fn (array $state): ?string => $state['option_name'] ?? 'New Option')
                     ->addActionLabel('Add Option')
-                    ->columnSpanFull(),
+                    ->columnSpanFull()
+                    ->defaultItems(0),
 
                 TextInput::make('total_onhand')
                     ->required()

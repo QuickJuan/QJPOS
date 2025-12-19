@@ -162,6 +162,9 @@
             <slot />
         </div>
 
+        <!-- PWA Install Banner -->
+        <PWAInstallBanner />
+
         <!-- Toast Notifications -->
         <Toast />
         <ConfirmPopup />
@@ -194,6 +197,8 @@ import { useConfirm } from "primevue";
 import { useToast } from "primevue";
 import { ConfirmPopup, Toast } from "primevue";
 import CloseSessionModal from "@/Pages/Resto/Partials/CloseSessionModal.vue";
+import SessionSummaryModal from "@/Pages/Resto/Partials/SessionSummaryModal.vue";
+import PWAInstallBanner from "@/Components/PWAInstallBanner.vue";
 import { useCashier } from "@/composables/useCashier";
 import {
     QrCodeIcon,
@@ -204,7 +209,6 @@ import {
     ClockIcon,
     DocumentChartBarIcon,
 } from "@heroicons/vue/24/outline";
-import SessionSummaryModal from "@/Pages/Resto/Partials/SessionSummaryModal.vue";
 
 const page = usePage();
 const confirm = useConfirm();

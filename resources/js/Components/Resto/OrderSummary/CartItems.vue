@@ -544,12 +544,43 @@ watch(
         // Only scroll to bottom if items were added (length increased)
         if (newLength > oldLength && cartContainer.value) {
             nextTick(() => {
-                cartContainer.value?.scrollTo({
-                    top: cartContainer.value.scrollHeight,
-                    behavior: "smooth",
-                });
+                if (cartContainer.value) {
+                    cartContainer.value.scrollTo({
+                        top: cartContainer.value.scrollHeight,
+                        behavior: "smooth",
+                    });
+                }
             });
         }
     }
+);
+
+// Also watch for changes in any individual item (e.g., quantity updates)
+watch(
+    () => props.orderItems,
+    (newItems, oldItems) => {
+        // Check if there are actual changes beyond just re-ordering
+        if (newItems && oldItems && newItems.length >= oldItems.length) {
+            // Small delay to ensure DOM has updated
+            nextTick(() => {
+                if (cartContainer.value) {
+                    const isNearBottom =
+                        cartContainer.value.scrollHeight -
+                            cartContainer.value.scrollTop -
+                            cartContainer.value.clientHeight <
+                        100;
+
+                    // Auto-scroll if user is near the bottom or if items were just added
+                    if (isNearBottom || newItems.length > oldItems.length) {
+                        cartContainer.value.scrollTo({
+                            top: cartContainer.value.scrollHeight,
+                            behavior: "smooth",
+                        });
+                    }
+                }
+            });
+        }
+    },
+    { deep: true }
 );
 </script>

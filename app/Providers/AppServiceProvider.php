@@ -9,6 +9,7 @@ use Laravel\Fortify\Fortify;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Config;
+use Spatie\Permission\PermissionRegistrar;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -17,7 +18,17 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Disable Spatie Permission completely in central domain
+        if (!app()->runningInConsole()) {
+            $this->app->booted(function () {
+                if (!tenancy()->initialized) {
+                    // Clear permission cache and disable
+                    app(PermissionRegistrar::class)->forgetCachedPermissions();
+                    Config::set('permission.register_permission_check_method', false);
+                    Config::set('permission.teams', false);
+                }
+            });
+        }
     }
 
     /**
@@ -28,7 +39,7 @@ class AppServiceProvider extends ServiceProvider
         // Register observers
         CartItem::observe(CartItemObserver::class);
 
-        // Dynamically add current host to sanctum.stateful for dynamic tenants
+        // Sanctum stateful domains configuration
         if (app()->environment('local', 'development', 'production')) {
             $host = request()->getHost();
             $stateful = Config::get('sanctum.stateful', []);

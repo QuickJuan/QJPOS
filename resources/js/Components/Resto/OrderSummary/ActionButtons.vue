@@ -49,7 +49,7 @@
 
         <OrderTypeSelectionModal
             v-model:visible="showOrderTypeModal"
-            :selected-order-type="selectedOrderType"
+            :selected-order-type="orderStore.selectedOrderType"
             :order-types="orderTypes"
             @update-order-type="selectOrderType"
         />
@@ -128,6 +128,7 @@ import { httpGet } from "@/Utils/axiosHelper";
 import { route } from "ziggy-js";
 import { useTable } from "@/composables/useTable";
 import { thermalPrinter } from "@/Services/ThermalPrinterService";
+import { useOrderStore } from "@/stores/orderStore";
 import Swal from "sweetalert2";
 import { formatMoney } from "@/Utils/FormatMoney";
 import moment from "moment-timezone";
@@ -137,7 +138,6 @@ const props = defineProps<{
     tableId: number;
     locationType: string;
     orderItems: any[];
-    selectedOrderType: string;
     selectedItemsForDiscount?: number[];
     totalAmount: number;
     appliedDiscount: any;
@@ -184,6 +184,9 @@ const { placeOrder } = useTable();
 const toast = useToast();
 // Use confirm
 const confirm = useConfirm();
+
+// Use order store
+const orderStore = useOrderStore();
 
 // UsePage
 const page = usePage();
@@ -257,13 +260,15 @@ const orderTypes = [
 const selectedOrderTypeData = computed(() => {
     return (
         orderTypes.find(
-            (orderType) => orderType.value === props.selectedOrderType
+            (orderType) => orderType.value === orderStore.selectedOrderType
         ) || orderTypes[0]
     );
 });
 
 // Select order type and close modal
 const selectOrderType = (type: string) => {
+    orderStore.setOrderType(type);
+    orderStore.updateUrlParams();
     showOrderTypeModal.value = false;
     emit("updateOrderType", type);
 };

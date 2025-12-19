@@ -31,42 +31,46 @@ class OptionResource extends Resource
                     ->required()
                     ->maxLength(255),
 
-                Repeater::make('productsPivot')
-                    ->label('')
-                    ->schema([
-                        Select::make('product_id')
-                            ->label('Product')
-                            ->options(\App\Models\Product::pluck('name', 'id'))
+                Select::make('product_id')
+                    ->label('Product')
+                    ->relationship('product', 'name')
+                    ->required()
+                    ->searchable()
+                    ->preload()
+                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->name . ' - ' . $record->category->name)
+                    ->createOptionForm([
+                        Select::make('category_id')
+                            ->relationship('category', 'name')
                             ->required()
                             ->searchable()
-                            ->preload()
-                            ->disableOptionsWhenSelectedInSiblingRepeaterItems(),
-
-                        TextInput::make('max_quantity')
-                            ->label('Max Quantity')
-                            ->numeric()
-                            ->minValue(1)
-                            ->default(1)
+                            ->preload(),
+                        Select::make('brand_id')
+                            ->relationship('brand', 'name')
                             ->required()
-                            ->helperText('Maximum quantity that can be selected for this option'),
-
-                        Toggle::make('is_default')
-                            ->label('Is Default')
-                            ->default(false)
-                            ->helperText('Set as default option for this product'),
+                            ->searchable()
+                            ->preload(),
+                        TextInput::make('name')
+                            ->required()
+                            ->maxLength(255),
+                        TextInput::make('price')
+                            ->numeric()
+                            ->required()
+                            ->prefix('₱'),
                     ])
-                    ->columnSpanFull()
-                    ->columns(3)
-                    ->reorderable(false)
-                    ->collapsible()
-                    ->itemLabel(fn (array $state): ?string => \App\Models\Product::find($state['product_id'])?->name ?? null)
-                    ->addActionLabel('Add Product')
-                    ->mutateRelationshipDataBeforeCreateUsing(function (array $data): array {
-                        return $data;
-                    })
-                    ->mutateRelationshipDataBeforeFillUsing(function (array $data): array {
-                        return $data;
-                    }),
+                    ->helperText('Select the product this option belongs to'),
+
+                TextInput::make('max_quantity')
+                    ->label('Max Quantity')
+                    ->numeric()
+                    ->minValue(1)
+                    ->default(1)
+                    ->required()
+                    ->helperText('Maximum quantity that can be selected for this option'),
+
+                Toggle::make('is_default')
+                    ->label('Is Default')
+                    ->default(false)
+                    ->helperText('Set as default option for this product'),
 
                 // SpatieMediaLibraryFileUpload::make('featured_image')
                 //     ->collection('featured_image')
@@ -88,12 +92,20 @@ class OptionResource extends Resource
                     ->sortable()
                     ->searchable(),
 
-                TextColumn::make('products.name')
-                    ->label('Products')
-                    ->listWithLineBreaks()
+                TextColumn::make('product.name')
+                    ->label('Product')
+                    ->sortable()
+                    ->searchable(),
+
+                TextColumn::make('max_quantity')
+                    ->label('Max Quantity')
+                    ->sortable(),
+
+                TextColumn::make('is_default')
+                    ->label('Is Default')
                     ->badge()
-                    ->limitList(3)
-                    ->expandableLimitedList(),
+                    ->formatStateUsing(fn ($state) => $state ? 'Yes' : 'No')
+                    ->color(fn ($state) => $state ? 'success' : 'gray'),
 
                 TextColumn::make('created_at')
                     ->dateTime()
@@ -106,7 +118,11 @@ class OptionResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('product_id')
+                    ->label('Product')
+                    ->relationship('product', 'name')
+                    ->searchable()
+                    ->preload(),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),

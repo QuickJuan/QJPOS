@@ -224,6 +224,12 @@ class HandleInertiaRequests extends Middleware
 
         return Cache::remember($cacheKey, now()->endOfDay(), function () {
             try {
+                // Check if HasRoles trait is available before using role method
+                if (!method_exists(User::class, 'role')) {
+                    \Log::warning('Spatie Permission not available - returning empty servers list');
+                    return [];
+                }
+
                 return User::role(['Server', 'Waiter'])
                     ->select('id', 'name', 'employee_code')
                     ->orderBy('name')
