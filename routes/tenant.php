@@ -12,6 +12,7 @@ use App\Http\Controllers\TableRoomController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\CashierSessionController;
 use App\Http\Controllers\TableManagementController;
+use App\Models\Branch;
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
 use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
@@ -74,8 +75,21 @@ if (!isCentralDomain()) {
 
     // ROUTE FOR PUBLIC LANDING PAGE
     Route::get('/', function () {
-        return Inertia::render('Landing', [
+        $branches = Branch::orderBy('name')
+            ->get([
+                'id',
+                'name',
+                'branch_code',
+                'address',
+                'phone',
+                'email',
+                'contact_person',
+                'is_active',
+            ]);
+
+        return Inertia::render('TenantLanding', [
             'tenant' => tenant(),
+            'branches' => $branches,
         ]);
     })->name('landing');
 

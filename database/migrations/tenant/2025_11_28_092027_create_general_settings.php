@@ -10,6 +10,7 @@ return new class extends SettingsMigration
         $this->migrator->add('general.company_address');
         $this->migrator->add('general.company_contact');
         $this->migrator->add('general.company_logo');
+        $this->migrator->add('general.hero_image');
     }
 
     public function down()
@@ -18,5 +19,6 @@ return new class extends SettingsMigration
         $this->migrator->delete('general.company_address');
         $this->migrator->delete('general.company_contact');
         $this->migrator->delete('general.company_logo');
+        $this->migrator->delete('general.hero_image');
     }
 };

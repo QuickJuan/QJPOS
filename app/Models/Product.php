@@ -47,6 +47,10 @@ class Product extends Model implements HasMedia
         'multiple_packaging' => 'boolean',
     ];
 
+    protected $appends = [
+        'featured_image_url',
+    ];
+
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('featured_image')
