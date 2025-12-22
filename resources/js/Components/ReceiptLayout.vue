@@ -127,7 +127,7 @@
                         <!-- Selected Options -->
                         <div
                             v-if="item.children && item.children.length > 0"
-                            class="ml-2 mb-4 space-y-1"
+                            class="ml-4 pl-3 border-l-2 border-dashed border-gray-300 mb-4 space-y-1"
                         >
                             <div
                                 v-for="option in item.children"
@@ -137,11 +137,17 @@
                                 <div class="flex items-center gap-2 flex-1">
                                     <span class="text-xs font-medium"> • </span>
                                     <span class="text-xs flex-1 ml-2">
-                                        {{ option.product.name }}
+                                        {{ option.quantity }} ×
+                                        {{ getChildName(option) }}
                                     </span>
                                 </div>
                                 <span class="text-xs font-medium">
-                                    +{{ formatMoney(option.price) }}
+                                    <template v-if="getChildAmount(option) > 0">
+                                        +{{
+                                            formatMoney(getChildAmount(option))
+                                        }}
+                                    </template>
+                                    <template v-else>Included</template>
                                 </span>
                             </div>
                         </div>

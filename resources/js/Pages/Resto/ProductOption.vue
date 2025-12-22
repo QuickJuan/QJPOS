@@ -1,346 +1,966 @@
 <template>
-    <div class="min-h-screen bg-slate-50">
-        <div class="mx-auto">
-            <!-- Top: Header (keeps existing Header component) -->
-            <Header />
+    <div class="min-h-screen bg-slate-100 pb-24">
+        <Header />
 
-            <!-- Main Content -->
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <!-- Back Button -->
-                <div class="mb-6">
-                    <button
-                        @click="goBack"
-                        class="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-colors"
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+            <button
+                @click="goBack"
+                class="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition"
+            >
+                <ChevronLeftIcon class="w-4 h-4" />
+                Back to Menu
+            </button>
+
+            <div class="grid lg:grid-cols-3 gap-8 mt-8 items-start">
+                <section class="lg:col-span-2">
+                    <div
+                        class="lg:max-h-[calc(100vh-200px)] lg:overflow-y-auto lg:pr-4"
                     >
-                        <ChevronLeftIcon class="w-4 h-4 mr-2" />
-                        Back to Products
-                    </button>
-                </div>
-
-                <!-- Product Header -->
-                <div
-                    class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6"
-                >
-                    <div class="flex items-center space-x-4">
-                        <!-- Product Image -->
                         <div
-                            class="w-32 h-32 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg mb-4"
+                            class="bg-white rounded-3xl shadow-xl p-6 lg:p-8 space-y-8"
                         >
-                            <div
-                                v-if="props.product?.data.productImage"
-                                class="w-full h-full flex items-center justify-center overflow-hidden rounded-lg"
-                            >
-                                <img
-                                    :src="props.product?.data.productImage"
-                                    :alt="props.product?.data.name"
-                                    class="w-full h-full object-cover rounded-lg"
-                                />
-                            </div>
-                            <div
-                                v-else
-                                class="h-20 w-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg flex items-center justify-center"
-                            >
-                                <ImageIcon class="w-8 h-8 text-gray-600" />
-                            </div>
-                        </div>
-
-                        <!-- Product Info -->
-                        <div class="flex-1">
-                            <h1 class="text-2xl font-bold text-gray-900">
-                                {{ props.product.data?.name }}
-                            </h1>
-                            <p
-                                class="text-gray-600"
-                                v-html="props.product.data?.description"
-                            ></p>
-                            <div class="mt-2">
+                            <div class="flex flex-col gap-2">
                                 <span
-                                    class="text-lg font-semibold text-gray-900"
+                                    class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500"
                                 >
-                                    {{ getPrice(props.product.data) }}
+                                    Customize
                                 </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Options Selection -->
-                <div
-                    class="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
-                >
-                    <h2 class="text-xl font-semibold text-gray-900 mb-6">
-                        Customize Your Order
-                    </h2>
-
-                    <Tabs class="w-full" :value="selectedTab" scrollable>
-                        <TabList>
-                            <Tab
-                                v-for="option in props.product.data?.options"
-                                :key="option.id"
-                                :value="option.id"
-                                as="div"
-                                class="flex items-center gap-2"
-                            >
-                                <Avatar
-                                    :image="option.optionImage"
-                                    shape="circle"
-                                />
-                                <div class="flex flex-col">
-                                    <span class="font-bold whitespace-nowrap">
-                                        {{ option.option_name }}
-                                    </span>
-                                </div>
-                            </Tab>
-                        </TabList>
-                        <TabPanels>
-                            <TabPanel
-                                v-for="option in props.product.data?.options"
-                                :key="option.id"
-                                :header="option.name"
-                                :value="option.id"
-                            >
-                                <p class="text-base font-medium text-gray-600">
-                                    Select exactly
-                                    {{ option?.max_quantity }} item(s)
-                                </p>
                                 <div
-                                    v-if="
-                                        option.max_quantity > 0 &&
-                                        getTotalSelected(option.id) <
-                                            option.max_quantity
-                                    "
-                                    class="mb-4 p-3 bg-red-100 border border-red-300 rounded-lg text-red-700 text-center"
+                                    class="flex flex-col md:flex-row md:items-center md:justify-between gap-3"
                                 >
-                                    Please select exactly
-                                    {{ option.max_quantity }} items for this
-                                    option.
-                                </div>
-                                <div
-                                    class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4"
-                                >
-                                    <div
-                                        v-for="item in option.optionItems"
-                                        :key="item.id"
-                                        :class="[
-                                            'relative border-2 rounded-xl p-6 transition-all duration-200 hover:shadow-lg flex flex-col h-full',
-                                            option.max_quantity > 0 &&
-                                            getTotalSelected(option.id) <
-                                                option.max_quantity
-                                                ? 'border-red-500'
-                                                : 'border-gray-200 hover:border-indigo-300',
-                                        ]"
+                                    <h2
+                                        class="text-2xl font-bold text-slate-900"
                                     >
-                                        <!-- Option Image -->
+                                        Build your bundle
+                                    </h2>
+                                    <p
+                                        class="text-sm text-slate-500"
+                                        v-if="hasCustomizableOptions"
+                                    >
+                                        {{ selectionHint }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div
+                                v-if="hasCustomizableOptions"
+                                class="space-y-6"
+                            >
+                                <div
+                                    v-for="(
+                                        option, index
+                                    ) in customizableOptions"
+                                    :key="option.id"
+                                    class="flex gap-6 border border-slate-200 rounded-3xl p-5 lg:p-6 bg-slate-50"
+                                >
+                                    <div class="flex flex-col items-center">
                                         <div
-                                            class="h-32 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg mb-4"
+                                            class="w-11 h-11 rounded-full bg-sky-600 text-white font-semibold flex items-center justify-center"
                                         >
-                                            <div
-                                                v-if="
-                                                    item?.product?.media
-                                                        ?.length > 0
-                                                "
-                                                class="w-full h-full flex items-center justify-center overflow-hidden rounded-lg"
-                                            >
-                                                <img
-                                                    :src="
-                                                        item?.product
-                                                            ?.media?.[0]
-                                                            ?.original_url
-                                                    "
-                                                    :alt="
-                                                        item?.product
-                                                            ?.media?.[0]?.name
-                                                    "
-                                                    class="w-full h-full object-cover rounded-lg"
-                                                />
-                                            </div>
-
-                                            <div
-                                                v-else
-                                                class="w-16 h-16 bg-gray-300 rounded-full flex items-center justify-center"
-                                            >
-                                                <ImageIcon
-                                                    class="w-8 h-8 text-gray-600"
-                                                />
-                                            </div>
+                                            {{ index + 1 }}
                                         </div>
-
-                                        <!-- Option Details -->
-                                        <div class="text-center">
-                                            <h5
-                                                class="font-semibold text-gray-900 mb-2 text-lg"
+                                        <div
+                                            v-if="
+                                                index !==
+                                                customizableOptions.length - 1
+                                            "
+                                            class="w-px flex-1 bg-slate-200 mt-3 hidden lg:block"
+                                        ></div>
+                                    </div>
+                                    <div class="flex-1 space-y-5">
+                                        <div
+                                            class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between"
+                                        >
+                                            <div>
+                                                <p
+                                                    class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400"
+                                                >
+                                                    Step {{ index + 1 }}
+                                                </p>
+                                                <h3
+                                                    class="text-xl font-semibold text-slate-900"
+                                                >
+                                                    {{ option.option_name }}
+                                                </h3>
+                                                <p
+                                                    class="text-sm text-slate-500"
+                                                >
+                                                    {{
+                                                        getMaxQuantity(option)
+                                                            ? `Pick ${getMaxQuantity(
+                                                                  option
+                                                              )} item${
+                                                                  getMaxQuantity(
+                                                                      option
+                                                                  ) > 1
+                                                                      ? "s"
+                                                                      : ""
+                                                              }`
+                                                            : "Choose as many as you like"
+                                                    }}
+                                                </p>
+                                            </div>
+                                            <div
+                                                class="text-sm font-semibold text-slate-600"
                                             >
-                                                {{ item?.product?.name }}
-                                                <span
+                                                <template
                                                     v-if="
-                                                        item.product_packaging
+                                                        getMaxQuantity(option)
                                                     "
                                                 >
-                                                    ({{
-                                                        item.product_packaging
-                                                            ?.name
-                                                    }})
-                                                </span>
-                                            </h5>
-                                            <div
-                                                v-if="
-                                                    item.price &&
-                                                    parseFloat(item.price) > 0
-                                                "
-                                                class="inline-flex items-center px-3 py-1 mb-5 rounded-full text-sm font-medium bg-green-100 text-green-800"
-                                            >
-                                                +{{
-                                                    formatMoney(
-                                                        parseFloat(
-                                                            item.price
-                                                        ).toFixed(2)
-                                                    )
-                                                }}
+                                                    {{
+                                                        getTotalSelected(
+                                                            option.id
+                                                        )
+                                                    }}
+                                                    /
+                                                    {{ getMaxQuantity(option) }}
+                                                    selected
+                                                </template>
+                                                <template v-else>
+                                                    {{
+                                                        getTotalSelected(
+                                                            option.id
+                                                        )
+                                                    }}
+                                                    selected
+                                                </template>
                                             </div>
                                         </div>
+
                                         <div
-                                            class="flex justify-center mt-auto"
+                                            v-if="option.optionItems?.length"
+                                            class="grid gap-5 md:grid-cols-2"
                                         >
-                                            <InputNumber
-                                                :modelValue="
-                                                    selectedOptions[
-                                                        option.id
-                                                    ]?.[item.id] || 0
-                                                "
-                                                @update:modelValue="
-                                                    updateQuantity(
-                                                        option,
-                                                        item.id,
-                                                        $event
-                                                    )
-                                                "
-                                                showButtons
-                                                buttonLayout="horizontal"
-                                                :min="0"
-                                                :max="
-                                                    option.max_quantity > 0 &&
-                                                    getTotalSelected(
-                                                        option.id
-                                                    ) >= option.max_quantity
-                                                        ? selectedOptions[
-                                                              option.id
-                                                          ]?.[item.id] || 0
-                                                        : 99
-                                                "
-                                                inputClass="text-center w-20"
-                                                buttonClass="p-button-outlined p-button-sm"
+                                            <div
+                                                v-for="item in option.optionItems"
+                                                :key="item.id"
+                                                :class="[
+                                                    'relative rounded-2xl border p-5 bg-white flex flex-col gap-4 transition hover:shadow-lg',
+                                                    getSelectionValue(
+                                                        option.id,
+                                                        item.id
+                                                    ) > 0
+                                                        ? 'border-sky-500 shadow-sky-100'
+                                                        : 'border-slate-200',
+                                                ]"
                                             >
-                                                <template #incrementicon>
-                                                    <span class="pi pi-plus" />
-                                                </template>
-                                                <template #decrementicon>
-                                                    <span class="pi pi-minus" />
-                                                </template>
-                                            </InputNumber>
+                                                <div
+                                                    class="flex items-start gap-4"
+                                                >
+                                                    <div
+                                                        class="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center overflow-hidden"
+                                                    >
+                                                        <img
+                                                            v-if="
+                                                                item?.product
+                                                                    ?.media
+                                                                    ?.length
+                                                            "
+                                                            :src="
+                                                                item.product
+                                                                    .media[0]
+                                                                    ?.original_url
+                                                            "
+                                                            :alt="
+                                                                item.product
+                                                                    .media[0]
+                                                                    ?.name
+                                                            "
+                                                            class="w-full h-full object-cover"
+                                                        />
+                                                        <div
+                                                            v-else
+                                                            class="text-slate-500"
+                                                        >
+                                                            <ImageIcon
+                                                                class="w-7 h-7"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div class="flex-1">
+                                                        <p
+                                                            class="font-semibold text-slate-900"
+                                                        >
+                                                            {{
+                                                                item?.product
+                                                                    ?.name ||
+                                                                "Option item"
+                                                            }}
+                                                            <span
+                                                                v-if="
+                                                                    item
+                                                                        ?.product_packaging
+                                                                        ?.name
+                                                                "
+                                                                class="text-sm text-slate-500"
+                                                            >
+                                                                ({{
+                                                                    item
+                                                                        .product_packaging
+                                                                        .name
+                                                                }})
+                                                            </span>
+                                                        </p>
+                                                        <p
+                                                            class="text-sm text-slate-500"
+                                                        >
+                                                            {{
+                                                                item
+                                                                    ?.product_packaging
+                                                                    ?.name ||
+                                                                "Single serve"
+                                                            }}
+                                                        </p>
+                                                    </div>
+                                                    <div
+                                                        class="text-sm font-semibold text-emerald-600"
+                                                        v-if="
+                                                            Number(item.price) >
+                                                            0
+                                                        "
+                                                    >
+                                                        +{{
+                                                            formatPrice(
+                                                                Number(
+                                                                    item.price
+                                                                )
+                                                            )
+                                                        }}
+                                                    </div>
+                                                    <div
+                                                        v-else
+                                                        class="text-sm text-slate-500"
+                                                    >
+                                                        Included
+                                                    </div>
+                                                </div>
+
+                                                <div
+                                                    class="flex items-center justify-between"
+                                                >
+                                                    <span
+                                                        class="text-sm text-slate-500"
+                                                        >Quantity</span
+                                                    >
+                                                    <div
+                                                        class="flex items-center gap-2"
+                                                    >
+                                                        <button
+                                                            type="button"
+                                                            class="w-10 h-10 rounded-full border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                                                            @click="
+                                                                adjustQuantity(
+                                                                    option,
+                                                                    item.id,
+                                                                    -1
+                                                                )
+                                                            "
+                                                            :disabled="
+                                                                getSelectionValue(
+                                                                    option.id,
+                                                                    item.id
+                                                                ) === 0
+                                                            "
+                                                        >
+                                                            <span
+                                                                aria-hidden="true"
+                                                                >−</span
+                                                            >
+                                                            <span
+                                                                class="sr-only"
+                                                                >Decrease
+                                                                quantity</span
+                                                            >
+                                                        </button>
+                                                        <span
+                                                            class="w-10 text-center font-semibold text-slate-900"
+                                                        >
+                                                            {{
+                                                                getSelectionValue(
+                                                                    option.id,
+                                                                    item.id
+                                                                )
+                                                            }}
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            class="w-10 h-10 rounded-full border border-sky-500 text-sky-600 hover:bg-sky-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                                                            @click="
+                                                                adjustQuantity(
+                                                                    option,
+                                                                    item.id,
+                                                                    1
+                                                                )
+                                                            "
+                                                            :disabled="
+                                                                isIncrementDisabled(
+                                                                    option,
+                                                                    item.id
+                                                                )
+                                                            "
+                                                        >
+                                                            <span
+                                                                aria-hidden="true"
+                                                                >+</span
+                                                            >
+                                                            <span
+                                                                class="sr-only"
+                                                                >Increase
+                                                                quantity</span
+                                                            >
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div
+                                            v-else
+                                            class="border border-dashed border-slate-200 rounded-2xl p-6 text-sm text-slate-500 bg-white"
+                                        >
+                                            No option items available for this
+                                            group yet.
+                                        </div>
+
+                                        <div
+                                            v-if="
+                                                getMaxQuantity(option) &&
+                                                getPendingSelections(option)
+                                            "
+                                            class="text-sm text-rose-500"
+                                        >
+                                            Choose
+                                            {{
+                                                getPendingSelections(option)
+                                            }}
+                                            more item(s) to complete this
+                                            option.
                                         </div>
                                     </div>
                                 </div>
-                            </TabPanel>
-                        </TabPanels>
-                    </Tabs>
+                            </div>
 
-                    <!-- Action Buttons -->
-                    <div class="flex justify-end space-x-4 mt-8">
-                        <Button
-                            @click="goBack"
-                            class="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
-                        >
-                            Cancel
-                        </Button>
-                        <button
-                            @click="addToCart"
-                            class="px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
-                        >
-                            Add to Order
-                        </button>
+                            <div
+                                v-else
+                                class="border border-dashed border-slate-300 rounded-2xl p-8 text-center text-slate-500 bg-slate-50"
+                            >
+                                All required components are already included.
+                                You can add this bundle right away.
+                            </div>
+
+                            <div
+                                class="border-t border-slate-200 pt-6 space-y-3"
+                            >
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-slate-500"
+                                        >Base Price</span
+                                    >
+                                    <span class="font-semibold text-slate-900">
+                                        {{ formatPrice(basePriceValue) }}
+                                    </span>
+                                </div>
+                                <div
+                                    class="flex justify-between text-lg font-bold text-slate-900"
+                                >
+                                    <span>Total</span>
+                                    <span>{{ formatPrice(totalAmount) }}</span>
+                                </div>
+                                <div class="grid gap-3 sm:grid-cols-2">
+                                    <button
+                                        type="button"
+                                        @click="goBack"
+                                        class="px-4 py-3 border border-slate-200 rounded-2xl text-slate-600 font-semibold hover:bg-slate-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="button"
+                                        :disabled="
+                                            hasCustomizableOptions &&
+                                            !selectionsAreComplete()
+                                        "
+                                        @click="addToCart"
+                                        class="px-4 py-3 rounded-2xl font-semibold text-white shadow-lg transition"
+                                        :class="[
+                                            hasCustomizableOptions &&
+                                            !selectionsAreComplete()
+                                                ? 'bg-slate-300 cursor-not-allowed'
+                                                : 'bg-sky-600 hover:bg-sky-700',
+                                        ]"
+                                    >
+                                        Add to Order
+                                    </button>
+                                </div>
+                                <p
+                                    v-if="
+                                        hasCustomizableOptions &&
+                                        !selectionsAreComplete()
+                                    "
+                                    class="text-xs text-rose-500"
+                                >
+                                    Complete each option's required quantity to
+                                    continue.
+                                </p>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                </section>
+
+                <aside class="lg:col-span-1">
+                    <div class="space-y-6 lg:sticky lg:top-6">
+                        <div
+                            class="bg-white rounded-3xl shadow-xl p-6 lg:p-7 space-y-6"
+                        >
+                            <div class="flex gap-4">
+                                <div
+                                    class="w-28 h-28 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center overflow-hidden"
+                                >
+                                    <img
+                                        v-if="coverImage"
+                                        :src="coverImage"
+                                        :alt="productData?.name"
+                                        class="w-full h-full object-cover"
+                                    />
+                                    <div v-else class="text-slate-500">
+                                        <ImageIcon class="w-9 h-9" />
+                                    </div>
+                                </div>
+                                <div class="flex-1 space-y-2">
+                                    <p
+                                        class="text-xs uppercase tracking-[0.25em] text-slate-400"
+                                    >
+                                        Bundle
+                                    </p>
+                                    <h1
+                                        class="text-2xl font-bold text-slate-900"
+                                    >
+                                        {{ productData?.name }}
+                                    </h1>
+                                    <p
+                                        v-if="productDescription"
+                                        class="text-sm text-slate-600 leading-relaxed"
+                                        v-html="productDescription"
+                                    ></p>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-xs uppercase text-slate-500">
+                                        Base Price
+                                    </p>
+                                    <p class="text-xl font-bold text-slate-900">
+                                        {{ formatPrice(basePriceValue) }}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p class="text-xs uppercase text-slate-500">
+                                        Current Total
+                                    </p>
+                                    <p
+                                        class="text-xl font-semibold text-emerald-600"
+                                    >
+                                        {{ formatPrice(totalAmount) }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            class="bg-white rounded-3xl shadow-xl p-6 lg:p-7 space-y-6"
+                        >
+                            <div>
+                                <p
+                                    class="text-xs uppercase tracking-[0.3em] text-slate-500"
+                                >
+                                    Included
+                                </p>
+                                <div
+                                    v-if="defaultOptionSummary.length"
+                                    class="mt-3 space-y-3"
+                                >
+                                    <div
+                                        v-for="group in defaultOptionSummary"
+                                        :key="group.id"
+                                        class="border border-slate-200 rounded-2xl p-4"
+                                    >
+                                        <p
+                                            class="text-sm font-semibold text-slate-900"
+                                        >
+                                            {{ group.name }}
+                                        </p>
+                                        <ul
+                                            class="mt-2 space-y-1 text-sm text-slate-600"
+                                        >
+                                            <li
+                                                v-for="item in group.items"
+                                                :key="item.id"
+                                                class="flex justify-between"
+                                            >
+                                                <span>
+                                                    {{ item.quantity }} ×
+                                                    {{ item.name }}
+                                                </span>
+                                                <span
+                                                    v-if="
+                                                        Number(item.price) > 0
+                                                    "
+                                                    class="text-emerald-600"
+                                                >
+                                                    +{{
+                                                        formatPrice(item.price)
+                                                    }}
+                                                </span>
+                                                <span
+                                                    v-else
+                                                    class="text-slate-400"
+                                                >
+                                                    Included
+                                                </span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <p v-else class="text-sm text-slate-500 mt-2">
+                                    No automatic inclusions for this bundle.
+                                </p>
+                            </div>
+
+                            <div>
+                                <p
+                                    class="text-xs uppercase tracking-[0.3em] text-slate-500"
+                                >
+                                    Your Selections
+                                </p>
+                                <div
+                                    v-if="hasCustomizableSelections"
+                                    class="mt-3 space-y-3"
+                                >
+                                    <div
+                                        v-for="group in customizableSelectionSummary"
+                                        :key="group.id"
+                                        class="border border-slate-200 rounded-2xl p-4"
+                                    >
+                                        <p
+                                            class="text-sm font-semibold text-slate-900"
+                                        >
+                                            {{ group.name }}
+                                        </p>
+                                        <ul
+                                            class="mt-2 space-y-1 text-sm text-slate-600"
+                                        >
+                                            <li
+                                                v-for="item in group.items"
+                                                :key="item.id"
+                                                class="flex justify-between"
+                                            >
+                                                <span>
+                                                    {{ item.quantity }} ×
+                                                    {{ item.name }}
+                                                </span>
+                                                <span
+                                                    v-if="
+                                                        Number(item.price) > 0
+                                                    "
+                                                    class="text-emerald-600"
+                                                >
+                                                    +{{
+                                                        formatPrice(
+                                                            item.price *
+                                                                item.quantity
+                                                        )
+                                                    }}
+                                                </span>
+                                                <span
+                                                    v-else
+                                                    class="text-slate-400"
+                                                >
+                                                    Included
+                                                </span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <p v-else class="text-sm text-slate-500 mt-2">
+                                    Your custom picks will appear here once
+                                    selected.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
             </div>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { route } from "ziggy-js";
 import { router, usePage } from "@inertiajs/vue3";
-import {
-    Avatar,
-    InputNumber,
-    Tab,
-    TabList,
-    TabPanel,
-    TabPanels,
-    Tabs,
-    useToast,
-} from "primevue";
+import { useToast } from "primevue";
 import Header from "./Partials/Header.vue";
 import ChevronLeftIcon from "@/Components/icons/ChevronLeftIcon.vue";
-import Product from "@/Types/Product";
-import CheckIcon from "@/Components/icons/CheckIcon.vue";
 import ImageIcon from "@/Components/icons/ImageIcon.vue";
-import { formatMoney } from "@/Utils/FormatMoney";
+import Product from "@/Types/Product";
 import PageProps from "@/Types/PageProps";
+import { formatMoney } from "@/Utils/FormatMoney";
 
-const props = defineProps<{
-    product: Product;
-}>();
-
-const selectedOptions = ref<Record<string, Record<string, number>>>({});
-const params = new URLSearchParams(window.location.search);
-const productPackagingId = ref(null);
-const tableId = ref(null);
-const selectedTab = ref(null);
-
-productPackagingId.value = params.get("packagingId");
-tableId.value = params.get("tableId");
-
-const updateQuantity = (option: any, itemId: string, value: number) => {
-    const optionId = option.id;
-    if (!selectedOptions.value[optionId]) {
-        selectedOptions.value[optionId] = {};
-    }
-    const currentQty = selectedOptions.value[optionId][itemId] || 0;
-    const currentTotal = getTotalSelected(optionId);
-    if (
-        value > currentQty &&
-        option.max_quantity > 0 &&
-        currentTotal >= option.max_quantity
-    ) {
-        return; // prevent increase when at max
-    }
-    selectedOptions.value[optionId][itemId] = value;
+type ProductResponse = {
+    data: Product & {
+        options?: any[];
+        product_packagings?: any[];
+        featured_image_url?: string;
+        product_images_urls?: string[];
+    };
 };
 
-const getTotalSelected = (optionId: string) => {
-    const optionSelections = selectedOptions.value[optionId] || {};
-    return Object.values(optionSelections).reduce(
-        (sum: number, qty: number) => sum + qty,
+const props = defineProps<{ product: ProductResponse }>();
+const toast = useToast();
+const page = usePage<PageProps>();
+
+const productData = computed(() => props.product?.data || {});
+const coverImage = computed(
+    () =>
+        productData.value?.featured_image_url ||
+        productData.value?.product_images_urls?.[0] ||
+        null
+);
+const productDescription = computed(() => productData.value?.description || "");
+
+const formatPrice = (value: number | string | null | undefined) => {
+    const numericValue = Number(value);
+    if (Number.isNaN(numericValue)) {
+        return formatMoney("0.00");
+    }
+
+    return formatMoney(numericValue === 0 ? "0.00" : numericValue);
+};
+
+const basePriceValue = computed(() => {
+    const averageCost = Number(productData.value?.average_cost);
+    if (!Number.isNaN(averageCost) && averageCost > 0) {
+        return averageCost;
+    }
+    const fallback = Number(productData.value?.price);
+    return Number.isNaN(fallback) ? 0 : fallback;
+});
+
+const getLowestPriceForProductPackagings = (packagings: any[] = []) => {
+    const prices = packagings
+        .map((packaging) => Number(packaging.price))
+        .filter((price) => !Number.isNaN(price));
+    return prices.length ? Math.min(...prices) : 0;
+};
+
+const customizableOptions = computed(
+    () =>
+        productData.value?.options?.filter(
+            (option: any) => !option.is_default
+        ) || []
+);
+
+const defaultOptionSummary = computed(() => {
+    return (
+        productData.value?.options
+            ?.filter((option: any) => option.is_default)
+            .map((option: any) => ({
+                id: option.id,
+                name: option.option_name,
+                items:
+                    option.optionItems
+                        ?.filter((item: any) => (item.quantity ?? 0) > 0)
+                        .map((item: any) => ({
+                            id: item.id,
+                            name:
+                                item.product?.name ||
+                                item.product_packaging?.name ||
+                                "Included item",
+                            quantity: item.quantity ?? 0,
+                            price: Number(item.price || 0),
+                            product_id: item.product_id,
+                            product_packaging_id: item.product_packaging_id,
+                        })) || [],
+            }))
+            .filter((group: any) => group.items.length > 0) || []
+    );
+});
+
+const defaultOptionPayloads = computed(() => {
+    return (
+        productData.value?.options
+            ?.filter((option: any) => option.is_default)
+            .map((option: any) => {
+                const items =
+                    option.optionItems
+                        ?.filter((item: any) => (item.quantity ?? 0) > 0)
+                        .map((item: any) => ({
+                            id: item.id,
+                            product_id: item.product_id,
+                            product_packaging_id: item.product_packaging_id,
+                            price: Number(item.price || 0),
+                            quantity: item.quantity ?? 0,
+                        })) || [];
+
+                return {
+                    id: option.id,
+                    option_name: option.option_name,
+                    max_quantity: option.max_quantity,
+                    product_id: option.product_id,
+                    is_default: true,
+                    items,
+                };
+            })
+            .filter((option: any) => option.items.length > 0) || []
+    );
+});
+
+const hasCustomizableOptions = computed(
+    () => customizableOptions.value.length > 0
+);
+
+const selectedOptions = ref<Record<string, Record<string, number>>>({});
+
+watch(
+    () => customizableOptions.value,
+    (options) => {
+        const nextSelections: Record<string, Record<string, number>> = {};
+        const previousSelections = selectedOptions.value;
+
+        options.forEach((option: any) => {
+            const key = String(option.id);
+            nextSelections[key] = { ...(previousSelections[key] || {}) };
+        });
+
+        selectedOptions.value = nextSelections;
+    },
+    { immediate: true }
+);
+
+const getMaxQuantity = (option: any) => {
+    const max = Number(option?.max_quantity);
+    return Number.isNaN(max) || max <= 0 ? 0 : max;
+};
+
+const getSelectionValue = (
+    optionId: string | number,
+    itemId: string | number
+) => {
+    return selectedOptions.value[String(optionId)]?.[String(itemId)] || 0;
+};
+
+const getTotalSelected = (optionId: string | number) => {
+    const selections = selectedOptions.value[String(optionId)] || {};
+    return Object.values(selections).reduce(
+        (sum, qty) => sum + Number(qty || 0),
         0
     );
 };
 
-const toast = useToast();
-const page = usePage<PageProps>();
-const goBack = () => {
-    router.visit(route("resto.index", { tableId: tableId.value }));
+const getPendingSelections = (option: any) => {
+    const max = getMaxQuantity(option);
+    if (!max) {
+        return 0;
+    }
+
+    return Math.max(0, max - getTotalSelected(option.id));
+};
+
+const updateQuantity = (
+    option: any,
+    itemId: string | number,
+    nextValue: number | null
+) => {
+    const optionKey = String(option.id);
+    const itemKey = String(itemId);
+    const sanitizedValue = Math.max(0, Number(nextValue ?? 0));
+    const max = getMaxQuantity(option);
+
+    const optionSelections = { ...(selectedOptions.value[optionKey] || {}) };
+    const totalWithoutCurrent = Object.entries(optionSelections)
+        .filter(([key]) => key !== itemKey)
+        .reduce((sum, [, qty]) => sum + Number(qty || 0), 0);
+
+    let resolvedValue = sanitizedValue;
+
+    if (max && totalWithoutCurrent + sanitizedValue > max) {
+        resolvedValue = Math.max(0, max - totalWithoutCurrent);
+    }
+
+    if (resolvedValue === 0) {
+        delete optionSelections[itemKey];
+    } else {
+        optionSelections[itemKey] = resolvedValue;
+    }
+
+    selectedOptions.value = {
+        ...selectedOptions.value,
+        [optionKey]: optionSelections,
+    };
+};
+
+const getMaxAllocatableForItem = (option: any, itemId: string | number) => {
+    const max = getMaxQuantity(option);
+    if (!max) {
+        return Number.POSITIVE_INFINITY;
+    }
+
+    const optionKey = String(option.id);
+    const itemKey = String(itemId);
+    const optionSelections = selectedOptions.value[optionKey] || {};
+
+    const totalWithoutCurrent = Object.entries(optionSelections)
+        .filter(([key]) => key !== itemKey)
+        .reduce((sum, [, qty]) => sum + Number(qty || 0), 0);
+
+    const currentValue = Number(optionSelections[itemKey] || 0);
+    const remainingSlots = Math.max(0, max - totalWithoutCurrent);
+
+    return Math.max(currentValue, remainingSlots);
+};
+
+const isIncrementDisabled = (option: any, itemId: string | number) => {
+    const maxForItem = getMaxAllocatableForItem(option, itemId);
+    if (!Number.isFinite(maxForItem)) {
+        return false;
+    }
+
+    const currentValue = getSelectionValue(option.id, itemId);
+    return currentValue >= maxForItem;
+};
+
+const adjustQuantity = (option: any, itemId: string | number, step: number) => {
+    if (step > 0 && isIncrementDisabled(option, itemId)) {
+        return;
+    }
+
+    const currentValue = getSelectionValue(option.id, itemId);
+    const nextValue = Math.max(0, currentValue + step);
+    updateQuantity(option, itemId, nextValue);
+};
+
+const customizableSelectionSummary = computed(() => {
+    return customizableOptions.value
+        .map((option: any) => {
+            const optionItems = option.optionItems || [];
+            const selections = Object.entries(
+                selectedOptions.value[String(option.id)] || {}
+            )
+                .filter(([, qty]) => Number(qty) > 0)
+                .map(([itemId, qty]) => {
+                    const item = optionItems.find(
+                        (optionItem: any) => String(optionItem.id) === itemId
+                    );
+
+                    if (!item) {
+                        return null;
+                    }
+
+                    return {
+                        id: item.id,
+                        name:
+                            item.product?.name ||
+                            item.product_packaging?.name ||
+                            "Selected item",
+                        quantity: Number(qty),
+                        price: Number(item.price || 0),
+                    };
+                })
+                .filter(Boolean) as Array<{
+                id: number;
+                name: string;
+                quantity: number;
+                price: number;
+            }>;
+
+            return {
+                id: option.id,
+                name: option.option_name,
+                items: selections,
+            };
+        })
+        .filter((group: any) => group.items.length > 0);
+});
+
+const hasCustomizableSelections = computed(
+    () => customizableSelectionSummary.value.length > 0
+);
+
+const selectionsAreComplete = () => {
+    return customizableOptions.value.every((option: any) => {
+        const max = getMaxQuantity(option);
+        if (!max) {
+            return true;
+        }
+
+        return getTotalSelected(option.id) === max;
+    });
+};
+
+const selectionHint = computed(() => {
+    if (!hasCustomizableOptions.value) {
+        return "Everything in this bundle is already set.";
+    }
+
+    return selectionsAreComplete()
+        ? "Selections complete — ready to add."
+        : "Finish the required picks for each step.";
+});
+
+const buildSelectedOptionPayload = (option: any) => {
+    const optionSelections = selectedOptions.value[String(option.id)] || {};
+    const optionItems = option.optionItems || [];
+
+    const items = Object.entries(optionSelections)
+        .filter(([, qty]) => Number(qty) > 0)
+        .map(([itemId, qty]) => {
+            const item = optionItems.find(
+                (optionItem: any) => String(optionItem.id) === itemId
+            );
+
+            if (!item) {
+                return null;
+            }
+
+            return {
+                id: item.id,
+                product_id: item.product_id,
+                product_packaging_id: item.product_packaging_id,
+                price: Number(item.price || 0),
+                quantity: Number(qty),
+            };
+        })
+        .filter(Boolean);
+
+    if (!items.length) {
+        return null;
+    }
+
+    return {
+        id: option.id,
+        option_name: option.option_name,
+        max_quantity: option.max_quantity,
+        product_id: option.product_id,
+        is_default: false,
+        items,
+    };
 };
 
 const calculateTotal = () => {
-    if (!props.product.data) return 0;
+    let total = basePriceValue.value || 0;
 
-    let total = parseFloat(props.product.data.average_cost || "0");
+    defaultOptionPayloads.value.forEach((option) => {
+        option.items.forEach((item: any) => {
+            total += Number(item.price || 0) * Number(item.quantity || 0);
+        });
+    });
 
-    props.product.data.options.forEach((option) => {
-        option.optionItems.forEach((item) => {
-            const qty = selectedOptions.value[option.id]?.[item.id] || 0;
-            if (qty > 0 && item.price) {
-                total += qty * parseFloat(item.price);
+    customizableOptions.value.forEach((option: any) => {
+        const optionSelections = selectedOptions.value[String(option.id)] || {};
+        option.optionItems?.forEach((item: any) => {
+            const qty = Number(optionSelections[String(item.id)] || 0);
+            if (qty > 0) {
+                total += qty * Number(item.price || 0);
             }
         });
     });
@@ -348,139 +968,77 @@ const calculateTotal = () => {
     return total;
 };
 
+const totalAmount = computed(() => calculateTotal());
+
+const searchParams =
+    typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search)
+        : new URLSearchParams();
+
+const productPackagingId = ref<string | null>(searchParams.get("packagingId"));
+const tableId = ref<string | null>(searchParams.get("tableId"));
+const orderType = ref<string>(searchParams.get("orderType") || "dine-in");
+
+const goBack = () => {
+    router.visit(route("resto.index", { tableId: tableId.value }));
+};
+
 const addToCart = () => {
-    // Get table ID and order type from URL params
-    const params = new URLSearchParams(window.location.search);
-    const tableId = params.get("tableId");
-    const orderType = params.get("orderType") || "dine-in";
+    if (hasCustomizableOptions.value && !selectionsAreComplete()) {
+        toast.add({
+            severity: "warn",
+            summary: "Incomplete",
+            detail: "Please finish the required selections before adding.",
+            life: 3000,
+        });
+        return;
+    }
 
-    // Filter selected options to only include items with quantity > 0 and include full option data
-    const filteredOptions = [];
-    Object.keys(selectedOptions.value).forEach((optionId) => {
-        const option = props.product.data.options.find((o) => o.id == optionId);
+    const customizablePayloads = customizableOptions.value
+        .map((option: any) => buildSelectedOptionPayload(option))
+        .filter((option: any) => option !== null);
 
-        if (option) {
-            const items = [];
-            Object.keys(selectedOptions.value[optionId]).forEach((itemId) => {
-                const qty = selectedOptions.value[optionId][itemId];
-                if (qty > 0) {
-                    const item = option.optionItems.find((i) => i.id == itemId);
-                    items.push({
-                        ...item,
-                        quantity: qty,
-                    });
-                }
-            });
+    const selectedOptionPayloads = [
+        ...defaultOptionPayloads.value,
+        ...customizablePayloads,
+    ];
 
-            if (items.length > 0) {
-                filteredOptions.push({
-                    id: optionId,
-                    option_name: option.option_name,
-                    max_quantity: option.max_quantity,
-                    product_id: option.product_id,
-                    product_packaging_id: option.product_packaging_id,
-                    price: option.price,
-                    items: items,
-                });
-            }
-        }
-    });
+    const hasChildItems = selectedOptionPayloads.some(
+        (option: any) => option.items && option.items.length > 0
+    );
 
     router.post(
         route("resto.cart.add"),
         {
-            product_id: props.product?.data?.id,
+            product_id: productData.value?.id,
             product_packaging_id: productPackagingId.value,
-            selected_options: filteredOptions,
+            selected_options: selectedOptionPayloads,
             quantity: 1,
-            total_price: calculateTotal(),
-            table_id: tableId,
-            order_type: orderType,
-            withParent: true,
+            total_price: totalAmount.value,
+            table_id: tableId.value,
+            order_type: orderType.value,
+            withParent: hasChildItems,
         },
         {
             onSuccess: () => {
-                // Navigate back to index
-                router.visit(route("resto.index", { tableId: tableId }));
+                router.visit(route("resto.index", { tableId: tableId.value }));
                 toast.add({
                     severity: "success",
-                    summary: "Success",
-                    detail: page.props.flash.success,
-                    life: 3000,
+                    summary: "Added",
+                    detail: page.props.flash?.success || "Item added to order.",
+                    life: 2500,
                 });
             },
             onError: (errors) => {
-                console.log(errors);
-                alert(
-                    "Failed to add item to cart: " +
-                        (errors.message || "Unknown error")
-                );
+                console.error(errors);
+                toast.add({
+                    severity: "error",
+                    summary: "Error",
+                    detail: errors.message || "Unable to add item to cart.",
+                    life: 3000,
+                });
             },
         }
     );
 };
-
-const getLowestPriceForProductPackagings = (data: any) => {
-    const prices = data
-        .filter((item: any) => item.price !== undefined)
-        .map((item: any) => item.price);
-
-    const lowestPrice = prices.length ? Math.min(...prices) : null;
-
-    return lowestPrice;
-};
-
-const getPrice = (product: any) => {
-    let price = 0;
-    if (product.multiple_packaging) {
-        if (product.product_packagings.length > 0) {
-            price = formatMoney(
-                getLowestPriceForProductPackagings(product.product_packagings)
-            );
-        } else {
-            formatMoney(parseFloat(product.price || "0").toFixed(2));
-        }
-    } else {
-        price = formatMoney(product.price);
-    }
-
-    return price;
-};
-
-watch(
-    () => props.product.data?.options,
-    (options) => {
-        if (options && options.length > 0) {
-            selectedTab.value = options[0].id;
-            options.forEach((option) => {
-                selectedOptions.value[option.id] = {};
-
-                // Find the options that has is_default set to true
-                const defaultProduct = option.products.find(
-                    (p) => p.pivot.is_default
-                );
-
-                if (defaultProduct) {
-                    const defaultItem = option.optionItems.find(
-                        (item) => item.option_id == defaultProduct.pivot.option_id
-                    );
-                    
-                    console.log("option", option);
-                    console.log("defaultProduct", defaultProduct);
-                    console.log("optionItems", option.optionItems);
-                    console.log("defaultItem", defaultItem);
-
-                    if (defaultItem) {
-                        selectedOptions.value[option.id][defaultItem.id] =
-                            defaultItem.quantity;
-                    }
-                } else if (option.optionItems.length > 0) {
-                    selectedOptions.value[option.id][option.optionItems[0].id] =
-                        option.max_quantity;
-                }
-            });
-        }
-    },
-    { immediate: true }
-);
 </script>

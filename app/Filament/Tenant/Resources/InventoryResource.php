@@ -4,9 +4,12 @@ namespace App\Filament\Tenant\Resources;
 use App\Filament\Imports\InventoryImporter;
 use App\Filament\Tenant\Resources\InventoryResource\Pages;
 use App\Models\Inventory;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -29,9 +32,35 @@ class InventoryResource extends Resource
                 TextInput::make('name')
                     ->required(),
 
-                TextInput::make('unit_measure')
+                Select::make('unit_measure_id')
                     ->label('Unit Measure')
-                    ->required(),
+                    ->relationship('unitMeasure', 'name')
+                    ->required()
+                    ->searchable()
+                    ->preload()
+                    ->createOptionForm([
+                        TextInput::make('name')
+                            ->label('Name')
+                            ->required()
+                            ->maxLength(100),
+
+                        TextInput::make('symbol')
+                            ->label('Symbol / Abbrev')
+                            ->maxLength(25),
+                    ])
+                    ->live()
+                    ->afterStateUpdated(function ($state, callable $set) {
+                        if (! $state) {
+                            return;
+                        }
+
+                        $unit = \App\Models\UnitMeasure::find($state);
+                        $set('unit_measure', $unit?->name);
+                    }),
+
+                Hidden::make('unit_measure')
+                    ->default(fn (?Inventory $record) => $record?->unit_measure)
+                    ->dehydrated(),
 
                 TextInput::make('cost')
                     ->numeric()
@@ -43,6 +72,70 @@ class InventoryResource extends Resource
                     ->relationship('defaultLocation', 'location')
                     ->preload()
                     ->searchable(),
+
+                Repeater::make('unitConversions')
+                    ->label('Unit Conversions')
+                    ->relationship('unitConversions')
+                    ->hidden(fn (Get $get) => blank($get('unit_measure_id')))
+                    ->schema([
+                        Select::make('unit_measure_id')
+                            ->label('Conversion Unit')
+                            ->relationship('unitMeasure', 'name')
+                            ->required()
+                            ->searchable()
+                            ->preload()
+                            ->helperText('Choose an alternate unit for this inventory item.'),
+
+                        TextInput::make('conversion_factor')
+                            ->label('Base Units per Conversion')
+                            ->numeric()
+                            ->minValue(0)
+                            ->required()
+                        ->rule('decimal:0,2')
+                        ->step(0.01)
+                        ->formatStateUsing(fn ($state) => $state === null
+                            ? null
+                            : ((float) $state == (int) $state
+                                ? (string) (int) $state
+                                : number_format((float) $state, 2, '.', '')))
+                            ->helperText('How many base units equal 1 of the selected unit.'),
+                    ])
+                    ->columns(2)
+                    ->defaultItems(0)
+                    ->collapsible()
+                    ->addActionLabel('Add Conversion')
+                    ->helperText('Default unit is always 1:1. Add other unit conversions here.'),
+
+                Repeater::make('packagings')
+                    ->label('Packagings')
+                    ->relationship('packagings')
+                    ->hidden(fn (Get $get) => blank($get('unit_measure_id')))
+                    ->schema([
+                        TextInput::make('name')
+                            ->label('Packaging Name')
+                            ->required()
+                            ->maxLength(100)
+                            ->helperText('e.g., Box, Sleeve, Bag'),
+
+                        TextInput::make('quantity')
+                            ->label('Base Units per Package')
+                            ->numeric()
+                            ->minValue(0.01)
+                            ->required()
+                            ->rule('decimal:0,2')
+                            ->step(0.01)
+                            ->formatStateUsing(fn ($state) => $state === null
+                                ? null
+                                : ((float) $state == (int) $state
+                                    ? (string) (int) $state
+                                    : number_format((float) $state, 2, '.', '')))
+                            ->helperText('How many base units make up this packaging (e.g., 24 pcs per box).'),
+                    ])
+                    ->columns(2)
+                    ->defaultItems(0)
+                    ->collapsible()
+                    ->addActionLabel('Add Packaging')
+                    ->helperText('Use packagings to describe how base units are grouped (box, pack, sleeve, etc.).'),
             ]);
     }
 
@@ -54,7 +147,7 @@ class InventoryResource extends Resource
                     ->sortable()
                     ->searchable(),
 
-                TextColumn::make('unit_measure')
+                TextColumn::make('unitMeasure.name')
                     ->label('Unit Measure')
                     ->sortable()
                     ->searchable(),

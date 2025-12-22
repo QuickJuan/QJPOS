@@ -22,6 +22,7 @@ class OptionItemResource extends JsonResource
             'quantity'             => $this->quantity,
             'option'               => $this->whenLoaded('option'),
             'product'              => $this->whenLoaded('product'),
+            'product_packaging'    => $this->whenLoaded('productPackaging'),
         ];
     }
 }

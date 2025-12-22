@@ -261,13 +261,16 @@ class CartService
         string $orderType
     ): void {
         foreach ($selectedOptions as $selectedOption) {
-            foreach ($selectedOption['items'] as $childItemData) {
+            $optionItems = $selectedOption['items'] ?? [];
+
+            foreach ($optionItems as $childItemData) {
                 $this->createChildItem(
                     $parentItem,
                     $childItemData,
                     $parentProduct,
                     $parentQuantity,
-                    $orderType
+                    $orderType,
+                    $selectedOption
                 );
             }
         }
@@ -281,17 +284,20 @@ class CartService
         array $childItemData,
         Product $parentProduct,
         int $parentQuantity,
-        string $orderType
+        string $orderType,
+        array $selectedOption = []
     ): void {
         try {
             $childPrice = (float) ($childItemData['price'] ?? 0);
+            $childQuantityPerBundle = (int) ($childItemData['quantity'] ?? 0);
 
-            // Skip items with no price
-            if ($childPrice <= 0) {
+            if ($childQuantityPerBundle <= 0) {
                 return;
             }
 
-            $pricingData = $this->calculatePricingData($childPrice, $parentQuantity, $parentProduct);
+            $childQuantity = $childQuantityPerBundle * max(1, $parentQuantity);
+
+            $pricingData = $this->calculatePricingData($childPrice, $childQuantity, $parentProduct);
             $amount      = $pricingData['vatable_sales'] + $pricingData['vat_amount'] + $pricingData['non_vat_sales'];
 
             $parentItem->children()->create([
@@ -299,7 +305,7 @@ class CartService
                 'cart_id'              => $parentItem->cart_id,
                 'product_id'           => $childItemData['product_id'],
                 'product_packaging_id' => $childItemData['product_packaging_id'] ?? null,
-                'quantity'             => $childItemData['quantity'],
+                'quantity'             => $childQuantity,
                 'price'                => $childPrice,
                 'amount'               => $amount,
                 'order_type'           => $orderType,
@@ -309,6 +315,11 @@ class CartService
                 'vat_amount'           => $pricingData['vat_amount'],
                 'non_vat_sales'        => $pricingData['non_vat_sales'],
                 'less_tax'             => $pricingData['less_tax'],
+                'meta_data'            => [
+                    'option_id'   => $selectedOption['id'] ?? null,
+                    'option_name' => $selectedOption['option_name'] ?? null,
+                    'max_quantity'=> $selectedOption['max_quantity'] ?? null,
+                ],
             ]);
         } catch (\Throwable $e) {
             info('Failed to add child cart item', [
@@ -950,14 +961,31 @@ class CartService
     public function getCartByTable(int $tableId): ?Cart
     {
         return $this->model->where('table_room_id', $tableId)
-            ->with(['cartItems', 'tableRoom'])
+            ->with([
+                'cartItems' => function ($query) {
+                    $query->with([
+                        'product',
+                        'productPackaging',
+                        'children' => function ($childQuery) {
+                            $childQuery->with(['product', 'productPackaging']);
+                        },
+                    ]);
+                },
+                'tableRoom',
+            ])
             ->first();
     }
 
     public function getCartByTableAsResource(int $tableId): ?CartResource
     {
         $cart = $this->model->where('table_room_id', $tableId)
-            ->with(['cartItems.product', 'cartItems.productPackaging', 'tableRoom'])
+            ->with([
+                'cartItems.product',
+                'cartItems.productPackaging',
+                'cartItems.children.product',
+                'cartItems.children.productPackaging',
+                'tableRoom',
+            ])
             ->first();
 
         return new CartResource($cart);
@@ -969,6 +997,9 @@ class CartService
             ->with([
                 'cartItems',
                 'cartItems.product',
+                'cartItems.children',
+                'cartItems.children.product',
+                'cartItems.children.productPackaging',
                 'cartItems.servedBy:id,name',
                 'cashierSession.branch',
                 'customer',

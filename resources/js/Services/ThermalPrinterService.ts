@@ -37,9 +37,15 @@ interface BillData {
             discount_amount?: number | string;
             served_by?: string | null;
             selectedOptions?: Array<{
-                name: string;
-                price: number | string;
+                name?: string;
+                description?: string;
+                price?: number | string;
+                amount?: number | string;
+                quantity?: number | string;
+                sub_items?: OrderChildItem[];
             }>;
+            sub_items?: OrderChildItem[];
+            children?: OrderChildItem[];
             modifiers?: string[];
             notes?: string | null;
         }>;
@@ -64,6 +70,27 @@ interface BillData {
         footer_notes?: string;
     };
     footerMessage?: string;
+}
+
+interface OrderChildItem {
+    id?: number;
+    name?: string;
+    description?: string;
+    product?: {
+        name?: string;
+    };
+    quantity?: number | string;
+    price?: number | string;
+    amount?: number | string;
+    total?: number | string;
+    sub_items?: OrderChildItem[];
+}
+
+interface PrintableOptionLineItem {
+    name: string;
+    quantity: number;
+    amount: number;
+    depth: number;
 }
 
 interface ReceiptData {
@@ -522,9 +549,10 @@ class ThermalPrinterService {
                     }
 
                     // Selected options (if any)
-                    if (item.selectedOptions && item.selectedOptions.length > 0) {
-                        item.selectedOptions.forEach(option => {
-                            const optionLine = this.formatOptionLine(option.name, option.price);
+                    const optionItems = this.collectOptionItems(item);
+                    if (optionItems.length > 0) {
+                        optionItems.forEach(option => {
+                            const optionLine = this.formatOptionLine(option);
                             commands.push(...this.stringToBytes(`  ${optionLine}`));
                             commands.push(...this.ESC_POS.LINE_FEED);
                         });
@@ -835,17 +863,97 @@ class ThermalPrinterService {
         return `${qtyPriceText}${spaces}${amountText}`;
     }
 
+    private normalizeNumber(value: number | string | null | undefined, defaultValue = 0): number {
+        if (typeof value === 'number' && Number.isFinite(value)) {
+            return value;
+        }
+
+        if (typeof value === 'string') {
+            const parsed = parseFloat(value);
+            return Number.isFinite(parsed) ? parsed : defaultValue;
+        }
+
+        return defaultValue;
+    }
+
+    private normalizeQuantity(value: number | string | null | undefined): number {
+        const quantity = this.normalizeNumber(value, 1);
+        return quantity > 0 ? quantity : 1;
+    }
+
+    private collectOptionItems(item: any): PrintableOptionLineItem[] {
+        if (!item) {
+            return [];
+        }
+
+        const sources = [
+            Array.isArray(item.selectedOptions) ? item.selectedOptions : null,
+            Array.isArray(item.sub_items) ? item.sub_items : null,
+            Array.isArray(item.children) ? item.children : null,
+        ].filter((source): source is any[] => !!source && source.length > 0);
+
+        if (sources.length === 0) {
+            return [];
+        }
+
+        const [primary] = sources;
+        return primary.reduce<PrintableOptionLineItem[]>((acc, option) => {
+            acc.push(...this.flattenOptionItem(option));
+            return acc;
+        }, []);
+    }
+
+    private flattenOptionItem(option: any, depth = 0): PrintableOptionLineItem[] {
+        if (!option) {
+            return [];
+        }
+
+        const name = option.name ?? option.description ?? option.product?.name ?? 'Option item';
+        const quantity = this.normalizeQuantity(option.quantity ?? option.qty ?? option.pivot?.quantity);
+        const amountCandidate = [
+            option.amount,
+            option.total,
+            option.line_total,
+            option.price,
+            option.unit_price,
+            option.pivot?.amount,
+        ].find(value => value !== undefined && value !== null);
+        let amount = this.normalizeNumber(amountCandidate, 0);
+
+        if (amount === 0) {
+            const unitPrice = this.normalizeNumber(option.price ?? option.unit_price, 0);
+            amount = unitPrice * quantity;
+        }
+
+        const normalized: PrintableOptionLineItem[] = [{
+            name,
+            quantity,
+            amount,
+            depth,
+        }];
+
+        if (Array.isArray(option.sub_items) && option.sub_items.length > 0) {
+            option.sub_items.forEach(child => {
+                normalized.push(...this.flattenOptionItem(child, depth + 1));
+            });
+        }
+
+        return normalized;
+    }
+
     /**
      * Format option line for selected options
      */
-    private formatOptionLine(name: string, price: number | string): string {
+    private formatOptionLine(option: PrintableOptionLineItem): string {
         const maxWidth = (this.currentConfig?.character_width || 47) - 2; // Account for indentation
-        const numPrice = typeof price === 'string' ? parseFloat(price) || 0 : price;
-        const priceText = this.formatNumberWithComma(numPrice.toFixed(2));
-        const optionText = `+ ${name}`;
-        const spaces = ' '.repeat(Math.max(1, maxWidth - optionText.length - priceText.length));
+        const indentation = option.depth > 0 ? ' '.repeat(option.depth * 2) : '';
+        const optionText = `${indentation}${option.quantity} x ${option.name}`;
+        const amountText = option.amount > 0
+            ? `+${this.formatNumberWithComma(option.amount.toFixed(2))}`
+            : 'Included';
+        const spaces = ' '.repeat(Math.max(1, maxWidth - optionText.length - amountText.length));
 
-        return `${optionText}${spaces}${priceText}`;
+        return `${optionText}${spaces}${amountText}`;
     }
 
     /**
@@ -869,9 +977,15 @@ class ThermalPrinterService {
         price: number | string;
         amount: number | string;
         selectedOptions?: Array<{
-            name: string;
-            price: number | string;
+            name?: string;
+            description?: string;
+            price?: number | string;
+            amount?: number | string;
+            quantity?: number | string;
+            sub_items?: OrderChildItem[];
         }>;
+        sub_items?: OrderChildItem[];
+        children?: OrderChildItem[];
         lessTax?: number | string;
         discount?: number | string;
         orderType?: string;
@@ -1033,9 +1147,10 @@ class ThermalPrinterService {
                     }
 
                     // Selected options (if any)
-                    if (item.selectedOptions && item.selectedOptions.length > 0) {
-                        item.selectedOptions.forEach(option => {
-                            const optionLine = this.formatOptionLine(option.name, option.price);
+                    const optionItems = this.collectOptionItems(item);
+                    if (optionItems.length > 0) {
+                        optionItems.forEach(option => {
+                            const optionLine = this.formatOptionLine(option);
                             commands.push(...this.stringToBytes(`  ${optionLine}`));
                             commands.push(...this.ESC_POS.LINE_FEED);
                         });

@@ -3,6 +3,7 @@ namespace App\Filament\Imports;
 
 use App\Models\Inventory;
 use App\Models\Location;
+use App\Models\UnitMeasure;
 use Filament\Actions\Imports\ImportColumn;
 use Filament\Actions\Imports\Importer;
 use Filament\Actions\Imports\Models\Import;
@@ -41,6 +42,13 @@ class InventoryImporter extends Importer
         )
             : null;
 
+        $unitMeasure = ! empty($this->data['unit_measure'])
+            ? UnitMeasure::firstOrCreate(
+                ['name' => $this->data['unit_measure']],
+                ['symbol' => strtoupper(substr($this->data['unit_measure'], 0, 5))]
+            )
+            : null;
+
         return Inventory::firstOrCreate(
             [
                 'name'             => $this->data['name'],
@@ -49,7 +57,8 @@ class InventoryImporter extends Importer
             [
                 'default_location' => $defaultLocation?->id ?? null,
                 'name'             => $this->data['name'],
-                'unit_measure'     => $this->data['unit_measure'],
+                'unit_measure'     => $unitMeasure?->name,
+                'unit_measure_id'  => $unitMeasure?->id,
                 'cost'             => $this->data['cost'],
             ]);
     }

@@ -185,14 +185,28 @@
                                         <span
                                             class="text-xs text-secondary-600"
                                         >
-                                            {{ option.product.name }}
+                                            {{ option.quantity }} ×
+                                            {{ getChildName(option) }}
                                         </span>
                                     </div>
                                     <div class="flex items-center gap-2">
                                         <span
                                             class="text-xs text-secondary-600"
                                         >
-                                            +{{ formatMoney(option.price) }}
+                                            <template
+                                                v-if="
+                                                    getChildAmount(option) > 0
+                                                "
+                                            >
+                                                +{{
+                                                    formatMoney(
+                                                        getChildAmount(option)
+                                                    )
+                                                }}
+                                            </template>
+                                            <template v-else>
+                                                Included
+                                            </template>
                                         </span>
                                         <button
                                             @click.stop="
@@ -363,6 +377,21 @@ const formatModifierValue = (value: any) => {
         return value.map((item) => item.name || item).join(", ");
     }
     return String(value);
+};
+
+const getChildName = (option: any) => {
+    return option?.product?.name || option?.description || "Selected item";
+};
+
+const getChildAmount = (option: any) => {
+    if (option?.amount !== undefined && option?.amount !== null) {
+        return parseFloat(String(option.amount)) || 0;
+    }
+
+    const price = parseFloat(String(option?.price ?? 0));
+    const quantity = parseFloat(String(option?.quantity ?? 0));
+
+    return price * quantity;
 };
 
 const showItemModifiers = (item: any) => {

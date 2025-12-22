@@ -20,7 +20,7 @@ class OptionResource extends JsonResource
             'max_quantity' => $this->max_quantity,
             'is_default'   => (bool) $this->is_default,
             'product'      => $this->whenLoaded('product'),
-            'optionItems'  => $this->whenLoaded('optionItems'),
+            'optionItems'  => OptionItemResource::collection($this->whenLoaded('optionItems')),
             'optionImage'  => $this->getFirstMediaUrl('featured_image'),
         ];
     }

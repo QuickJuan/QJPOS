@@ -108,13 +108,20 @@ class Product extends Model implements HasMedia
         return $this->hasMany(OptionItem::class);
     }
 
-    public function modifiers(): BelongsToMany
-    {
-        return $this->belongsToMany(Modifier::class, 'modifier_product', 'product_id', 'modifier_id')->withTimestamps();
-    }
-
     public function preparationLocation(): BelongsTo
     {
         return $this->belongsTo(PreparationLocation::class);
+    }
+
+    public function recipeInventories(): BelongsToMany
+    {
+        return $this->belongsToMany(Inventory::class, 'inventory_product')
+            ->withPivot(['quantity', 'unit_measure'])
+            ->withTimestamps();
+    }
+
+    public function inventoryRecipes(): HasMany
+    {
+        return $this->hasMany(ProductInventory::class, 'product_id');
     }
 }

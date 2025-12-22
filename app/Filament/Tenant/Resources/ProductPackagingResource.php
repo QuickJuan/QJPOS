@@ -15,9 +15,10 @@ use Filament\Tables\Table;
 
 class ProductPackagingResource extends Resource
 {
-    protected static ?string $model           = ProductPackaging::class;
-    protected static ?string $navigationLabel = "Product Pricing";
-    protected static ?string $navigationIcon  = 'heroicon-o-rectangle-stack';
+    protected static ?string $model                 = ProductPackaging::class;
+    protected static bool $shouldRegisterNavigation = false;
+    protected static ?string $navigationLabel       = "Product Pricing";
+    protected static ?string $navigationIcon        = 'heroicon-o-rectangle-stack';
 
     public static function form(Form $form): Form
     {

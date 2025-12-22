@@ -18,7 +18,8 @@ use App\Filament\Tenant\Resources\OptionResource\RelationManagers\OptionItemsRel
 
 class OptionResource extends Resource
 {
-    protected static ?string $model = Option::class;
+    protected static ?string $model                 = Option::class;
+    protected static bool $shouldRegisterNavigation = false;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 

@@ -121,22 +121,28 @@
 
                         <!-- Selected Options -->
                         <div
-                            v-if="item.children && item.children.length > 0"
-                            class="ml-2 mb-4 space-y-1"
+                            v-if="hasChildItems(item)"
+                            class="ml-5 pl-4 border-l-4 border-gray-300/80 mb-4 space-y-1"
                         >
                             <div
-                                v-for="option in item.children"
+                                v-for="option in getChildItems(item)"
                                 :key="option.id"
                                 class="flex items-center justify-between"
                             >
                                 <div class="flex items-center gap-2 flex-1">
                                     <span class="text-xs font-medium"> • </span>
                                     <span class="text-xs flex-1 ml-2">
-                                        {{ option.product.name }}
+                                        {{ option.quantity }} ×
+                                        {{ getChildName(option) }}
                                     </span>
                                 </div>
                                 <span class="text-xs font-medium">
-                                    +{{ formatMoney(option.price) }}
+                                    <template v-if="getChildAmount(option) > 0">
+                                        +{{
+                                            formatMoney(getChildAmount(option))
+                                        }}
+                                    </template>
+                                    <template v-else>Included</template>
                                 </span>
                             </div>
                         </div>
@@ -229,6 +235,39 @@ const getOrderTypeLabel = (orderType: string) => {
         delivery: "Delivery",
     };
     return labels[orderType] || orderType;
+};
+
+const getChildName = (option: any) => {
+    return option?.product?.name || option?.description || "Selected item";
+};
+
+const getChildItems = (item: any) => {
+    if (Array.isArray(item?.children) && item.children.length) {
+        return item.children;
+    }
+
+    if (Array.isArray(item?.sub_items) && item.sub_items.length) {
+        return item.sub_items;
+    }
+
+    if (Array.isArray(item?.subItems) && item.subItems.length) {
+        return item.subItems;
+    }
+
+    return [];
+};
+
+const hasChildItems = (item: any) => getChildItems(item).length > 0;
+
+const getChildAmount = (option: any) => {
+    if (option?.amount !== undefined && option?.amount !== null) {
+        return parseFloat(String(option.amount)) || 0;
+    }
+
+    const price = parseFloat(String(option?.price ?? 0));
+    const quantity = parseFloat(String(option?.quantity ?? 0));
+
+    return price * quantity;
 };
 
 const formatTime = (dateString: string) => {

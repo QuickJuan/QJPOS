@@ -3,7 +3,6 @@ namespace App\Filament\Tenant\Resources;
 
 use App\Filament\Tenant\Resources\ModifierResource\Pages;
 use App\Models\Modifier;
-use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
@@ -22,21 +21,16 @@ class ModifierResource extends Resource
     {
         return $form
             ->schema([
-                Select::make('product_id')
-                    ->relationship('products', 'name')
-                    ->multiple()
-                    ->preload()
-                    ->searchable()
-                    ->required(),
-
                 TextInput::make('name')
                     ->required()
                     ->rules('required'),
 
                 TagsInput::make('list')
+                    ->label('Modifier Options')
                     ->placeholder('Enter modifier options, press tab or comma to separate')
                     ->separator(',')
-                    ->splitKeys(['Tab', ',']),
+                    ->splitKeys(['Tab', ','])
+                    ->helperText('Modifiers are now global and automatically available across all products.'),
             ]);
     }
 
@@ -44,9 +38,28 @@ class ModifierResource extends Resource
     {
         return $table
             ->columns([
+                TextColumn::make('id')
+                    ->label('ID')
+                    ->sortable(),
+
                 TextColumn::make('name')
                     ->searchable()
                     ->sortable(),
+
+                TextColumn::make('list')
+                    ->label('Options')
+                    ->formatStateUsing(function ($state) {
+                        if (is_array($state)) {
+                            return implode(', ', array_filter($state));
+                        }
+
+                        if (is_string($state)) {
+                            return $state;
+                        }
+
+                        return '';
+                    })
+                    ->wrap(),
             ])
             ->filters([
                 //

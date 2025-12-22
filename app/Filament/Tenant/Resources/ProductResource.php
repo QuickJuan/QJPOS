@@ -5,6 +5,7 @@ use App\Enums\VatType;
 use App\Filament\Imports\ProductImporter;
 use App\Filament\Tenant\Resources\ProductResource\Pages;
 use App\Filament\Tenant\Resources\ProductResource\RelationManagers;
+use App\Filament\Tenant\Resources\ProductResource\RelationManagers\OptionsRelationManager;
 use App\Models\Product;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\RichEditor;
@@ -25,7 +26,6 @@ use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Illuminate\Support\HtmlString;
 
 class ProductResource extends Resource
 {
@@ -64,6 +64,19 @@ class ProductResource extends Resource
                             ->maxLength(255)
                             ->label('Brand Name'),
                     ]),
+
+                Select::make('product_type')
+                    ->label('Product Type')
+                    ->required()
+                    ->options([
+                        'simple'       => 'Simple',
+                        'with_variant' => 'With Variant',
+                        'composite'    => 'Composite',
+                        'bundle'       => 'Bundle',
+                    ])
+                    ->default('simple')
+                    ->live()
+                    ->helperText('Choose how this product behaves in POS and inventory.'),
 
                 Select::make('preparation_location_id')
                     ->relationship('preparationLocation', 'description')
@@ -109,17 +122,12 @@ class ProductResource extends Resource
                     ->maxLength(150)
                     ->label('Receipt Name'),
 
-                Toggle::make('multiple_packaging')
-                    ->label('Multiple Packaging')
-                    ->live(onBlur: true)
-                    ->default(false),
-
                 TextInput::make('price')
                     ->required()
                     ->default(0)
                     ->numeric()
                     ->label('Price')
-                    ->hidden(fn(Get $get) => $get('multiple_packaging') === true),
+                    ->hidden(fn(Get $get) => $get('product_type') === 'with_variant'),
 
                 Select::make('vat_type')
                     ->label('Tax Type')
@@ -151,11 +159,52 @@ class ProductResource extends Resource
 
                 TextInput::make('unit_measure')
                     ->label('Unit of Measure')
-                    ->hidden(fn(Get $get) => $get('multiple_packaging') === true),
+                    ->hidden(fn(Get $get) => $get('product_type') === 'with_variant'),
+
+                Repeater::make('inventoryRecipes')
+                    ->label('Recipe Ingredients')
+                    ->relationship('inventoryRecipes')
+                    ->hidden(fn(Get $get) => $get('product_type') !== 'composite')
+                    ->schema([
+                        Select::make('inventory_id')
+                            ->label('Inventory Item')
+                            ->relationship('inventory', 'name')
+                            ->required()
+                            ->searchable()
+                            ->preload()
+                            ->reactive()
+                            ->afterStateUpdated(function ($state, callable $set) {
+                                if (! $state) {
+                                    return;
+                                }
+
+                                $inventory = \App\Models\Inventory::find($state);
+                                $set('unit_measure', $inventory?->unit_measure);
+                            }),
+
+                        TextInput::make('quantity')
+                            ->label('Qty Used')
+                            ->numeric()
+                            ->minValue(0)
+                            ->required(),
+
+                        TextInput::make('unit_measure')
+                            ->label('Unit')
+                            ->maxLength(50)
+                            ->placeholder('e.g., g, ml, pcs'),
+                    ])
+                    ->columns(3)
+                    ->defaultItems(0)
+                    ->collapsible()
+                    ->itemLabel(fn (array $state): ?string => $state['inventory_id'] ? (\App\Models\Inventory::find($state['inventory_id'])?->name) : 'Ingredient')
+                    ->addActionLabel('Add Ingredient')
+                    ->columnSpanFull(),
 
                 Repeater::make('options')
                     ->label('Product Options')
                     ->relationship('options')
+                    ->hidden(fn(Get $get) => $get('product_type') !== 'bundle')
+                    ->helperText('Options are only available for bundle products.')
                     ->schema([
                         TextInput::make('option_name')
                             ->label('Option Name')
@@ -260,11 +309,11 @@ class ProductResource extends Resource
                     ->columnSpanFull()
                     ->defaultItems(0),
 
-                TextInput::make('total_onhand')
-                    ->required()
-                    ->default(0)
-                    ->numeric()
-                    ->label('Total Onhand'),
+                // TextInput::make('total_onhand')
+                //     ->required()
+                //     ->default(0)
+                //     ->numeric()
+                //     ->label('Total Onhand'),
 
                 Toggle::make('is_active')
                     ->default(true),
@@ -274,12 +323,12 @@ class ProductResource extends Resource
                     ->ColumnSpan(2)
                     ->label('Description'),
 
-                Select::make('modifiers')
-                    ->relationship('modifiers', 'name')
-                    ->nullable()
-                    ->searchable()
-                    ->multiple()
-                    ->preload(),
+                // Select::make('modifiers')
+                //     ->relationship('modifiers', 'name')
+                //     ->nullable()
+                //     ->searchable()
+                //     ->multiple()
+                //     ->preload(),
 
                 SpatieMediaLibraryFileUpload::make('featured_image')
                     ->label('Featured Image')
@@ -305,6 +354,11 @@ class ProductResource extends Resource
     {
         return $table
             ->columns([
+
+                TextColumn::make('id')
+                    ->label('ID')
+                    ->sortable(),
+
                 SpatieMediaLibraryImageColumn::make('featured_image')
                     ->collection('featured_image')
                     ->circular(),
@@ -443,6 +497,7 @@ class ProductResource extends Resource
             // RelationManagers\CategoryRelationManager::class,
             // RelationManagers\BrandRelationManager::class,
             RelationManagers\ProductPackagingsRelationManager::class,
+            RelationManagers\OptionsRelationManager::class,
             // Add other relation managers here if needed
         ];
     }
