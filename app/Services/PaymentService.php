@@ -14,9 +14,12 @@ use Illuminate\Support\Facades\Log;
 
 class PaymentService
 {
-    public function __construct(protected BranchService $branchService)
-    {
-        $this->branchService = $branchService;
+    public function __construct(
+        protected BranchService $branchService,
+        protected InventoryStockService $inventoryStockService
+    ) {
+        $this->branchService         = $branchService;
+        $this->inventoryStockService = $inventoryStockService;
     }
 
     public function settleBill($payload): mixed
@@ -29,6 +32,8 @@ class PaymentService
                 $order = $this->saveCartToOrder($cart, $payload);
                 $this->saveCartItemsToOrderItems($cart->cartItems, $order);
                 $this->saveVoidCartItemsToOrderItems($cart, $order);
+
+                $this->inventoryStockService->deductOrderInventory($order);
 
                 // Update table status if applicable
                 if ($cart->table_room_id

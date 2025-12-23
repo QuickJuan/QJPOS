@@ -4,6 +4,7 @@ namespace App\Filament\Tenant\Resources;
 use App\Filament\Imports\InventoryImporter;
 use App\Filament\Tenant\Resources\InventoryResource\Pages;
 use App\Models\Inventory;
+use App\Models\InventoryLocationStock;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
@@ -18,6 +19,7 @@ use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Actions\ImportAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class InventoryResource extends Resource
 {
@@ -158,9 +160,15 @@ class InventoryResource extends Resource
                     ->searchable(),
 
                 TextColumn::make('defaultLocation.location')
+                    ->label('Default Location')
                     ->sortable()
-                    ->money('PHP')
                     ->searchable(),
+
+                TextColumn::make('locationStocksSummary')
+                    ->label('Location Stocks')
+                    ->state(fn (Inventory $record) => self::renderLocationStocks($record))
+                    ->html()
+                    ->wrap(),
             ])
             ->filters([
                 //
@@ -196,6 +204,47 @@ class InventoryResource extends Resource
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with([
+            'unitMeasure',
+            'defaultLocation',
+            'locationStocks.location',
+        ]);
+    }
+
+    protected static function renderLocationStocks(Inventory $inventory): string
+    {
+        if ($inventory->locationStocks->isEmpty()) {
+            return '<span class="text-sm text-gray-500">No stock recorded</span>';
+        }
+
+        $unitLabel = e($inventory->unitMeasure?->symbol ?? $inventory->unit_measure ?? '');
+
+        return $inventory->locationStocks
+            ->sortBy(fn (InventoryLocationStock $stock) => $stock->location?->location ?? '')
+            ->map(function (InventoryLocationStock $stock) use ($unitLabel) {
+                $locationName = e($stock->location?->location ?? 'Unassigned');
+                $stockValue  = e(self::formatStock($stock->current_stock));
+                $unitHtml    = $unitLabel ? "<span class=\"text-[11px] text-gray-500\"> {$unitLabel}</span>" : '';
+
+                return "<div class=\"flex items-center justify-between gap-3\"><span>{$locationName}</span><span class=\"font-semibold\">{$stockValue}{$unitHtml}</span></div>";
+            })
+            ->implode('');
+    }
+
+    public static function formatStock(null|int|float|string $value): string
+    {
+        if ($value === null || $value === '') {
+            return '0';
+        }
+
+        $formatted = number_format((float) $value, 4, '.', '');
+        $trimmed   = rtrim(rtrim($formatted, '0'), '.');
+
+        return $trimmed === '' ? '0' : $trimmed;
     }
 
     public static function getRelations(): array
