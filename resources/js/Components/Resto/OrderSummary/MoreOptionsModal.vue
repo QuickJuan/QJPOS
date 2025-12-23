@@ -3,168 +3,243 @@
         :visible="props.visible"
         modal
         header="More Options"
-        :style="{ width: '20rem' }"
+        class="bg-white more-options-dialog"
+        :style="{ maxWidth: '95vw' }"
         @update:visible="handleClose"
     >
-        <div class="space-y-3">
-            <!-- <button
-                @click="handleSaveOrder"
-                :disabled="orderItems.length === 0"
-                class="w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center gap-3 bg-gray-100 text-secondary-700 hover:bg-gray-200 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
-            >
-                <BookmarkIcon class="w-5 h-5" />
-                <div class="text-left">
-                    <div class="font-semibold">Save Order</div>
-                    <div class="text-xs opacity-75">
-                        Save order for later processing
-                    </div>
-                </div>
-            </button> -->
-
-            <button
-                @click="handleApplyDiscount"
-                :disabled="selectedItemsForDiscount.length === 0"
-                class="w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center gap-3 bg-gray-100 text-secondary-700 hover:bg-gray-200 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
-            >
-                <TagIcon class="w-5 h-5" />
-                <div class="text-left flex-1">
-                    <div class="font-semibold flex items-center gap-2">
-                        Apply Discount
+        <div class="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
+            <div class="space-y-6">
+                <div
+                    class="rounded-2xl border border-slate-100 bg-gradient-to-r from-blue-50 via-emerald-50 to-white/80 p-4 text-sm text-secondary-600 shadow-inner"
+                >
+                    <p
+                        class="text-xs font-semibold uppercase tracking-widest text-secondary-500"
+                    >
+                        Quick glance
+                    </p>
+                    <div class="mt-2 flex items-center justify-between gap-3">
+                        <div>
+                            <p class="text-lg font-semibold text-secondary-900">
+                                {{
+                                    hasOrderItems
+                                        ? `${orderItems.length} item${
+                                              orderItems.length === 1 ? "" : "s"
+                                          }`
+                                        : "No items yet"
+                                }}
+                            </p>
+                            <p class="text-xs text-secondary-500">
+                                {{ selectedCount }} selected
+                                {{ selectedCount === 1 ? "item" : "items" }}
+                                ready for quick actions
+                            </p>
+                        </div>
                         <span
-                            v-if="selectedItemsForDiscount.length > 0"
-                            class="bg-yellow-600 text-white text-xs px-1.5 py-0.5 rounded-full"
+                            class="rounded-full bg-white px-3 py-1 text-sm font-semibold text-secondary-700 shadow"
                         >
-                            {{ selectedItemsForDiscount.length }}
+                            {{ selectedCount }}
                         </span>
                     </div>
-                    <div class="text-xs opacity-75">
-                        Apply discount to selected items
-                    </div>
                 </div>
-            </button>
 
-            <button
-                @click="handleAddModifier"
-                :disabled="selectedItemsForDiscount.length === 0"
-                class="w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center gap-3 bg-gray-100 text-secondary-700 hover:bg-gray-200 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
-            >
-                <PlusIcon class="w-5 h-5" />
-                <div class="text-left flex-1">
-                    <div class="font-semibold flex items-center gap-2">
-                        Add Modifier
+                <section class="space-y-3">
+                    <p
+                        class="text-xs font-semibold uppercase tracking-wide text-secondary-500"
+                    >
+                        Selected items
+                    </p>
+
+                    <button
+                        @click="handleApplyDiscount"
+                        :disabled="selectedCount === 0"
+                        class="group relative flex w-full items-center gap-4 rounded-2xl border border-slate-200/70 bg-gradient-to-br from-white to-slate-50 p-4 text-left text-secondary-800 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg disabled:translate-y-0 disabled:border-slate-100 disabled:bg-slate-50 disabled:text-slate-400 disabled:shadow-none"
+                    >
                         <span
-                            v-if="selectedItemsForDiscount.length > 0"
-                            class="bg-blue-600 text-white text-xs px-1.5 py-0.5 rounded-full"
+                            class="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 text-amber-600 group-disabled:bg-slate-100 group-disabled:text-slate-400"
                         >
-                            {{ selectedItemsForDiscount.length }}
+                            <TagIcon class="w-5 h-5" />
                         </span>
-                    </div>
-                    <div class="text-xs opacity-75">
-                        Add modifier to selected items
-                    </div>
-                </div>
-            </button>
+                        <div class="flex-1 text-left">
+                            <div
+                                class="flex items-center gap-2 text-base font-semibold"
+                            >
+                                Apply Discount
+                                <span
+                                    v-if="selectedCount > 0"
+                                    class="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-semibold text-white"
+                                >
+                                    {{ selectedCount }}
+                                </span>
+                            </div>
+                            <p class="text-xs text-secondary-500">
+                                Apply preset promos to highlighted items.
+                            </p>
+                        </div>
+                    </button>
 
-            <button
-                @click="handleTransferOrderItems"
-                :disabled="selectedItemsForDiscount.length === 0"
-                class="w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center gap-3 bg-gray-100 text-secondary-700 hover:bg-gray-200 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
-            >
-                <ArrowRightIcon class="w-5 h-5" />
-                <div class="text-left flex-1">
-                    <div class="font-semibold flex items-center gap-2">
-                        Transfer Order Items
+                    <button
+                        @click="handleAddModifier"
+                        :disabled="selectedCount === 0"
+                        class="group relative flex w-full items-center gap-4 rounded-2xl border border-slate-200/70 bg-gradient-to-br from-white to-slate-50 p-4 text-left text-secondary-800 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg disabled:translate-y-0 disabled:border-slate-100 disabled:bg-slate-50 disabled:text-slate-400 disabled:shadow-none"
+                    >
                         <span
-                            v-if="selectedItemsForDiscount.length > 0"
-                            class="bg-green-600 text-white text-xs px-1.5 py-0.5 rounded-full"
+                            class="flex h-11 w-11 items-center justify-center rounded-xl bg-sky-50 text-sky-600 group-disabled:bg-slate-100 group-disabled:text-slate-400"
                         >
-                            {{ selectedItemsForDiscount.length }}
+                            <PlusIcon class="w-5 h-5" />
                         </span>
-                    </div>
-                    <div class="text-xs opacity-75">
-                        Transfer selected items to another table
-                    </div>
-                </div>
-            </button>
+                        <div class="flex-1 text-left">
+                            <div
+                                class="flex items-center gap-2 text-base font-semibold"
+                            >
+                                Add Modifier
+                                <span
+                                    v-if="selectedCount > 0"
+                                    class="rounded-full bg-sky-500 px-2 py-0.5 text-xs font-semibold text-white"
+                                >
+                                    {{ selectedCount }}
+                                </span>
+                            </div>
+                            <p class="text-xs text-secondary-500">
+                                Attach add-ons, remarks, or cooking
+                                instructions.
+                            </p>
+                        </div>
+                    </button>
 
-            <button
-                @click="handlePrintBill"
-                :disabled="orderItems.length === 0"
-                class="w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center gap-3 bg-gray-100 text-secondary-700 hover:bg-gray-200 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
-            >
-                <PrinterIcon class="w-5 h-5" />
-                <div class="text-left">
-                    <div class="font-semibold">Print Bill</div>
-                    <div class="text-xs opacity-75">
-                        Print bill for customer
-                    </div>
-                </div>
-            </button>
+                    <button
+                        @click="handleTransferOrderItems"
+                        :disabled="selectedCount === 0"
+                        class="group relative flex w-full items-center gap-4 rounded-2xl border border-slate-200/70 bg-gradient-to-br from-white to-slate-50 p-4 text-left text-secondary-800 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg disabled:translate-y-0 disabled:border-slate-100 disabled:bg-slate-50 disabled:text-slate-400 disabled:shadow-none"
+                    >
+                        <span
+                            class="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 group-disabled:bg-slate-100 group-disabled:text-slate-400"
+                        >
+                            <ArrowRightIcon class="w-5 h-5" />
+                        </span>
+                        <div class="flex-1 text-left">
+                            <div
+                                class="flex items-center gap-2 text-base font-semibold"
+                            >
+                                Transfer Order Items
+                                <span
+                                    v-if="selectedCount > 0"
+                                    class="rounded-full bg-emerald-500 px-2 py-0.5 text-xs font-semibold text-white"
+                                >
+                                    {{ selectedCount }}
+                                </span>
+                            </div>
+                            <p class="text-xs text-secondary-500">
+                                Move the highlighted items to another table.
+                            </p>
+                        </div>
+                    </button>
+                </section>
+            </div>
 
-            <button
-                @click="handleViewTable"
-                class="w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center gap-3 bg-gray-100 text-secondary-700 hover:bg-gray-200"
-            >
-                <TableCellsIcon class="w-5 h-5" />
-                <div class="text-left">
-                    <div class="font-semibold">View Table</div>
-                    <div class="text-xs opacity-75">
-                        View table layout and status
-                    </div>
-                </div>
-            </button>
+            <div class="space-y-6">
+                <section class="space-y-3">
+                    <p
+                        class="text-xs font-semibold uppercase tracking-wide text-secondary-500"
+                    >
+                        Order actions
+                    </p>
 
-            <button
-                @click="handleReviewTransactions"
-                class="w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center gap-3 bg-gray-100 text-secondary-700 hover:bg-gray-200"
-            >
-                <TableCellsIcon class="w-5 h-5" />
-                <div class="text-left">
-                    <div class="font-semibold">Review Transactions</div>
-                    <div class="text-xs opacity-75">
-                        Review Previous Transactions
-                    </div>
-                </div>
-            </button>
+                    <button
+                        @click="handlePrintBill"
+                        :disabled="!hasOrderItems"
+                        class="group relative flex w-full items-center gap-4 rounded-2xl border border-slate-200/70 bg-white p-4 text-left text-secondary-800 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg disabled:translate-y-0 disabled:border-slate-100 disabled:bg-slate-50 disabled:text-slate-400 disabled:shadow-none"
+                    >
+                        <span
+                            class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-50 text-primary-600 group-disabled:bg-slate-100 group-disabled:text-slate-400"
+                        >
+                            <PrinterIcon class="w-5 h-5" />
+                        </span>
+                        <div>
+                            <p class="text-base font-semibold">Print Bill</p>
+                            <p class="text-xs text-secondary-500">
+                                Generate a customer copy with the latest totals.
+                            </p>
+                        </div>
+                    </button>
 
-            <!-- <button
-                @click="handlePrinterConfig"
-                class="w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center gap-3 bg-gray-100 text-secondary-700 hover:bg-gray-200"
-            >
-                <CogIcon class="w-5 h-5" />
-                <div class="text-left">
-                    <div class="font-semibold">Printer Configuration</div>
-                    <div class="text-xs opacity-75">
-                        Configure thermal printers
-                    </div>
-                </div>
-            </button> -->
+                    <button
+                        @click="handleReprintOrder"
+                        class="group relative flex w-full items-center gap-4 rounded-2xl border border-slate-200/70 bg-white p-4 text-left text-secondary-800 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
+                    >
+                        <span
+                            class="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-50 text-violet-600"
+                        >
+                            <ArrowPathIcon class="w-5 h-5" />
+                        </span>
+                        <div>
+                            <p class="text-base font-semibold">
+                                Re-print Order
+                            </p>
+                            <p class="text-xs text-secondary-500">
+                                Fetch a previous print via batch reference.
+                            </p>
+                        </div>
+                    </button>
+                </section>
 
-            <!-- <button
-                @click="handleEndOfShift"
-                class="w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center gap-3 bg-red-100 text-red-700 hover:bg-red-200"
-            >
-                <PowerIcon class="w-5 h-5" />
-                <div class="text-left">
-                    <div class="font-semibold">End of Shift</div>
-                    <div class="text-xs opacity-75">Close cashier session</div>
-                </div>
-            </button> -->
+                <section class="space-y-3">
+                    <p
+                        class="text-xs font-semibold uppercase tracking-wide text-secondary-500"
+                    >
+                        Navigation
+                    </p>
+
+                    <button
+                        @click="handleViewTable"
+                        class="group relative flex w-full items-center gap-4 rounded-2xl border border-slate-200/70 bg-white p-4 text-left text-secondary-800 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
+                    >
+                        <span
+                            class="flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600"
+                        >
+                            <TableCellsIcon class="w-5 h-5" />
+                        </span>
+                        <div>
+                            <p class="text-base font-semibold">View Table</p>
+                            <p class="text-xs text-secondary-500">
+                                Open the floor layout and seat status.
+                            </p>
+                        </div>
+                    </button>
+
+                    <button
+                        @click="handleReviewTransactions"
+                        class="group relative flex w-full items-center gap-4 rounded-2xl border border-slate-200/70 bg-white p-4 text-left text-secondary-800 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
+                    >
+                        <span
+                            class="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-50 text-slate-600"
+                        >
+                            <TableCellsIcon class="w-5 h-5" />
+                        </span>
+                        <div>
+                            <p class="text-base font-semibold">
+                                Review Transactions
+                            </p>
+                            <p class="text-xs text-secondary-500">
+                                Jump to the transaction history dashboard.
+                            </p>
+                        </div>
+                    </button>
+                </section>
+            </div>
         </div>
     </Dialog>
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
 import { Dialog } from "primevue";
 import {
-    BookmarkIcon,
     TagIcon,
     PlusIcon,
     PrinterIcon,
     TableCellsIcon,
-    PowerIcon,
-    CogIcon,
     ArrowRightIcon,
+    ArrowPathIcon,
 } from "@heroicons/vue/24/outline";
 import { route } from "ziggy-js";
 import { router } from "@inertiajs/vue3";
@@ -175,12 +250,19 @@ const props = defineProps<{
     selectedItemsForDiscount?: number[];
 }>();
 
+const selectedCount = computed(
+    () => props.selectedItemsForDiscount?.length ?? 0
+);
+
+const hasOrderItems = computed(() => (props.orderItems ?? []).length > 0);
+
 const emit = defineEmits<{
     saveOrder: [];
     openDiscountModal: [];
     addModifier: [];
     transferOrderItems: [];
     printBill: [];
+    reprintOrder: [];
     viewTable: [];
     printerConfig: [];
     endOfShift: [];
@@ -213,6 +295,11 @@ const handlePrintBill = () => {
     emit("update:visible", false);
 };
 
+const handleReprintOrder = () => {
+    emit("reprintOrder");
+    emit("update:visible", false);
+};
+
 const handleViewTable = () => {
     emit("viewTable");
     emit("update:visible", false);
@@ -232,3 +319,22 @@ const handleClose = () => {
     emit("update:visible", false);
 };
 </script>
+
+<style scoped>
+.more-options-dialog {
+    width: 24rem;
+    max-width: 95vw;
+}
+
+@media (min-width: 768px) {
+    .more-options-dialog {
+        width: 48rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .more-options-dialog {
+        width: 72rem;
+    }
+}
+</style>

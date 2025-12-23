@@ -12,6 +12,7 @@ class CartItem extends Model
         'parent_id',
         'cart_id',
         'product_id',
+        'product_type',
         'description',
         'product_packaging_id',
         'quantity',
@@ -35,11 +36,13 @@ class CartItem extends Model
         'notes',
         'meta_data',
         'served_by',
+        'serving_number',
     ];
 
     protected $casts = [
         'selected_options' => 'array',
         'meta_data'        => 'array',
+        'serving_number'   => 'integer',
     ];
 
     // SCOPES
@@ -76,6 +79,17 @@ class CartItem extends Model
     public function children(): HasMany
     {
         return $this->hasMany(self::class, 'parent_id');
+    }
+
+    public function childrenRecursive(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_id')
+            ->with([
+                'childrenRecursive',
+                'product',
+                'productPackaging',
+                'product.preparationLocation',
+            ]);
     }
 
     public function selectedOptions()

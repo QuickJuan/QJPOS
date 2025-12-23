@@ -14,6 +14,7 @@ export default interface Product {
     total_onhand: string;
     price: number;
     multiple_packaging: boolean;
+    product_type?: string;
     unit_type: string;
     category: Category;
     brand: Brand;

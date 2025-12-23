@@ -3,12 +3,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Modifier extends Model
 {
     protected $fillable = [
-        'product_id',
         'name',
         'list',
     ];
@@ -27,8 +25,4 @@ class Modifier extends Model
             ]);
     }
 
-    public function products(): BelongsToMany
-    {
-        return $this->belongsToMany(Product::class, 'modifier_product', 'modifier_id', 'product_id')->withTimestamps();
-    }
 }

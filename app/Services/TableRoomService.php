@@ -142,7 +142,12 @@ class TableRoomService
             $query->where('branch_id', $branchId)
                     ->whereNull('merge_to')
                     ->orderBy('name')
-                    ->with(['mergedTables', 'cart']);
+                    ->with([
+                        'mergedTables' => function ($mergedQuery) {
+                            $mergedQuery->with(['mergedTables', 'cart.cartItems']);
+                        },
+                        'cart.cartItems',
+                    ]);
         }])
         ->orderBy('name')
         ->get();

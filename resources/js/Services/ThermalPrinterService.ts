@@ -37,9 +37,15 @@ interface BillData {
             discount_amount?: number | string;
             served_by?: string | null;
             selectedOptions?: Array<{
-                name: string;
-                price: number | string;
+                name?: string;
+                description?: string;
+                price?: number | string;
+                amount?: number | string;
+                quantity?: number | string;
+                sub_items?: OrderChildItem[];
             }>;
+            sub_items?: OrderChildItem[];
+            children?: OrderChildItem[];
             modifiers?: string[];
             notes?: string | null;
         }>;
@@ -64,6 +70,50 @@ interface BillData {
         footer_notes?: string;
     };
     footerMessage?: string;
+}
+
+interface OrderChildItem {
+    id?: number;
+    name?: string;
+    description?: string;
+    product?: {
+        name?: string;
+    };
+    quantity?: number | string;
+    price?: number | string;
+    amount?: number | string;
+    total?: number | string;
+    sub_items?: OrderChildItem[];
+}
+
+interface PrintableOptionLineItem {
+    name: string;
+    quantity: number;
+    amount: number;
+    depth: number;
+}
+
+type PlaceOrderModifier = string | {
+    name?: string;
+    description?: string;
+    label?: string;
+    value?: string;
+    option?: string;
+    quantity?: number | string;
+    qty?: number | string;
+    count?: number | string;
+    packaging?: string;
+    unit?: string;
+};
+
+interface PlacedOrderItem {
+    id: number;
+    description?: string;
+    packaging?: string;
+    qty: number | string;
+    modifiers?: PlaceOrderModifier[];
+    notes?: string;
+    children?: PlacedOrderItem[];
 }
 
 interface ReceiptData {
@@ -509,22 +559,43 @@ class ThermalPrinterService {
 
                 // Print items in this group
                 items.orderItems.forEach(item => {
-                    // Main item line
-                    commands.push(...this.stringToBytes(item.description));
+                    const quantity = this.normalizeQuantity(item.quantity);
+                    let unitPrice = this.normalizeNumber(item.price, Number.NaN);
+                    let lineAmount = this.normalizeNumber(item.amount, Number.NaN);
+
+                    if (Number.isNaN(lineAmount) && !Number.isNaN(unitPrice)) {
+                        lineAmount = unitPrice * quantity;
+                    }
+
+                    if (!Number.isNaN(lineAmount) && Number.isNaN(unitPrice) && quantity > 0) {
+                        unitPrice = lineAmount / quantity;
+                    }
+
+                    if (Number.isNaN(unitPrice)) {
+                        unitPrice = 0;
+                    }
+
+                    if (Number.isNaN(lineAmount)) {
+                        lineAmount = 0;
+                    }
+
+                    const itemName = (item.description ?? item.name ?? 'Item').toString();
+                    const unitLabel = this.getItemUnit(item);
+                    const itemLine = this.formatItemLine(itemName, quantity, unitPrice, lineAmount, unitLabel);
+                    commands.push(...this.stringToBytes(itemLine));
                     commands.push(...this.ESC_POS.LINE_FEED);
 
-                    // Quantity and price line (indented) - always show if we have price and amount
-                    const quantity = typeof item.quantity === 'string' ? parseInt(item.quantity) || 1 : (item.quantity || 1);
-                    if (item.price !== undefined && item.amount !== undefined) {
-                        const qtyLine = this.formatQuantityLine(quantity, item.price, item.amount);
+                    if (quantity > 1 && item.price !== undefined && item.amount !== undefined) {
+                        const qtyLine = this.formatQuantityLine(quantity, unitPrice, lineAmount);
                         commands.push(...this.stringToBytes(`  ${qtyLine}`));
                         commands.push(...this.ESC_POS.LINE_FEED);
                     }
 
                     // Selected options (if any)
-                    if (item.selectedOptions && item.selectedOptions.length > 0) {
-                        item.selectedOptions.forEach(option => {
-                            const optionLine = this.formatOptionLine(option.name, option.price);
+                    const optionItems = this.collectOptionItems(item);
+                    if (optionItems.length > 0) {
+                        optionItems.forEach(option => {
+                            const optionLine = this.formatOptionLine(option);
                             commands.push(...this.stringToBytes(`  ${optionLine}`));
                             commands.push(...this.ESC_POS.LINE_FEED);
                         });
@@ -774,24 +845,36 @@ class ThermalPrinterService {
     /**
      * Format item line for receipt (76mm paper - 47 characters width)
      */
-    private formatItemLine(name: string, quantity: number | string, price: number | string, amount: number | string): string {
-        const maxWidth = 47; // 76mm paper width
-        const numPrice = typeof price === 'string' ? parseFloat(price) || 0 : price;
-        const numAmount = typeof amount === 'string' ? parseFloat(amount) || 0 : amount;
-        const numQuantity = typeof quantity === 'string' ? parseInt(quantity) || 0 : quantity;
+    private formatItemLine(
+        name: string,
+        quantity: number | string,
+        price: number | string,
+        amount: number | string,
+        unit?: string | null
+    ): string {
+        const maxWidth = this.currentConfig?.character_width || 47;
+        const numQuantity = typeof quantity === 'string' ? parseFloat(quantity) || 1 : quantity || 1;
+        const numAmount = typeof amount === 'string' ? parseFloat(amount) || 0 : amount || 0;
 
-        const qtyPriceText = `${numQuantity}x${numPrice.toFixed(2)}`;
-        const amountText = numAmount.toFixed(2);
+        const quantityPrefix = this.buildQuantityPrefix(numQuantity, unit);
+        const baseName = (name || '').toString().trim();
+        const displayName = `${quantityPrefix} ${baseName}`.trim();
 
-        // Truncate name if too long (allow more characters for 76mm)
-        let itemName = name.length > 29 ? name.substring(0, 26) + '...' : name;
+        const amountText = this.formatNumberWithComma(numAmount.toFixed(2));
+        const maxNameLength = Math.max(8, maxWidth - amountText.length - 1);
+        const truncatedName = displayName.length > maxNameLength
+            ? displayName.substring(0, maxNameLength - 3) + '...'
+            : displayName;
 
-        // Calculate spaces needed
-        const spacesNeeded = maxWidth - itemName.length - qtyPriceText.length - amountText.length;
-        const spaces = ' '.repeat(Math.max(1, spacesNeeded));
+        if (!amountText) {
+            return truncatedName;
+        }
 
-        return `${itemName} ${qtyPriceText}${spaces}${amountText}`;
-    }    /**
+        const spaces = ' '.repeat(Math.max(1, maxWidth - truncatedName.length - amountText.length));
+        return `${truncatedName}${spaces}${amountText}`;
+    }
+
+    /**
      * Format total line for receipt with dynamic width based on printer config
      */
     private formatTotalLine(label: string, amount: number | string): string {
@@ -835,17 +918,256 @@ class ThermalPrinterService {
         return `${qtyPriceText}${spaces}${amountText}`;
     }
 
+    private normalizeNumber(value: number | string | null | undefined, defaultValue = 0): number {
+        if (typeof value === 'number' && Number.isFinite(value)) {
+            return value;
+        }
+
+        if (typeof value === 'string') {
+            const parsed = parseFloat(value);
+            return Number.isFinite(parsed) ? parsed : defaultValue;
+        }
+
+        return defaultValue;
+    }
+
+    private normalizeQuantity(value: number | string | null | undefined): number {
+        const quantity = this.normalizeNumber(value, 1);
+        return quantity > 0 ? quantity : 1;
+    }
+
+    private formatQuantityValue(quantity: number): string {
+        if (Number.isInteger(quantity)) {
+            return quantity.toString();
+        }
+
+        return quantity.toFixed(2).replace(/\.00$/, '').replace(/0$/, '') || quantity.toString();
+    }
+
+    private getUnitLabel(unit?: string | null, quantity = 1): string {
+        const fallback = quantity > 1 ? 'pcs' : 'pc';
+        const trimmed = (unit ?? '').toString().trim();
+        return trimmed || fallback;
+    }
+
+    private getItemUnit(item: any): string | undefined {
+        return (
+            item?.unit_measure ||
+            item?.unit ||
+            item?.unitMeasure ||
+            item?.unit_of_measure ||
+            item?.packaging ||
+            item?.packaging_name ||
+            undefined
+        );
+    }
+
+    private buildQuantityPrefix(quantity: number, unit?: string | null): string {
+        const quantityText = this.formatQuantityValue(quantity);
+        const unitLabel = this.getUnitLabel(unit, quantity);
+        return `${quantityText} ${unitLabel}`.trim();
+    }
+
+    private collectOptionItems(item: any): PrintableOptionLineItem[] {
+        if (!item) {
+            return [];
+        }
+
+        const sources = [
+            Array.isArray(item.selectedOptions) ? item.selectedOptions : null,
+            Array.isArray(item.sub_items) ? item.sub_items : null,
+            Array.isArray(item.children) ? item.children : null,
+        ].filter((source): source is any[] => !!source && source.length > 0);
+
+        if (sources.length === 0) {
+            return [];
+        }
+
+        const [primary] = sources;
+        return primary.reduce<PrintableOptionLineItem[]>((acc, option) => {
+            acc.push(...this.flattenOptionItem(option));
+            return acc;
+        }, []);
+    }
+
+    private flattenOptionItem(option: any, depth = 0): PrintableOptionLineItem[] {
+        if (!option) {
+            return [];
+        }
+
+        const name = option.name ?? option.description ?? option.product?.name ?? 'Option item';
+        const quantity = this.normalizeQuantity(option.quantity ?? option.qty ?? option.pivot?.quantity);
+        const amountCandidate = [
+            option.amount,
+            option.total,
+            option.line_total,
+            option.price,
+            option.unit_price,
+            option.pivot?.amount,
+        ].find(value => value !== undefined && value !== null);
+        let amount = this.normalizeNumber(amountCandidate, 0);
+
+        if (amount === 0) {
+            const unitPrice = this.normalizeNumber(option.price ?? option.unit_price, 0);
+            amount = unitPrice * quantity;
+        }
+
+        const normalized: PrintableOptionLineItem[] = [{
+            name,
+            quantity,
+            amount,
+            depth,
+        }];
+
+        if (Array.isArray(option.sub_items) && option.sub_items.length > 0) {
+            option.sub_items.forEach(child => {
+                normalized.push(...this.flattenOptionItem(child, depth + 1));
+            });
+        }
+
+        return normalized;
+    }
+
+    private getPlacedOrderQuantityText(value: number | string | null | undefined): string {
+        if (value === null || value === undefined) {
+            return '1';
+        }
+
+        if (typeof value === 'string') {
+            const trimmed = value.trim();
+            if (trimmed.length > 0) {
+                return trimmed;
+            }
+        }
+
+        return this.normalizeQuantity(value).toString();
+    }
+
+    private formatPlacedOrderItemLine(
+        item: Pick<PlacedOrderItem, 'qty' | 'packaging' | 'description'>,
+        depth = 0
+    ): string {
+        const parts: string[] = [];
+        const qtyText = this.getPlacedOrderQuantityText(item.qty);
+        if (qtyText) {
+            parts.push(qtyText);
+        }
+
+        const packagingText = (item.packaging ?? '').toString().trim();
+        if (packagingText) {
+            parts.push(packagingText);
+        }
+
+        const descriptionText = (item.description ?? '').toString().trim();
+        if (descriptionText) {
+            parts.push(descriptionText);
+        }
+
+        const line = parts.join(' ').replace(/\s+/g, ' ').trim();
+        const indentation = depth > 0 ? ' '.repeat(depth * 2) : '';
+
+        return `${indentation}${line}`.trimEnd();
+    }
+
+    private formatPlacedOrderModifier(modifier: PlaceOrderModifier): string {
+        if (modifier === null || modifier === undefined) {
+            return '';
+        }
+
+        if (typeof modifier === 'string') {
+            return modifier.trim();
+        }
+
+        const qty = modifier.quantity ?? modifier.qty ?? modifier.count;
+        const packaging = modifier.packaging ?? modifier.unit;
+        const label = modifier.name ?? modifier.description ?? modifier.label ?? modifier.value ?? modifier.option ?? '';
+
+        const parts: string[] = [];
+
+        if (qty !== undefined && qty !== null && String(qty).trim() !== '') {
+            parts.push(String(qty).trim());
+        }
+
+        if (packaging && String(packaging).trim() !== '') {
+            parts.push(String(packaging).trim());
+        }
+
+        if (label && String(label).trim() !== '') {
+            parts.push(String(label).trim());
+        }
+
+        if (parts.length > 0) {
+            return parts.join(' ');
+        }
+
+        try {
+            return JSON.stringify(modifier);
+        } catch (error) {
+            return '';
+        }
+    }
+
+    private normalizePlacedOrderModifiers(modifiers?: PlaceOrderModifier[]): string[] {
+        if (!Array.isArray(modifiers)) {
+            return [];
+        }
+
+        return modifiers
+            .map(modifier => this.formatPlacedOrderModifier(modifier))
+            .map(text => text.trim())
+            .filter(text => text.length > 0);
+    }
+
+    private printPlacedOrderChildren(
+        commands: number[],
+        children?: PlacedOrderItem[],
+        depth = 1
+    ): void {
+        if (!children || children.length === 0) {
+            return;
+        }
+
+        children.forEach(child => {
+            const childLine = this.formatPlacedOrderItemLine(child, depth);
+            commands.push(...this.stringToBytes(childLine));
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            const childModifiers = this.normalizePlacedOrderModifiers(child.modifiers);
+            if (childModifiers.length > 0) {
+                childModifiers.forEach(modifierLine => {
+                    const indentation = ' '.repeat((depth + 1) * 2);
+                    commands.push(...this.stringToBytes(`${indentation}${modifierLine}`));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                });
+            }
+
+            if (child.notes) {
+                const indentation = ' '.repeat((depth + 1) * 2);
+                commands.push(...this.stringToBytes(`${indentation}Note: ${child.notes}`));
+                commands.push(...this.ESC_POS.LINE_FEED);
+            }
+
+            this.printPlacedOrderChildren(commands, child.children, depth + 1);
+        });
+    }
+
     /**
      * Format option line for selected options
      */
-    private formatOptionLine(name: string, price: number | string): string {
+    private formatOptionLine(option: PrintableOptionLineItem): string {
         const maxWidth = (this.currentConfig?.character_width || 47) - 2; // Account for indentation
-        const numPrice = typeof price === 'string' ? parseFloat(price) || 0 : price;
-        const priceText = this.formatNumberWithComma(numPrice.toFixed(2));
-        const optionText = `+ ${name}`;
-        const spaces = ' '.repeat(Math.max(1, maxWidth - optionText.length - priceText.length));
+        const indentation = option.depth > 0 ? ' '.repeat(option.depth * 2) : '';
+        const optionText = `${indentation}${option.quantity} x ${option.name}`;
+        const amountValue = this.normalizeNumber(option.amount, 0);
 
-        return `${optionText}${spaces}${priceText}`;
+        if (amountValue <= 0) {
+            return optionText.trimEnd();
+        }
+
+        const amountText = `+${this.formatNumberWithComma(amountValue.toFixed(2))}`;
+        const spaces = ' '.repeat(Math.max(1, maxWidth - optionText.length - amountText.length));
+
+        return `${optionText}${spaces}${amountText}`;
     }
 
     /**
@@ -869,9 +1191,15 @@ class ThermalPrinterService {
         price: number | string;
         amount: number | string;
         selectedOptions?: Array<{
-            name: string;
-            price: number | string;
+            name?: string;
+            description?: string;
+            price?: number | string;
+            amount?: number | string;
+            quantity?: number | string;
+            sub_items?: OrderChildItem[];
         }>;
+        sub_items?: OrderChildItem[];
+        children?: OrderChildItem[];
         lessTax?: number | string;
         discount?: number | string;
         orderType?: string;
@@ -1014,8 +1342,30 @@ class ThermalPrinterService {
 
                 // Print items in this group (cartItems)
                 group.cartItems?.forEach((item: any) => {
-                    // Main item line
-                    commands.push(...this.stringToBytes(item.name));
+                    const quantity = this.normalizeQuantity(item.quantity);
+                    let unitPrice = this.normalizeNumber(item.price, Number.NaN);
+                    let lineAmount = this.normalizeNumber(item.amount, Number.NaN);
+
+                    if (Number.isNaN(lineAmount) && !Number.isNaN(unitPrice)) {
+                        lineAmount = unitPrice * quantity;
+                    }
+
+                    if (!Number.isNaN(lineAmount) && Number.isNaN(unitPrice) && quantity > 0) {
+                        unitPrice = lineAmount / quantity;
+                    }
+
+                    if (Number.isNaN(unitPrice)) {
+                        unitPrice = 0;
+                    }
+
+                    if (Number.isNaN(lineAmount)) {
+                        lineAmount = 0;
+                    }
+
+                    const itemName = (item.name ?? item.description ?? 'Item').toString();
+                    const unitLabel = this.getItemUnit(item);
+                    const itemLine = this.formatItemLine(itemName, quantity, unitPrice, lineAmount, unitLabel);
+                    commands.push(...this.stringToBytes(itemLine));
                     commands.push(...this.ESC_POS.LINE_FEED);
 
                     // Server name (if available)
@@ -1024,18 +1374,17 @@ class ThermalPrinterService {
                         commands.push(...this.ESC_POS.LINE_FEED);
                     }
 
-                    // Quantity and price line (indented) - always show if we have price and amount
-                    const quantity = typeof item.quantity === 'string' ? parseInt(item.quantity) || 1 : (item.quantity || 1);
-                    if (item.price !== undefined && item.amount !== undefined) {
-                        const qtyLine = this.formatQuantityLine(quantity, item.price, item.amount);
+                    if (quantity > 1 && item.price !== undefined && item.amount !== undefined) {
+                        const qtyLine = this.formatQuantityLine(quantity, unitPrice, lineAmount);
                         commands.push(...this.stringToBytes(`  ${qtyLine}`));
                         commands.push(...this.ESC_POS.LINE_FEED);
                     }
 
                     // Selected options (if any)
-                    if (item.selectedOptions && item.selectedOptions.length > 0) {
-                        item.selectedOptions.forEach(option => {
-                            const optionLine = this.formatOptionLine(option.name, option.price);
+                    const optionItems = this.collectOptionItems(item);
+                    if (optionItems.length > 0) {
+                        optionItems.forEach(option => {
+                            const optionLine = this.formatOptionLine(option);
                             commands.push(...this.stringToBytes(`  ${optionLine}`));
                             commands.push(...this.ESC_POS.LINE_FEED);
                         });
@@ -1514,16 +1863,9 @@ class ThermalPrinterService {
      */
     public async printPlacedOrder(orderNumber: number, tableName: string, orderGroups: Array<{
         orderType: string;
-        items: Array<{
-            id: number;
-            description: string;
-            packaging: string;
-            qty: number | string;
-            modifiers: Array<string>;
-            notes: string;
-        }>;
+        items: PlacedOrderItem[];
         totalItems: number;
-    }>, servedBy: string): Promise<void> {
+    }>, servedBy: string, servingNumber?: number | string | null): Promise<void> {
         if (!this.isConnected()) {
             throw new Error('Printer not connected. Please connect first.');
         }
@@ -1547,11 +1889,27 @@ class ThermalPrinterService {
             commands.push(...this.ESC_POS.BOLD_OFF);
             commands.push(...this.ESC_POS.LINE_FEED);
 
-            // Order number
+            // Order number / server details
             commands.push(...this.ESC_POS.BOLD_ON);
             commands.push(...this.stringToBytes(`Order #${orderNumber}`));
             commands.push(...this.ESC_POS.LINE_FEED);
             commands.push(...this.stringToBytes(`Server ${servedBy}`));
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            const servingLabel = servingNumber ?? null;
+            if (
+                servingLabel !== null &&
+                servingLabel !== undefined &&
+                String(servingLabel).trim() !== ''
+            ) {
+                this.addTextWithSize(
+                    commands,
+                    `Serving #${String(servingLabel).trim()}`,
+                    'medium'
+                );
+                commands.push(...this.ESC_POS.LINE_FEED);
+            }
+
             commands.push(...this.ESC_POS.BOLD_OFF);
             commands.push(...this.ESC_POS.LINE_FEED);
 
@@ -1585,24 +1943,21 @@ class ThermalPrinterService {
                 // Print items in this group
                 group.items.forEach(item => {
                     // Item description - quantity and name
-                    const qty = typeof item.qty === 'string' ? item.qty : item.qty;
-                    const itemLine = `${qty}x ${item.description}`;
+                    const itemLine = this.formatPlacedOrderItemLine(item);
                     commands.push(...this.stringToBytes(itemLine));
                     commands.push(...this.ESC_POS.LINE_FEED);
 
-                    // Packaging info if available
-                    if (item.packaging) {
-                        commands.push(...this.stringToBytes(`  Pkg: ${item.packaging}`));
-                        commands.push(...this.ESC_POS.LINE_FEED);
-                    }
-
                     // Modifiers (options/add-ons)
-                    if (item.modifiers && item.modifiers.length > 0) {
-                        item.modifiers.forEach(modifier => {
-                            commands.push(...this.stringToBytes(`  - ${modifier}`));
+                    const modifierLines = this.normalizePlacedOrderModifiers(item.modifiers);
+                    if (modifierLines.length > 0) {
+                        modifierLines.forEach(modifierLine => {
+                            commands.push(...this.stringToBytes(`  ${modifierLine}`));
                             commands.push(...this.ESC_POS.LINE_FEED);
                         });
                     }
+
+                    // Child items (option selections)
+                    this.printPlacedOrderChildren(commands, item.children);
 
                     // Notes (special instructions)
                     if (item.notes) {

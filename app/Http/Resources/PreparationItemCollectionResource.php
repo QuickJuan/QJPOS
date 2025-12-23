@@ -18,9 +18,13 @@ class PreparationItemCollectionResource extends ResourceCollection
         $grouped = $this->collection->groupBy('order_type');
 
         return $grouped->map(function ($items, $orderType) {
+            $parentItems = $items->filter(function ($item) {
+                return empty($item->parent_id);
+            })->values();
+
             return [
                 'orderType' => $orderType,
-                'items' => PreparationItemResource::collection($items),
+                'items' => PreparationItemResource::collection($parentItems),
                 'totalItems' => $items->count(),
             ];
         })->values()->all();

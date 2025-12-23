@@ -13,6 +13,27 @@ export const useProduct = () => {
     const showPackagingModal = ref(false);
     const selectedProductForPackaging = ref<any>(null);
 
+    const buildOptionItemsPayload = (option: any) => {
+        return (
+            option.optionItems
+                ?.filter((item: any) => (item.quantity ?? 0) > 0)
+                .map((item: any) => ({
+                    id: item.id,
+                    product_id: item.product_id,
+                    product_packaging_id: item.product_packaging_id,
+                    price: item.price,
+                    quantity: item.quantity ?? 0,
+                    receipt_name:
+                        item.product?.receipt_alias ||
+                        item.product?.name ||
+                        item.product_packaging?.unit_measure ||
+                        item.product_packaging?.name ||
+                        item.name ||
+                        null,
+                })) || []
+        );
+    };
+
     const addToCart = (
         product: any,
         packaging?: any,
@@ -29,15 +50,20 @@ export const useProduct = () => {
         const hasNonDefaultOptions = product.options?.some((option: any) => !option.is_default);
 
         // Prepare default options to auto-add
-        const defaultOptions = product.options
-            ?.filter((option: any) => option.is_default)
-            .map((option: any) => ({
-                option_id: option.id,
-                option_name: option.option_name,
-                max_quantity: option.max_quantity,
-                is_default: true,
-                items: option.optionItems || [],
-            })) || [];
+        const defaultOptions =
+            product.options
+                ?.filter((option: any) => option.is_default)
+                .map((option: any) => ({
+                    option_id: option.id,
+                    option_name: option.option_name,
+                    max_quantity: option.max_quantity,
+                    is_default: true,
+                    items: buildOptionItemsPayload(option),
+                })) || [];
+
+        const hasDefaultChildItems = defaultOptions.some(
+            (option: any) => option.items?.length
+        );
 
         if (packaging) {
             // Packaging already selected, proceed
@@ -62,7 +88,9 @@ export const useProduct = () => {
                         table_id: tableId,
                         total_price: parseFloat(packaging.price || 0),
                         order_type: selectedOrderType,
+                            product_type: product.product_type,
                         selected_options: defaultOptions,
+                        withParent: hasDefaultChildItems,
                     },
                     {
                         preserveScroll: false,
@@ -111,7 +139,9 @@ export const useProduct = () => {
                                 table_id: tableId,
                                 total_price: parseFloat(packaging.price || 0),
                                 order_type: selectedOrderType,
+                                product_type: product.product_type,
                                 selected_options: defaultOptions,
+                                withParent: hasDefaultChildItems,
                             },
                             {
                                 preserveScroll: false,
@@ -159,7 +189,9 @@ export const useProduct = () => {
                             table_id: tableId,
                             total_price: parseFloat(product.average_cost || "0"),
                             order_type: selectedOrderType,
+                            product_type: product.product_type,
                             selected_options: defaultOptions,
+                            withParent: hasDefaultChildItems,
                         },
                         {
                             preserveScroll: false,

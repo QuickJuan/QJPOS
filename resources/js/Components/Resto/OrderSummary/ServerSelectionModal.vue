@@ -30,6 +30,22 @@
                 />
             </div>
 
+            <!-- Serving Number (Optional) -->
+            <div class="space-y-2">
+                <label class="text-sm font-medium text-gray-700">
+                    Serving Number <span class="text-gray-400">(optional)</span>
+                </label>
+                <InputNumber
+                    v-model="servingNumber"
+                    input-id="serving-number"
+                    class="w-full"
+                    placeholder="e.g. 1"
+                    :use-grouping="false"
+                    :min="1"
+                    :allow-empty="true"
+                />
+            </div>
+
             <!-- Action Buttons -->
             <div class="flex gap-2 justify-end pt-4">
                 <button
@@ -54,6 +70,7 @@
 import { ref, computed, watch } from "vue";
 import Dialog from "primevue/dialog";
 import Select from "primevue/select";
+import InputNumber from "primevue/inputnumber";
 import { usePage } from "@inertiajs/vue3";
 
 interface Server {
@@ -68,7 +85,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     "update:visible": [value: boolean];
-    confirm: [serverId: number];
+    confirm: [payload: { serverId: number; servingNumber: number | null }];
     cancel: [];
 }>();
 
@@ -80,6 +97,7 @@ const visible = computed({
 });
 
 const selectedServerId = ref<number | null>(null);
+const servingNumber = ref<number | null>(null);
 
 // Get servers from shared Inertia data (cached daily)
 const servers = computed<Server[]>(() => {
@@ -92,19 +110,24 @@ watch(
     (isVisible) => {
         if (!isVisible) {
             selectedServerId.value = null;
+            servingNumber.value = null;
         }
     }
 );
 
 const handleConfirm = () => {
     if (selectedServerId.value) {
-        emit("confirm", selectedServerId.value);
+        emit("confirm", {
+            serverId: selectedServerId.value,
+            servingNumber: servingNumber.value,
+        });
         visible.value = false;
     }
 };
 
 const handleCancel = () => {
     emit("cancel");
+    servingNumber.value = null;
     visible.value = false;
 };
 </script>

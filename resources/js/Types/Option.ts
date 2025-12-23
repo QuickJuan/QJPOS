@@ -3,6 +3,9 @@ import OptionItem from "./OptionItem";
 export default interface Option {
     id: number;
     option_name: string;
-    optionImage: string;
+    product_id: number;
+    max_quantity: number;
+    is_default: boolean;
+    optionImage?: string;
     optionItems: OptionItem[];
 }

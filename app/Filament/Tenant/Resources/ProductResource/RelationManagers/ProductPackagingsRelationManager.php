@@ -22,6 +22,11 @@ class ProductPackagingsRelationManager extends RelationManager
         return 'Product Pricing';
     }
 
+    public static function canViewForRecord(Model $ownerRecord, string $pageClass): bool
+    {
+        return $ownerRecord->product_type === 'with_variant';
+    }
+
     public function form(Form $form): Form
     {
         return $form

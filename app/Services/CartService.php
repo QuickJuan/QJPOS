@@ -239,6 +239,7 @@ class CartService
             'amount'               => $amount,
             'sub_total'            => $amount,
             'order_type'           => $orderType,
+            'product_type'         => $request['product_type'] ?? $product->product_type,
             'vatable_sales'        => $pricingData['vatable_sales'],
             'vat_exempt_sales'     => $pricingData['vat_exempt_sales'],
             'vat_amount'           => $pricingData['vat_amount'],
@@ -261,13 +262,16 @@ class CartService
         string $orderType
     ): void {
         foreach ($selectedOptions as $selectedOption) {
-            foreach ($selectedOption['items'] as $childItemData) {
+            $optionItems = $selectedOption['items'] ?? [];
+
+            foreach ($optionItems as $childItemData) {
                 $this->createChildItem(
                     $parentItem,
                     $childItemData,
                     $parentProduct,
                     $parentQuantity,
-                    $orderType
+                    $orderType,
+                    $selectedOption
                 );
             }
         }
@@ -281,34 +285,55 @@ class CartService
         array $childItemData,
         Product $parentProduct,
         int $parentQuantity,
-        string $orderType
+        string $orderType,
+        array $selectedOption = []
     ): void {
         try {
             $childPrice = (float) ($childItemData['price'] ?? 0);
+            $childQuantityPerBundle = (int) ($childItemData['quantity'] ?? 0);
 
-            // Skip items with no price
-            if ($childPrice <= 0) {
+            if ($childQuantityPerBundle <= 0) {
                 return;
             }
 
-            $pricingData = $this->calculatePricingData($childPrice, $parentQuantity, $parentProduct);
+            $childQuantity = $childQuantityPerBundle * max(1, $parentQuantity);
+
+            $childProduct = null;
+            if (! empty($childItemData['product_id'])) {
+                $childProduct = Product::find($childItemData['product_id']);
+            }
+
+            $receiptName = $childItemData['receipt_name']
+                ?? $childProduct?->receipt_alias
+                ?? $childProduct?->name
+                ?? $childItemData['description']
+                ?? null;
+
+            $pricingData = $this->calculatePricingData($childPrice, $childQuantity, $parentProduct);
             $amount      = $pricingData['vatable_sales'] + $pricingData['vat_amount'] + $pricingData['non_vat_sales'];
 
             $parentItem->children()->create([
                 'parent_id'            => $parentItem->id,
                 'cart_id'              => $parentItem->cart_id,
                 'product_id'           => $childItemData['product_id'],
+                'description'          => $receiptName,
                 'product_packaging_id' => $childItemData['product_packaging_id'] ?? null,
-                'quantity'             => $childItemData['quantity'],
+                'quantity'             => $childQuantity,
                 'price'                => $childPrice,
                 'amount'               => $amount,
                 'order_type'           => $orderType,
+                'product_type'         => $childProduct?->product_type ?? $parentProduct->product_type,
                 'sub_total'            => $amount,
                 'vatable_sales'        => $pricingData['vatable_sales'],
                 'vat_exempt_sales'     => $pricingData['vat_exempt_sales'],
                 'vat_amount'           => $pricingData['vat_amount'],
                 'non_vat_sales'        => $pricingData['non_vat_sales'],
                 'less_tax'             => $pricingData['less_tax'],
+                'meta_data'            => [
+                    'option_id'   => $selectedOption['id'] ?? null,
+                    'option_name' => $selectedOption['option_name'] ?? null,
+                    'max_quantity'=> $selectedOption['max_quantity'] ?? null,
+                ],
             ]);
         } catch (\Throwable $e) {
             info('Failed to add child cart item', [
@@ -802,16 +827,25 @@ class CartService
                             'placed_order' => true,
                             'batch_number' => $orderNumber,
                             'served_by' => $payload['served_by'],
+                            'serving_number' => $payload['serving_number'] ?? null,
                         ]);
 
                     $cart->update([
                         'table_room_id' => $payload['table_id'],
                     ]);
 
-                    // Get only necessary columns to prevent memory exhaustion
-                    $cartItems = CartItem::where('cart_id', $cart->id)
+                    // Get parent cart items with their option children
+                    $cartItems = CartItem::with([
+                            'product',
+                            'product.preparationLocation',
+                            'productPackaging',
+                            'childrenRecursive',
+                        ])
+                        ->where('cart_id', $cart->id)
                         ->where('batch_number', $orderNumber)
-                        ->select('id', 'cart_id', 'product_id', 'quantity', 'price', 'order_type', 'notes', 'meta_data', 'placed_order', 'batch_number', 'served_by')
+                        ->whereNull('parent_id')
+                        ->where('placed_order', true)
+                        ->orderBy('id')
                         ->get();
 
                     $newOrderItems = new PreparationItemCollectionResource($cartItems);
@@ -825,6 +859,7 @@ class CartService
                         'orderNumber'      => $orderNumber,
                         'cart'             => $cart->fresh(['tableRoom']),
                         'servedBy'         => $servedBy->name ?? 'N/A',
+                        'servingNumber'    => $payload['serving_number'] ?? null,
                         'placedOrderItems' => $newOrderItems,
                         'tableRoom'        => $cart->tableRoom,
                         'success'          => true,
@@ -839,6 +874,42 @@ class CartService
             // Transaction automatically rolls back on exception
             throw new Exception('Failed to place order: ' . $e->getMessage());
         }
+    }
+
+    public function getPlacedOrderByBatchNumber(int $batchNumber): array
+    {
+        $cartItems = CartItem::with([
+                'product',
+                'product.preparationLocation',
+                'productPackaging',
+                'cart.tableRoom',
+                'childrenRecursive',
+            ])
+            ->where('batch_number', $batchNumber)
+            ->whereNotNull('batch_number')
+            ->where('placed_order', true)
+            ->whereNull('parent_id')
+            ->orderBy('id')
+            ->get();
+
+        if ($cartItems->isEmpty()) {
+            throw new Exception('No placed order found for the provided batch number.');
+        }
+
+        $firstItem = $cartItems->first();
+        $cart      = $firstItem->cart;
+        $servedBy  = $firstItem->served_by ? User::find($firstItem->served_by) : null;
+
+        return [
+            'orderNumber'      => $batchNumber,
+            'cart'             => $cart,
+            'servedBy'         => $servedBy?->name ?? 'N/A',
+            'servingNumber'    => $firstItem?->serving_number,
+            'placedOrderItems' => new PreparationItemCollectionResource($cartItems),
+            'tableRoom'        => $cart?->tableRoom,
+            'success'          => true,
+            'message'          => 'Order ready for re-printing.',
+        ];
     }
 
     public function claimOrder(int $tableId): mixed
@@ -950,14 +1021,31 @@ class CartService
     public function getCartByTable(int $tableId): ?Cart
     {
         return $this->model->where('table_room_id', $tableId)
-            ->with(['cartItems', 'tableRoom'])
+            ->with([
+                'cartItems' => function ($query) {
+                    $query->with([
+                        'product',
+                        'productPackaging',
+                        'children' => function ($childQuery) {
+                            $childQuery->with(['product', 'productPackaging']);
+                        },
+                    ]);
+                },
+                'tableRoom',
+            ])
             ->first();
     }
 
     public function getCartByTableAsResource(int $tableId): ?CartResource
     {
         $cart = $this->model->where('table_room_id', $tableId)
-            ->with(['cartItems.product', 'cartItems.productPackaging', 'tableRoom'])
+            ->with([
+                'cartItems.product',
+                'cartItems.productPackaging',
+                'cartItems.children.product',
+                'cartItems.children.productPackaging',
+                'tableRoom',
+            ])
             ->first();
 
         return new CartResource($cart);
@@ -969,6 +1057,9 @@ class CartService
             ->with([
                 'cartItems',
                 'cartItems.product',
+                'cartItems.children',
+                'cartItems.children.product',
+                'cartItems.children.productPackaging',
                 'cartItems.servedBy:id,name',
                 'cashierSession.branch',
                 'customer',

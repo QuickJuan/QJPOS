@@ -190,6 +190,7 @@ class CartController extends Controller
                 'cart_id'  => $request->input('cart_id'),
                 'table_id' => $request->input('table_id'),
                 'served_by' => $request->input('served_by'),
+                'serving_number' => $request->input('serving_number'),
             ];
 
             $response = $this->cartService->placeOrder($payload);
@@ -209,6 +210,22 @@ class CartController extends Controller
                 'message' => 'There was an error placing order.',
                 'error'   => $e->getMessage(),
             ], 500);
+        }
+    }
+
+    public function reprintPlacedOrder(int $batchNumber): JsonResponse
+    {
+        try {
+            $response = $this->cartService->getPlacedOrderByBatchNumber($batchNumber);
+
+            return response()->json($response, 200);
+        } catch (Exception $e) {
+            Log::error('Reprint order error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage() ?? 'Failed to re-print order.',
+            ], 404);
         }
     }
 

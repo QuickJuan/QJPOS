@@ -14,9 +14,12 @@ use Illuminate\Support\Facades\Log;
 
 class PaymentService
 {
-    public function __construct(protected BranchService $branchService)
-    {
-        $this->branchService = $branchService;
+    public function __construct(
+        protected BranchService $branchService,
+        protected InventoryStockService $inventoryStockService
+    ) {
+        $this->branchService         = $branchService;
+        $this->inventoryStockService = $inventoryStockService;
     }
 
     public function settleBill($payload): mixed
@@ -29,6 +32,8 @@ class PaymentService
                 $order = $this->saveCartToOrder($cart, $payload);
                 $this->saveCartItemsToOrderItems($cart->cartItems, $order);
                 $this->saveVoidCartItemsToOrderItems($cart, $order);
+
+                $this->inventoryStockService->deductOrderInventory($order);
 
                 // Update table status if applicable
                 if ($cart->table_room_id
@@ -120,44 +125,11 @@ class PaymentService
 
     private function saveCartItemsToOrderItems($cartItems, $order)
     {
-        $orderItemsData = $cartItems->map(function ($cartItem) use ($order) {
-            return [
-                'order_id'             => $order->id,
-                'product_id'           => $cartItem->product_id,
-                'description'          => $cartItem->description,
-                'product_packaging_id' => $cartItem->product_packaging_id,
-                'quantity'             => $cartItem->quantity,
-                'price'                => $cartItem->price,
-                'discount_amount'      => $cartItem->discount_amount ?? 0,
-                'vatable_sales'        => $cartItem->vatable_sales ?? 0,
-                'vat_exempt_sales'     => $cartItem->vat_exempt_sales ?? 0,
-                'vat_amount'           => $cartItem->vat_amount ?? 0,
-                'non_vat_sales'        => $cartItem->non_vat_sales ?? 0,
-                'less_tax'             => $cartItem->less_tax ?? 0,
-                'amount'               => $cartItem->amount,
-                'order_type'           => $cartItem->order_type,
-                'discount_id'          => $cartItem->discount_id,
-                'coupon_code'          => $cartItem->coupon_code,
-                'sub_total'            => $cartItem->sub_total,
-                'is_served'            => $cartItem->is_served,
-                'placed_order'         => $cartItem->placed_order,
-                'is_void'              => $cartItem->is_void ?? false,
-                'reason'               => $cartItem->reason,
-                'notes'                => $cartItem->notes,
-                'meta_data'            => json_encode($cartItem->meta_data ?? []),
-                'served_by'            => $cartItem->served_by,
-                'created_at'           => now(),
-                'updated_at'           => now(),
-            ];
-        })->toArray();
-
-        // Bulk insert - single INSERT query instead of N queries
-        return OrderItem::insert($orderItemsData);
+        $this->persistCartItemsAsOrderItems($cartItems, $order);
     }
 
     private function saveVoidCartItemsToOrderItems($cart, $order)
     {
-        // Get void cart items
         $voidCartItems = CartItem::where('cart_id', $cart->id)
             ->where('is_void', true)
             ->get();
@@ -166,39 +138,61 @@ class PaymentService
             return;
         }
 
-        $voidOrderItemsData = $voidCartItems->map(function ($cartItem) use ($order) {
-            return [
-                'order_id'             => $order->id,
-                'product_id'           => $cartItem->product_id,
-                'description'          => $cartItem->description,
-                'product_packaging_id' => $cartItem->product_packaging_id,
-                'quantity'             => $cartItem->quantity,
-                'price'                => $cartItem->price,
-                'discount_amount'      => $cartItem->discount_amount ?? 0,
-                'vatable_sales'        => $cartItem->vatable_sales ?? 0,
-                'vat_exempt_sales'     => $cartItem->vat_exempt_sales ?? 0,
-                'vat_amount'           => $cartItem->vat_amount ?? 0,
-                'non_vat_sales'        => $cartItem->non_vat_sales ?? 0,
-                'less_tax'             => $cartItem->less_tax ?? 0,
-                'amount'               => $cartItem->amount,
-                'order_type'           => $cartItem->order_type,
-                'discount_id'          => $cartItem->discount_id,
-                'coupon_code'          => $cartItem->coupon_code,
-                'sub_total'            => $cartItem->sub_total,
-                'is_served'            => $cartItem->is_served,
-                'placed_order'         => $cartItem->placed_order,
-                'is_void'              => true,
-                'reason'               => $cartItem->reason,
-                'notes'                => $cartItem->notes,
-                'meta_data'            => json_encode($cartItem->meta_data ?? []),
-                'served_by'            => $cartItem->served_by,
-                'created_at'           => now(),
-                'updated_at'           => now(),
-            ];
-        })->toArray();
+        $this->persistCartItemsAsOrderItems($voidCartItems, $order, true);
+    }
 
-        // Bulk insert void items
-        return OrderItem::insert($voidOrderItemsData);
+    private function persistCartItemsAsOrderItems($cartItems, $order, bool $forceVoid = false): void
+    {
+        $idMap = [];
+
+        foreach ($cartItems->sortBy('parent_id') as $cartItem) {
+            $parentOrderItemId = null;
+
+            if ($cartItem->parent_id && isset($idMap[$cartItem->parent_id])) {
+                $parentOrderItemId = $idMap[$cartItem->parent_id];
+            }
+
+            $orderItem = OrderItem::create($this->mapCartItemToOrderItemData(
+                $cartItem,
+                $order,
+                $parentOrderItemId,
+                $forceVoid
+            ));
+
+            $idMap[$cartItem->id] = $orderItem->id;
+        }
+    }
+
+    private function mapCartItemToOrderItemData($cartItem, $order, ?int $parentOrderItemId = null, bool $forceVoid = false): array
+    {
+        return [
+            'order_id'             => $order->id,
+            'parent_id'            => $parentOrderItemId,
+            'product_id'           => $cartItem->product_id,
+            'description'          => $cartItem->description,
+            'product_packaging_id' => $cartItem->product_packaging_id,
+            'quantity'             => $cartItem->quantity,
+            'price'                => $cartItem->price,
+            'discount_amount'      => $cartItem->discount_amount ?? 0,
+            'vatable_sales'        => $cartItem->vatable_sales ?? 0,
+            'vat_exempt_sales'     => $cartItem->vat_exempt_sales ?? 0,
+            'vat_amount'           => $cartItem->vat_amount ?? 0,
+            'non_vat_sales'        => $cartItem->non_vat_sales ?? 0,
+            'less_tax'             => $cartItem->less_tax ?? 0,
+            'amount'               => $cartItem->amount,
+            'order_type'           => $cartItem->order_type,
+            'discount_id'          => $cartItem->discount_id,
+            'coupon_code'          => $cartItem->coupon_code,
+            'sub_total'            => $cartItem->sub_total,
+            'is_served'            => $cartItem->is_served,
+            'placed_order'         => $cartItem->placed_order,
+            'is_void'              => $forceVoid ? true : ($cartItem->is_void ?? false),
+            'reason'               => $cartItem->reason,
+            'notes'                => $cartItem->notes,
+            'meta_data'            => $cartItem->meta_data ?? [],
+            'served_by'            => $cartItem->served_by,
+            'serving_number'       => $cartItem->serving_number,
+        ];
     }
 
 }

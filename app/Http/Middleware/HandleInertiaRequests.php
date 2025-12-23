@@ -108,6 +108,7 @@ class HandleInertiaRequests extends Middleware
                 'company_address' => $companySettings['company_address'] ?? '',
                 'company_phone'   => $companySettings['company_phone'] ?? '',
                 'company_logo'    => $companySettings['company_logo'] ?? '',
+                'hero_image'      => $companySettings['hero_image'] ?? '',
             ];
         } catch (\Exception $e) {
             return [
@@ -115,6 +116,7 @@ class HandleInertiaRequests extends Middleware
                 'company_address' => '',
                 'company_phone'   => '',
                 'company_logo'    => '',
+                'hero_image'      => '',
             ];
         }
     }
@@ -134,9 +136,14 @@ class HandleInertiaRequests extends Middleware
             $cart = app(CartService::class)->getCartByTable((int) $tableId);
 
             if ($cart) {
-                // Refresh to ensure we have the latest data from database
                 $cart->refresh();
-                $cart->load(['cartItems', 'tableRoom']);
+                $cart->load([
+                    'cartItems.product',
+                    'cartItems.productPackaging',
+                    'cartItems.children.product',
+                    'cartItems.children.productPackaging',
+                    'tableRoom',
+                ]);
             }
 
             return $cart ? $cart->toArray() : null;

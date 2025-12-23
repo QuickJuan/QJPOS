@@ -4,11 +4,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class OrderItem extends Model
 {
     protected $fillable = [
         'order_id',
+        'parent_id',
         'product_id',
         'product_packaging_id',
         'quantity',
@@ -33,6 +35,8 @@ class OrderItem extends Model
         'reason',
         'notes',
         'meta_data',
+        'served_by',
+        'serving_number',
     ];
 
     protected $casts = [
@@ -42,6 +46,7 @@ class OrderItem extends Model
         'discount'         => 'decimal:2',
         'sub_total'        => 'decimal:2',
         'meta_data'        => 'array',
+        'serving_number'   => 'integer',
     ];
 
     // SCOPES
@@ -53,6 +58,16 @@ class OrderItem extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_id');
+    }
+
+    public function children()
+    {
+        return $this->hasMany(self::class, 'parent_id');
     }
 
     public function product(): BelongsTo

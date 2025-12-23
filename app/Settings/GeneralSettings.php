@@ -14,6 +14,7 @@ class GeneralSettings extends Settings
     public ?string $company_address;
     public ?string $company_contact;
     public ?string $company_logo;
+    public ?string $hero_image;
 
 
     public static function group(): string

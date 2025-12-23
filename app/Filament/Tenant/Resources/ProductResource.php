@@ -5,7 +5,10 @@ use App\Enums\VatType;
 use App\Filament\Imports\ProductImporter;
 use App\Filament\Tenant\Resources\ProductResource\Pages;
 use App\Filament\Tenant\Resources\ProductResource\RelationManagers;
+use App\Filament\Tenant\Resources\ProductResource\RelationManagers\OptionsRelationManager;
 use App\Models\Product;
+use Filament\Forms\Components\Component;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
@@ -25,7 +28,6 @@ use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Illuminate\Support\HtmlString;
 
 class ProductResource extends Resource
 {
@@ -64,6 +66,24 @@ class ProductResource extends Resource
                             ->maxLength(255)
                             ->label('Brand Name'),
                     ]),
+
+                Select::make('product_type')
+                    ->label('Product Type')
+                    ->required()
+                    ->options([
+                        'simple'       => 'Simple',
+                        'with_variant' => 'With Variant',
+                        'composite'    => 'Composite',
+                        'bundle'       => 'Bundle',
+                    ])
+                    ->default('simple')
+                    ->live()
+                    ->afterStateUpdated(function ($state, callable $set) {
+                        if ($state !== 'simple') {
+                            $set('track_inventory', false);
+                        }
+                    })
+                    ->helperText('Choose how this product behaves in POS and inventory.'),
 
                 Select::make('preparation_location_id')
                     ->relationship('preparationLocation', 'description')
@@ -109,17 +129,58 @@ class ProductResource extends Resource
                     ->maxLength(150)
                     ->label('Receipt Name'),
 
-                Toggle::make('multiple_packaging')
-                    ->label('Multiple Packaging')
-                    ->live(onBlur: true)
-                    ->default(false),
-
                 TextInput::make('price')
                     ->required()
                     ->default(0)
                     ->numeric()
                     ->label('Price')
-                    ->hidden(fn(Get $get) => $get('multiple_packaging') === true),
+                    ->hidden(fn(Get $get) => $get('product_type') === 'with_variant'),
+
+                Toggle::make('track_inventory')
+                    ->label('Track Inventory')
+                    ->helperText(function (Get $get) {
+                        $message = 'Enable to automatically manage stock for this simple product.';
+
+                        if (! $get('track_inventory') && $get('has_inventory_links')) {
+                            $message .= ' While tracking is off, linked inventories remain hidden and sales will not reduce stock.';
+                        }
+
+                        return $message;
+                    })
+                    ->reactive()
+                    ->live()
+                    ->inline(false)
+                    ->default(false)
+                    ->afterStateUpdated(function ($state, callable $set, callable $get, Component $component) {
+                        if ($state) {
+                            return;
+                        }
+
+                        $livewire = $component->getLivewire();
+
+                        if (! method_exists($livewire, 'getRecord')) {
+                            return;
+                        }
+
+                        $record = $livewire->getRecord();
+
+                        if (! $record || ! $record->inventoryRecipes()->exists()) {
+                            return;
+                        }
+
+                        Notification::make()
+                            ->title('Inventory tracking disabled')
+                            ->body('Existing inventory links are now hidden and future sales will skip stock deduction until tracking is enabled again.')
+                            ->info()
+                            ->send();
+
+                        $set('has_inventory_links', true);
+                    })
+                    ->disabled(fn (Get $get) => $get('product_type') !== 'simple'),
+
+                Hidden::make('has_inventory_links')
+                    ->default(fn (?Product $record) => $record?->inventoryRecipes()->exists())
+                    ->dehydrated(false),
 
                 Select::make('vat_type')
                     ->label('Tax Type')
@@ -151,11 +212,197 @@ class ProductResource extends Resource
 
                 TextInput::make('unit_measure')
                     ->label('Unit of Measure')
-                    ->hidden(fn(Get $get) => $get('multiple_packaging') === true),
+                    ->hidden(fn(Get $get) => $get('product_type') === 'with_variant'),
+
+                Repeater::make('inventoryRecipes')
+                    ->label('Recipe Ingredients')
+                    ->relationship('inventoryRecipes')
+                    ->hidden(fn(Get $get) => $get('product_type') !== 'composite')
+                    ->schema([
+                        Select::make('inventory_id')
+                            ->label('Inventory Item')
+                            ->relationship('inventory', 'name')
+                            ->required()
+                            ->searchable()
+                            ->preload()
+                            ->reactive()
+                            ->afterStateUpdated(function ($state, callable $set) {
+                                if (! $state) {
+                                    $set('unit_measure', null);
+                                    $set('unit_option', null);
+                                    $set('use_custom_unit', false);
+                                    $set('unit_type', 'base');
+                                    $set('unit_reference_id', null);
+                                    return;
+                                }
+
+                                $inventory = \App\Models\Inventory::find($state);
+                                $set('unit_option', null);
+                                $set('use_custom_unit', false);
+                                $set('unit_type', 'base');
+                                $set('unit_reference_id', null);
+                                $set('unit_measure', $inventory?->unit_measure);
+                            }),
+
+                        TextInput::make('quantity')
+                            ->label('Qty Used')
+                            ->numeric()
+                            ->minValue(0)
+                            ->required(),
+
+                        Toggle::make('use_custom_unit')
+                            ->label('Use Conversion / Packaging')
+                            ->dehydrated(false)
+                            ->reactive()
+                            ->hidden(fn (Get $get) => blank($get('inventory_id')))
+                            ->helperText('Enable to deduct via a conversion unit or packaging.')
+                            ->default(false)
+                            ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                if (! $state) {
+                                    $inventoryId = $get('inventory_id');
+                                    $inventory   = $inventoryId ? \App\Models\Inventory::find($inventoryId) : null;
+                                    $set('unit_option', null);
+                                    $set('unit_type', 'base');
+                                    $set('unit_reference_id', null);
+                                    $set('unit_measure', $inventory?->unit_measure);
+                                }
+                            }),
+
+                        Select::make('unit_option')
+                            ->label('Select Conversion / Packaging')
+                            ->dehydrated(false)
+                            ->reactive()
+                            ->hidden(fn (Get $get) => blank($get('inventory_id')) || ! $get('use_custom_unit'))
+                            ->required(fn (Get $get) => (bool) $get('use_custom_unit'))
+                            ->placeholder('Choose an available conversion or packaging')
+                            ->options(function (Get $get) {
+                                $inventoryId = $get('inventory_id');
+
+                                if (! $inventoryId) {
+                                    return [];
+                                }
+
+                                $inventory = \App\Models\Inventory::with([
+                                    'unitConversions.unitMeasure',
+                                    'packagings',
+                                ])->find($inventoryId);
+
+                                if (! $inventory) {
+                                    return [];
+                                }
+
+                                $options = [];
+
+                                if ($inventory->unit_measure) {
+                                    $options['base:0'] = 'Base Unit - ' . $inventory->unit_measure;
+                                }
+
+                                foreach ($inventory->unitConversions as $conversion) {
+                                    $unitName = $conversion->unitMeasure?->name ?? 'Conversion';
+                                    $factor = $conversion->conversion_factor ?? 0;
+                                    $formattedFactor = rtrim(rtrim(number_format($factor, 4, '.', ''), '0'), '.');
+                                    $options['conversion:' . $conversion->id] = sprintf(
+                                        'Conversion - %s (1 %s = %s %s)',
+                                        $unitName,
+                                        $unitName,
+                                        $formattedFactor ?: '0',
+                                        $inventory->unit_measure ?? 'base units'
+                                    );
+                                }
+
+                                foreach ($inventory->packagings as $packaging) {
+                                    $qty = $packaging->quantity ?? 0;
+                                    $formattedQty = rtrim(rtrim(number_format($qty, 4, '.', ''), '0'), '.');
+                                    $options['packaging:' . $packaging->id] = sprintf(
+                                        'Packaging - %s (%s %s per package)',
+                                        $packaging->name,
+                                        $formattedQty ?: '0',
+                                        $inventory->unit_measure ?? 'base units'
+                                    );
+                                }
+
+                                return $options;
+                            })
+                            ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                $inventoryId = $get('inventory_id');
+
+                                if (! $inventoryId) {
+                                    $set('unit_measure', null);
+                                    $set('unit_type', 'base');
+                                    $set('unit_reference_id', null);
+                                    return;
+                                }
+
+                                $inventory = \App\Models\Inventory::with([
+                                    'unitConversions.unitMeasure',
+                                    'packagings',
+                                ])->find($inventoryId);
+
+                                if (! $inventory) {
+                                    $set('unit_measure', null);
+                                    $set('unit_type', 'base');
+                                    $set('unit_reference_id', null);
+                                    return;
+                                }
+
+                                if (! $state || $state === 'base:0') {
+                                    $set('unit_type', 'base');
+                                    $set('unit_reference_id', null);
+                                    $set('unit_measure', $inventory->unit_measure);
+                                    return;
+                                }
+
+                                $parts = explode(':', $state);
+                                $type  = $parts[0] ?? null;
+                                $id    = isset($parts[1]) ? (int) $parts[1] : null;
+
+                                if ($type === 'conversion' && $id) {
+                                    $conversion = $inventory->unitConversions->firstWhere('id', $id);
+                                    $set('unit_type', 'conversion');
+                                    $set('unit_reference_id', $conversion?->id);
+                                    $set('unit_measure', $conversion?->unitMeasure?->name ?? $inventory->unit_measure);
+                                    return;
+                                }
+
+                                if ($type === 'packaging' && $id) {
+                                    $packaging = $inventory->packagings->firstWhere('id', $id);
+                                    $set('unit_type', 'packaging');
+                                    $set('unit_reference_id', $packaging?->id);
+                                    $set('unit_measure', $packaging?->name ?? $inventory->unit_measure);
+                                    return;
+                                }
+
+                                $set('unit_type', 'base');
+                                $set('unit_reference_id', null);
+                                $set('unit_measure', $inventory->unit_measure);
+                            }),
+
+                        TextInput::make('unit_measure')
+                            ->label('Unit (auto-filled)')
+                            ->maxLength(50)
+                            ->placeholder('Defaults to the base unit')
+                            ->helperText('Automatically reflects the chosen base unit, conversion, or packaging.')
+                            ->disabled()
+                            ->dehydrated(true),
+
+                        Hidden::make('unit_type')
+                            ->default('base'),
+
+                        Hidden::make('unit_reference_id')
+                            ->default(null),
+                    ])
+                    ->columns(4)
+                    ->defaultItems(0)
+                    ->collapsible()
+                    ->itemLabel(fn (array $state): ?string => $state['inventory_id'] ? (\App\Models\Inventory::find($state['inventory_id'])?->name) : 'Ingredient')
+                    ->addActionLabel('Add Ingredient')
+                    ->columnSpanFull(),
 
                 Repeater::make('options')
                     ->label('Product Options')
                     ->relationship('options')
+                    ->hidden(fn(Get $get) => $get('product_type') !== 'bundle')
+                    ->helperText('Options are only available for bundle products.')
                     ->schema([
                         TextInput::make('option_name')
                             ->label('Option Name')
@@ -260,11 +507,11 @@ class ProductResource extends Resource
                     ->columnSpanFull()
                     ->defaultItems(0),
 
-                TextInput::make('total_onhand')
-                    ->required()
-                    ->default(0)
-                    ->numeric()
-                    ->label('Total Onhand'),
+                // TextInput::make('total_onhand')
+                //     ->required()
+                //     ->default(0)
+                //     ->numeric()
+                //     ->label('Total Onhand'),
 
                 Toggle::make('is_active')
                     ->default(true),
@@ -274,12 +521,12 @@ class ProductResource extends Resource
                     ->ColumnSpan(2)
                     ->label('Description'),
 
-                Select::make('modifiers')
-                    ->relationship('modifiers', 'name')
-                    ->nullable()
-                    ->searchable()
-                    ->multiple()
-                    ->preload(),
+                // Select::make('modifiers')
+                //     ->relationship('modifiers', 'name')
+                //     ->nullable()
+                //     ->searchable()
+                //     ->multiple()
+                //     ->preload(),
 
                 SpatieMediaLibraryFileUpload::make('featured_image')
                     ->label('Featured Image')
@@ -305,6 +552,11 @@ class ProductResource extends Resource
     {
         return $table
             ->columns([
+
+                TextColumn::make('id')
+                    ->label('ID')
+                    ->sortable(),
+
                 SpatieMediaLibraryImageColumn::make('featured_image')
                     ->collection('featured_image')
                     ->circular(),
@@ -440,9 +692,11 @@ class ProductResource extends Resource
     public static function getRelations(): array
     {
         return [
+            RelationManagers\InventoryRecipesRelationManager::class,
             // RelationManagers\CategoryRelationManager::class,
             // RelationManagers\BrandRelationManager::class,
             RelationManagers\ProductPackagingsRelationManager::class,
+            RelationManagers\OptionsRelationManager::class,
             // Add other relation managers here if needed
         ];
     }
