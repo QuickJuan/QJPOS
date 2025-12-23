@@ -503,11 +503,17 @@ const cartSummary = computed(() => {
     }
 
     const cartItems = getCartItems(cart);
-    const orderTotal = cartItems.length
-        ? sumCartItemSubtotals(cartItems)
-        : parseCurrencyValue(cart.total_amount);
+    const precomputedOrderTotal = parseCurrencyValue(
+        cart.order_total ?? cart.totals?.sub_total ?? cart.totals?.total_amount
+    );
+    const orderTotal =
+        precomputedOrderTotal > 0
+            ? precomputedOrderTotal
+            : cartItems.length
+            ? sumCartItemSubtotals(cartItems)
+            : parseCurrencyValue(cart.total_amount ?? 0);
     const serviceCharge = parseCurrencyValue(
-        cart.service_charge ?? cart.serviceCharge
+        cart.totals?.service_charge ?? cart.service_charge ?? cart.serviceCharge
     );
     const runningTotal = orderTotal + serviceCharge;
 

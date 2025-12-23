@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use App\Http\Resources\CartResource;
 
 class TableListingResource extends JsonResource
 {
@@ -27,7 +28,7 @@ class TableListingResource extends JsonResource
             'tableRoomLocation' => $this->whenLoaded('tableRoomLocation'),
             'chairs' => $this->chairs,
             'mergedTables' => Self::collection($this->mergedTables),
-            'cart' => $this->whenLoaded('cart'),
+            'cart' => CartResource::make($this->whenLoaded('cart')),
             'table_x' => $this->table_x ?? 0,
             'table_y' => $this->table_y ?? 0,
             'withTimeFrame' => (bool) $this->with_timeframe,
