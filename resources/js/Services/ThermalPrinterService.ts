@@ -1865,7 +1865,7 @@ class ThermalPrinterService {
         orderType: string;
         items: PlacedOrderItem[];
         totalItems: number;
-    }>, servedBy: string): Promise<void> {
+    }>, servedBy: string, servingNumber?: number | string | null): Promise<void> {
         if (!this.isConnected()) {
             throw new Error('Printer not connected. Please connect first.');
         }
@@ -1889,11 +1889,27 @@ class ThermalPrinterService {
             commands.push(...this.ESC_POS.BOLD_OFF);
             commands.push(...this.ESC_POS.LINE_FEED);
 
-            // Order number
+            // Order number / server details
             commands.push(...this.ESC_POS.BOLD_ON);
             commands.push(...this.stringToBytes(`Order #${orderNumber}`));
             commands.push(...this.ESC_POS.LINE_FEED);
             commands.push(...this.stringToBytes(`Server ${servedBy}`));
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            const servingLabel = servingNumber ?? null;
+            if (
+                servingLabel !== null &&
+                servingLabel !== undefined &&
+                String(servingLabel).trim() !== ''
+            ) {
+                this.addTextWithSize(
+                    commands,
+                    `Serving #${String(servingLabel).trim()}`,
+                    'medium'
+                );
+                commands.push(...this.ESC_POS.LINE_FEED);
+            }
+
             commands.push(...this.ESC_POS.BOLD_OFF);
             commands.push(...this.ESC_POS.LINE_FEED);
 

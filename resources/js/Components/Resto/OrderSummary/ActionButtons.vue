@@ -468,7 +468,8 @@ const sendPlacedOrderToPrinter = async (
     orderNumber: number | string,
     tableName: string,
     placedOrderItems: any[],
-    servedBy: string
+    servedBy: string,
+    servingNumber?: number | null
 ) => {
     if (!placedOrderItems || placedOrderItems.length === 0) {
         throw new Error("No items available to print.");
@@ -487,13 +488,24 @@ const sendPlacedOrderToPrinter = async (
         orderNumber,
         tableName || "Table",
         placedOrderItems,
-        servedBy
+        servedBy,
+        servingNumber
     );
 };
 
-const handleServerConfirm = async (serverId: number) => {
-    selectedServerId.value = serverId;
-    const response = await placeOrder(props.tableId, props.cart?.id, serverId);
+interface ServerConfirmationPayload {
+    serverId: number;
+    servingNumber: number | null;
+}
+
+const handleServerConfirm = async (payload: ServerConfirmationPayload) => {
+    selectedServerId.value = payload.serverId;
+    const response = await placeOrder(
+        props.tableId,
+        props.cart?.id,
+        payload.serverId,
+        payload.servingNumber
+    );
 
     if (response.success) {
         toast.add({
@@ -513,7 +525,8 @@ const handleServerConfirm = async (serverId: number) => {
                     response.orderNumber,
                     response.tableRoom?.name || "Table",
                     response.placedOrderItems,
-                    response.servedBy
+                    response.servedBy,
+                    response.servingNumber ?? null
                 );
 
                 // Redirect back to tables after printing
@@ -606,7 +619,8 @@ const handleReprintOrder = async () => {
             payload.orderNumber ?? batchNumber,
             payload.tableRoom?.name || "Table",
             payload.placedOrderItems,
-            payload.servedBy ?? "N/A"
+            payload.servedBy ?? "N/A",
+            payload.servingNumber ?? null
         );
 
         toast.add({

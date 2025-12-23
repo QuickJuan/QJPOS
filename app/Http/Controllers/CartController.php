@@ -190,6 +190,7 @@ class CartController extends Controller
                 'cart_id'  => $request->input('cart_id'),
                 'table_id' => $request->input('table_id'),
                 'served_by' => $request->input('served_by'),
+                'serving_number' => $request->input('serving_number'),
             ];
 
             $response = $this->cartService->placeOrder($payload);

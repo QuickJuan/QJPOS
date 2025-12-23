@@ -827,6 +827,7 @@ class CartService
                             'placed_order' => true,
                             'batch_number' => $orderNumber,
                             'served_by' => $payload['served_by'],
+                            'serving_number' => $payload['serving_number'] ?? null,
                         ]);
 
                     $cart->update([
@@ -858,6 +859,7 @@ class CartService
                         'orderNumber'      => $orderNumber,
                         'cart'             => $cart->fresh(['tableRoom']),
                         'servedBy'         => $servedBy->name ?? 'N/A',
+                        'servingNumber'    => $payload['serving_number'] ?? null,
                         'placedOrderItems' => $newOrderItems,
                         'tableRoom'        => $cart->tableRoom,
                         'success'          => true,
@@ -902,6 +904,7 @@ class CartService
             'orderNumber'      => $batchNumber,
             'cart'             => $cart,
             'servedBy'         => $servedBy?->name ?? 'N/A',
+            'servingNumber'    => $firstItem?->serving_number,
             'placedOrderItems' => new PreparationItemCollectionResource($cartItems),
             'tableRoom'        => $cart?->tableRoom,
             'success'          => true,

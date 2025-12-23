@@ -52,6 +52,7 @@ class CartItemResource extends JsonResource
                         'sub_items'        => $this->getSubItems($item->id),
                         'notes'            => $item->notes,
                         'product'          => $item->product,
+                        'servingNumber'    => $item->serving_number,
                     ];
                 })->toArray(),
             ];
@@ -90,6 +91,7 @@ class CartItemResource extends JsonResource
                 'selectedOptions'  => $subItem->meta_data['selected_options'] ?? [],
                 'modifiers'        => $subItem->meta_data['modifiers'] ?? [],
                 'notes'            => $subItem->notes,
+                'servingNumber'    => $subItem->serving_number,
                 // Recursively get sub-sub items if needed
                 'sub_items'        => $this->getSubItems($subItem->id),
             ];

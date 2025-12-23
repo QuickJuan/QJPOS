@@ -44,13 +44,19 @@ export const useTable = () => {
         );
     };
 
-    const placeOrder = async (tableId: number, cartId: number, servedBy: number) => {
+    const placeOrder = async (
+        tableId: number,
+        cartId: number,
+        servedBy: number,
+        servingNumber?: number | null
+    ) => {
         const response = await httpPost(
             route("resto.cart.place-order"),
             {
                 cart_id: cartId,
                 table_id: tableId,
                 served_by: servedBy,
+                serving_number: servingNumber,
             }
         );
        return response;

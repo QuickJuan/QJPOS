@@ -36,6 +36,7 @@ class OrderItem extends Model
         'notes',
         'meta_data',
         'served_by',
+        'serving_number',
     ];
 
     protected $casts = [
@@ -45,6 +46,7 @@ class OrderItem extends Model
         'discount'         => 'decimal:2',
         'sub_total'        => 'decimal:2',
         'meta_data'        => 'array',
+        'serving_number'   => 'integer',
     ];
 
     // SCOPES

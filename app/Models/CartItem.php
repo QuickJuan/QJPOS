@@ -36,11 +36,13 @@ class CartItem extends Model
         'notes',
         'meta_data',
         'served_by',
+        'serving_number',
     ];
 
     protected $casts = [
         'selected_options' => 'array',
         'meta_data'        => 'array',
+        'serving_number'   => 'integer',
     ];
 
     // SCOPES

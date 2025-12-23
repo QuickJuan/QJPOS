@@ -26,6 +26,7 @@ class PlaceOrderRequest extends FormRequest
               'cart_id' => ['required', 'integer', 'exists:carts,id', new CartHasUnplacedItems()],
               'table_id' => 'required|integer|exists:table_rooms,id',
               'served_by' => 'required|integer|exists:users,id',
+              'serving_number' => 'nullable|integer|min:1',
         ];
     }
 }

@@ -186,6 +186,7 @@ class PaymentService
             'notes'                => $cartItem->notes,
             'meta_data'            => $cartItem->meta_data ?? [],
             'served_by'            => $cartItem->served_by,
+            'serving_number'       => $cartItem->serving_number,
         ];
     }
 
