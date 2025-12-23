@@ -55,26 +55,46 @@
         >
             <!-- Toolbar (sticky on desktop, part of content flow on mobile) -->
             <div class="p-3 bg-white shadow lg:sticky lg:top-0">
-                <!-- Location Tabs Grid -->
-                <div
-                    class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"
-                >
-                    <button
-                        v-for="loc in tableRooms"
-                        :key="loc.id"
-                        @click="selectedLocationId = loc.id"
-                        :class="[
-                            'h-16 cursor-pointer px-2 py-1.5 rounded text-xs sm:text-sm font-semibold border flex flex-col sm:flex-row items-center justify-center gap-1 transition-colors',
-                            selectedLocationId === loc.id
-                                ? 'bg-blue-600 text-white border-blue-600 shadow'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300',
-                        ]"
+                <!-- Location Tabs grouped by type -->
+                <div class="space-y-5">
+                    <div
+                        v-for="group in groupedLocations"
+                        :key="group.type"
+                        class="space-y-2"
                     >
-                        <span class="truncate">{{ loc.name }}</span>
-                        <span class="text-base opacity-80">
-                            ({{ loc?.tableRoomCount || 0 }})
-                        </span>
-                    </button>
+                        <div
+                            class="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-wide text-gray-500"
+                        >
+                            <span>{{ group.label }}</span>
+                            <span class="h-px flex-1 bg-gray-200"></span>
+                            <span class="text-gray-400">
+                                {{ group.locations.length }} area{{
+                                    group.locations.length === 1 ? "" : "s"
+                                }}
+                            </span>
+                        </div>
+
+                        <div
+                            class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+                        >
+                            <button
+                                v-for="loc in group.locations"
+                                :key="loc.id"
+                                @click="selectedLocationId = loc.id"
+                                :class="[
+                                    'h-14 cursor-pointer px-2 py-1 rounded text-[11px] sm:text-xs font-semibold border flex flex-col sm:flex-row items-center justify-center gap-1 transition-colors',
+                                    selectedLocationId === loc.id
+                                        ? 'bg-blue-600 text-white border-blue-600 shadow'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300',
+                                ]"
+                            >
+                                <span class="truncate">{{ loc.name }}</span>
+                                <span class="text-sm opacity-80">
+                                    ({{ loc?.tableRoomCount || 0 }})
+                                </span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Back Button (Desktop only) -->
@@ -503,9 +523,115 @@ const props = defineProps<{
 
 // Reactive State
 const page = usePage<PageProps>();
+const normalizeLocationType = (type: unknown): string => {
+    if (!type && type !== 0) {
+        return "other";
+    }
+    return String(type).toLowerCase().trim();
+};
+
+const canonicalizeLocationType = (rawType: unknown): string => {
+    const type = normalizeLocationType(rawType);
+
+    if (["dine-in", "dining", "restaurant"].includes(type)) {
+        return "dine-in";
+    }
+
+    if (
+        [
+            "takeout",
+            "take-out",
+            "take away",
+            "take-away",
+            "delivery",
+            "pickup",
+            "pick-up",
+            "take away",
+        ].includes(type)
+    ) {
+        return "takeout";
+    }
+
+    return "other";
+};
+
+const normalizeTableRooms = (raw: any[] = []) => {
+    return raw.map((location) => {
+        const normalizedType = canonicalizeLocationType(
+            location.location_type ?? location.locationType ?? location.type
+        );
+
+        return {
+            ...location,
+            location_type: normalizedType,
+            name: location.name ?? location.title ?? "Unnamed",
+            tableRooms: Array.isArray(location.tableRooms)
+                ? location.tableRooms
+                : location.table_rooms ?? [],
+        };
+    });
+};
+
 const locations = computed(() => {
-    // Extract locations from tableRooms array
-    return props.tableRooms || [];
+    // Extract locations from tableRooms array, ensuring structure compatibility
+    return normalizeTableRooms(props.tableRooms || []);
+});
+
+const LOCATION_TYPE_ORDER: Record<string, number> = {
+    "dine-in": 0,
+    takeout: 1,
+    other: 2,
+};
+
+const getLocationTypeLabel = (type: string): string => {
+    switch (type) {
+        case "dine-in":
+            return "Dine-In Areas";
+        case "takeout":
+            return "Takeout & Delivery Areas";
+        default:
+            return "Other Areas";
+    }
+};
+
+const groupedLocations = computed(() => {
+    const groupMap = new Map<
+        string,
+        {
+            type: string;
+            label: string;
+            order: number;
+            locations: any[];
+        }
+    >();
+
+    for (const location of locations.value) {
+        const type = location.location_type ?? "other";
+        if (!groupMap.has(type)) {
+            groupMap.set(type, {
+                type,
+                label: getLocationTypeLabel(type),
+                order: LOCATION_TYPE_ORDER[type] ?? 99,
+                locations: [],
+            });
+        }
+
+        groupMap.get(type)?.locations.push(location);
+    }
+
+    return Array.from(groupMap.values())
+        .map((group) => ({
+            ...group,
+            locations: [...group.locations].sort((a, b) =>
+                String(a.name || "").localeCompare(String(b.name || ""))
+            ),
+        }))
+        .sort((a, b) => {
+            if (a.order !== b.order) {
+                return a.order - b.order;
+            }
+            return a.label.localeCompare(b.label);
+        });
 });
 const selectedLocationId = ref<number | null>(null);
 const showTableModal = ref(false);
