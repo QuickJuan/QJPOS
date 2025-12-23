@@ -133,6 +133,7 @@ import { useOrderStore } from "@/stores/orderStore";
 import Swal from "sweetalert2";
 import { formatMoney } from "@/Utils/FormatMoney";
 import moment from "moment-timezone";
+import { usePrintBill } from "@/composables/usePrintBill";
 
 const props = defineProps<{
     cart: any;
@@ -389,12 +390,24 @@ const handleSettleBill = async (response: any) => {
 };
 
 // Handle print bill
-const handlePrintBill = async () => {
-    const response = await httpGet(
-        `/api/carts/${page.props.cart?.id}/print-bill`
-    );
+const { fetchBillData, sendBillToPrinter } = usePrintBill();
 
-    if (!response.success) {
+const handlePrintBill = async () => {
+    const cartId = page.props.cart?.id;
+
+    if (!cartId) {
+        toast.add({
+            severity: "warn",
+            summary: "No Active Cart",
+            detail: "Please open an order before printing a bill.",
+            life: 3000,
+        });
+        return;
+    }
+
+    const response = await fetchBillData(cartId);
+
+    if (!response.success || !response.data) {
         toast.add({
             severity: "error",
             summary: "Error",
@@ -406,43 +419,28 @@ const handlePrintBill = async () => {
 
     billData.value = response.data;
 
-    if (billData.value) {
-        const thermalBillData = {
-            storeName: page.props.company_info?.company_name,
-            branch: billData.value.branch,
-            billNumber: billData.value.bill_number,
-            tableName: billData.value.table_number,
-            cashier: billData.value.cashier,
-            items: billData.value.cart_items || [],
-            totals: billData.value.totals || {},
-        };
-
-        try {
-            await thermalPrinter.printBill(thermalBillData);
-        } catch (error) {
-            console.log("Failed to print bill:", error);
-            showBillModal.value = true;
-            toast.add({
-                severity: "warn",
-                summary: "Printer Error",
-                detail: "Failed to print billl. Showing Bill modal instead.",
-                life: 3000,
-            });
-        }
+    if (!billData.value) {
+        toast.add({
+            severity: "error",
+            summary: "Error",
+            detail: "Bill data is unavailable.",
+            life: 3000,
+        });
+        return;
     }
 
-    // Populate bill data
-    // billData.value = {
-    //     billNumber: responseData.bill_number,
-    //     date: responseData.cart_date,
-    //     tableInfo: responseData.table_number,
-    //     cashierName: responseData.cashier?.name,
-    //     orderItems: responseData.cart_items,
-    //     subtotal: responseData.totals.subtotal,
-    //     lessTax: responseData.totals.less_tax,
-    //     lessDiscount: responseData.totals.less_discount,
-    //     totalAmount: parseFloat(props.total.toFixed(2)),
-    // };
+    try {
+        await sendBillToPrinter(billData.value);
+    } catch (error) {
+        console.log("Failed to print bill:", error);
+        showBillModal.value = true;
+        toast.add({
+            severity: "warn",
+            summary: "Printer Error",
+            detail: "Failed to print bill. Showing Bill modal instead.",
+            life: 3000,
+        });
+    }
 };
 
 // Handle view table

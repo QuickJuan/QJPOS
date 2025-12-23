@@ -84,6 +84,50 @@
                 </div>
             </div>
 
+            <!-- Running Total Summary -->
+            <div
+                v-if="showCartSummary"
+                class="rounded-xl border border-blue-100 bg-blue-50/70 p-4 shadow-sm"
+            >
+                <div
+                    class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+                >
+                    <div>
+                        <p
+                            class="text-xs uppercase tracking-wide text-blue-700"
+                        >
+                            Running Amount Due
+                        </p>
+                        <p class="text-2xl font-bold text-blue-900">
+                            {{ formatCurrency(cartSummary?.runningTotal || 0) }}
+                        </p>
+                        <p class="text-xs text-blue-600/80">
+                            Includes service charge
+                        </p>
+                    </div>
+                    <div class="flex-1 space-y-2 text-sm text-blue-900">
+                        <div class="flex items-center justify-between">
+                            <span class="text-blue-700/80">Order Total</span>
+                            <span class="font-semibold">
+                                {{
+                                    formatCurrency(cartSummary?.orderTotal || 0)
+                                }}
+                            </span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-blue-700/80">Service Charge</span>
+                            <span class="font-semibold">
+                                {{
+                                    formatCurrency(
+                                        cartSummary?.serviceCharge || 0
+                                    )
+                                }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Action Buttons -->
             <div class="space-y-3">
                 <div class="flex items-center justify-between">
@@ -186,6 +230,18 @@
                         outlined
                         @click="handleUnmergeTables"
                     />
+
+                    <Button
+                        v-if="canPrintBill"
+                        label="Print Bill"
+                        icon="pi pi-print"
+                        class="table-action-btn w-full h-14 justify-start gap-3 rounded-xl text-left"
+                        severity="secondary"
+                        outlined
+                        :loading="isPrintingBill"
+                        :disabled="isPrintingBill"
+                        @click="handlePrintBill"
+                    />
                 </div>
             </div>
 
@@ -282,6 +338,8 @@ import Dialog from "primevue/dialog";
 import Button from "primevue/button";
 import TextField from "@/Components/Form/TextField.vue";
 import { useTable } from "@/composables/useTable";
+import { useToast } from "primevue/usetoast";
+import { usePrintBill } from "@/composables/usePrintBill";
 
 const props = defineProps<{
     show: boolean;
@@ -300,6 +358,10 @@ const emit = defineEmits<{
     unmergeTable: [];
     refundOrder: [];
 }>();
+
+const toast = useToast();
+const isPrintingBill = ref(false);
+const { fetchBillData, sendBillToPrinter } = usePrintBill();
 
 const {
     vacantTable: vacantTableAction,
@@ -344,6 +406,134 @@ const quickPaxOptions = Array.from({ length: 10 }, (_, index) => index + 1);
 const tableCapacity = computed(() => {
     return props.table?.chairs ?? props.table?.capacity ?? 0;
 });
+
+const parseCurrencyValue = (value: unknown): number => {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : 0;
+};
+
+const normalizeCollection = (collection: unknown): any[] => {
+    if (Array.isArray(collection)) {
+        return collection;
+    }
+
+    if (
+        collection &&
+        typeof collection === "object" &&
+        Array.isArray((collection as Record<string, any>).data)
+    ) {
+        return (collection as Record<string, any>).data;
+    }
+
+    return [];
+};
+
+const flattenSubItems = (item: any): any[] => {
+    const subItems = normalizeCollection(item?.sub_items ?? item?.subItems);
+    if (!subItems.length) {
+        return [];
+    }
+
+    const flattened: any[] = [];
+    subItems.forEach((subItem) => {
+        flattened.push(subItem);
+        flattened.push(...flattenSubItems(subItem));
+    });
+
+    return flattened;
+};
+
+const flattenItems = (items: any[]): any[] => {
+    const normalizedItems = normalizeCollection(items);
+    const flattened: any[] = [];
+
+    normalizedItems.forEach((item) => {
+        if (!item) {
+            return;
+        }
+        flattened.push(item);
+        flattened.push(...flattenSubItems(item));
+    });
+
+    return flattened;
+};
+
+const extractItemsFromGroups = (groups: any[]): any[] => {
+    const normalizedGroups = normalizeCollection(groups);
+    return normalizedGroups.flatMap((group) =>
+        flattenItems(group?.cartItems ?? group?.cart_items ?? [])
+    );
+};
+
+const getCartItems = (cart: Record<string, any> | null | undefined): any[] => {
+    if (!cart) {
+        return [];
+    }
+
+    const rawGroups = normalizeCollection(
+        (cart as any).cart_items ?? (cart as any).cartItems
+    );
+
+    if (!rawGroups.length) {
+        return [];
+    }
+
+    const hasGroupStructure = rawGroups.some((entry) =>
+        Array.isArray(entry?.cartItems ?? entry?.cart_items)
+    );
+
+    return hasGroupStructure
+        ? extractItemsFromGroups(rawGroups)
+        : flattenItems(rawGroups);
+};
+
+const sumCartItemSubtotals = (items: any[]): number => {
+    return items.reduce((total, item) => {
+        const subTotal = parseCurrencyValue(
+            item?.sub_total ?? item?.subTotal ?? item?.subtotal ?? 0
+        );
+        return total + subTotal;
+    }, 0);
+};
+
+const cartSummary = computed(() => {
+    const cart = props.table?.cart;
+    if (!cart) {
+        return null;
+    }
+
+    const cartItems = getCartItems(cart);
+    const orderTotal = cartItems.length
+        ? sumCartItemSubtotals(cartItems)
+        : parseCurrencyValue(cart.total_amount);
+    const serviceCharge = parseCurrencyValue(
+        cart.service_charge ?? cart.serviceCharge
+    );
+    const runningTotal = orderTotal + serviceCharge;
+
+    return {
+        orderTotal,
+        serviceCharge,
+        runningTotal,
+    };
+});
+
+const showCartSummary = computed(() => {
+    return props.table?.status === "occupied" && Boolean(cartSummary.value);
+});
+
+const canPrintBill = computed(() => {
+    return Boolean(props.table?.status === "occupied" && props.table?.cart?.id);
+});
+
+const formatCurrency = (value: number): string => {
+    const safeValue = Number.isFinite(value) ? value : 0;
+    return new Intl.NumberFormat("en-PH", {
+        style: "currency",
+        currency: "PHP",
+        minimumFractionDigits: 2,
+    }).format(safeValue);
+};
 
 const locationName = computed(() => {
     if (props.table?.locationName) {
@@ -512,5 +702,51 @@ const handleTransferGuest = () => {
 const handleReserveTable = () => {
     reserveTable(props.table);
     handleClose();
+};
+
+const handlePrintBill = async () => {
+    if (!props.table?.cart?.id) {
+        toast.add({
+            severity: "warn",
+            summary: "No Active Order",
+            detail: "This table does not have a bill to print yet.",
+            life: 3000,
+        });
+        return;
+    }
+
+    try {
+        isPrintingBill.value = true;
+        const response = await fetchBillData(props.table.cart.id);
+
+        if (!response.success || !response.data) {
+            throw new Error(response.error || "Failed to fetch bill data");
+        }
+
+        await sendBillToPrinter(response.data);
+
+        toast.add({
+            severity: "success",
+            summary: "Bill Sent",
+            detail: "Bill has been sent to the thermal printer.",
+            life: 3000,
+        });
+    } catch (error) {
+        console.error("Print bill failed:", error);
+        const errorMessage =
+            error instanceof Error
+                ? error.message
+                : (error as { message?: string })?.message ||
+                  "Failed to print bill. Please try again.";
+
+        toast.add({
+            severity: "error",
+            summary: "Print Failed",
+            detail: errorMessage,
+            life: 4000,
+        });
+    } finally {
+        isPrintingBill.value = false;
+    }
 };
 </script>
