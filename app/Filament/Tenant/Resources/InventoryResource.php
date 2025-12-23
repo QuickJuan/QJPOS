@@ -74,20 +74,20 @@ class InventoryResource extends Resource
                     ->searchable(),
 
                 Repeater::make('unitConversions')
-                    ->label('Unit Conversions')
+                    ->label('Unit Conversions (Smaller Units)')
                     ->relationship('unitConversions')
                     ->hidden(fn (Get $get) => blank($get('unit_measure_id')))
                     ->schema([
                         Select::make('unit_measure_id')
-                            ->label('Conversion Unit')
+                            ->label('Conversion Unit (smaller)')
                             ->relationship('unitMeasure', 'name')
                             ->required()
                             ->searchable()
                             ->preload()
-                            ->helperText('Choose an alternate unit for this inventory item.'),
+                            ->helperText('Pick a smaller unit that breaks down the selected base unit (e.g., liter → milliliter).'),
 
                         TextInput::make('conversion_factor')
-                            ->label('Base Units per Conversion')
+                            ->label('Base Units per Conversion Unit')
                             ->numeric()
                             ->minValue(0)
                             ->required()
@@ -98,7 +98,7 @@ class InventoryResource extends Resource
                             : ((float) $state == (int) $state
                                 ? (string) (int) $state
                                 : number_format((float) $state, 2, '.', '')))
-                            ->helperText('How many base units equal 1 of the selected unit.'),
+                                ->helperText('Enter how many of the smaller unit make up 1 base unit (e.g., 1 liter = 1,000 milliliters).'),
                     ])
                     ->columns(2)
                     ->defaultItems(0)
@@ -107,18 +107,18 @@ class InventoryResource extends Resource
                     ->helperText('Default unit is always 1:1. Add other unit conversions here.'),
 
                 Repeater::make('packagings')
-                    ->label('Packagings')
+                    ->label('Packagings (Larger Groupings)')
                     ->relationship('packagings')
                     ->hidden(fn (Get $get) => blank($get('unit_measure_id')))
                     ->schema([
                         TextInput::make('name')
-                            ->label('Packaging Name')
+                            ->label('Packaging Name (larger)')
                             ->required()
                             ->maxLength(100)
-                            ->helperText('e.g., Box, Sleeve, Bag'),
+                            ->helperText('Describe the bigger container, e.g., Box, Sleeve, Bag, Blister.'),
 
                         TextInput::make('quantity')
-                            ->label('Base Units per Package')
+                            ->label('Base Units inside this Package')
                             ->numeric()
                             ->minValue(0.01)
                             ->required()
@@ -129,7 +129,7 @@ class InventoryResource extends Resource
                                 : ((float) $state == (int) $state
                                     ? (string) (int) $state
                                     : number_format((float) $state, 2, '.', '')))
-                            ->helperText('How many base units make up this packaging (e.g., 24 pcs per box).'),
+                                ->helperText('Enter how many base units this package holds (e.g., 1 blister = 10 liters).'),
                     ])
                     ->columns(2)
                     ->defaultItems(0)
@@ -153,6 +153,11 @@ class InventoryResource extends Resource
                     ->searchable(),
 
                 TextColumn::make('cost')
+                    ->sortable()
+                    ->money('PHP')
+                    ->searchable(),
+
+                TextColumn::make('defaultLocation.location')
                     ->sortable()
                     ->money('PHP')
                     ->searchable(),

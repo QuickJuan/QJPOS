@@ -7,6 +7,7 @@ use App\Filament\Tenant\Resources\ProductResource\Pages;
 use App\Filament\Tenant\Resources\ProductResource\RelationManagers;
 use App\Filament\Tenant\Resources\ProductResource\RelationManagers\OptionsRelationManager;
 use App\Models\Product;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
@@ -175,10 +176,19 @@ class ProductResource extends Resource
                             ->reactive()
                             ->afterStateUpdated(function ($state, callable $set) {
                                 if (! $state) {
+                                    $set('unit_measure', null);
+                                    $set('unit_option', null);
+                                    $set('use_custom_unit', false);
+                                    $set('unit_type', 'base');
+                                    $set('unit_reference_id', null);
                                     return;
                                 }
 
                                 $inventory = \App\Models\Inventory::find($state);
+                                $set('unit_option', null);
+                                $set('use_custom_unit', false);
+                                $set('unit_type', 'base');
+                                $set('unit_reference_id', null);
                                 $set('unit_measure', $inventory?->unit_measure);
                             }),
 
@@ -188,12 +198,148 @@ class ProductResource extends Resource
                             ->minValue(0)
                             ->required(),
 
+                        Toggle::make('use_custom_unit')
+                            ->label('Use Conversion / Packaging')
+                            ->dehydrated(false)
+                            ->reactive()
+                            ->hidden(fn (Get $get) => blank($get('inventory_id')))
+                            ->helperText('Enable to deduct via a conversion unit or packaging.')
+                            ->default(false)
+                            ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                if (! $state) {
+                                    $inventoryId = $get('inventory_id');
+                                    $inventory   = $inventoryId ? \App\Models\Inventory::find($inventoryId) : null;
+                                    $set('unit_option', null);
+                                    $set('unit_type', 'base');
+                                    $set('unit_reference_id', null);
+                                    $set('unit_measure', $inventory?->unit_measure);
+                                }
+                            }),
+
+                        Select::make('unit_option')
+                            ->label('Select Conversion / Packaging')
+                            ->dehydrated(false)
+                            ->reactive()
+                            ->hidden(fn (Get $get) => blank($get('inventory_id')) || ! $get('use_custom_unit'))
+                            ->required(fn (Get $get) => (bool) $get('use_custom_unit'))
+                            ->placeholder('Choose an available conversion or packaging')
+                            ->options(function (Get $get) {
+                                $inventoryId = $get('inventory_id');
+
+                                if (! $inventoryId) {
+                                    return [];
+                                }
+
+                                $inventory = \App\Models\Inventory::with([
+                                    'unitConversions.unitMeasure',
+                                    'packagings',
+                                ])->find($inventoryId);
+
+                                if (! $inventory) {
+                                    return [];
+                                }
+
+                                $options = [];
+
+                                if ($inventory->unit_measure) {
+                                    $options['base:0'] = 'Base Unit - ' . $inventory->unit_measure;
+                                }
+
+                                foreach ($inventory->unitConversions as $conversion) {
+                                    $unitName = $conversion->unitMeasure?->name ?? 'Conversion';
+                                    $factor = $conversion->conversion_factor ?? 0;
+                                    $formattedFactor = rtrim(rtrim(number_format($factor, 4, '.', ''), '0'), '.');
+                                    $options['conversion:' . $conversion->id] = sprintf(
+                                        'Conversion - %s (1 %s = %s %s)',
+                                        $unitName,
+                                        $unitName,
+                                        $formattedFactor ?: '0',
+                                        $inventory->unit_measure ?? 'base units'
+                                    );
+                                }
+
+                                foreach ($inventory->packagings as $packaging) {
+                                    $qty = $packaging->quantity ?? 0;
+                                    $formattedQty = rtrim(rtrim(number_format($qty, 4, '.', ''), '0'), '.');
+                                    $options['packaging:' . $packaging->id] = sprintf(
+                                        'Packaging - %s (%s %s per package)',
+                                        $packaging->name,
+                                        $formattedQty ?: '0',
+                                        $inventory->unit_measure ?? 'base units'
+                                    );
+                                }
+
+                                return $options;
+                            })
+                            ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                $inventoryId = $get('inventory_id');
+
+                                if (! $inventoryId) {
+                                    $set('unit_measure', null);
+                                    $set('unit_type', 'base');
+                                    $set('unit_reference_id', null);
+                                    return;
+                                }
+
+                                $inventory = \App\Models\Inventory::with([
+                                    'unitConversions.unitMeasure',
+                                    'packagings',
+                                ])->find($inventoryId);
+
+                                if (! $inventory) {
+                                    $set('unit_measure', null);
+                                    $set('unit_type', 'base');
+                                    $set('unit_reference_id', null);
+                                    return;
+                                }
+
+                                if (! $state || $state === 'base:0') {
+                                    $set('unit_type', 'base');
+                                    $set('unit_reference_id', null);
+                                    $set('unit_measure', $inventory->unit_measure);
+                                    return;
+                                }
+
+                                $parts = explode(':', $state);
+                                $type  = $parts[0] ?? null;
+                                $id    = isset($parts[1]) ? (int) $parts[1] : null;
+
+                                if ($type === 'conversion' && $id) {
+                                    $conversion = $inventory->unitConversions->firstWhere('id', $id);
+                                    $set('unit_type', 'conversion');
+                                    $set('unit_reference_id', $conversion?->id);
+                                    $set('unit_measure', $conversion?->unitMeasure?->name ?? $inventory->unit_measure);
+                                    return;
+                                }
+
+                                if ($type === 'packaging' && $id) {
+                                    $packaging = $inventory->packagings->firstWhere('id', $id);
+                                    $set('unit_type', 'packaging');
+                                    $set('unit_reference_id', $packaging?->id);
+                                    $set('unit_measure', $packaging?->name ?? $inventory->unit_measure);
+                                    return;
+                                }
+
+                                $set('unit_type', 'base');
+                                $set('unit_reference_id', null);
+                                $set('unit_measure', $inventory->unit_measure);
+                            }),
+
                         TextInput::make('unit_measure')
-                            ->label('Unit')
+                            ->label('Unit (auto-filled)')
                             ->maxLength(50)
-                            ->placeholder('e.g., g, ml, pcs'),
+                            ->placeholder('Defaults to the base unit')
+                            ->helperText('Automatically reflects the chosen base unit, conversion, or packaging.')
+                            ->disabled()
+                            ->dehydrated(true),
+
+                        Hidden::make('unit_type')
+                            ->default('base'),
+
+                        Hidden::make('unit_reference_id')
+                            ->default(null),
                     ])
-                    ->columns(3)
+                    ->columns(4)
                     ->defaultItems(0)
                     ->collapsible()
                     ->itemLabel(fn (array $state): ?string => $state['inventory_id'] ? (\App\Models\Inventory::find($state['inventory_id'])?->name) : 'Ingredient')

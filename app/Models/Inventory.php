@@ -45,7 +45,7 @@ class Inventory extends Model
     public function products(): BelongsToMany
     {
         return $this->belongsToMany(Product::class, 'inventory_product')
-            ->withPivot(['quantity', 'unit_measure'])
+            ->withPivot(['quantity', 'unit_measure', 'unit_type', 'unit_reference_id'])
             ->withTimestamps();
     }
 }

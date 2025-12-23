@@ -116,7 +116,7 @@ class Product extends Model implements HasMedia
     public function recipeInventories(): BelongsToMany
     {
         return $this->belongsToMany(Inventory::class, 'inventory_product')
-            ->withPivot(['quantity', 'unit_measure'])
+            ->withPivot(['quantity', 'unit_measure', 'unit_type', 'unit_reference_id'])
             ->withTimestamps();
     }
 
