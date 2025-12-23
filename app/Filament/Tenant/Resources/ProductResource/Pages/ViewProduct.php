@@ -33,7 +33,7 @@ class ViewProduct extends ViewRecord
                 ->modalHeading('Associate Inventory')
                 ->modalIcon('heroicon-o-archive-box')
                 ->modalWidth('lg')
-                ->visible(fn () => $this->record->product_type !== 'bundle')
+                ->visible(fn () => $this->record->product_type === 'simple' && (bool) $this->record->track_inventory)
                 ->form([
                     Select::make('inventory_id')
                         ->label('Inventory Item')
@@ -256,6 +256,10 @@ class ViewProduct extends ViewRecord
 
                         TextEntry::make('preparationLocation.description'),
 
+                        TextEntry::make('track_inventory')
+                            ->label('Tracks Inventory')
+                            ->formatStateUsing(fn ($state) => $state ? 'Yes' : 'No'),
+
                         TextEntry::make('uuid')
                             ->label('UUID'),
 
@@ -365,7 +369,13 @@ class ViewProduct extends ViewRecord
                             })
                             ->html(),
                     ])
-                    ->visible(fn($record) => $record->product_type !== 'bundle'),
+                    ->visible(function ($record) {
+                        if ($record->product_type === 'simple') {
+                            return (bool) $record->track_inventory;
+                        }
+
+                        return $record->product_type !== 'bundle';
+                    }),
             ]);
     }
 }

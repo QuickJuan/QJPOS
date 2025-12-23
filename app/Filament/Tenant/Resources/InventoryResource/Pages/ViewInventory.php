@@ -1,14 +1,16 @@
 <?php
 namespace App\Filament\Tenant\Resources\InventoryResource\Pages;
 
-use Filament\Actions\EditAction;
-use Filament\Infolists\Infolist;
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
-use Filament\Resources\Pages\ViewRecord;
+use Filament\Actions\EditAction;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Infolist;
+use Filament\Resources\Pages\ViewRecord;
 use App\Filament\Tenant\Resources\InventoryResource;
+use App\Filament\Tenant\Resources\InventoryStockMovementResource;
 
 class ViewInventory extends ViewRecord
 {
@@ -66,8 +68,29 @@ class ViewInventory extends ViewRecord
                                 TextEntry::make('current_stock')
                                     ->label('Current Stock')
                                     ->formatStateUsing(fn ($state) => InventoryResource::formatStock($state)),
+
+                                TextEntry::make('view_movements')
+                                    ->label('View Movements')
+                                    ->state(fn () => 'See history')
+                                    ->formatStateUsing(function ($state, $component) {
+                                        $stock = $component->getRecord();
+                                        $locationId = $stock?->location?->id;
+                                        $url = InventoryStockMovementResource::getUrl('index')
+                                            . '?tableFilters[inventory][value]=' . ($stock?->inventory_id ?? '');
+
+                                        if ($locationId) {
+                                            $url .= '&tableFilters[location][value]=' . $locationId;
+                                        }
+
+                                        return sprintf(
+                                            '<a href="%s" target="_blank" class="text-primary-600 hover:underline">%s</a>',
+                                            e($url),
+                                            e($state)
+                                        );
+                                    })
+                                    ->html(),
                             ])
-                            ->columns(2),
+                            ->columns(3),
                     ])
                     ->hidden(fn ($record) => $record->locationStocks->isEmpty())
                     ->columnSpan(2),

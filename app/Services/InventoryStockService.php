@@ -102,6 +102,7 @@ class InventoryStockService
                 'orderItems.product.inventoryRecipes.inventory.unitConversions',
                 'orderItems.product.inventoryRecipes.inventory.packagings',
                 'orderItems.product.inventoryRecipes.inventory.defaultLocation',
+                'orderItems.product.inventoryRecipes.inventory.locationStocks',
             ]);
 
             foreach ($order->orderItems as $orderItem) {
@@ -111,7 +112,15 @@ class InventoryStockService
 
                 $product = $orderItem->product;
 
-                if (! $product || $product->inventoryRecipes->isEmpty()) {
+                if (! $product) {
+                    continue;
+                }
+
+                if (! $product->track_inventory) {
+                    continue;
+                }
+
+                if ($product->inventoryRecipes->isEmpty()) {
                     continue;
                 }
 
@@ -123,6 +132,12 @@ class InventoryStockService
                     }
 
                     $locationId = $inventory->default_location;
+
+                    if (! $locationId) {
+                        $locationId = $inventory->locationStocks
+                            ->sortByDesc(fn ($stock) => (float) ($stock->current_stock ?? 0))
+                            ->first()?->location_id;
+                    }
 
                     if (! $locationId) {
                         Log::warning('Inventory deduction skipped due to missing default location.', [

@@ -2,6 +2,10 @@
 
 namespace App\Filament\Tenant\Resources;
 
+use App\Exports\InventoryStockMovementTemplateExport;
+use App\Filament\Imports\InventoryStockMovementImporter;
+use App\Filament\Tenant\Exports\InventoryStockMovements\InventoryStockMovementExporter;
+use App\Filament\Tenant\Resources\InventoryResource;
 use App\Filament\Tenant\Resources\InventoryStockMovementResource\Pages;
 use App\Models\Inventory;
 use App\Models\InventoryPackaging;
@@ -18,8 +22,14 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Actions\Action;
+use Filament\Tables\Actions\ImportAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Carbon;
+use Maatwebsite\Excel\Facades\Excel;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportAction;
+use pxlrbt\FilamentExcel\Columns\Column;
 
 class InventoryStockMovementResource extends Resource
 {
@@ -184,7 +194,55 @@ class InventoryStockMovementResource extends Resource
                     ->dateTime('M d, Y h:i A')
                     ->sortable(),
             ])
+            ->defaultSort('created_at', 'desc')
             ->headerActions([
+                Action::make('downloadTemplate')
+                    ->label('Download Template')
+                    ->icon('heroicon-m-arrow-down-tray')
+                    ->color('gray')
+                    ->action(fn () => Excel::download(new InventoryStockMovementTemplateExport(), 'inventory-stock-movement-template.xlsx')),
+
+                ImportAction::make('importStockMovements')
+                    ->label('Import Movements')
+                    ->icon('heroicon-m-arrow-up-on-square')
+                    ->importer(InventoryStockMovementImporter::class)
+                    ->modalHeading('Import Stock Movements')
+                    ->modalDescription('Use the template to list inventory, location, movement type, and quantity for each adjustment.'),
+
+                ExportAction::make()
+                    ->label('Export Movements')
+                    ->exports([
+                        InventoryStockMovementExporter::make()
+                            ->fromTable()
+                            ->withColumns([
+                                Column::make('inventory.name')
+                                    ->heading('Inventory'),
+
+                                Column::make('location.location')
+                                    ->heading('Location'),
+
+                                Column::make('movement_type')
+                                    ->heading('Type')
+                                    ->formatStateUsing(fn (string $state) => $state === 'in' ? 'Stock In' : 'Stock Out'),
+
+                                Column::make('quantity')
+                                    ->heading('Quantity (Base)'),
+
+                                Column::make('packaging.name')
+                                    ->heading('Packaging'),
+
+                                Column::make('resulting_stock')
+                                    ->heading('Balance'),
+
+                                Column::make('user.name')
+                                    ->heading('Recorded By'),
+
+                                Column::make('created_at')
+                                    ->heading('Date')
+                                    ->formatStateUsing(fn ($state) => $state ? Carbon::parse($state)->format('M d, Y h:i A') : null),
+                            ]),
+                    ]),
+
                 Action::make('transferStock')
                     ->label('Transfer Stock')
                     ->icon('heroicon-m-arrows-right-left')
@@ -252,7 +310,17 @@ class InventoryStockMovementResource extends Resource
                     ->modalSubmitActionLabel('Transfer'),
             ])
             ->filters([
-                //
+                SelectFilter::make('inventory')
+                    ->label('Inventory')
+                    ->relationship('inventory', 'name')
+                    ->searchable()
+                    ->preload(),
+
+                SelectFilter::make('location')
+                    ->label('Location')
+                    ->relationship('location', 'location')
+                    ->searchable()
+                    ->preload(),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),

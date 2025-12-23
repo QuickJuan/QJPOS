@@ -212,6 +212,10 @@ class InventoryResource extends Resource
             'unitMeasure',
             'defaultLocation',
             'locationStocks.location',
+            'stockMovements' => fn ($query) => $query
+                ->latest()
+                ->with(['location', 'user'])
+                ->limit(10),
         ]);
     }
 

@@ -7,6 +7,7 @@ use App\Filament\Tenant\Resources\ProductResource\Pages;
 use App\Filament\Tenant\Resources\ProductResource\RelationManagers;
 use App\Filament\Tenant\Resources\ProductResource\RelationManagers\OptionsRelationManager;
 use App\Models\Product;
+use Filament\Forms\Components\Component;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\RichEditor;
@@ -77,6 +78,11 @@ class ProductResource extends Resource
                     ])
                     ->default('simple')
                     ->live()
+                    ->afterStateUpdated(function ($state, callable $set) {
+                        if ($state !== 'simple') {
+                            $set('track_inventory', false);
+                        }
+                    })
                     ->helperText('Choose how this product behaves in POS and inventory.'),
 
                 Select::make('preparation_location_id')
@@ -129,6 +135,52 @@ class ProductResource extends Resource
                     ->numeric()
                     ->label('Price')
                     ->hidden(fn(Get $get) => $get('product_type') === 'with_variant'),
+
+                Toggle::make('track_inventory')
+                    ->label('Track Inventory')
+                    ->helperText(function (Get $get) {
+                        $message = 'Enable to automatically manage stock for this simple product.';
+
+                        if (! $get('track_inventory') && $get('has_inventory_links')) {
+                            $message .= ' While tracking is off, linked inventories remain hidden and sales will not reduce stock.';
+                        }
+
+                        return $message;
+                    })
+                    ->reactive()
+                    ->live()
+                    ->inline(false)
+                    ->default(false)
+                    ->afterStateUpdated(function ($state, callable $set, callable $get, Component $component) {
+                        if ($state) {
+                            return;
+                        }
+
+                        $livewire = $component->getLivewire();
+
+                        if (! method_exists($livewire, 'getRecord')) {
+                            return;
+                        }
+
+                        $record = $livewire->getRecord();
+
+                        if (! $record || ! $record->inventoryRecipes()->exists()) {
+                            return;
+                        }
+
+                        Notification::make()
+                            ->title('Inventory tracking disabled')
+                            ->body('Existing inventory links are now hidden and future sales will skip stock deduction until tracking is enabled again.')
+                            ->info()
+                            ->send();
+
+                        $set('has_inventory_links', true);
+                    })
+                    ->disabled(fn (Get $get) => $get('product_type') !== 'simple'),
+
+                Hidden::make('has_inventory_links')
+                    ->default(fn (?Product $record) => $record?->inventoryRecipes()->exists())
+                    ->dehydrated(false),
 
                 Select::make('vat_type')
                     ->label('Tax Type')
@@ -640,6 +692,7 @@ class ProductResource extends Resource
     public static function getRelations(): array
     {
         return [
+            RelationManagers\InventoryRecipesRelationManager::class,
             // RelationManagers\CategoryRelationManager::class,
             // RelationManagers\BrandRelationManager::class,
             RelationManagers\ProductPackagingsRelationManager::class,
