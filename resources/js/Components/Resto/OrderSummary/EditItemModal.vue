@@ -3,96 +3,259 @@
         :visible="visible"
         @update:visible="$emit('update:visible', $event)"
         modal
-        :header="`Edit ${selectedOrderItem?.name || ''}`"
-        :style="{ width: '25rem' }"
+        :header="dialogTitle"
+        :style="{ width: '30rem' }"
+        class="bg-white"
     >
-        <div class="flex flex-col gap-1 mb-8">
-            <span class="font-semibold text-secondary-800">
-                Modifiers:
-            </span>
-            <!-- Modifiers -->
-            <div v-if="hasModifiers(selectedOrderItem)">
-                <div
-                    v-for="(modifierData, index) in selectedOrderItem.meta_data"
-                    :key="index"
-                    class="text-xs text-gray-700 space-y-1 ml-3"
-                >
-                    <!-- Modifier Options -->
-                    <div
-                        v-for="(value, key) in getModifierOptions(modifierData)"
-                        :key="key"
-                    >
-                        <strong class="capitalize">
-                            {{ formatModifierKey(String(key)) }}:
-                        </strong>
-                        {{ formatModifierValue(value) }}
+        <div v-if="selectedItem" class="space-y-6">
+            <section
+                class="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 shadow-inner"
+            >
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p
+                            class="text-[11px] font-semibold uppercase tracking-wide text-secondary-500"
+                        >
+                            Current item
+                        </p>
+                        <h2 class="text-xl font-semibold text-secondary-900">
+                            {{ itemName }}
+                        </h2>
+                        <p class="text-sm text-secondary-500">
+                            {{ selectedItem.quantity }} ×
+                            {{ formatMoney(unitPrice) }}
+                        </p>
                     </div>
-
-                    <!-- Special Instructions -->
-                    <div v-if="getSpecialInstructions(modifierData)">
-                        <strong>Instructions:</strong>
-                        {{ getSpecialInstructions(modifierData) }}
+                    <div class="text-right">
+                        <p
+                            class="text-[11px] uppercase tracking-wide text-secondary-500"
+                        >
+                            Line total
+                        </p>
+                        <p class="text-2xl font-bold text-secondary-900">
+                            {{ formatMoney(lineTotal) }}
+                        </p>
+                        <p
+                            v-if="hasAppliedDiscount"
+                            class="text-xs font-semibold text-success-600"
+                        >
+                            -{{ formatMoney(selectedDiscountAmount) }}
+                            <span v-if="discountLabel">
+                                ({{ discountLabel }})
+                            </span>
+                        </p>
                     </div>
                 </div>
-            </div>
-        </div>
-        <div class="flex flex-col gap-4 mb-4">
-            <label for="quantity" class="font-semibold w-24 text-secondary-800">
-                Quantity
-            </label>
-            <InputNumber
-                v-model="editableItem.quantity"
-                showButtons
-                buttonLayout="horizontal"
-                style="width: 1rem"
-                :min="0"
-                :max="99"
+                <div class="mt-4 flex flex-wrap gap-2 text-xs font-semibold">
+                    <span
+                        v-if="selectedItem.order_type"
+                        :class="[
+                            'px-2 py-0.5 rounded-full',
+                            getOrderTypeBadgeClass(selectedItem.order_type),
+                        ]"
+                    >
+                        {{ getOrderTypeLabel(selectedItem.order_type) }}
+                    </span>
+                    <span
+                        v-if="packagingLabel"
+                        class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700"
+                    >
+                        {{ packagingLabel }}
+                    </span>
+                </div>
+            </section>
+
+            <section class="rounded-2xl border border-slate-100 p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div>
+                        <p
+                            class="text-xs uppercase tracking-wide text-secondary-500"
+                        >
+                            Quantity
+                        </p>
+                        <p class="text-sm text-secondary-600">
+                            Update the number of servings for this item.
+                        </p>
+                    </div>
+                    <span class="text-xs font-semibold text-secondary-500">
+                        {{ editableItem.quantity }} in cart
+                    </span>
+                </div>
+                <InputNumber
+                    v-model="editableItem.quantity"
+                    showButtons
+                    buttonLayout="horizontal"
+                    class="w-full"
+                    :inputClass="'w-full text-center text-lg font-semibold'"
+                    :min="0"
+                    :max="99"
+                >
+                    <template #incrementicon>
+                        <span class="pi pi-plus" />
+                    </template>
+                    <template #decrementicon>
+                        <span class="pi pi-minus" />
+                    </template>
+                </InputNumber>
+            </section>
+
+            <section
+                v-if="hasModifiers(selectedItem)"
+                class="rounded-2xl border border-slate-100 p-4"
             >
-                <template #incrementicon>
-                    <span class="pi pi-plus" />
-                </template>
-                <template #decrementicon>
-                    <span class="pi pi-minus" />
-                </template>
-            </InputNumber>
+                <div class="flex items-center justify-between mb-3">
+                    <p
+                        class="text-xs uppercase tracking-wide text-secondary-500"
+                    >
+                        Modifiers
+                    </p>
+                    <span class="text-xs text-secondary-400">
+                        {{ modifierCount }} applied
+                    </span>
+                </div>
+                <div class="space-y-3">
+                    <div
+                        v-for="(modifierData, index) in selectedItem.meta_data"
+                        :key="index"
+                        class="rounded-xl border border-slate-100 bg-slate-50/80 p-3 text-sm"
+                    >
+                        <div
+                            v-for="(value, key) in getModifierOptions(
+                                modifierData
+                            )"
+                            :key="key"
+                            class="flex items-start justify-between gap-4"
+                        >
+                            <span class="text-secondary-500">
+                                {{ formatModifierKey(String(key)) }}
+                            </span>
+                            <span
+                                class="font-medium text-secondary-900 text-right"
+                            >
+                                {{ formatModifierValue(value) }}
+                            </span>
+                        </div>
+                        <p
+                            v-if="getSpecialInstructions(modifierData)"
+                            class="mt-2 text-xs text-secondary-500"
+                        >
+                            Instructions:
+                            <span class="font-medium text-secondary-900">
+                                {{ getSpecialInstructions(modifierData) }}
+                            </span>
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <section
+                v-if="hasChildOptions"
+                class="rounded-2xl border border-slate-100 p-4"
+            >
+                <div class="flex items-center justify-between mb-3">
+                    <p
+                        class="text-xs uppercase tracking-wide text-secondary-500"
+                    >
+                        Option items
+                    </p>
+                    <span class="text-xs text-secondary-400">
+                        {{ childItems.length }} linked
+                    </span>
+                </div>
+                <div class="space-y-2">
+                    <div
+                        v-for="option in childItems"
+                        :key="option.id"
+                        class="flex items-center justify-between rounded-xl border border-slate-100 bg-white px-3 py-2 text-sm"
+                    >
+                        <div>
+                            <p class="font-semibold text-secondary-900">
+                                {{ getChildName(option) }}
+                            </p>
+                            <p class="text-xs text-secondary-500">
+                                {{ option.quantity }} ×
+                                {{ formatMoney(getChildUnitPrice(option)) }}
+                            </p>
+                        </div>
+                        <p class="text-sm font-semibold text-secondary-900">
+                            <template v-if="getChildAmount(option) > 0">
+                                +{{ formatMoney(getChildAmount(option)) }}
+                            </template>
+                            <template v-else>Included</template>
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="rounded-2xl border border-slate-100 p-4">
+                <p
+                    class="text-xs uppercase tracking-wide text-secondary-500 mb-3"
+                >
+                    Discounts & tax
+                </p>
+                <div class="space-y-2 text-sm">
+                    <div v-if="hasAppliedDiscount" class="flex justify-between">
+                        <span>
+                            Less Discount
+                            <span v-if="discountLabel"
+                                >({{ discountLabel }})</span
+                            >
+                        </span>
+                        <span class="font-semibold text-success-600">
+                            -{{ formatMoney(selectedDiscountAmount) }}
+                        </span>
+                    </div>
+                    <p v-else class="text-secondary-500">
+                        No discounts applied to this item yet.
+                    </p>
+                    <div
+                        v-if="selectedItem.less_tax"
+                        class="flex justify-between"
+                    >
+                        <span>Less Tax</span>
+                        <span class="font-semibold text-secondary-700">
+                            -{{ formatMoney(selectedItem.less_tax) }}
+                        </span>
+                    </div>
+                </div>
+            </section>
         </div>
+        <div v-else class="py-12 text-center text-secondary-500">
+            Select an item to edit.
+        </div>
+
         <template #footer>
-            <div class="flex flex-col gap-2 justify-between w-full">
-                <div class="flex gap-2">
+            <div class="flex flex-col gap-3 w-full pt-6 border-t">
+                <div class="grid grid-cols-2 lg:grid-cols-3 gap-2">
                     <Button
+                        v-if="selectedItem && !hasAppliedDiscount"
                         type="button"
                         label="Add Discount"
                         severity="info"
                         size="small"
-                        @click="$emit('addDiscount', selectedOrderItem)"
+                        @click="$emit('addDiscount', selectedItem)"
                     />
                     <Button
+                        v-if="selectedItem && hasAppliedDiscount"
                         type="button"
                         label="Clear Discount"
                         severity="warn"
                         size="small"
-                        @click="$emit('clearDiscount', selectedOrderItem)"
+                        @click="$emit('clearDiscount', selectedItem)"
                     />
                     <Button
                         type="button"
                         label="Add Modifier"
                         severity="success"
                         size="small"
-                        @click="$emit('addModifier', selectedOrderItem)"
-                    />
-                </div>
-                <div class="flex flex-end justify-end gap-2 mt-5">
-                    <Button
-                        type="button"
-                        label="Cancel"
-                        severity="secondary"
-                        size="small"
-                        @click="$emit('update:visible', false)"
+                        :disabled="!selectedItem"
+                        @click="$emit('addModifier', selectedItem)"
                     />
                     <Button
                         type="button"
                         label="Save"
                         size="small"
+                        :disabled="!selectedItem"
                         @click="saveEdit"
                         class="bg-primary hover:bg-primary-600"
                     />
@@ -103,8 +266,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { Button, Dialog, InputNumber } from "primevue";
+import { formatMoney } from "@/Utils/FormatMoney";
 
 const props = defineProps<{
     visible: boolean;
@@ -119,8 +283,117 @@ const emit = defineEmits<{
     addModifier: [item: any];
 }>();
 
+const selectedItem = computed(() => props.selectedOrderItem);
+
 const editableItem = ref({
     quantity: 1,
+});
+
+const dialogTitle = computed(() => {
+    const item = selectedItem.value;
+    if (!item) {
+        return "Edit Item";
+    }
+
+    const label = item.description || item.name || "Item";
+    return `Edit ${label}`;
+});
+
+const itemName = computed(() => {
+    const item = selectedItem.value;
+    if (!item) {
+        return "Item";
+    }
+
+    return item.description || item.name || "Item";
+});
+
+const unitPrice = computed(() => {
+    const item = selectedItem.value;
+    if (!item) {
+        return 0;
+    }
+
+    const directPrice = Number(item.price ?? item.unit_price ?? 0);
+    if (directPrice > 0) {
+        return directPrice;
+    }
+
+    const subTotal = Number(item.sub_total ?? 0);
+    const quantity = Number(item.quantity || 1);
+    if (quantity <= 0) {
+        return subTotal;
+    }
+
+    return subTotal / quantity;
+});
+
+const lineTotal = computed(() => {
+    const item = selectedItem.value;
+    if (!item) {
+        return 0;
+    }
+
+    return Number(item.amount ?? item.sub_total ?? 0);
+});
+
+const selectedDiscountAmount = computed(() => {
+    const item = selectedItem.value;
+    return item ? Number(item.discount_amount || 0) : 0;
+});
+
+const hasAppliedDiscount = computed(() => selectedDiscountAmount.value > 0);
+
+const discountLabel = computed(() => {
+    const item = selectedItem.value;
+    if (!item) {
+        return "";
+    }
+
+    return (
+        item.discount_name ||
+        item.discount?.discount_name ||
+        item.discount_code ||
+        ""
+    );
+});
+
+const packagingLabel = computed(() => {
+    const item = selectedItem.value;
+    if (!item) {
+        return "";
+    }
+
+    if (item.product_packaging) {
+        const packaging = item.product_packaging;
+        const unit =
+            typeof packaging.unit_measure === "string"
+                ? packaging.unit_measure
+                : "";
+        return `${packaging.name} (${packaging.qty}${unit ?? ""})`;
+    }
+
+    if (
+        item.product &&
+        item.product.unit_measure &&
+        !item.product.multiple_packaging
+    ) {
+        return item.product.unit_measure;
+    }
+
+    return "";
+});
+
+const childItems = computed(() => selectedItem.value?.children ?? []);
+const hasChildOptions = computed(() => childItems.value.length > 0);
+
+const modifierCount = computed(() => {
+    const item = selectedItem.value;
+    if (!item?.meta_data || !Array.isArray(item.meta_data)) {
+        return 0;
+    }
+
+    return item.meta_data.length;
 });
 
 watch(
@@ -131,6 +404,8 @@ watch(
                 ...newItem,
                 quantity: newItem.quantity || 1,
             };
+        } else {
+            editableItem.value = { quantity: 1 };
         }
     },
     { immediate: true }
@@ -178,7 +453,51 @@ const formatModifierValue = (value: any) => {
     return String(value);
 };
 
+const getChildName = (option: any) => {
+    return (
+        option?.description || option?.name || option?.product?.name || "Option"
+    );
+};
+
+const getChildUnitPrice = (option: any) => {
+    return Number(option?.price ?? option?.unit_price ?? option?.amount ?? 0);
+};
+
+const getChildAmount = (option: any) => {
+    return Number(option?.amount ?? option?.sub_total ?? option?.price ?? 0);
+};
+
+const getOrderTypeBadgeClass = (orderType: string) => {
+    switch (orderType) {
+        case "dine-in":
+            return "bg-blue-100 text-blue-800";
+        case "takeout":
+            return "bg-green-100 text-green-800";
+        case "delivery":
+            return "bg-orange-100 text-orange-800";
+        default:
+            return "bg-gray-100 text-gray-800";
+    }
+};
+
+const getOrderTypeLabel = (orderType: string) => {
+    switch (orderType) {
+        case "dine-in":
+            return "Dine-in";
+        case "takeout":
+            return "Takeout";
+        case "delivery":
+            return "Delivery";
+        default:
+            return orderType;
+    }
+};
+
 const saveEdit = () => {
+    if (!selectedItem.value) {
+        return;
+    }
+
     emit("save", editableItem.value);
     emit("update:visible", false);
 };

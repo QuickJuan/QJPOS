@@ -23,23 +23,50 @@ class DiscountService
     {
         $discount = $this->discount->find($discountId);
 
-        $results = [];
+        if (! $discount) {
+            return [];
+        }
+
+        $cartItems = CartItem::whereIn('id', $itemIds)->get()->keyBy('id');
+        $itemsData = [];
 
         foreach ($itemIds as $itemId) {
-            $cartItem = CartItem::find($itemId);
+            $cartItem = $cartItems->get($itemId);
 
-            if ($cartItem) {
-                $itemQuantity = $quantity ?? $cartItem->quantity;
-                $amount       = $itemQuantity * $cartItem->price;
-
-                $results[] = $discount['remove_tax']
-                    ? $this->calculateDiscountWithTaxRemoval($discount, $amount)
-                    : match ($discount['type']) {
-                    'percentage' => $this->calculatePercentageDiscount($discount, $amount),
-                    'fixed', 'amount' => $this->calculateFixedDiscount($discount, $amount),
-                    default      => $this->calculateFixedDiscount($discount, $amount),
-                };
+            if (! $cartItem) {
+                continue;
             }
+
+            $itemQuantity = $quantity ?? $cartItem->quantity;
+            $amount       = $itemQuantity * $cartItem->price;
+
+            $itemsData[] = [
+                'id'     => $itemId,
+                'amount' => $amount,
+            ];
+        }
+
+        if (empty($itemsData)) {
+            return [];
+        }
+
+        $allocations = $this->buildFixedAllocations($discount, $itemsData);
+        $results     = [];
+
+        foreach ($itemsData as $index => $data) {
+            $amount           = $data['amount'];
+            $allocatedAmount  = $allocations[$index] ?? null;
+
+            if ($discount['remove_tax']) {
+                $results[] = $this->calculateDiscountWithTaxRemoval($discount, $amount, $allocatedAmount);
+                continue;
+            }
+
+            $results[] = match ($discount['type']) {
+                'percentage'      => $this->calculatePercentageDiscount($discount, $amount),
+                'fixed', 'amount' => $this->calculateFixedDiscount($discount, $amount, $allocatedAmount),
+                default           => $this->calculateFixedDiscount($discount, $amount, $allocatedAmount),
+            };
         }
 
         return $results;
@@ -49,7 +76,7 @@ class DiscountService
      * Calculate discount with tax removal
      * Extracts tax from price, applies discount to net amount, then adds tax back to discount
      */
-    private function calculateDiscountWithTaxRemoval(Discount $discount, float $amount): array
+    private function calculateDiscountWithTaxRemoval(Discount $discount, float $amount, ?float $allocatedAmount = null): array
     {
         $taxRate      = config('sales.tax_rate');
         $vatExempt    = $amount / $taxRate;
@@ -59,7 +86,7 @@ class DiscountService
 
         $discount->type == TypeEnum::PERCENTAGE->value
             ? $discountAmount = $vatExempt * ($discount->amount / 100)
-            : $discountAmount = $discount->amount;
+            : $discountAmount = $allocatedAmount ?? $discount->amount;
 
         return [
             'taxRate'        => $taxRate,
@@ -97,7 +124,7 @@ class DiscountService
     /**
      * Calculate fixed amount discount
      */
-    private function calculateFixedDiscount(Discount $discount, float $amount): array
+    private function calculateFixedDiscount(Discount $discount, float $amount, ?float $allocatedAmount = null): array
     {
         $taxRate      = config('sales.tax_rate');
         $vatExempt    = 0;
@@ -105,14 +132,40 @@ class DiscountService
         $taxAmount    = $amount - $vatableSales;
         $lessTax      = 0;
 
+        $discountAmount = $allocatedAmount ?? $discount->amount;
+        $discountAmount = min($discountAmount, $amount);
+
         return [
             'taxRate'        => $taxRate,
             'vatExempt'      => $vatExempt,
             'taxAmount'      => $taxAmount,
             'vatableSales'   => $vatableSales,
             'lessTax'        => $lessTax,
-            'discountAmount' => $discount->amount,
+            'discountAmount' => $discountAmount,
         ];
+    }
+
+    private function buildFixedAllocations(Discount $discount, array $itemsData): array
+    {
+        if (! in_array($discount->type, ['fixed', 'amount'], true)) {
+            return [];
+        }
+
+        $discountValue = (float) $discount->amount;
+
+        if ($discountValue <= 0) {
+            return array_fill(0, count($itemsData), 0.0);
+        }
+
+        return array_map(static function ($item) use ($discountValue) {
+            $amount = (float) ($item['amount'] ?? 0);
+
+            if ($amount <= 0) {
+                return 0.0;
+            }
+
+            return min($discountValue, $amount);
+        }, $itemsData);
     }
 
     public function getAvailableDiscounts()

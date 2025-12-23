@@ -494,19 +494,33 @@ const applyDiscount = () => {
 };
 
 const calculateDiscountAmount = (discount: any) => {
-    if (!discount) return;
-    console.log("items to discount", props.selectedItems);
+    if (!discount) return [];
 
-    return props.selectedItems.map((item: any) => {
-        const amount = item.quantity * item.price;
+    const lineTotals = props.selectedItems.map(
+        (item: any) => Number(item.quantity) * Number(item.price)
+    );
+
+    const allocations =
+        discount.type === "fixed" || discount.type === "amount"
+            ? allocateFixedDiscount(discount, lineTotals)
+            : [];
+
+    return props.selectedItems.map((item: any, index: number) => {
+        const amount = lineTotals[index] ?? 0;
         const itemTax = {
             type: item.tax_type,
             percentage: item.tax_percentage,
             included: item.tax_included,
         };
+        const allocation = allocations[index] ?? null;
 
         if (discount.remove_tax) {
-            return calculateDiscountWithTaxRemoval(discount, amount, itemTax);
+            return calculateDiscountWithTaxRemoval(
+                discount,
+                amount,
+                itemTax,
+                allocation ?? undefined
+            );
         }
 
         switch (discount.type) {
@@ -515,7 +529,11 @@ const calculateDiscountAmount = (discount: any) => {
 
             case "fixed":
             case "amount":
-                return calculateFixedDiscount(discount, amount);
+                return calculateFixedDiscount(
+                    discount,
+                    amount,
+                    allocation ?? undefined
+                );
 
             default:
                 return {
@@ -529,10 +547,23 @@ const calculateDiscountAmount = (discount: any) => {
     });
 };
 
+const allocateFixedDiscount = (discount: any, totals: number[]) => {
+    const numericAmount = Number(discount.amount) || 0;
+
+    return totals.map((amount) => {
+        if (numericAmount <= 0 || amount <= 0) {
+            return 0;
+        }
+
+        return Math.min(numericAmount, amount);
+    });
+};
+
 const calculateDiscountWithTaxRemoval = (
     discount: any,
     amount: number,
-    itemTax: any
+    itemTax: any,
+    allocatedAmount?: number
 ) => {
     let vatExempt = 0;
     let lessTax = 0;
@@ -550,7 +581,7 @@ const calculateDiscountWithTaxRemoval = (
     const discountAmount =
         discount.type == "percentage"
             ? vatExempt * (discount.amount / 100)
-            : discount.amount;
+            : Math.min(allocatedAmount ?? discount.amount, vatExempt || amount);
 
     return {
         vatExempt: vatExempt,
@@ -578,18 +609,23 @@ const calculatePercentageDiscount = (discount: any, amount: number) => {
     };
 };
 
-const calculateFixedDiscount = (discount: any, amount: number) => {
+const calculateFixedDiscount = (
+    discount: any,
+    amount: number,
+    allocatedAmount?: number
+) => {
     const vatExempt = 0;
     const vatableSales = amount / taxRate.value;
     const taxAmount = amount - vatableSales;
     const lessTax = 0;
+    const resolvedAmount = Math.min(allocatedAmount ?? discount.amount, amount);
 
     return {
         vatExempt: vatExempt,
         taxAmount: taxAmount,
         vatableSales: vatableSales,
         lessTax: lessTax,
-        discountAmount: discount.amount,
+        discountAmount: resolvedAmount,
     };
 };
 </script>
