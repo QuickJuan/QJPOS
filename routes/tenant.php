@@ -168,6 +168,7 @@ if (!isCentralDomain()) {
                             Route::put('/cart/{cartId}', 'updateCart')->name('cart.update');
                             Route::post('/cart/merge', 'mergeCart')->name('cart.merge');
                             Route::post('/cart/place-order', 'placeOrder')->name('cart.place-order');
+                            Route::get('/cart/reprint-order/{batchNumber}', 'reprintPlacedOrder')->name('cart.reprint-order');
                             Route::post('/cart/settle-bill', 'settleBill')->name('cart.settle-bill');
                             Route::post('/cart/transfer-items}', 'transferItems')->name('cart.transfer-items');
                             Route::post('/cart/claim-order/{tableId}', 'claimOrder')->name('cart.claim-order');

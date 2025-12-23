@@ -66,21 +66,23 @@
                     class="my-3"
                 >
                     <template v-if="item.parent_id == null">
-                        <div class="flex justify-between">
-                            <span class="flex-1">{{ item.name }}</span>
+                        <div class="flex justify-between gap-2">
+                            <div class="flex-1">
+                                <span class="block font-medium">
+                                    {{ getQuantityPrefix(item) }}
+                                    {{ getItemName(item) }}
+                                </span>
+                            </div>
+                            <span class="text-sm font-medium">
+                                {{ formatMoney(getItemAmount(item)) }}
+                            </span>
                         </div>
 
                         <div
-                            v-if="item.quantity >= 1"
+                            v-if="shouldShowStackedQuantity(item)"
                             class="ml-2 text-xs text-gray-600"
                         >
-                            <div class="flex justify-between">
-                                <span>
-                                    {{ item.quantity }} x
-                                    {{ formatMoney(item.price) }}
-                                </span>
-                                <span>{{ formatMoney(item.amount) }}</span>
-                            </div>
+                            {{ getQuantityPriceText(item) }}
                         </div>
 
                         <!-- Less Tax -->
@@ -142,7 +144,7 @@
                                             formatMoney(getChildAmount(option))
                                         }}
                                     </template>
-                                    <template v-else>Included</template>
+                                    <template v-else>&nbsp;</template>
                                 </span>
                             </div>
                         </div>
@@ -227,6 +229,109 @@ const businessName = computed(() => props.storeName || "QuickJuan POS");
 const billNumber = computed(() => props.billNumber || "001234");
 const billDate = computed(() => new Date().toISOString());
 const totals = computed(() => props.totals || {});
+
+const parseNumeric = (value: any): number | null => {
+    if (value === null || value === undefined || value === "") {
+        return null;
+    }
+
+    const parsed = parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : null;
+};
+
+const getItemQuantity = (item: any): number => {
+    return parseNumeric(item?.quantity ?? item?.qty) ?? 1;
+};
+
+const getItemUnit = (item: any): string => {
+    return (
+        item?.unit_measure ||
+        item?.unit ||
+        item?.unitMeasure ||
+        item?.unit_of_measure ||
+        ""
+    );
+};
+
+const getItemName = (item: any): string => {
+    return item?.name || item?.description || "Menu Item";
+};
+
+const getItemPriceValue = (item: any): number | null => {
+    const candidates = [item?.price, item?.unit_price, item?.unitPrice];
+    for (const candidate of candidates) {
+        const parsed = parseNumeric(candidate);
+        if (parsed !== null) {
+            return parsed;
+        }
+    }
+
+    return null;
+};
+
+const getItemAmountValue = (item: any): number => {
+    const candidates = [item?.amount, item?.total, item?.line_total];
+    for (const candidate of candidates) {
+        const parsed = parseNumeric(candidate);
+        if (parsed !== null) {
+            return parsed;
+        }
+    }
+
+    const quantity = getItemQuantity(item);
+    const unitPrice = getItemPriceValue(item) ?? 0;
+    return quantity * unitPrice;
+};
+
+const getItemUnitPrice = (item: any): number => {
+    const directPrice = getItemPriceValue(item);
+    if (directPrice !== null) {
+        return directPrice;
+    }
+
+    const quantity = getItemQuantity(item);
+    const amount = getItemAmountValue(item);
+    if (quantity <= 0) {
+        return amount;
+    }
+
+    return amount / quantity;
+};
+
+const getItemAmount = (item: any): number => getItemAmountValue(item);
+
+const getQuantityPriceText = (item: any): string => {
+    const quantity = getItemQuantity(item);
+    const priceText = formatMoney(getItemUnitPrice(item));
+    if (!priceText) {
+        return "";
+    }
+
+    return `${quantity} × ${priceText}`;
+};
+
+const formatQuantityValue = (quantity: number): string => {
+    if (Number.isInteger(quantity)) {
+        return quantity.toString();
+    }
+
+    return (
+        quantity.toFixed(2).replace(/\.00$/, "").replace(/0$/, "") ||
+        quantity.toString()
+    );
+};
+
+const getQuantityPrefix = (item: any): string => {
+    const quantity = getItemQuantity(item);
+    const unit = getItemUnit(item);
+    const fallbackUnit = quantity > 1 ? "pcs" : "pc";
+    const unitLabel = unit?.trim() || fallbackUnit;
+    return `${formatQuantityValue(quantity)} ${unitLabel}`.trim();
+};
+
+const shouldShowStackedQuantity = (item: any): boolean => {
+    return getItemQuantity(item) > 1 && !!getQuantityPriceText(item);
+};
 
 const getOrderTypeLabel = (orderType: string) => {
     const labels: { [key: string]: string } = {

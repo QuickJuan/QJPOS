@@ -2,12 +2,18 @@
 namespace App\Filament\Tenant\Resources\ProductResource\Pages;
 
 use App\Filament\Tenant\Resources\ProductResource;
+use App\Models\Inventory;
+use App\Models\ProductInventory;
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Infolist;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 
 class ViewProduct extends ViewRecord
@@ -17,6 +23,71 @@ class ViewProduct extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('associateInventory')
+                ->label('Associate Inventory')
+                ->icon('heroicon-m-plus-circle')
+                ->color('primary')
+                ->modalHeading('Associate Inventory')
+                ->modalIcon('heroicon-o-archive-box')
+                ->modalWidth('lg')
+                ->visible(fn () => $this->record->product_type !== 'bundle')
+                ->form([
+                    Select::make('inventory_id')
+                        ->label('Inventory Item')
+                        ->options(fn () => Inventory::query()->orderBy('name')->pluck('name', 'id'))
+                        ->searchable()
+                        ->preload()
+                        ->reactive()
+                        ->required()
+                        ->afterStateUpdated(function ($state, callable $set) {
+                            if (! $state) {
+                                return;
+                            }
+
+                            $inventory = Inventory::find($state);
+
+                            if ($inventory) {
+                                $set('unit_measure', $inventory->unit_measure);
+                            }
+                        }),
+                    TextInput::make('quantity')
+                        ->label('Quantity Used')
+                        ->numeric()
+                        ->minValue(0.01)
+                        ->step(0.01)
+                        ->default(1)
+                        ->required(),
+                    TextInput::make('unit_measure')
+                        ->label('Unit of Measure')
+                        ->maxLength(50)
+                        ->placeholder('e.g., g, ml, pcs'),
+                ])
+                ->action(function (array $data) {
+                    $product = $this->record;
+
+                    $inventory = Inventory::find($data['inventory_id']);
+
+                    ProductInventory::updateOrCreate(
+                        [
+                            'product_id'   => $product->id,
+                            'inventory_id' => $data['inventory_id'],
+                        ],
+                        [
+                            'quantity'     => (float) $data['quantity'],
+                            'unit_measure' => $data['unit_measure']
+                                ?: ($inventory?->unit_measure ?? null),
+                        ],
+                    );
+
+                    $product->refresh();
+
+                    Notification::make()
+                        ->title('Inventory Associated')
+                        ->body('Inventory item has been linked to this product.')
+                        ->success()
+                        ->send();
+                }),
+
             EditAction::make('edit'),
 
             DeleteAction::make('delete')
@@ -106,7 +177,40 @@ class ViewProduct extends ViewRecord
                                     ->implode('<br>')
                             )
                             ->html(),
-                    ]),
+                    ])
+                    ->visible(fn($record) => $record->product_type === 'bundle'),
+
+                Section::make('Associated Inventories')
+                    ->schema([
+                        TextEntry::make('inventoryRecipes')
+                            ->label('Inventories')
+                            ->formatStateUsing(function ($record) {
+                                $record->loadMissing('inventoryRecipes.inventory');
+
+                                $entries = $record->inventoryRecipes
+                                    ->filter(fn($recipe) => $recipe->inventory)
+                                    ->map(function ($recipe) {
+                                        $inventoryName = $recipe->inventory->name;
+                                        $quantity = $recipe->quantity ?? 0;
+                                        $unit = $recipe->unit_measure
+                                            ?? $recipe->inventory->unit_measure
+                                            ?? '';
+
+                                        $formattedQuantity = rtrim(rtrim(number_format($quantity, 4, '.', ''), '0'), '.');
+
+                                        if ($formattedQuantity === '') {
+                                            $formattedQuantity = '0';
+                                        }
+
+                                        return trim(sprintf('%s - %s %s', $inventoryName, $formattedQuantity, $unit));
+                                    })
+                                    ->implode('<br>');
+
+                                return $entries ?: 'No associated inventories';
+                            })
+                            ->html(),
+                    ])
+                    ->visible(fn($record) => $record->product_type !== 'bundle'),
             ]);
     }
 }

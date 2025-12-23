@@ -23,6 +23,13 @@ export const useProduct = () => {
                     product_packaging_id: item.product_packaging_id,
                     price: item.price,
                     quantity: item.quantity ?? 0,
+                    receipt_name:
+                        item.product?.receipt_alias ||
+                        item.product?.name ||
+                        item.product_packaging?.unit_measure ||
+                        item.product_packaging?.name ||
+                        item.name ||
+                        null,
                 })) || []
         );
     };
@@ -81,6 +88,7 @@ export const useProduct = () => {
                         table_id: tableId,
                         total_price: parseFloat(packaging.price || 0),
                         order_type: selectedOrderType,
+                            product_type: product.product_type,
                         selected_options: defaultOptions,
                         withParent: hasDefaultChildItems,
                     },
@@ -131,6 +139,7 @@ export const useProduct = () => {
                                 table_id: tableId,
                                 total_price: parseFloat(packaging.price || 0),
                                 order_type: selectedOrderType,
+                                product_type: product.product_type,
                                 selected_options: defaultOptions,
                                 withParent: hasDefaultChildItems,
                             },
@@ -180,6 +189,7 @@ export const useProduct = () => {
                             table_id: tableId,
                             total_price: parseFloat(product.average_cost || "0"),
                             order_type: selectedOrderType,
+                            product_type: product.product_type,
                             selected_options: defaultOptions,
                             withParent: hasDefaultChildItems,
                         },

@@ -239,6 +239,7 @@ class CartService
             'amount'               => $amount,
             'sub_total'            => $amount,
             'order_type'           => $orderType,
+            'product_type'         => $request['product_type'] ?? $product->product_type,
             'vatable_sales'        => $pricingData['vatable_sales'],
             'vat_exempt_sales'     => $pricingData['vat_exempt_sales'],
             'vat_amount'           => $pricingData['vat_amount'],
@@ -297,6 +298,17 @@ class CartService
 
             $childQuantity = $childQuantityPerBundle * max(1, $parentQuantity);
 
+            $childProduct = null;
+            if (! empty($childItemData['product_id'])) {
+                $childProduct = Product::find($childItemData['product_id']);
+            }
+
+            $receiptName = $childItemData['receipt_name']
+                ?? $childProduct?->receipt_alias
+                ?? $childProduct?->name
+                ?? $childItemData['description']
+                ?? null;
+
             $pricingData = $this->calculatePricingData($childPrice, $childQuantity, $parentProduct);
             $amount      = $pricingData['vatable_sales'] + $pricingData['vat_amount'] + $pricingData['non_vat_sales'];
 
@@ -304,11 +316,13 @@ class CartService
                 'parent_id'            => $parentItem->id,
                 'cart_id'              => $parentItem->cart_id,
                 'product_id'           => $childItemData['product_id'],
+                'description'          => $receiptName,
                 'product_packaging_id' => $childItemData['product_packaging_id'] ?? null,
                 'quantity'             => $childQuantity,
                 'price'                => $childPrice,
                 'amount'               => $amount,
                 'order_type'           => $orderType,
+                'product_type'         => $childProduct?->product_type ?? $parentProduct->product_type,
                 'sub_total'            => $amount,
                 'vatable_sales'        => $pricingData['vatable_sales'],
                 'vat_exempt_sales'     => $pricingData['vat_exempt_sales'],
@@ -819,10 +833,18 @@ class CartService
                         'table_room_id' => $payload['table_id'],
                     ]);
 
-                    // Get only necessary columns to prevent memory exhaustion
-                    $cartItems = CartItem::where('cart_id', $cart->id)
+                    // Get parent cart items with their option children
+                    $cartItems = CartItem::with([
+                            'product',
+                            'product.preparationLocation',
+                            'productPackaging',
+                            'childrenRecursive',
+                        ])
+                        ->where('cart_id', $cart->id)
                         ->where('batch_number', $orderNumber)
-                        ->select('id', 'cart_id', 'product_id', 'quantity', 'price', 'order_type', 'notes', 'meta_data', 'placed_order', 'batch_number', 'served_by')
+                        ->whereNull('parent_id')
+                        ->where('placed_order', true)
+                        ->orderBy('id')
                         ->get();
 
                     $newOrderItems = new PreparationItemCollectionResource($cartItems);
@@ -850,6 +872,41 @@ class CartService
             // Transaction automatically rolls back on exception
             throw new Exception('Failed to place order: ' . $e->getMessage());
         }
+    }
+
+    public function getPlacedOrderByBatchNumber(int $batchNumber): array
+    {
+        $cartItems = CartItem::with([
+                'product',
+                'product.preparationLocation',
+                'productPackaging',
+                'cart.tableRoom',
+                'childrenRecursive',
+            ])
+            ->where('batch_number', $batchNumber)
+            ->whereNotNull('batch_number')
+            ->where('placed_order', true)
+            ->whereNull('parent_id')
+            ->orderBy('id')
+            ->get();
+
+        if ($cartItems->isEmpty()) {
+            throw new Exception('No placed order found for the provided batch number.');
+        }
+
+        $firstItem = $cartItems->first();
+        $cart      = $firstItem->cart;
+        $servedBy  = $firstItem->served_by ? User::find($firstItem->served_by) : null;
+
+        return [
+            'orderNumber'      => $batchNumber,
+            'cart'             => $cart,
+            'servedBy'         => $servedBy?->name ?? 'N/A',
+            'placedOrderItems' => new PreparationItemCollectionResource($cartItems),
+            'tableRoom'        => $cart?->tableRoom,
+            'success'          => true,
+            'message'          => 'Order ready for re-printing.',
+        ];
     }
 
     public function claimOrder(int $tableId): mixed

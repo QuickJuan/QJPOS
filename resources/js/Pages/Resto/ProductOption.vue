@@ -331,9 +331,7 @@
                                             class="text-sm text-rose-500"
                                         >
                                             Choose
-                                            {{
-                                                getPendingSelections(option)
-                                            }}
+                                            {{ getPendingSelections(option) }}
                                             more item(s) to complete this
                                             option.
                                         </div>
@@ -928,6 +926,13 @@ const buildSelectedOptionPayload = (option: any) => {
                 product_packaging_id: item.product_packaging_id,
                 price: Number(item.price || 0),
                 quantity: Number(qty),
+                receipt_name:
+                    item.product?.receipt_alias ||
+                    item.product?.name ||
+                    item.product_packaging?.name ||
+                    item.product_packaging?.unit_measure ||
+                    item.name ||
+                    null,
             };
         })
         .filter(Boolean);
@@ -1014,6 +1019,7 @@ const addToCart = () => {
             product_packaging_id: productPackagingId.value,
             selected_options: selectedOptionPayloads,
             quantity: 1,
+            product_type: productData.value?.product_type,
             total_price: totalAmount.value,
             table_id: tableId.value,
             order_type: orderType.value,

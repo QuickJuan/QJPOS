@@ -79,6 +79,17 @@ class CartItem extends Model
         return $this->hasMany(self::class, 'parent_id');
     }
 
+    public function childrenRecursive(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_id')
+            ->with([
+                'childrenRecursive',
+                'product',
+                'productPackaging',
+                'product.preparationLocation',
+            ]);
+    }
+
     public function selectedOptions()
     {
         return $this->belongsToMany(OptionItem::class, 'cart_item_options', 'cart_item_id', 'option_item_id');

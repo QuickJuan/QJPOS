@@ -212,6 +212,22 @@ class CartController extends Controller
         }
     }
 
+    public function reprintPlacedOrder(int $batchNumber): JsonResponse
+    {
+        try {
+            $response = $this->cartService->getPlacedOrderByBatchNumber($batchNumber);
+
+            return response()->json($response, 200);
+        } catch (Exception $e) {
+            Log::error('Reprint order error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage() ?? 'Failed to re-print order.',
+            ], 404);
+        }
+    }
+
     public function settleBill(SettleBillRequest $request): JsonResponse | RedirectResponse
     {
         try {

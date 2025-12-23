@@ -605,10 +605,53 @@ const getRootTable = (table: any): any => {
     return table;
 };
 
+const findLocationForTable = (tableId: number): any | null => {
+    for (const location of locations.value) {
+        const stack = [...(location.tableRooms || [])];
+
+        while (stack.length) {
+            const candidate = stack.pop();
+
+            if (!candidate) {
+                continue;
+            }
+
+            if (candidate.id === tableId) {
+                return location;
+            }
+
+            if (candidate.mergedTables && candidate.mergedTables.length) {
+                stack.push(...candidate.mergedTables);
+            }
+        }
+    }
+
+    return null;
+};
+
 const openTableModal = (table: any) => {
     // If the clicked table is merged, show the root parent table instead
     const rootTable = getRootTable(table);
-    selectedTable.value = rootTable;
+    const location = findLocationForTable(rootTable.id);
+    const resolvedLocationName =
+        location?.name ??
+        rootTable.tableRoomLocation?.name ??
+        rootTable.tableRoomLocation?.description ??
+        "Unassigned";
+
+    selectedTable.value = {
+        ...rootTable,
+        tableRoomLocation:
+            rootTable.tableRoomLocation ??
+            (location
+                ? {
+                      id: location.id,
+                      name: location.name,
+                      location_type: location.location_type ?? null,
+                  }
+                : null),
+        locationName: resolvedLocationName,
+    };
     showTableModal.value = true;
 };
 

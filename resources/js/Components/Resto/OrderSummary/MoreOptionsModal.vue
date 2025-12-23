@@ -102,6 +102,19 @@
             </button>
 
             <button
+                @click="handleReprintOrder"
+                class="w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center gap-3 bg-gray-100 text-secondary-700 hover:bg-gray-200"
+            >
+                <ArrowPathIcon class="w-5 h-5" />
+                <div class="text-left">
+                    <div class="font-semibold">Re-print Order</div>
+                    <div class="text-xs opacity-75">
+                        Re-print placed order via batch number
+                    </div>
+                </div>
+            </button>
+
+            <button
                 @click="handleViewTable"
                 class="w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center gap-3 bg-gray-100 text-secondary-700 hover:bg-gray-200"
             >
@@ -165,6 +178,7 @@ import {
     PowerIcon,
     CogIcon,
     ArrowRightIcon,
+    ArrowPathIcon,
 } from "@heroicons/vue/24/outline";
 import { route } from "ziggy-js";
 import { router } from "@inertiajs/vue3";
@@ -181,6 +195,7 @@ const emit = defineEmits<{
     addModifier: [];
     transferOrderItems: [];
     printBill: [];
+    reprintOrder: [];
     viewTable: [];
     printerConfig: [];
     endOfShift: [];
@@ -210,6 +225,11 @@ const handleTransferOrderItems = () => {
 
 const handlePrintBill = () => {
     emit("printBill");
+    emit("update:visible", false);
+};
+
+const handleReprintOrder = () => {
+    emit("reprintOrder");
     emit("update:visible", false);
 };
 

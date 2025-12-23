@@ -63,6 +63,7 @@
             @open-discount-modal="handleApplyDiscount"
             @add-modifier="handleAddModifier"
             @print-bill="handlePrintBill"
+            @reprint-order="handleReprintOrder"
             @view-table="handleViewTable"
             @printer-config="handlePrinterConfig"
             @end-of-shift="handleEndOfShift"
@@ -465,6 +466,33 @@ const handlePlaceOrder = async () => {
     showServerSelectionModal.value = true;
 };
 
+const sendPlacedOrderToPrinter = async (
+    orderNumber: number | string,
+    tableName: string,
+    placedOrderItems: any[],
+    servedBy: string
+) => {
+    if (!placedOrderItems || placedOrderItems.length === 0) {
+        throw new Error("No items available to print.");
+    }
+
+    if (!thermalPrinter.isConnected()) {
+        const connected = await thermalPrinter.connectToPrinterType("kitchen");
+        if (!connected) {
+            throw new Error(
+                "Printer not connected. Please connect a kitchen printer first."
+            );
+        }
+    }
+
+    await thermalPrinter.printPlacedOrder(
+        orderNumber,
+        tableName || "Table",
+        placedOrderItems,
+        servedBy
+    );
+};
+
 const handleServerConfirm = async (serverId: number) => {
     selectedServerId.value = serverId;
     const response = await placeOrder(props.tableId, props.cart?.id, serverId);
@@ -483,29 +511,14 @@ const handleServerConfirm = async (serverId: number) => {
             response.placedOrderItems.length > 0
         ) {
             try {
-                if (!thermalPrinter.isConnected()) {
-                    const connected = await thermalPrinter.connectToPrinterType(
-                        "kitchen"
-                    );
-                    if (!connected) {
-                        console.warn("Printer not connected, skipping print");
-                    } else {
-                        await thermalPrinter.printPlacedOrder(
-                            response.orderNumber,
-                            response.tableRoom?.name || "Table",
-                            response.placedOrderItems,
-                            response.servedBy
-                        );
-                    }
-                } else {
-                    await thermalPrinter.printPlacedOrder(
-                        response.orderNumber,
-                        response.tableRoom?.name || "Table",
-                        response.placedOrderItems,
-                        response.servedBy
-                    );
-                }
-                //redirect back to table-rooms index after printing
+                await sendPlacedOrderToPrinter(
+                    response.orderNumber,
+                    response.tableRoom?.name || "Table",
+                    response.placedOrderItems,
+                    response.servedBy
+                );
+
+                // Redirect back to tables after printing
                 let locationId =
                     response.data?.tableRoom?.table_room_location_id;
                 if (locationId) {
@@ -538,6 +551,83 @@ const handleServerConfirm = async (serverId: number) => {
             summary: "Error",
             detail: response.message || "Failed to place order",
             life: 3000,
+        });
+    }
+};
+
+const handleReprintOrder = async () => {
+    const result = await Swal.fire({
+        title: "Re-print Order",
+        input: "text",
+        inputLabel: "Enter batch/order number",
+        inputPlaceholder: "e.g., 123",
+        showCancelButton: true,
+        confirmButtonText: "Re-print",
+        inputValidator: (value) => {
+            if (!value || !value.trim()) {
+                return "Batch number is required";
+            }
+            if (!/^\d+$/.test(value.trim())) {
+                return "Batch number must be numeric";
+            }
+            return null;
+        },
+    });
+
+    if (!result.isConfirmed || !result.value) {
+        return;
+    }
+
+    const batchNumber = result.value.trim();
+
+    try {
+        const response = await httpGet(
+            route("resto.cart.reprint-order", { batchNumber })
+        );
+
+        if (!response?.success || !response?.data) {
+            throw new Error(
+                response?.error ||
+                    "Unable to fetch placed order items. Please try again."
+            );
+        }
+
+        const payload: any = response.data;
+
+        if (
+            !payload?.placedOrderItems ||
+            payload.placedOrderItems.length === 0
+        ) {
+            throw new Error(
+                payload?.message ||
+                    "No placed order items found for this batch number."
+            );
+        }
+
+        await sendPlacedOrderToPrinter(
+            payload.orderNumber ?? batchNumber,
+            payload.tableRoom?.name || "Table",
+            payload.placedOrderItems,
+            payload.servedBy ?? "N/A"
+        );
+
+        toast.add({
+            severity: "success",
+            summary: "Order Re-printed",
+            detail: `Order #${
+                payload.orderNumber ?? batchNumber
+            } sent to kitchen`,
+            life: 3000,
+        });
+    } catch (error: any) {
+        console.error("Failed to re-print order:", error);
+        toast.add({
+            severity: "error",
+            summary: "Re-print Failed",
+            detail:
+                error?.message ||
+                "Unable to re-print the order. Please verify the batch number.",
+            life: 4000,
         });
     }
 };

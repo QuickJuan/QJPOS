@@ -7,12 +7,12 @@
                 ? 'Merged to ' + table.mergedToTable
                 : table?.name || ''
         }`"
-        :style="{ width: '800px' }"
+        :style="{ width: '760px', maxWidth: '95vw' }"
         :closable="true"
         @hide="handleClose"
         @update:visible="handleClose"
     >
-        <div class="space-y-4">
+        <div class="space-y-3">
             <!-- Merged Table Info Badge -->
             <div
                 v-if="hasMergedTables"
@@ -39,184 +39,206 @@
             </div>
 
             <!-- Table Info -->
-            <div class="bg-gray-50 p-4 rounded-lg">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="text-sm font-medium text-gray-700">
-                        Status:
-                    </span>
-
-                    <span
-                        :class="[
-                            'px-2 py-1 text-xs font-medium rounded-full capitalize',
-                            table?.status === 'available' &&
-                                'bg-green-100 text-green-800',
-                            table?.status === 'occupied' &&
-                                'bg-red-100 text-red-800',
-                            table?.status === 'reserved' &&
-                                'bg-yellow-100 text-yellow-800',
-                            table?.status === 'merged' &&
-                                'bg-purple-100 text-purple-800',
-                        ]"
-                    >
-                        {{ table?.status ?? "" }}
-                    </span>
+            <div
+                class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+            >
+                <div class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+                    <div class="space-y-1">
+                        <p
+                            class="text-xs uppercase tracking-wide text-gray-500"
+                        >
+                            Status
+                        </p>
+                        <span :class="statusBadgeClass">{{ statusLabel }}</span>
+                    </div>
+                    <div class="space-y-1">
+                        <p
+                            class="text-xs uppercase tracking-wide text-gray-500"
+                        >
+                            Seats
+                        </p>
+                        <p class="text-base font-semibold text-gray-900">
+                            {{ tableCapacity || "—" }}
+                        </p>
+                    </div>
+                    <div class="space-y-1">
+                        <p
+                            class="text-xs uppercase tracking-wide text-gray-500"
+                        >
+                            Location
+                        </p>
+                        <p class="text-base font-semibold text-gray-900">
+                            {{ locationName }}
+                        </p>
+                    </div>
                 </div>
+
                 <div
-                    class="flex text-sm text-gray-600 justify-between space-y-1"
+                    v-if="table?.mergedTo"
+                    class="mt-3 rounded-lg border border-dashed border-gray-200 bg-gray-50 px-3 py-2 text-xs"
                 >
-                    <p v-if="table?.mergedTo">Original #</p>
-                    <p v-if="table?.mergedTo">{{ table.name }}</p>
+                    <p class="font-semibold text-gray-700">
+                        Merged into {{ table.mergedToTable }}
+                    </p>
+                    <p class="text-gray-500">Original: {{ table.name }}</p>
                 </div>
             </div>
 
             <!-- Action Buttons -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <!-- Order Claim -->
-                <Button
-                    v-if="isTakeoutOccupied"
-                    label="Order Claim"
-                    icon="pi pi-plus"
-                    class="w-full h-12"
-                    severity="success"
-                    @click="handleClaimOrder"
-                    :disabled="!table"
-                />
+            <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <p
+                        class="text-xs font-semibold uppercase tracking-wide text-gray-500"
+                    >
+                        Quick Actions
+                    </p>
+                    <span class="text-xs text-gray-400" v-if="table?.status">
+                        Manage {{ table?.status }} table
+                    </span>
+                </div>
 
-                <!-- Transfer Number -->
-                <Button
-                    v-if="isTakeoutOccupied"
-                    label="Transfer Number"
-                    icon="pi pi-arrow-right"
-                    class="w-full h-12"
-                    severity="success"
-                    @click="handleTransferNumber"
-                    :disabled="!table"
-                />
+                <div
+                    class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                >
+                    <Button
+                        v-if="isTakeoutOccupied"
+                        label="Order Claim"
+                        icon="pi pi-inbox"
+                        class="table-action-btn w-full h-14 justify-start gap-3 rounded-xl text-left"
+                        severity="success"
+                        outlined
+                        @click="handleClaimOrder"
+                        :disabled="!table"
+                    />
 
-                <!-- View Order (only if occupied) -->
-                <Button
-                    v-if="
-                        !isTakeoutOccupied &&
-                        table &&
-                        table.status === 'occupied'
-                    "
-                    label="View Order"
-                    icon="pi pi-eye"
-                    class="w-full h-12"
-                    severity="info"
-                    @click="handleViewOrder"
-                />
+                    <Button
+                        v-if="isTakeoutOccupied"
+                        label="Transfer Number"
+                        icon="pi pi-arrow-right-arrow-left"
+                        class="table-action-btn w-full h-14 justify-start gap-3 rounded-xl text-left"
+                        severity="success"
+                        outlined
+                        @click="handleTransferNumber"
+                        :disabled="!table"
+                    />
 
-                <!-- Transfer Guest (only if the order type is dine-in and the table is occupied) -->
-                <Button
-                    v-if="
-                        !isTakeoutOccupied &&
-                        table &&
-                        table.status === 'occupied'
-                    "
-                    label="Transfer Guest"
-                    icon="pi pi-arrow-right"
-                    class="w-full h-12"
-                    severity="warn"
-                    @click="handleTransferGuest"
-                    :disabled="!table"
-                />
+                    <Button
+                        v-if="
+                            !isTakeoutOccupied &&
+                            table &&
+                            table.status === 'occupied'
+                        "
+                        label="View Order"
+                        icon="pi pi-eye"
+                        class="table-action-btn w-full h-14 justify-start gap-3 rounded-xl text-left"
+                        severity="info"
+                        outlined
+                        @click="handleViewOrder"
+                    />
 
-                <!-- Vacant table (only if occupied and not merged) -->
-                <Button
-                    v-if="
-                        table && table.status === 'occupied' && !table.mergedTo
-                    "
-                    label="Vacant Table"
-                    icon="pi pi-undo"
-                    class="w-full h-12"
-                    severity="warning"
-                    @click="vacantTable"
-                />
+                    <Button
+                        v-if="
+                            !isTakeoutOccupied &&
+                            table &&
+                            table.status === 'occupied'
+                        "
+                        label="Transfer Guest"
+                        icon="pi pi-users"
+                        class="table-action-btn w-full h-14 justify-start gap-3 rounded-xl text-left"
+                        severity="warn"
+                        outlined
+                        @click="handleTransferGuest"
+                        :disabled="!table"
+                    />
 
-                <!-- Merge Table (only for available tables) -->
-                <Button
-                    v-if="
-                        !isTakeoutOccupied &&
-                        table &&
-                        table.status === 'available' &&
-                        !table.mergedTo
-                    "
-                    label="Merge Table"
-                    icon="pi pi-link"
-                    class="w-full h-12"
-                    severity="secondary"
-                    @click="handleMergeTable"
-                />
+                    <Button
+                        v-if="
+                            table &&
+                            table.status === 'occupied' &&
+                            !table.mergedTo
+                        "
+                        label="Vacant Table"
+                        icon="pi pi-undo"
+                        class="table-action-btn w-full h-14 justify-start gap-3 rounded-xl text-left"
+                        severity="warning"
+                        outlined
+                        @click="vacantTable"
+                    />
 
-                <!-- Unmerge Table (this table from its parent) -->
-                <Button
-                    v-if="table?.mergedTo"
-                    label="Unmerge from Parent Table"
-                    icon="pi pi-arrow-up-right-and-arrow-down-left-from-center"
-                    class="w-full h-12"
-                    severity="warning"
-                    @click="handleUnmergeFromTable"
-                />
+                    <Button
+                        v-if="table?.mergedTo"
+                        label="Unmerge from Parent"
+                        icon="pi pi-external-link"
+                        class="table-action-btn w-full h-14 justify-start gap-3 rounded-xl text-left"
+                        severity="warning"
+                        outlined
+                        @click="handleUnmergeFromTable"
+                    />
 
-                <!-- Unmerge all merged tables from this table -->
-                <Button
-                    v-if="table?.mergedTables && table.mergedTables.length > 0"
-                    label="Unmerge All Tables"
-                    icon="pi pi-arrow-up-right-and-arrow-down-left-from-center"
-                    class="w-full h-12"
-                    severity="warning"
-                    @click="handleUnmergeTables"
-                />
-
-                <!-- Reserve/Unreserve hide reserve button for now-->
-                <!-- <Button
-                    v-if="!isTakeoutOccupied"
-                    :label="
-                        table && table.status === 'reserved'
-                            ? 'Unreserve Table'
-                            : 'Reserve Table'
-                    "
-                    :icon="
-                        table && table.status === 'reserved'
-                            ? 'pi pi-times'
-                            : 'pi pi-clock'
-                    "
-                    class="w-full h-12"
-                    :severity="
-                        table && table.status === 'reserved'
-                            ? 'danger'
-                            : 'warning'
-                    "
-                    @click="handleReserveTable"
-                    :disabled="!table"
-                /> -->
+                    <Button
+                        v-if="
+                            table?.mergedTables && table.mergedTables.length > 0
+                        "
+                        label="Unmerge All Tables"
+                        icon="pi pi-table"
+                        class="table-action-btn"
+                        severity="warning"
+                        outlined
+                        @click="handleUnmergeTables"
+                    />
+                </div>
             </div>
 
             <!-- Pax/Guest Input for Available Tables: show immediately -->
             <div
-                v-if="table && table.status === 'available' && !table.mergeTo"
-                class="border-t pt-4 space-y-8"
+                v-if="table && table.status === 'available' && !table?.mergedTo"
+                class="border-t pt-5 space-y-5"
             >
-                <h4 class="font-medium text-gray-900">Guest Count</h4>
-                <div class="flex flex-wrap gap-2 mb-2">
+                <div
+                    class="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between"
+                >
+                    <div>
+                        <h4 class="text-base font-semibold text-gray-900">
+                            Guest Count
+                        </h4>
+                        <p class="text-sm text-gray-500">
+                            Tap numbers to add to the total or enter it
+                            manually.
+                        </p>
+                    </div>
+                    <div
+                        class="flex flex-wrap items-center gap-3 text-xs uppercase tracking-wide text-gray-400"
+                    >
+                        <span v-if="tableCapacity">
+                            Seats: {{ tableCapacity }}
+                        </span>
+                        <button
+                            type="button"
+                            class="font-semibold text-primary transition hover:text-primary/80"
+                            @click="resetPax"
+                        >
+                            Reset count
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-5 gap-2 sm:grid-cols-10">
                     <button
-                        v-for="n in [1, 2, 3, 4, 6, 7, 8, 9, 0]"
+                        v-for="n in quickPaxOptions"
                         :key="n"
                         type="button"
-                        class="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-800 font-semibold hover:bg-primary hover:text-white transition-colors"
-                        :class="{ 'bg-primary text-red-500': pax === n }"
-                        @click="pax = n"
+                        class="rounded-lg border border-gray-200 bg-white py-2 text-sm font-semibold text-gray-700 transition hover:border-primary hover:text-primary"
+                        @click="incrementPax(n)"
                     >
                         {{ n }}
                     </button>
                 </div>
+
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
                     <TextField
                         label="Number of Pax"
                         v-model="pax"
-                        :min="1"
-                        :max="table ? table.chairs : 10"
+                        :min="0"
                         class="w-full"
                         placeholder="Enter number of guests"
                         type="number"
@@ -224,20 +246,29 @@
                     <TextField
                         label="Guest Name"
                         v-model="guestName"
-                        :min="1"
-                        :max="table ? table.chairs : 10"
                         class="w-full md:col-span-3"
                         placeholder="Enter guest name"
                         @keyup.enter="confirmTakeOrder"
                     />
                 </div>
 
-                <div class="flex gap-4">
+                <div class="grid gap-3 sm:grid-cols-2">
                     <Button
                         label="Start Order"
+                        icon="pi pi-play"
                         severity="success"
-                        class="flex-1"
+                        class="h-12 w-full text-base font-semibold shadow-md"
+                        :disabled="!hasValidPax"
                         @click="confirmTakeOrder"
+                    />
+
+                    <Button
+                        v-if="canMergeTable"
+                        label="Merge Table"
+                        icon="pi pi-link"
+                        class="h-12 w-full text-base font-semibold"
+                        outlined
+                        @click="handleMergeTable"
                     />
                 </div>
             </div>
@@ -251,13 +282,6 @@ import Dialog from "primevue/dialog";
 import Button from "primevue/button";
 import TextField from "@/Components/Form/TextField.vue";
 import { useTable } from "@/composables/useTable";
-import { useCashier } from "@/composables/useCashier";
-import { useToast } from "primevue";
-import { router, usePage } from "@inertiajs/vue3";
-import { route } from "ziggy-js";
-
-const toast = useToast();
-const page = usePage();
 
 const props = defineProps<{
     show: boolean;
@@ -315,14 +339,99 @@ const allNestedMergedTables = computed(() => {
     return getAllMergedTables(props.table?.mergedTables);
 });
 
-const pax = ref(1);
+const quickPaxOptions = Array.from({ length: 10 }, (_, index) => index + 1);
+
+const tableCapacity = computed(() => {
+    return props.table?.chairs ?? props.table?.capacity ?? 0;
+});
+
+const locationName = computed(() => {
+    if (props.table?.locationName) {
+        return props.table.locationName;
+    }
+
+    const location = props.table?.tableRoomLocation;
+    const fallbackLocation = props.table?.location;
+
+    return (
+        location?.name ??
+        fallbackLocation?.name ??
+        location?.description ??
+        fallbackLocation?.description ??
+        "Unassigned"
+    );
+});
+
+const statusLabel = computed(() => {
+    const status = props.table?.status ?? "unknown";
+    switch (status) {
+        case "available":
+            return "Available";
+        case "occupied":
+            return "Occupied";
+        case "reserved":
+            return "Reserved";
+        case "cleaning":
+            return "Cleaning";
+        default:
+            return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+});
+
+const statusBadgeClass = computed(() => {
+    const base =
+        "px-3 py-1 text-xs font-semibold rounded-full border border-transparent";
+    switch (props.table?.status) {
+        case "available":
+            return `${base} bg-green-50 text-green-700 border-green-200`;
+        case "occupied":
+            return `${base} bg-orange-50 text-orange-700 border-orange-200`;
+        case "reserved":
+            return `${base} bg-blue-50 text-blue-700 border-blue-200`;
+        case "cleaning":
+            return `${base} bg-amber-50 text-amber-700 border-amber-200`;
+        default:
+            return `${base} bg-gray-100 text-gray-600 border-gray-200`;
+    }
+});
+
+const canMergeTable = computed(() => {
+    return (
+        props.table &&
+        props.table.status === "available" &&
+        !props.table.mergedTo &&
+        !isTakeoutOccupied.value
+    );
+});
+
+const normalizePaxValue = (value: unknown): number => {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : 0;
+};
+
+const ensureNonNegative = (value: number): number => {
+    return Math.max(value, 0);
+};
+
+const pax = ref(0);
 const guestName = ref("");
+
+const hasValidPax = computed(() => normalizePaxValue(pax.value) >= 1);
+
+const incrementPax = (value: number) => {
+    const current = normalizePaxValue(pax.value);
+    pax.value = ensureNonNegative(current + value);
+};
+
+const resetPax = () => {
+    pax.value = 0;
+};
 
 watch(
     () => props.show,
     (newShow) => {
         if (newShow) {
-            pax.value = 1;
+            pax.value = 0;
             guestName.value = "";
         }
     }
@@ -333,8 +442,20 @@ const handleClose = () => {
 };
 
 const confirmTakeOrder = () => {
+    if (!props.table?.id) {
+        return;
+    }
+
+    const safePax = ensureNonNegative(normalizePaxValue(pax.value));
+
+    if (safePax < 1) {
+        return;
+    }
+
+    pax.value = safePax;
+
     takeOrder(props.table.id, {
-        pax: pax.value,
+        pax: safePax,
         guest_name: guestName.value.trim(),
     });
 };
