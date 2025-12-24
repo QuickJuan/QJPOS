@@ -37,7 +37,7 @@
 
                 <!-- Settle Bill Button -->
                 <button
-                    @click="showSettleBillModal = true"
+                    @click="openSettlePaymentPage"
                     class="py-2 px-3 bg-success-600 text-white rounded-lg font-semibold hover:bg-success-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
                 >
                     Settle Bill
@@ -70,26 +70,6 @@
             @transfer-order-items="handleTransferOrderItems"
         />
 
-        <!-- Settle Bill Modal -->
-        <SettleBillModal
-            v-model:visible="showSettleBillModal"
-            :cart="cart"
-            :sub-total="props.subTotal"
-            :total="props.total"
-            :table-info="tableInfo"
-            @settle-bill="handleSettleBill"
-        />
-
-        <!-- Receipt Modal -->
-        <ReceiptModal
-            v-model:visible="showReceiptModal"
-            :receipt-data="receiptData"
-            :order-items="orderItems"
-            :receipt-footer="receiptFooter"
-            :general-settings="generalSettings"
-            :active-branch="page.props.active_branch"
-        />
-
         <BillModal
             v-model:visible="showBillModal"
             :bill-data="billData"
@@ -118,8 +98,6 @@ import {
 } from "@heroicons/vue/24/outline";
 import OrderTypeSelectionModal from "./OrderTypeSelectionModal.vue";
 import MoreOptionsModal from "./MoreOptionsModal.vue";
-import SettleBillModal from "./SettleBillModal.vue";
-import ReceiptModal from "./ReceiptModal.vue";
 import BillModal from "./BillModal.vue";
 import ServerSelectionModal from "./ServerSelectionModal.vue";
 import { useBillNumber } from "@/composables/useBillNumber";
@@ -131,8 +109,6 @@ import { useTable } from "@/composables/useTable";
 import { thermalPrinter } from "@/Services/ThermalPrinterService";
 import { useOrderStore } from "@/stores/orderStore";
 import Swal from "sweetalert2";
-import { formatMoney } from "@/Utils/FormatMoney";
-import moment from "moment-timezone";
 import { usePrintBill } from "@/composables/usePrintBill";
 
 const props = defineProps<{
@@ -167,7 +143,6 @@ const emit = defineEmits<{
     openDiscountModal: [];
     addModifier: [];
     transferOrderItems: [];
-    settleBill: [data: any];
     printBill: [];
     viewTable: [];
     printerConfig: [];
@@ -196,32 +171,10 @@ const page = usePage();
 // Modal visibility states
 const showOrderTypeModal = ref(false);
 const showMoreOptionsModal = ref(false);
-const showSettleBillModal = ref(false);
-const showReceiptModal = ref(false);
 const showBillModal = ref(false);
 const showServerSelectionModal = ref(false);
 const selectedServerId = ref<number | null>(null);
 const { getNextBillNumber } = useBillNumber();
-
-// Receipt data
-const receiptData = ref({
-    receiptNumber: props.receiptNumber,
-    date: new Date().toISOString(),
-    tableNumber: "",
-    cashierName: "",
-    orderType: "",
-    orderItems: [] as any[],
-    subtotal: 0,
-    taxAmount: 0,
-    discountAmount: 0,
-    discountName: null as string | null,
-    discountType: null as string | null,
-    removeTax: false,
-    isSeniorDiscount: false,
-    totalAmount: 0,
-    paymentInfo: null as any,
-    taxInfo: null as any,
-});
 
 const billData = ref({
     billNumber: "",
@@ -299,94 +252,22 @@ const handleTransferOrderItems = () => {
     showMoreOptionsModal.value = false;
 };
 
-// Handle settle bill form submission
-const handleSettleBill = async (response: any) => {
-    // Update receipt data from settle bill modal
-    // emit("settleBill", response.data);
-    receiptData.value = response?.data || null;
-    showSettleBillModal.value = false;
-    if (receiptData.value) {
-        // Format receipt data for thermal printer
-        const thermalReceiptData = {
-            storeName: page.props.company_info.company_name,
-            branch: receiptData.value.branch,
-            orderNumber: receiptData.value.invoice_no,
-            cashier: receiptData.value.cashier?.name,
-            dateTime: moment(receiptData.value.order_date)
-                .tz("Asia/Manila")
-                .format("MM/DD/YYYY hh:mm A"),
-            tableNumber: receiptData.value.table_number,
-            items: receiptData.value.order_items || [],
-            totals: receiptData.value.totals || 0,
-            payment: receiptData.value.payment,
-            receiptFooter: receiptData.value?.branch?.receipt_footer,
-            receiptHeader: receiptData.value?.branch?.receipt_headers,
-            birAccreditationFooter:
-                receiptData.value?.branch?.bir_accreditation_footer,
-            isReprint: false,
-        };
-
-        // Print to thermal printer
-        try {
-            await thermalPrinter.printReceipt(thermalReceiptData, false);
-
-            // Show change amount in Swal only if print was successful
-            Swal.fire({
-                title: formatMoney(receiptData.value.payment.change),
-                text: "Change to return to customer",
-                icon: "success",
-                confirmButtonText: "OK",
-                didOpen: () => {
-                    // Focus the OK button when Swal opens
-                    const confirmButton = document.querySelector(
-                        ".swal2-confirm"
-                    ) as HTMLButtonElement;
-                    if (confirmButton) {
-                        confirmButton.focus();
-                    }
-                },
-            }).then((result) => {
-                // Redirect to table-rooms index when OK is clicked
-                if (result.isConfirmed) {
-                    router.visit(route("table-rooms.index"));
-                }
-            });
-        } catch (error) {
-            console.error("Failed to print receipt:", error);
-
-            // Show receipt modal only if thermal printer fails
-            showReceiptModal.value = true;
-
-            toast.add({
-                severity: "warn",
-                summary: "Printer Error",
-                detail: "Failed to print receipt. Showing receipt modal instead.",
-                life: 3000,
-            });
-
-            // Show change amount in Swal only if print was successful
-            Swal.fire({
-                title: formatMoney(receiptData.value.payment.change),
-                text: "Change to return to customer",
-                icon: "success",
-                confirmButtonText: "OK",
-                didOpen: () => {
-                    // Focus the OK button when Swal opens
-                    const confirmButton = document.querySelector(
-                        ".swal2-confirm"
-                    ) as HTMLButtonElement;
-                    if (confirmButton) {
-                        confirmButton.focus();
-                    }
-                },
-            }).then((result) => {
-                // Redirect to table-rooms index when OK is clicked
-                if (result.isConfirmed) {
-                    router.visit(route("table-rooms.index"));
-                }
-            });
-        }
+const openSettlePaymentPage = () => {
+    if (!props.cart?.id) {
+        toast.add({
+            severity: "warn",
+            summary: "No Active Cart",
+            detail: "Please open an order before settling a bill.",
+            life: 3000,
+        });
+        return;
     }
+
+    router.visit(
+        route("resto.cart.settle-payment", {
+            cart: props.cart.id,
+        })
+    );
 };
 
 // Handle print bill

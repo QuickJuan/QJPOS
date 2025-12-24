@@ -2,7 +2,10 @@
 namespace App\Http\Controllers;
 
 use Exception;
+use Inertia\Inertia;
+use Inertia\Response;
 use Illuminate\Http\Request;
+use App\Models\Cart;
 use App\Services\CartService;
 use App\Services\PaymentService;
 use Illuminate\Http\JsonResponse;
@@ -227,6 +230,28 @@ class CartController extends Controller
                 'message' => $e->getMessage() ?? 'Failed to re-print order.',
             ], 404);
         }
+    }
+
+    public function showSettlePayment(Cart $cart): Response
+    {
+        $cart->load([
+            'cartItems',
+            'cartItems.product',
+            'cartItems.productPackaging',
+            'cartItems.children',
+            'cartItems.children.product',
+            'cartItems.children.productPackaging',
+            'cartItems.servedBy:id,name',
+            'cashier',
+            'cashierSession',
+            'branch',
+            'customer',
+            'tableRoom.tableRoomLocation',
+        ]);
+
+        return Inertia::render('Resto/SettlePayment', [
+            'cart' => new CartResource($cart),
+        ]);
     }
 
     public function settleBill(SettleBillRequest $request): JsonResponse | RedirectResponse

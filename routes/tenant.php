@@ -163,6 +163,7 @@ if (!isCentralDomain()) {
 
                     Route::controller(CartController::class)
                         ->group(function () {
+                            Route::get('/cart/{cart}/settle-payment', 'showSettlePayment')->name('cart.settle-payment');
                             Route::post('/cart/create-order', 'create')->name('cart.create-order');
                             Route::post('/cart/add', 'addToCart')->name('cart.add');
                             Route::put('/cart/{cartId}', 'updateCart')->name('cart.update');

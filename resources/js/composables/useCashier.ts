@@ -43,6 +43,17 @@ export interface CashierState {
     locationType: string | null;
 }
 
+export interface SettlePaymentPayload {
+    cart_id: number;
+    payment_method_id: number;
+    currency_id: number | null;
+    amount_in_payment_currency: number;
+    total_amount: number;
+    amount_paid?: number;
+    reference_number?: string;
+    notes?: string;
+}
+
 const CASHIER_STORAGE_KEY = "quickjuan_cashier_state";
 
 // Initialize reactive state
@@ -225,17 +236,18 @@ export const useCashier = () => {
     };
 
     // Settle payment for a cart
-    const settlePayment = async (paymentData: {
-        cart_id: number;
-        amount_paid: number;
-        total_amount: number;
-    }) => {
+    const settlePayment = async (paymentData: SettlePaymentPayload) => {
         const response = await httpPost(
             route("resto.cart.settle-bill"),
             {
                 cart_id: paymentData.cart_id,
+                payment_method_id: paymentData.payment_method_id,
+                currency_id: paymentData.currency_id,
+                amount_in_payment_currency: paymentData.amount_in_payment_currency,
                 amount_paid: paymentData.amount_paid,
                 total_amount: paymentData.total_amount,
+                reference_number: paymentData.reference_number,
+                notes: paymentData.notes,
             }
         );
 

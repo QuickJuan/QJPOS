@@ -199,11 +199,33 @@
             </div>
             <div class="flex justify-between" v-if="props.payment">
                 <span>Payment Received:</span>
-                <span>{{ formatMoney(props.payment.amount_paid) }}</span>
+                <span>
+                    {{ formatMoney(amountPaidBase, baseCurrencyCode) }}
+                </span>
+            </div>
+            <div
+                class="flex justify-between"
+                v-if="
+                    props.payment?.currency &&
+                    !props.payment.currency?.is_default &&
+                    paymentCurrencyAmount !== null
+                "
+            >
+                <span> Paid in {{ props.payment.currency.code }}: </span>
+                <span>
+                    {{
+                        formatMoney(
+                            paymentCurrencyAmount,
+                            props.payment.currency.code
+                        )
+                    }}
+                </span>
             </div>
             <div class="flex justify-between" v-if="props.payment">
                 <span>Change:</span>
-                <span>{{ formatMoney(customerChange) }}</span>
+                <span>
+                    {{ formatMoney(customerChange, baseCurrencyCode) }}
+                </span>
             </div>
         </div>
 
@@ -439,18 +461,44 @@ const getChildAmount = (option: any) => {
 };
 
 const totalAmountDue = computed(() => {
+    const totalDue = parseFloat(props.totals?.total_due) || 0;
+    const serviceCharge = parseFloat(props.totals?.service_charge) || 0;
+    return totalDue + serviceCharge;
+});
+
+const amountPaidBase = computed(() => {
+    if (!props.payment) {
+        return 0;
+    }
+
+    const amount = parseNumeric(props.payment.amount_paid);
+    return amount ?? 0;
+});
+
+const paymentCurrencyAmount = computed(() => {
+    if (!props.payment) {
+        return null;
+    }
+
+    return parseNumeric(props.payment.amount_in_payment_currency);
+});
+
+const baseCurrencyCode = computed(() => {
     return (
-        parseFloat(props.totals?.total_due) +
-            parseFloat(props.totals?.service_charge) || 0
+        props.payment?.base_currency?.code ||
+        props.payment?.currency?.code ||
+        "PHP"
     );
 });
 
 const customerChange = computed(() => {
     if (props.payment) {
-        return (
-            parseFloat(props.payment.amount_paid) -
-            parseFloat(totalAmountDue.value)
-        );
+        const change = parseNumeric(props.payment.change);
+        if (change !== null) {
+            return change;
+        }
+
+        return amountPaidBase.value - totalAmountDue.value;
     }
     return 0;
 });

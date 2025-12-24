@@ -1,6 +1,7 @@
 <?php
 namespace App\Models;
 
+use App\Models\Payment;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -150,6 +151,11 @@ class Order extends Model
     public function tableRoom(): BelongsTo
     {
         return $this->belongsTo(TableRoom::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
     }
 
     public function getPaymentInfoAttribute()

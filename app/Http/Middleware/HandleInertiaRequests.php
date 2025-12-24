@@ -4,6 +4,8 @@ namespace App\Http\Middleware;
 use App\Models\Branch;
 use App\Models\Cart;
 use App\Models\CashierSession;
+use App\Models\Currency;
+use App\Models\PaymentMethod;
 use App\Models\User;
 use App\Services\CartService;
 use App\Services\DiscountService;
@@ -195,6 +197,9 @@ class HandleInertiaRequests extends Middleware
             'cart' => fn() => $this->getCartByTableId($request),
             'available_modifiers' => fn() => $this->loadTenantModifiers(),
             'available_servers' => fn() => $this->getAvailableServers(),
+            'currencies' => fn() => $this->loadTenantCurrencies(),
+            'default_currency' => fn() => $this->getDefaultCurrency(),
+            'payment_methods' => fn() => $this->loadTenantPaymentMethods(),
         ];
 
         return $sharedData;
@@ -266,6 +271,67 @@ class HandleInertiaRequests extends Middleware
                 'file' => $e->getFile(),
             ]);
             // Return empty array on error to prevent 502
+            return [];
+        }
+    }
+
+    /**
+     * Load active currencies for the tenant
+     */
+    private function loadTenantCurrencies(): array
+    {
+        if (!tenant()) {
+            return [];
+        }
+
+        try {
+            return Currency::active()
+                ->orderByDesc('is_default')
+                ->orderBy('name')
+                ->get(['id', 'code', 'name', 'symbol', 'exchange_rate', 'is_default'])
+                ->toArray();
+        } catch (\Exception $e) {
+            \Log::error('Failed to load currencies in HandleInertiaRequests: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Retrieve the default currency for display and change computation
+     */
+    private function getDefaultCurrency(): ?array
+    {
+        if (!tenant()) {
+            return null;
+        }
+
+        try {
+            return Currency::default()
+                ->select('id', 'code', 'name', 'symbol', 'exchange_rate', 'is_default')
+                ->first()?->toArray();
+        } catch (\Exception $e) {
+            \Log::error('Failed to load default currency in HandleInertiaRequests: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Load active payment methods with their currencies
+     */
+    private function loadTenantPaymentMethods(): array
+    {
+        if (!tenant()) {
+            return [];
+        }
+
+        try {
+            return PaymentMethod::active()
+                ->ordered()
+                ->with('currency:id,code,name,symbol,exchange_rate,is_default')
+                ->get(['id', 'name', 'payment_type', 'currency_id', 'is_active', 'sort_order'])
+                ->toArray();
+        } catch (\Exception $e) {
+            \Log::error('Failed to load payment methods in HandleInertiaRequests: ' . $e->getMessage());
             return [];
         }
     }
