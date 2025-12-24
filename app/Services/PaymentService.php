@@ -123,6 +123,7 @@ class PaymentService
             'amount_in_default_currency' => $baseAmountPaid,
             'exchange_rate' => $paymentContext['currency']->exchange_rate,
             'change' => $changeAmount,
+            'details' => $paymentContext['payment_details'] ?? [],
         ];
 
         // Get branch_id from cart's cashier session, or fallback to current user's branch
@@ -242,6 +243,10 @@ class PaymentService
 
         $currencyId = $payload['currency_id'] ?? $paymentMethod->currency_id;
         $currency = Currency::findOrFail($currencyId);
+        $paymentDetails = $payload['payment_details'] ?? [];
+        if (! is_array($paymentDetails)) {
+            $paymentDetails = [];
+        }
 
         $amountInPaymentCurrency = (float) ($payload['amount_in_payment_currency'] ?? $payload['amount_paid'] ?? 0);
 
@@ -258,6 +263,7 @@ class PaymentService
             'base_amount_paid' => $baseAmountPaid,
             'reference_number' => $payload['reference_number'] ?? null,
             'notes' => $payload['notes'] ?? null,
+            'payment_details' => $paymentDetails,
         ];
     }
 
@@ -273,6 +279,7 @@ class PaymentService
             'change_amount' => $paymentContext['change_amount'] ?? 0,
             'reference_number' => $paymentContext['reference_number'],
             'notes' => $paymentContext['notes'],
+            'payment_details' => $paymentContext['payment_details'] ?? [],
         ]);
     }
 

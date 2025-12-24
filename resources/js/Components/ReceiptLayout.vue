@@ -221,6 +221,13 @@
                     }}
                 </span>
             </div>
+            <div
+                class="flex justify-between text-xs text-gray-600"
+                v-if="foreignExchangeRateDisplay"
+            >
+                <span>Exchange Rate:</span>
+                <span>{{ foreignExchangeRateDisplay }}</span>
+            </div>
             <div class="flex justify-between" v-if="props.payment">
                 <span>Change:</span>
                 <span>
@@ -481,6 +488,32 @@ const paymentCurrencyAmount = computed(() => {
     }
 
     return parseNumeric(props.payment.amount_in_payment_currency);
+});
+
+const foreignExchangeRateDisplay = computed(() => {
+    if (
+        !props.payment?.currency ||
+        props.payment.currency.is_default ||
+        props.payment.currency.exchange_rate === undefined ||
+        props.payment.currency.exchange_rate === null
+    ) {
+        return null;
+    }
+
+    const exchangeRate = parseNumeric(props.payment.currency.exchange_rate);
+    if (!exchangeRate || exchangeRate <= 0) {
+        return null;
+    }
+
+    const paymentCurrencyCode = props.payment.currency.code || "";
+    const baseCurrencyCode = props.payment?.base_currency?.code || "PHP";
+    const formattedRate = formatMoney(exchangeRate, baseCurrencyCode);
+
+    if (paymentCurrencyCode) {
+        return `1 ${paymentCurrencyCode} = ${formattedRate}`;
+    }
+
+    return formattedRate;
 });
 
 const baseCurrencyCode = computed(() => {

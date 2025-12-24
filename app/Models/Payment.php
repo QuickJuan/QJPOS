@@ -16,6 +16,7 @@ class Payment extends Model
         'exchange_rate',
         'change_amount',
         'reference_number',
+        'payment_details',
         'notes',
     ];
 
@@ -24,6 +25,7 @@ class Payment extends Model
         'amount_in_payment_currency' => 'decimal:2',
         'exchange_rate' => 'decimal:4',
         'change_amount' => 'decimal:2',
+        'payment_details' => 'array',
     ];
 
     /**

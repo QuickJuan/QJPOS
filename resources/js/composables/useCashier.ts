@@ -52,6 +52,7 @@ export interface SettlePaymentPayload {
     amount_paid?: number;
     reference_number?: string;
     notes?: string;
+    payment_details?: Record<string, any>;
 }
 
 const CASHIER_STORAGE_KEY = "quickjuan_cashier_state";
@@ -248,6 +249,7 @@ export const useCashier = () => {
                 total_amount: paymentData.total_amount,
                 reference_number: paymentData.reference_number,
                 notes: paymentData.notes,
+                payment_details: paymentData.payment_details,
             }
         );
 

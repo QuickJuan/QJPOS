@@ -688,6 +688,46 @@ class ThermalPrinterService {
                 commands.push(...this.stringToBytes(this.formatTotalLine('Amount Paid:', paymentAmount)));
                 commands.push(...this.ESC_POS.LINE_FEED);
 
+                const paymentCurrency = receiptData.payment.currency;
+                const paidInCurrencyAmount = this.normalizeNumber(
+                    receiptData.payment.amount_in_payment_currency ?? receiptData.payment.amount_paid,
+                    0
+                );
+
+                if (
+                    paymentCurrency &&
+                    paymentCurrency.is_default === false &&
+                    paidInCurrencyAmount > 0
+                ) {
+                    const label = paymentCurrency.code
+                        ? `Paid in ${paymentCurrency.code}:`
+                        : 'Paid in Foreign Currency:';
+                    commands.push(
+                        ...this.stringToBytes(
+                            this.formatTotalLine(label, paidInCurrencyAmount)
+                        )
+                    );
+                    commands.push(...this.ESC_POS.LINE_FEED);
+
+                    const baseCurrencyCode =
+                        receiptData.payment.base_currency?.code || 'PHP';
+                    const exchangeRateValue = this.normalizeNumber(
+                        paymentCurrency.exchange_rate,
+                        0
+                    );
+
+                    if (exchangeRateValue > 0) {
+                        const formattedRate = this.formatNumberWithComma(
+                            exchangeRateValue.toFixed(4)
+                        );
+                        const exchangeLine = paymentCurrency.code
+                            ? `Exchange Rate: 1 ${paymentCurrency.code} = ${formattedRate} ${baseCurrencyCode}`
+                            : `Exchange Rate: ${formattedRate} ${baseCurrencyCode}`;
+                        commands.push(...this.stringToBytes(exchangeLine));
+                        commands.push(...this.ESC_POS.LINE_FEED);
+                    }
+                }
+
                 if (receiptData.payment.change && parseFloat(String(receiptData.payment.change)) > 0) {
                     const change = paymentAmount - total
                     commands.push(...this.ESC_POS.BOLD_ON);
