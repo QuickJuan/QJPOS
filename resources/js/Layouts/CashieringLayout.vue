@@ -48,6 +48,22 @@
                                     <span>Review X Reading</span>
                                 </button>
                                 <button
+                                    @click="handleCashOutClick"
+                                    class="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-3"
+                                >
+                                    <BanknotesIcon class="w-5 h-5" />
+                                    <span>Log Cash Movement</span>
+                                </button>
+                                <button
+                                    @click="handleCashDrawerLogClick"
+                                    class="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-3"
+                                >
+                                    <ClipboardDocumentListIcon
+                                        class="w-5 h-5"
+                                    />
+                                    <span>Cash Drawer Log</span>
+                                </button>
+                                <button
                                     @click="handlePrinterConfigClick"
                                     class="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-3"
                                 >
@@ -132,6 +148,22 @@
                     </button>
 
                     <button
+                        @click="handleCashOutClick"
+                        class="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                        <BanknotesIcon class="w-5 h-5" />
+                        <span class="font-medium">Log Cash Movement</span>
+                    </button>
+
+                    <button
+                        @click="handleCashDrawerLogClick"
+                        class="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                        <ClipboardDocumentListIcon class="w-5 h-5" />
+                        <span class="font-medium">Cash Drawer Log</span>
+                    </button>
+
+                    <button
                         @click="handleReviewTransactionsClick"
                         class="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                     >
@@ -200,6 +232,7 @@ import CloseSessionModal from "@/Pages/Resto/Partials/CloseSessionModal.vue";
 import SessionSummaryModal from "@/Pages/Resto/Partials/SessionSummaryModal.vue";
 import PWAInstallBanner from "@/Components/PWAInstallBanner.vue";
 import { useCashier } from "@/composables/useCashier";
+import { thermalPrinter } from "@/Services/ThermalPrinterService";
 import {
     QrCodeIcon,
     TableCellsIcon,
@@ -208,6 +241,8 @@ import {
     PrinterIcon,
     ClockIcon,
     DocumentChartBarIcon,
+    BanknotesIcon,
+    ClipboardDocumentListIcon,
 } from "@heroicons/vue/24/outline";
 
 const page = usePage();
@@ -287,6 +322,18 @@ const handleReviewTransactionsClick = () => {
 const handleReviewXReadingClick = () => {
     showMoreOptions.value = false;
     router.visit(route("resto.review-x-readings"));
+};
+
+const handleCashOutClick = () => {
+    showSidebar.value = false;
+    showMoreOptions.value = false;
+    router.visit(route("resto.cashier-cashouts.create"));
+};
+
+const handleCashDrawerLogClick = () => {
+    showSidebar.value = false;
+    showMoreOptions.value = false;
+    router.visit(route("resto.cashier-cashouts.index"));
 };
 
 const handlePrinterConfigClick = () => {

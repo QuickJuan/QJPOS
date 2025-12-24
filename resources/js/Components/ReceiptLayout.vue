@@ -234,6 +234,21 @@
                     {{ formatMoney(customerChange, baseCurrencyCode) }}
                 </span>
             </div>
+            <div
+                v-if="paymentDetailRows.length"
+                class="mt-2 space-y-1 text-sm text-gray-700"
+            >
+                <div
+                    v-for="detail in paymentDetailRows"
+                    :key="`${detail.label}-${detail.value}`"
+                    class="flex justify-between gap-4"
+                >
+                    <span>{{ detail.label }}</span>
+                    <span class="font-semibold text-right ml-auto">
+                        {{ detail.value }}
+                    </span>
+                </div>
+            </div>
         </div>
 
         <!-- Tax Info -->
@@ -297,6 +312,11 @@
 import Branch from "@/Types/Branch";
 import { formatMoney } from "@/Utils/FormatMoney";
 import { computed } from "vue";
+
+type PaymentDetailRow = {
+    label: string;
+    value: string;
+};
 
 const props = defineProps<{
     businessLogo?: string;
@@ -490,6 +510,14 @@ const paymentCurrencyAmount = computed(() => {
     return parseNumeric(props.payment.amount_in_payment_currency);
 });
 
+const baseCurrencyCode = computed(() => {
+    return (
+        props.payment?.base_currency?.code ||
+        props.payment?.currency?.code ||
+        "PHP"
+    );
+});
+
 const foreignExchangeRateDisplay = computed(() => {
     if (
         !props.payment?.currency ||
@@ -506,8 +534,7 @@ const foreignExchangeRateDisplay = computed(() => {
     }
 
     const paymentCurrencyCode = props.payment.currency.code || "";
-    const baseCurrencyCode = props.payment?.base_currency?.code || "PHP";
-    const formattedRate = formatMoney(exchangeRate, baseCurrencyCode);
+    const formattedRate = formatMoney(exchangeRate, baseCurrencyCode.value);
 
     if (paymentCurrencyCode) {
         return `1 ${paymentCurrencyCode} = ${formattedRate}`;
@@ -516,12 +543,78 @@ const foreignExchangeRateDisplay = computed(() => {
     return formattedRate;
 });
 
-const baseCurrencyCode = computed(() => {
-    return (
-        props.payment?.base_currency?.code ||
-        props.payment?.currency?.code ||
-        "PHP"
-    );
+const normalizedPaymentType = computed(() => {
+    const typeValue =
+        props.payment?.payment_type_value ?? props.payment?.payment_type ?? "";
+    return typeof typeValue === "string" ? typeValue.toLowerCase() : "";
+});
+
+const isCreditPayment = computed(
+    () => normalizedPaymentType.value === "credit"
+);
+const isEWalletPayment = computed(
+    () => normalizedPaymentType.value === "e-wallet"
+);
+const isGiftCheckPayment = computed(
+    () => normalizedPaymentType.value === "gift-check"
+);
+const isCardPayment = computed(() => normalizedPaymentType.value === "card");
+
+const paymentDetailRows = computed<PaymentDetailRow[]>(() => {
+    if (!props.payment) {
+        return [];
+    }
+
+    const rows: PaymentDetailRow[] = [];
+
+    if (props.payment.method) {
+        rows.push({ label: "Payment Method:", value: props.payment.method });
+    }
+
+    if (isCreditPayment.value && props.payment.customer_name) {
+        rows.push({ label: "Customer:", value: props.payment.customer_name });
+    }
+
+    if (isEWalletPayment.value) {
+        const reference = props.payment.reference_number;
+        if (reference) {
+            rows.push({ label: "Reference No.:", value: reference });
+        }
+    }
+
+    if (isGiftCheckPayment.value) {
+        const reference =
+            props.payment.reference_number || props.payment.gift_check_number;
+        if (reference) {
+            rows.push({ label: "Reference No.:", value: reference });
+        }
+
+        const giftAmount = parseNumeric(props.payment.gift_check_amount);
+        if (giftAmount !== null) {
+            rows.push({
+                label: "Gift Check Amount:",
+                value: formatMoney(giftAmount, baseCurrencyCode.value),
+            });
+        }
+    }
+
+    if (isCardPayment.value) {
+        if (props.payment.approval_code) {
+            rows.push({
+                label: "Approval Code:",
+                value: props.payment.approval_code,
+            });
+        }
+
+        if (props.payment.card_holder_name) {
+            rows.push({
+                label: "Cardholder:",
+                value: props.payment.card_holder_name,
+            });
+        }
+    }
+
+    return rows;
 });
 
 const customerChange = computed(() => {

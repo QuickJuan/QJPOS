@@ -96,10 +96,17 @@ class ReceiptOrdersResource extends JsonResource
             $paymentTypeLabel = $paymentType instanceof PaymentType
                 ? $paymentType->label()
                 : $paymentType;
+            $paymentDetails = (array) ($primaryPayment->payment_details ?? []);
+            $paymentTypeValue = $paymentType instanceof PaymentType
+                ? $paymentType->value
+                : (is_string($paymentType) ? strtolower($paymentType) : null);
+            $giftCheckAmount = $paymentDetails['gift_check_amount'] ?? null;
+            $giftCheckAmountValue = is_numeric($giftCheckAmount) ? (float) $giftCheckAmount : null;
 
             return [
                 'method' => $primaryPayment->paymentMethod?->name,
                 'payment_type' => $paymentTypeLabel,
+                'payment_type_value' => $paymentTypeValue,
                 'amount_paid' => (float) $primaryPayment->amount,
                 'amount_in_payment_currency' => (float) ($primaryPayment->amount_in_payment_currency ?? $primaryPayment->amount),
                 'currency' => $primaryPayment->currency ? [
@@ -110,6 +117,15 @@ class ReceiptOrdersResource extends JsonResource
                 ] : null,
                 'base_currency' => $defaultCurrency,
                 'change' => (float) $primaryPayment->change_amount,
+                'customer_name' => $paymentDetails['customer_name'] ?? null,
+                'customer_contact' => $paymentDetails['customer_contact'] ?? null,
+                'reference_number' => $paymentDetails['reference_number']
+                    ?? $paymentDetails['gift_check_number']
+                    ?? null,
+                'approval_code' => $paymentDetails['approval_code'] ?? null,
+                'card_holder_name' => $paymentDetails['card_holder_name'] ?? null,
+                'gift_check_number' => $paymentDetails['gift_check_number'] ?? null,
+                'gift_check_amount' => $giftCheckAmountValue,
                 'status' => $this->payment_status,
             ];
         }
@@ -120,14 +136,33 @@ class ReceiptOrdersResource extends JsonResource
             return null;
         }
 
+        $metaDetails = (array) ($metaPayment['payment_details'] ?? []);
+        $metaPaymentTypeRaw = $metaPayment['payment_type'] ?? null;
+        $metaPaymentTypeValue = is_string($metaPaymentTypeRaw)
+            ? strtolower($metaPaymentTypeRaw)
+            : null;
+        $metaGiftAmount = $metaDetails['gift_check_amount'] ?? null;
+        $metaGiftAmountValue = is_numeric($metaGiftAmount) ? (float) $metaGiftAmount : null;
+
         return [
             'method' => $metaPayment['method'] ?? null,
             'payment_type' => $metaPayment['payment_type'] ?? null,
+            'payment_type_value' => $metaPaymentTypeValue,
             'amount_paid' => (float) ($metaPayment['amount_in_default_currency'] ?? $this->amount_tendered ?? 0),
             'amount_in_payment_currency' => (float) ($metaPayment['amount_in_payment_currency'] ?? $metaPayment['amount_in_default_currency'] ?? 0),
             'currency' => $metaPayment['currency'] ?? null,
             'base_currency' => $defaultCurrency,
             'change' => (float) ($metaPayment['change'] ?? ($this->amount_tendered - ($this->total_due + $this->service_charge))),
+            'customer_name' => $metaDetails['customer_name'] ?? ($metaPayment['customer_name'] ?? null),
+            'customer_contact' => $metaDetails['customer_contact'] ?? ($metaPayment['customer_contact'] ?? null),
+            'reference_number' => $metaDetails['reference_number']
+                ?? $metaPayment['reference_number']
+                ?? $metaDetails['gift_check_number']
+                ?? null,
+            'approval_code' => $metaDetails['approval_code'] ?? null,
+            'card_holder_name' => $metaDetails['card_holder_name'] ?? null,
+            'gift_check_number' => $metaDetails['gift_check_number'] ?? null,
+            'gift_check_amount' => $metaGiftAmountValue,
             'status' => $this->payment_status,
         ];
     }

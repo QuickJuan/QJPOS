@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 
+use App\Models\CashierCashout;
+
 class CashierSession extends Model
 {
     protected $fillable = [
@@ -62,5 +64,10 @@ class CashierSession extends Model
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    public function cashouts()
+    {
+        return $this->hasMany(CashierCashout::class, 'cashier_session_id');
     }
 }

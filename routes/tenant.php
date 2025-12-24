@@ -11,6 +11,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\TableRoomController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\CashierSessionController;
+use App\Http\Controllers\CashierCashoutController;
 use App\Http\Controllers\TableManagementController;
 use App\Models\Branch;
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
@@ -154,11 +155,13 @@ if (!isCentralDomain()) {
                             Route::put('/update-bill-no/{branchId}', 'updateBillNo')->name('update-bill-no');
                         });
 
-                    // Category routes (wildcard routes should come last)
-                    Route::controller(\App\Http\Controllers\CategoryController::class)
+                    Route::controller(CashierCashoutController::class)
+                        ->prefix('/cashier-cashouts')
+                        ->as('cashier-cashouts.')
                         ->group(function () {
                             Route::get('/', 'index')->name('index');
-                            Route::get('/{categorySlug}', 'show')->name('category');
+                            Route::get('/create', 'create')->name('create');
+                            Route::post('/', 'store')->name('store');
                         });
 
                     Route::controller(CartController::class)
@@ -182,6 +185,13 @@ if (!isCentralDomain()) {
                             Route::put('/cart/item/clear-discount/{cartItemId}', 'clearDiscountToCartItem')->name('cart.clear-discount');
                             Route::put('/cart/item/void/{cartItemId}', 'voidCartItem')->name('cart.void-cart');
                             Route::delete('/cart/item/{cartItemId}', 'deleteCartItem')->name('cart.delete');
+                        });
+
+                    // Category routes (wildcard routes should come last)
+                    Route::controller(\App\Http\Controllers\CategoryController::class)
+                        ->group(function () {
+                            Route::get('/', 'index')->name('index');
+                            Route::get('/{categorySlug}', 'show')->name('category');
                         });
                 });
 

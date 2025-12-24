@@ -1079,9 +1079,16 @@ const navigateBack = () => {
 };
 
 const showChangeDialog = async (changeValue: number) => {
+    const normalizedChange = Math.max(0, Number(changeValue) || 0);
+    const hasChange = normalizedChange > 0;
+
     await Swal.fire({
-        title: formatMoney(changeValue, defaultCurrencyCode.value),
-        text: "Change to return to customer",
+        title: hasChange
+            ? formatMoney(normalizedChange, defaultCurrencyCode.value)
+            : "Payment received exact amount",
+        text: hasChange
+            ? "Change to return to customer"
+            : "Payment received exact amount",
         icon: "success",
         confirmButtonText: "OK",
         didOpen: () => {

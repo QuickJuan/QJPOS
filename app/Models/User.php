@@ -17,7 +17,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class User extends Authenticatable
 {
     use HasApiTokens;
-    use HasRoles;
+    use HasRoles {
+        hasRole as protected traitHasRole;
+        hasPermissionTo as protected traitHasPermissionTo;
+    }
 
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory;
@@ -150,7 +153,7 @@ class User extends Authenticatable
             return false;
         }
 
-        return parent::hasRole($roles, $guard);
+        return $this->traitHasRole($roles, $guard);
     }
 
     /**
@@ -162,7 +165,7 @@ class User extends Authenticatable
             return false;
         }
 
-        return parent::hasPermissionTo($permission, $guardName);
+        return $this->traitHasPermissionTo($permission, $guardName);
     }
 
     public function inventoryLogs(): HasMany

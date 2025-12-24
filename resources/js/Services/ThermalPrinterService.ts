@@ -684,6 +684,55 @@ class ThermalPrinterService {
                 commands.push(...this.ESC_POS.ALIGN_LEFT);
                 commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
+                const paymentTypeValue = (
+                    receiptData.payment.payment_type_value ||
+                    receiptData.payment.payment_type ||
+                    ''
+                )
+                    .toString()
+                    .toLowerCase();
+
+                const addInfoLine = (label: string, value: string | number) => {
+                    commands.push(
+                        ...this.stringToBytes(
+                            this.formatInfoLine(label, String(value))
+                        )
+                    );
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                };
+
+                if (receiptData.payment.method) {
+                    commands.push(...this.stringToBytes(
+                        this.formatInfoLine('Payment Method:', receiptData.payment.method)
+                    ));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                }
+
+                if (paymentTypeValue === 'credit' && receiptData.payment.customer_name) {
+                    addInfoLine('Customer:', receiptData.payment.customer_name);
+                }
+
+                if (paymentTypeValue === 'e-wallet' && receiptData.payment.reference_number) {
+                    addInfoLine('Reference No.:', receiptData.payment.reference_number);
+                }
+
+                if (paymentTypeValue === 'gift-check') {
+                    const giftReference = receiptData.payment.reference_number || receiptData.payment.gift_check_number;
+                    if (giftReference) {
+                        addInfoLine('Reference No.:', giftReference);
+                    }
+                }
+
+                if (paymentTypeValue === 'card') {
+                    if (receiptData.payment.approval_code) {
+                        addInfoLine('Approval Code:', receiptData.payment.approval_code);
+                    }
+
+                    if (receiptData.payment.card_holder_name) {
+                        addInfoLine('Cardholder:', receiptData.payment.card_holder_name);
+                    }
+                }
+
                 const paymentAmount = parseFloat(receiptData.payment.amount_paid)
                 commands.push(...this.stringToBytes(this.formatTotalLine('Amount Paid:', paymentAmount)));
                 commands.push(...this.ESC_POS.LINE_FEED);
