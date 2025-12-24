@@ -43,20 +43,6 @@
                 <section
                     class="bg-white border border-gray-200 rounded-2xl shadow-sm p-5 space-y-6"
                 >
-                    <div>
-                        <p
-                            class="text-xs font-semibold text-gray-500 uppercase"
-                        >
-                            Payable Amount
-                        </p>
-                        <p class="text-3xl font-black text-primary-600">
-                            {{ formatMoney(totalDue, defaultCurrencyCode) }}
-                        </p>
-                        <p class="text-xs text-gray-500 mt-1">
-                            Cart #{{ formattedCartNumber }}
-                        </p>
-                    </div>
-
                     <div class="space-y-3">
                         <div class="flex items-center justify-between">
                             <h3 class="text-sm font-semibold text-gray-800">
@@ -313,28 +299,6 @@
                                     }}
                                 </span>
                             </div>
-                            <div
-                                class="flex items-center justify-between text-sm"
-                            >
-                                <span class="text-gray-600">
-                                    Change ({{ defaultCurrencyCode }})
-                                </span>
-                                <span
-                                    class="font-semibold"
-                                    :class="
-                                        changeAmount > 0
-                                            ? 'text-success-600'
-                                            : 'text-gray-900'
-                                    "
-                                >
-                                    {{
-                                        formatMoney(
-                                            changeAmount,
-                                            defaultCurrencyCode
-                                        )
-                                    }}
-                                </span>
-                            </div>
                         </div>
                     </div>
                 </section>
@@ -358,7 +322,7 @@
                                 pattern="[0-9]*\\.?[0-9]{0,2}"
                                 inputmode="decimal"
                                 class="flex-1"
-                                input-class="text-xl py-3"
+                                input-class="text-2xl py-4"
                                 :readonly="!isCashMethod"
                                 :disabled="!isCashMethod"
                                 :helper="
@@ -367,113 +331,64 @@
                                         : undefined
                                 "
                             />
-                            <button
-                                type="button"
-                                @click="clearAmount"
-                                class="px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-semibold text-xs transition-colors"
-                                :disabled="!isCashMethod"
-                                :class="
-                                    !isCashMethod
-                                        ? 'opacity-40 cursor-not-allowed'
-                                        : ''
-                                "
-                            >
-                                Clear
-                            </button>
                         </div>
                     </div>
 
-                    <div class="grid gap-4 xl:grid-cols-[220px_1fr]">
-                        <div class="space-y-3">
-                            <p class="text-sm font-medium text-gray-700">
-                                Keypad
-                            </p>
-                            <div class="grid grid-cols-3 gap-2">
-                                <button
-                                    v-for="digit in keypadDigits"
-                                    :key="digit"
-                                    type="button"
-                                    @click="appendDigit(digit)"
-                                    :class="[
-                                        'py-3 rounded-lg text-base font-semibold bg-white border border-gray-200 hover:bg-primary-600 hover:text-white transition-all duration-150 shadow-sm',
-                                        digit === '0' ? 'col-span-3' : '',
-                                        !isCashMethod
-                                            ? 'opacity-50 cursor-not-allowed hover:bg-white hover:text-gray-500'
-                                            : '',
-                                    ]"
-                                    :disabled="!isCashMethod"
-                                >
-                                    {{ digit }}
-                                </button>
-                            </div>
-                        </div>
+                    <div class="">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            <div class="w-full">
+                                <div class="grid grid-cols-3 gap-2">
+                                    <button
+                                        v-for="digit in keypadDigits"
+                                        :key="digit"
+                                        type="button"
+                                        @click="appendDigit(digit)"
+                                        :class="[
+                                            'py-4 rounded-xl text-lg font-semibold bg-white border border-gray-200 hover:bg-primary-600 hover:text-white transition-all duration-150 shadow-sm',
 
-                        <div class="space-y-4">
-                            <button
-                                v-if="isCashMethod && totalDue > 0"
-                                type="button"
-                                @click="setExactAmount"
-                                class="w-full h-11 py-2 px-4 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-medium text-sm transition-colors"
-                            >
-                                Exact Amount (
-                                {{ formatMoney(totalDue, defaultCurrencyCode) }}
-                                )
-                            </button>
-
-                            <div
-                                class="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3"
-                            >
-                                <div
-                                    v-if="showConversionSummary"
-                                    class="space-y-1"
-                                >
-                                    <p class="text-xs text-gray-600">
-                                        Converted Amount ({{
-                                            defaultCurrencyCode
-                                        }})
-                                    </p>
-                                    <p
-                                        class="text-base font-semibold text-gray-900"
+                                            !isCashMethod
+                                                ? 'opacity-50 cursor-not-allowed hover:bg-white hover:text-gray-500'
+                                                : '',
+                                        ]"
+                                        :disabled="!isCashMethod"
                                     >
-                                        {{
-                                            formatMoney(
-                                                amountPaidBase,
-                                                defaultCurrencyCode
-                                            )
-                                        }}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p class="text-xs text-gray-600">
-                                        Change ({{ defaultCurrencyCode }})
-                                    </p>
-                                    <p
-                                        class="text-xl font-semibold"
-                                        :class="
-                                            changeAmount > 0
-                                                ? 'text-success-600'
-                                                : 'text-gray-900'
-                                        "
+                                        {{ digit }}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        @click="backSpace"
+                                        :class="[
+                                            'py-4 rounded-xl text-lg font-semibold bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-all duration-150 shadow-sm',
+                                            !isCashMethod
+                                                ? 'opacity-50 cursor-not-allowed hover:bg-red-50 hover:text-red-600'
+                                                : '',
+                                        ]"
+                                        :disabled="!isCashMethod"
                                     >
-                                        {{
-                                            formatMoney(
-                                                changeAmount,
-                                                defaultCurrencyCode
-                                            )
-                                        }}
-                                    </p>
+                                        <-
+                                    </button>
+                                    <button
+                                        type="button"
+                                        @click="clearAmount"
+                                        :class="[
+                                            'py-4 rounded-xl text-lg font-semibold bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-all duration-150 shadow-sm',
+                                            !isCashMethod
+                                                ? 'opacity-50 cursor-not-allowed hover:bg-red-50 hover:text-red-600'
+                                                : '',
+                                        ]"
+                                        :disabled="!isCashMethod"
+                                    >
+                                        Clear
+                                    </button>
                                 </div>
                             </div>
 
                             <div
                                 v-if="isCashMethod && quickAmountOptions.length"
-                                class="space-y-2"
+                                class="space-y-2 w-full"
                             >
-                                <p class="text-sm font-medium text-gray-700">
-                                    Quick Amount Selection
-                                </p>
                                 <div
-                                    class="grid grid-cols-1 sm:grid-cols-2 gap-2"
+                                    class="grid grid-cols-1 sm:grid-cols-2 gap-3"
                                 >
                                     <button
                                         v-for="option in quickAmountOptions"
@@ -484,6 +399,44 @@
                                     >
                                         +{{ option.label }}
                                     </button>
+                                </div>
+                                <div class="space-y-4">
+                                    <button
+                                        v-if="isCashMethod && totalDue > 0"
+                                        type="button"
+                                        @click="setExactAmount"
+                                        class="mt-2 w-full h-11 py-2 px-4 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-medium text-sm transition-colors"
+                                    >
+                                        Exact Amount (
+                                        {{
+                                            formatMoney(
+                                                totalDue,
+                                                defaultCurrencyCode
+                                            )
+                                        }}
+                                        )
+                                    </button>
+
+                                    <div
+                                        v-if="showConversionSummary"
+                                        class="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-1"
+                                    >
+                                        <p class="text-xs text-gray-600">
+                                            Converted Amount ({{
+                                                defaultCurrencyCode
+                                            }})
+                                        </p>
+                                        <p
+                                            class="text-base font-semibold text-gray-900"
+                                        >
+                                            {{
+                                                formatMoney(
+                                                    amountPaidBase,
+                                                    defaultCurrencyCode
+                                                )
+                                            }}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -729,7 +682,7 @@ const giftCheckAmountNumber = computed(() => {
 });
 
 const keypadDigits = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
-const presetBaseAmounts = [100, 200, 500, 1000];
+const presetBaseAmounts = [50, 100, 200, 500, 1000, 2000, 5000, 10000];
 const amountTendered = ref<string>("0");
 const amountInputRef = ref();
 
@@ -1062,6 +1015,22 @@ const appendDigit = (digit: string) => {
     }
 
     amountTendered.value = `${current}${digit}`;
+};
+
+const backSpace = () => {
+    if (!isCashMethod.value) {
+        return;
+    }
+
+    const currentValue = amountTendered.value?.toString() ?? "0";
+    if (currentValue.length <= 1) {
+        amountTendered.value = "0";
+        return;
+    }
+
+    const nextValue = currentValue.slice(0, -1);
+    amountTendered.value =
+        nextValue === "" || nextValue === "-" ? "0" : nextValue;
 };
 
 const addAmountPaid = (amount: number) => {
