@@ -39,49 +39,15 @@
             </div>
 
             <!-- Table Info -->
-            <div
-                class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
-            >
-                <div class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
-                    <div class="space-y-1">
-                        <p
-                            class="text-xs uppercase tracking-wide text-gray-500"
-                        >
-                            Status
-                        </p>
-                        <span :class="statusBadgeClass">{{ statusLabel }}</span>
-                    </div>
-                    <div class="space-y-1">
-                        <p
-                            class="text-xs uppercase tracking-wide text-gray-500"
-                        >
-                            Seats
-                        </p>
-                        <p class="text-base font-semibold text-gray-900">
-                            {{ tableCapacity || "—" }}
-                        </p>
-                    </div>
-                    <div class="space-y-1">
-                        <p
-                            class="text-xs uppercase tracking-wide text-gray-500"
-                        >
-                            Location
-                        </p>
-                        <p class="text-base font-semibold text-gray-900">
-                            {{ locationName }}
-                        </p>
-                    </div>
-                </div>
 
-                <div
-                    v-if="table?.mergedTo"
-                    class="mt-3 rounded-lg border border-dashed border-gray-200 bg-gray-50 px-3 py-2 text-xs"
-                >
-                    <p class="font-semibold text-gray-700">
-                        Merged into {{ table.mergedToTable }}
-                    </p>
-                    <p class="text-gray-500">Original: {{ table.name }}</p>
-                </div>
+            <div
+                v-if="table?.mergedTo"
+                class="mt-4 rounded-lg border border-dashed border-gray-200 bg-gray-50 px-3 py-2 text-xs"
+            >
+                <p class="font-semibold text-gray-700">
+                    Merged into {{ table.mergedToTable }}
+                </p>
+                <p class="text-gray-500">Original: {{ table.name }}</p>
             </div>
 
             <!-- Running Total Summary -->
@@ -130,17 +96,6 @@
 
             <!-- Action Buttons -->
             <div class="space-y-3">
-                <div class="flex items-center justify-between">
-                    <p
-                        class="text-xs font-semibold uppercase tracking-wide text-gray-500"
-                    >
-                        Quick Actions
-                    </p>
-                    <span class="text-xs text-gray-400" v-if="table?.status">
-                        Manage {{ table?.status }} table
-                    </span>
-                </div>
-
                 <div
                     class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
                 >
@@ -192,140 +147,214 @@
                         severity="warn"
                         outlined
                         @click="handleTransferGuest"
-                        :disabled="!table"
-                    />
-
-                    <Button
-                        v-if="
-                            table &&
-                            table.status === 'occupied' &&
-                            !table.mergedTo
-                        "
-                        label="Vacant Table"
-                        icon="pi pi-undo"
-                        class="table-action-btn w-full h-14 justify-start gap-3 rounded-xl text-left"
-                        severity="warning"
-                        outlined
-                        @click="vacantTable"
-                    />
-
-                    <Button
-                        v-if="table?.mergedTo"
-                        label="Unmerge from Parent"
-                        icon="pi pi-external-link"
-                        class="table-action-btn w-full h-14 justify-start gap-3 rounded-xl text-left"
-                        severity="warning"
-                        outlined
-                        @click="handleUnmergeFromTable"
-                    />
-
-                    <Button
-                        v-if="
-                            table?.mergedTables && table.mergedTables.length > 0
-                        "
-                        label="Unmerge All Tables"
-                        icon="pi pi-table"
-                        class="table-action-btn"
-                        severity="warning"
-                        outlined
-                        @click="handleUnmergeTables"
-                    />
-
-                    <Button
-                        v-if="canPrintBill"
-                        label="Print Bill"
-                        icon="pi pi-print"
-                        class="table-action-btn w-full h-14 justify-start gap-3 rounded-xl text-left"
-                        severity="secondary"
-                        outlined
-                        :loading="isPrintingBill"
-                        :disabled="isPrintingBill"
-                        @click="handlePrintBill"
                     />
                 </div>
-            </div>
 
-            <!-- Pax/Guest Input for Available Tables: show immediately -->
-            <div
-                v-if="table && table.status === 'available' && !table?.mergedTo"
-                class="border-t pt-5 space-y-5"
-            >
                 <div
-                    class="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between"
+                    v-if="
+                        table &&
+                        table.status === 'available' &&
+                        !table?.mergedTo
+                    "
+                    class="mt-5 border-t border-dashed pt-5"
                 >
-                    <div>
-                        <h4 class="text-base font-semibold text-gray-900">
-                            Guest Count
-                        </h4>
-                        <p class="text-sm text-gray-500">
-                            Tap numbers to add to the total or enter it
-                            manually.
-                        </p>
-                    </div>
-                    <div
-                        class="flex flex-wrap items-center gap-3 text-xs uppercase tracking-wide text-gray-400"
-                    >
-                        <span v-if="tableCapacity">
-                            Seats: {{ tableCapacity }}
-                        </span>
-                        <button
-                            type="button"
-                            class="font-semibold text-primary transition hover:text-primary/80"
-                            @click="resetPax"
+                    <div class="flex flex-col gap-6 lg:flex-row lg:items-start">
+                        <div class="flex-1 space-y-5">
+                            <div
+                                class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
+                            >
+                                <div>
+                                    <h4
+                                        class="text-base font-semibold text-gray-900"
+                                    >
+                                        {{ locationName }}
+                                        <span
+                                            :class="statusBadgeClass"
+                                            class="mt-1 inline-flex w-fit items-center"
+                                        >
+                                            {{ statusLabel }}
+                                        </span>
+                                    </h4>
+                                    <p class="text-sm text-gray-500"></p>
+                                </div>
+                                <div
+                                    class="flex flex-wrap items-center gap-3 text-xs uppercase tracking-wide text-gray-400"
+                                >
+                                    <span v-if="tableCapacity">
+                                        Seats: {{ tableCapacity }}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        class="font-semibold text-primary transition hover:text-primary/80"
+                                        @click="resetPax"
+                                    >
+                                        Reset count
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="space-y-4">
+                                <TextField
+                                    label="Number of Pax"
+                                    v-model="pax"
+                                    :min="0"
+                                    class="w-full"
+                                    :placeholder="paxPlaceholder"
+                                    type="number"
+                                />
+
+                                <div class="space-y-1">
+                                    <label
+                                        class="text-sm font-medium text-gray-700"
+                                        for="customer-search"
+                                    >
+                                        Customer (optional)
+                                    </label>
+                                    <div class="relative">
+                                        <input
+                                            id="customer-search"
+                                            type="text"
+                                            v-model="customerSearchQuery"
+                                            class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                            placeholder="Search customers or leave blank for walk-in"
+                                            autocomplete="off"
+                                        />
+                                        <span
+                                            v-if="
+                                                isCustomerSearchLoading &&
+                                                !selectedCustomer
+                                            "
+                                            class="absolute inset-y-0 right-3 flex items-center text-gray-400"
+                                        >
+                                            <i
+                                                class="pi pi-spin pi-spinner text-sm"
+                                            ></i>
+                                        </span>
+                                        <button
+                                            v-if="selectedCustomer"
+                                            type="button"
+                                            class="absolute inset-y-0 right-3 flex items-center text-gray-400 transition hover:text-gray-600"
+                                            @click="clearSelectedCustomer"
+                                            aria-label="Clear selected customer"
+                                        >
+                                            <i class="pi pi-times"></i>
+                                        </button>
+
+                                        <div
+                                            v-if="showCustomerDropdown"
+                                            class="absolute left-0 right-0 top-full z-30 mt-1 max-h-60 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-xl"
+                                        >
+                                            <button
+                                                v-for="customer in customerResults"
+                                                :key="customer.id"
+                                                type="button"
+                                                class="flex w-full flex-col items-start px-3 py-2 text-left transition hover:bg-gray-50"
+                                                @click="
+                                                    selectCustomer(customer)
+                                                "
+                                            >
+                                                <span
+                                                    class="text-sm font-semibold text-gray-900"
+                                                >
+                                                    {{ customer.customer_name }}
+                                                </span>
+                                                <span
+                                                    v-if="
+                                                        customer.contact_no ||
+                                                        customer.email
+                                                    "
+                                                    class="text-xs text-gray-500"
+                                                >
+                                                    {{
+                                                        customer.contact_no ||
+                                                        customer.email
+                                                    }}
+                                                </span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <p class="text-xs text-gray-500">
+                                        {{ customerHelperText }}
+                                    </p>
+                                    <p
+                                        v-if="customerSearchError"
+                                        class="text-xs text-red-500"
+                                    >
+                                        {{ customerSearchError }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="grid gap-3 sm:grid-cols-2">
+                                <Button
+                                    label="Start Order"
+                                    icon="pi pi-play"
+                                    severity="success"
+                                    class="h-12 w-full text-base font-semibold shadow-md"
+                                    :disabled="!hasValidPax"
+                                    @click="confirmTakeOrder"
+                                />
+
+                                <Button
+                                    v-if="canMergeTable"
+                                    label="Merge Table"
+                                    icon="pi pi-link"
+                                    class="h-12 w-full text-base font-semibold"
+                                    outlined
+                                    @click="handleMergeTable"
+                                />
+                            </div>
+                        </div>
+
+                        <div
+                            class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm lg:w-64"
                         >
-                            Reset count
-                        </button>
+                            <p
+                                class="text-xs font-semibold uppercase tracking-wide text-gray-500"
+                            >
+                                Guest Keypad
+                            </p>
+                            <div class="mt-4 space-y-2">
+                                <div
+                                    v-for="(row, rowIndex) in keypadRows"
+                                    :key="`keypad-row-${rowIndex}`"
+                                    class="grid grid-cols-3 gap-2"
+                                >
+                                    <button
+                                        v-for="entry in row"
+                                        :key="entry"
+                                        type="button"
+                                        class="rounded-xl border border-gray-200 bg-gray-50 py-3 text-lg font-semibold text-gray-700 transition hover:border-primary hover:bg-primary/5 hover:text-primary"
+                                        @click="handleKeypadPress(entry)"
+                                    >
+                                        {{ entry }}
+                                    </button>
+                                </div>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <button
+                                        v-for="entry in keypadActionRow"
+                                        :key="`action-${entry}`"
+                                        type="button"
+                                        class="rounded-xl border border-gray-200 bg-gray-50 py-3 text-sm font-semibold text-gray-700 transition hover:border-primary hover:bg-primary/5 hover:text-primary"
+                                        @click="handleKeypadPress(entry)"
+                                    >
+                                        <span v-if="entry === 'clear'">
+                                            Clear
+                                        </span>
+                                        <span v-else-if="entry === 'backspace'">
+                                            Del
+                                        </span>
+                                        <span v-else>
+                                            {{ entry }}
+                                        </span>
+                                    </button>
+                                </div>
+                            </div>
+                            <p class="mt-3 text-center text-xs text-gray-400">
+                                Keypad buttons append digits to guest count.
+                            </p>
+                        </div>
                     </div>
-                </div>
-
-                <div class="grid grid-cols-5 gap-2 sm:grid-cols-10">
-                    <button
-                        v-for="n in quickPaxOptions"
-                        :key="n"
-                        type="button"
-                        class="rounded-lg border border-gray-200 bg-white py-2 text-sm font-semibold text-gray-700 transition hover:border-primary hover:text-primary"
-                        @click="incrementPax(n)"
-                    >
-                        {{ n }}
-                    </button>
-                </div>
-
-                <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
-                    <TextField
-                        label="Number of Pax"
-                        v-model="pax"
-                        :min="0"
-                        class="w-full"
-                        placeholder="Enter number of guests"
-                        type="number"
-                    />
-                    <TextField
-                        label="Guest Name"
-                        v-model="guestName"
-                        class="w-full md:col-span-3"
-                        placeholder="Enter guest name"
-                        @keyup.enter="confirmTakeOrder"
-                    />
-                </div>
-
-                <div class="grid gap-3 sm:grid-cols-2">
-                    <Button
-                        label="Start Order"
-                        icon="pi pi-play"
-                        severity="success"
-                        class="h-12 w-full text-base font-semibold shadow-md"
-                        :disabled="!hasValidPax"
-                        @click="confirmTakeOrder"
-                    />
-
-                    <Button
-                        v-if="canMergeTable"
-                        label="Merge Table"
-                        icon="pi pi-link"
-                        class="h-12 w-full text-base font-semibold"
-                        outlined
-                        @click="handleMergeTable"
-                    />
                 </div>
             </div>
         </div>
@@ -333,7 +362,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from "vue";
+import { ref, watch, computed, onBeforeUnmount } from "vue";
+import axios from "axios";
+import { route } from "ziggy-js";
 import Dialog from "primevue/dialog";
 import Button from "primevue/button";
 import TextField from "@/Components/Form/TextField.vue";
@@ -401,7 +432,15 @@ const allNestedMergedTables = computed(() => {
     return getAllMergedTables(props.table?.mergedTables);
 });
 
-const quickPaxOptions = Array.from({ length: 10 }, (_, index) => index + 1);
+type KeypadEntry = number | "clear" | "backspace";
+
+const keypadRows: number[][] = [
+    [1, 2, 3],
+    [4, 5, 6],
+    [7, 8, 9],
+];
+const keypadActionRow: KeypadEntry[] = ["clear", 0, "backspace"];
+const MAX_PAX = 999;
 
 const tableCapacity = computed(() => {
     return props.table?.chairs ?? props.table?.capacity ?? 0;
@@ -610,28 +649,200 @@ const ensureNonNegative = (value: number): number => {
 };
 
 const pax = ref(0);
-const guestName = ref("");
+const customerSearchQuery = ref("");
+const customerResults = ref<any[]>([]);
+const selectedCustomer = ref<any | null>(null);
+const customerSearchError = ref<string | null>(null);
+const isCustomerSearchLoading = ref(false);
+const lastSearchTerm = ref("");
+let customerSearchTimeout: ReturnType<typeof setTimeout> | null = null;
+const WALK_IN_LABEL = "Walk-in Guest";
+const MIN_CUSTOMER_SEARCH_LENGTH = 2;
 
 const hasValidPax = computed(() => normalizePaxValue(pax.value) >= 1);
 
-const incrementPax = (value: number) => {
-    const current = normalizePaxValue(pax.value);
-    pax.value = ensureNonNegative(current + value);
+const paxPlaceholder = computed(() => {
+    const current = ensureNonNegative(normalizePaxValue(pax.value));
+    if (!current) {
+        return "Enter number of guests";
+    }
+    return `Enter number of guests (current: ${current})`;
+});
+
+const showCustomerDropdown = computed(() => {
+    const trimmedQuery = customerSearchQuery.value.trim();
+    return (
+        !selectedCustomer.value &&
+        Boolean(trimmedQuery) &&
+        trimmedQuery.length >= MIN_CUSTOMER_SEARCH_LENGTH &&
+        customerResults.value.length > 0
+    );
+});
+
+const customerHelperText = computed(() => {
+    if (selectedCustomer.value) {
+        return "Customer will be linked to this cart.";
+    }
+
+    return "Leave blank if this is a walk-in guest.";
+});
+
+const appendPaxDigit = (digit: number) => {
+    const safeDigit = Number(digit);
+    if (!Number.isFinite(safeDigit)) {
+        return;
+    }
+
+    const currentValue = ensureNonNegative(normalizePaxValue(pax.value));
+    const currentString = currentValue.toString();
+    const nextString =
+        currentString === "0"
+            ? String(safeDigit)
+            : `${currentString}${safeDigit}`;
+    const nextValue = ensureNonNegative(Number(nextString));
+    pax.value = Math.min(nextValue, MAX_PAX);
+};
+
+const removeLastPaxDigit = () => {
+    const currentString = ensureNonNegative(
+        normalizePaxValue(pax.value)
+    ).toString();
+    const trimmed =
+        currentString.length <= 1 ? "0" : currentString.slice(0, -1);
+    pax.value = ensureNonNegative(Number(trimmed));
+};
+
+const handleKeypadPress = (entry: KeypadEntry) => {
+    if (entry === "clear") {
+        resetPax();
+        return;
+    }
+
+    if (entry === "backspace") {
+        removeLastPaxDigit();
+        return;
+    }
+
+    appendPaxDigit(entry);
 };
 
 const resetPax = () => {
     pax.value = 0;
 };
 
+const resetCustomerSelection = () => {
+    customerSearchQuery.value = "";
+    customerResults.value = [];
+    selectedCustomer.value = null;
+    customerSearchError.value = null;
+    isCustomerSearchLoading.value = false;
+    if (customerSearchTimeout) {
+        clearTimeout(customerSearchTimeout);
+        customerSearchTimeout = null;
+    }
+};
+
+const fetchCustomers = async (term: string) => {
+    try {
+        isCustomerSearchLoading.value = true;
+        customerSearchError.value = null;
+        const { data } = await axios.get(route("customers.search"), {
+            params: { query: term },
+        });
+
+        if (Array.isArray(data)) {
+            customerResults.value = data;
+        } else if (Array.isArray(data?.data)) {
+            customerResults.value = data.data;
+        } else {
+            customerResults.value = [];
+        }
+    } catch (error) {
+        console.error("Customer search failed", error);
+        customerResults.value = [];
+        customerSearchError.value =
+            "Unable to load customers right now. Please try again.";
+    } finally {
+        isCustomerSearchLoading.value = false;
+        lastSearchTerm.value = term;
+    }
+};
+
+const handleCustomerSearch = (nextQuery: string) => {
+    const trimmed = nextQuery.trim();
+
+    if (customerSearchTimeout) {
+        clearTimeout(customerSearchTimeout);
+        customerSearchTimeout = null;
+    }
+
+    if (!trimmed) {
+        customerResults.value = [];
+        selectedCustomer.value = null;
+        customerSearchError.value = null;
+        lastSearchTerm.value = "";
+        return;
+    }
+
+    if (
+        selectedCustomer.value &&
+        trimmed === (selectedCustomer.value.customer_name ?? "").trim()
+    ) {
+        customerResults.value = [];
+        customerSearchError.value = null;
+        return;
+    }
+
+    if (trimmed.length < MIN_CUSTOMER_SEARCH_LENGTH) {
+        customerResults.value = [];
+        customerSearchError.value = null;
+        lastSearchTerm.value = "";
+        return;
+    }
+
+    if (trimmed === lastSearchTerm.value) {
+        return;
+    }
+
+    customerSearchTimeout = setTimeout(() => {
+        fetchCustomers(trimmed);
+    }, 300);
+};
+
+watch(customerSearchQuery, handleCustomerSearch);
+
 watch(
     () => props.show,
     (newShow) => {
         if (newShow) {
             pax.value = 0;
-            guestName.value = "";
+            resetCustomerSelection();
+        } else {
+            resetCustomerSelection();
         }
     }
 );
+
+onBeforeUnmount(() => {
+    if (customerSearchTimeout) {
+        clearTimeout(customerSearchTimeout);
+    }
+});
+
+const selectCustomer = (customer: any) => {
+    if (!customer) {
+        return;
+    }
+
+    selectedCustomer.value = customer;
+    customerSearchQuery.value = customer.customer_name ?? "";
+    customerResults.value = [];
+    customerSearchError.value = null;
+};
+
+const clearSelectedCustomer = () => {
+    resetCustomerSelection();
+};
 
 const handleClose = () => {
     emit("close");
@@ -652,7 +863,8 @@ const confirmTakeOrder = () => {
 
     takeOrder(props.table.id, {
         pax: safePax,
-        guest_name: guestName.value.trim(),
+        guest_name: selectedCustomer.value?.customer_name ?? WALK_IN_LABEL,
+        customer_id: selectedCustomer.value?.id ?? null,
     });
 };
 

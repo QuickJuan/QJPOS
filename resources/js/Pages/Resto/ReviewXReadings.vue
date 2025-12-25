@@ -279,6 +279,31 @@
                                                         </p>
                                                     </div>
                                                     <div
+                                                        v-if="
+                                                            getGiftCheckTotal(
+                                                                sessionSummary
+                                                            ) > 0
+                                                        "
+                                                        class="flex flex-col lg:flex-row lg:justify-between"
+                                                    >
+                                                        <p
+                                                            class="text-sm text-gray-600"
+                                                        >
+                                                            Gift Checks
+                                                        </p>
+                                                        <p
+                                                            class="font-semibold"
+                                                        >
+                                                            ₱{{
+                                                                formatMoney(
+                                                                    getGiftCheckTotal(
+                                                                        sessionSummary
+                                                                    )
+                                                                )
+                                                            }}
+                                                        </p>
+                                                    </div>
+                                                    <div
                                                         class="flex flex-col lg:flex-row lg:justify-between"
                                                     >
                                                         <p
@@ -1028,6 +1053,19 @@ const getStatusLabel = (status: string) => {
         default:
             return status;
     }
+};
+
+const getGiftCheckTotal = (sessionSummary: any) => {
+    if (!sessionSummary?.cash_denomination_details) {
+        return 0;
+    }
+
+    const details = sessionSummary.cash_denomination_details as any;
+    return (
+        Number(
+            details.gift_check_total ?? details.totals?.gift_check_in_base ?? 0
+        ) || 0
+    );
 };
 
 watch(

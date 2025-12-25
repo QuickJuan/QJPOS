@@ -312,6 +312,11 @@
                     </span>
                 </div>
 
+                <div class="flex justify-between" v-if="giftCheckTotal > 0">
+                    <span>Gift Checks:</span>
+                    <span>{{ formatMoney(giftCheckTotal) }}</span>
+                </div>
+
                 <div class="flex justify-between">
                     <span>Expected Cash:</span>
                     <span>
@@ -327,31 +332,13 @@
                     </span>
                 </div>
 
-                <!-- Cash Denomination Details -->
-                <div
+                <CashBreakdown
                     v-if="props.sessionSummary?.cash_denomination_details"
-                    class="mt-2"
-                >
-                    <div class="text-xs font-semibold mb-1">
-                        Cash Breakdown:
-                    </div>
-                    <div
-                        v-for="[denom, count] in Object.entries(
-                            props.sessionSummary.cash_denomination_details
-                        ).sort((a, b) => parseFloat(b[0]) - parseFloat(a[0]))"
-                        :key="denom"
-                        class="flex justify-between text-xs ml-2"
-                    >
-                        <span>{{ formatMoney(denom) }} x {{ count }}:</span>
-                        <span>
-                            {{
-                                formatMoney(
-                                    parseFloat(String(denom)) * Number(count)
-                                )
-                            }}
-                        </span>
-                    </div>
-                </div>
+                    class="mt-4"
+                    :cash-denomination-details="
+                        props.sessionSummary.cash_denomination_details
+                    "
+                />
 
                 <div class="border-t my-2"></div>
 
@@ -365,6 +352,7 @@
 </template>
 
 <script setup lang="ts">
+import CashBreakdown from "@/Components/Resto/CashBreakdown.vue";
 import { formatMoney } from "@/Utils/FormatMoney";
 import { usePage } from "@inertiajs/vue3";
 import { Button, Dialog, ConfirmPopup, Toast, useToast } from "primevue";
@@ -406,5 +394,15 @@ const variance = computed(() => {
     const expectedCashValue = expectedCash.value;
 
     return cashDenominationTotal - expectedCashValue;
+});
+
+const giftCheckTotal = computed(() => {
+    const details = props.sessionSummary?.cash_denomination_details as any;
+    if (!details) return 0;
+    return (
+        Number(
+            details.gift_check_total ?? details.totals?.gift_check_in_base ?? 0
+        ) || 0
+    );
 });
 </script>

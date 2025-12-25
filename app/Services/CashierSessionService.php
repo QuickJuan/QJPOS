@@ -71,7 +71,10 @@ class CashierSessionService
             throw new Exception('No open session found');
         }
 
-        $closingCash = $session->beginning_cash + $request->cash_denomination;
+        $rawBreakdown = $request->input('cash_denomination_details', []);
+        $normalizedBreakdown = $this->normalizeCashDenominationDetails($rawBreakdown);
+        $cashDenominationTotal = (float) ($normalizedBreakdown['grand_total_in_base'] ?? 0);
+        $closingCash = ($session->beginning_cash ?? 0) + $cashDenominationTotal;
 
         $ordersTotals = $this->orderService->getTotalOrdersPerShift($session->id);
         $productCounts = $this->orderService->getOrderItemsCount($session->id);
@@ -92,8 +95,8 @@ class CashierSessionService
         $session->update([
             'closing_time'              => now(),
             'closing_cash'              => (float) $closingCash,
-            'cash_denomination_details' => $request->cash_denomination_details,
-            'cash_denomination'         => (float) $request->cash_denomination,
+            'cash_denomination_details' => $normalizedBreakdown,
+            'cash_denomination'         => $cashDenominationTotal,
             'total_sales'              => (float) $ordersTotals->total_due,
             'meta_data'                 => [
                 'total_orders'   => (float) $ordersTotals->total_orders,
@@ -123,6 +126,134 @@ class CashierSessionService
         ]);
 
         return $session->fresh();
+    }
+
+    /**
+     * Ensure cash denomination details follow the structured multi-currency schema.
+     */
+    private function normalizeCashDenominationDetails($details): array
+    {
+        if (! is_array($details)) {
+            return $this->convertLegacyDenominations([]);
+        }
+
+        if (! isset($details['currencies']) || ! is_array($details['currencies'])) {
+            return $this->convertLegacyDenominations($details);
+        }
+
+        $currencies = [];
+        foreach ($details['currencies'] as $currency) {
+            if (! is_array($currency)) {
+                continue;
+            }
+
+            $denominations = [];
+            foreach ($currency['denominations'] ?? [] as $entry) {
+                if (! isset($entry['value'], $entry['count'])) {
+                    continue;
+                }
+
+                $value = (float) $entry['value'];
+                $count = (int) $entry['count'];
+
+                if ($count <= 0) {
+                    continue;
+                }
+
+                $denominations[] = [
+                    'id' => $entry['id'] ?? null,
+                    'label' => $entry['label'] ?? number_format($value, 2),
+                    'value' => $value,
+                    'count' => $count,
+                    'total' => $entry['total'] ?? $value * $count,
+                ];
+            }
+
+            $exchangeRate = (float) ($currency['exchange_rate'] ?? 1);
+            $amountInCurrency = (float) ($currency['amount_in_currency'] ?? $currency['total_amount'] ?? array_sum(array_column($denominations, 'total')));
+            $amountInBase = (float) ($currency['amount_in_base'] ?? $currency['total_in_base'] ?? $amountInCurrency * $exchangeRate);
+
+            $currencies[] = [
+                'currency_id' => $currency['currency_id'] ?? null,
+                'currency_code' => $currency['currency_code'] ?? '',
+                'currency_name' => $currency['currency_name'] ?? '',
+                'symbol' => $currency['symbol'] ?? null,
+                'exchange_rate' => $exchangeRate,
+                'denominations' => array_values($denominations),
+                'amount_in_currency' => $amountInCurrency,
+                'amount_in_base' => $amountInBase,
+            ];
+        }
+
+        $cashTotal = array_reduce($currencies, fn($carry, $currency) => $carry + (float) ($currency['amount_in_base'] ?? 0), 0.0);
+        $giftCheck = (float) ($details['gift_check_total'] ?? data_get($details, 'totals.gift_check_in_base', 0));
+        $grandTotal = $cashTotal + $giftCheck;
+
+        return [
+            'base_currency_id' => $details['base_currency_id'] ?? null,
+            'base_currency_code' => $details['base_currency_code'] ?? null,
+            'base_currency_symbol' => $details['base_currency_symbol'] ?? null,
+            'gift_check_total' => $giftCheck,
+            'totals' => [
+                'cash_in_base' => $cashTotal,
+                'gift_check_in_base' => $giftCheck,
+                'combined_in_base' => $grandTotal,
+                'variance_in_base' => data_get($details, 'totals.variance_in_base'),
+            ],
+            'currencies' => $currencies,
+            'grand_total_in_base' => $grandTotal,
+        ];
+    }
+
+    /**
+     * Support legacy payloads that only contained denomination => count mappings.
+     */
+    private function convertLegacyDenominations(array $legacy): array
+    {
+        $denominations = [];
+
+        foreach ($legacy as $denomination => $count) {
+            $count = (int) $count;
+            $value = (float) $denomination;
+
+            if ($count <= 0 || $value <= 0) {
+                continue;
+            }
+
+            $denominations[] = [
+                'id' => null,
+                'label' => number_format($value, 2),
+                'value' => $value,
+                'count' => $count,
+                'total' => $value * $count,
+            ];
+        }
+
+        $total = array_sum(array_column($denominations, 'total'));
+
+        return [
+            'base_currency_id' => null,
+            'base_currency_code' => null,
+            'base_currency_symbol' => null,
+            'gift_check_total' => 0,
+            'totals' => [
+                'cash_in_base' => $total,
+                'gift_check_in_base' => 0,
+                'combined_in_base' => $total,
+                'variance_in_base' => null,
+            ],
+            'currencies' => [[
+                'currency_id' => null,
+                'currency_code' => 'CASH',
+                'currency_name' => 'Cash',
+                'symbol' => null,
+                'exchange_rate' => 1,
+                'denominations' => $denominations,
+                'amount_in_currency' => $total,
+                'amount_in_base' => $total,
+            ]],
+            'grand_total_in_base' => $total,
+        ];
     }
 
     public function createOrder(Request $request)

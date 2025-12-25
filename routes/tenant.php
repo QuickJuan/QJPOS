@@ -13,7 +13,7 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\CashierSessionController;
 use App\Http\Controllers\CashierCashoutController;
 use App\Http\Controllers\TableManagementController;
-use App\Models\Branch;
+use App\Http\Controllers\TenantLandingController;
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
 use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
@@ -34,9 +34,9 @@ use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 // Only register tenant routes if NOT on central domain
 if (!isCentralDomain()) {
     Route::middleware([
-        'web',
         InitializeTenancyBySubdomain::class,
         PreventAccessFromCentralDomains::class,
+        'web',
 
 ])->group(function () {
 
@@ -47,7 +47,9 @@ if (!isCentralDomain()) {
             Route::middleware('guest')
                 ->group(function () {
                     Route::get('/login', 'index')->name('login');
-                    Route::post('/login', 'login')->name('login.post');
+                    Route::post('/login', 'login')
+                        ->name('login.post')
+                        ->middleware('throttle:login');
                     Route::get('/branches/validate/{id}', 'checkBranch')->name('branches.validate');
                 });
 
@@ -75,24 +77,7 @@ if (!isCentralDomain()) {
         });
 
     // ROUTE FOR PUBLIC LANDING PAGE
-    Route::get('/', function () {
-        $branches = Branch::orderBy('name')
-            ->get([
-                'id',
-                'name',
-                'branch_code',
-                'address',
-                'phone',
-                'email',
-                'contact_person',
-                'is_active',
-            ]);
-
-        return Inertia::render('TenantLanding', [
-            'tenant' => tenant(),
-            'branches' => $branches,
-        ]);
-    })->name('landing');
+    Route::get('/', TenantLandingController::class)->name('landing');
 
     Route::get('/product/{slug}', [ProductController::class, 'show'])->name('product.show');
 

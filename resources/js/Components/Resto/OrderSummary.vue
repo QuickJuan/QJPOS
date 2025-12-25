@@ -673,8 +673,8 @@ const handleEndOfShift = () => {
 };
 
 const handleConfirmCloseSession = async (data: any) => {
-    let payload = {
-        cash_denomination_details: data.denominationData,
+    const payload = {
+        cash_denomination_details: data.currencyBreakdown,
         cash_denomination: data.totalCashCounted,
         shift_no: page.props.current_cashier_session?.id,
         cashier_id: page.props.current_cashier_session?.cashier_id,

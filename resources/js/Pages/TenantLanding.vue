@@ -87,35 +87,68 @@
                     <div
                         class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
                     >
-                        <div class="flex flex-wrap gap-2">
-                            <button
-                                type="button"
-                                @click="setCategoryFilter(null)"
-                                :class="[
-                                    'rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] transition',
-                                    !activeCategorySlug
-                                        ? 'border border-primary-300 bg-white text-slate-900'
-                                        : 'border border-white/20 text-white hover:border-white',
-                                ]"
+                        <div class="space-y-3">
+                            <div
+                                class="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.3em] text-slate-500"
                             >
-                                All
-                            </button>
-                            <button
-                                v-for="category in categoriesList"
-                                :key="category.id"
-                                type="button"
-                                @click="
-                                    setCategoryFilter(category.slug ?? null)
-                                "
-                                :class="[
-                                    'rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] transition',
-                                    activeCategorySlug === category.slug
-                                        ? 'border border-primary-300 bg-primary-500/10 text-primary-200'
-                                        : 'border border-white/20 text-white hover:border-white',
-                                ]"
-                            >
-                                {{ category.name }}
-                            </button>
+                                <span>Filter by</span>
+                                <div
+                                    class="inline-flex rounded-full border border-white/10 bg-slate-900/70 p-1"
+                                >
+                                    <button
+                                        type="button"
+                                        class="rounded-full px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] transition"
+                                        :class="
+                                            filterMode === 'category'
+                                                ? 'bg-white text-slate-900'
+                                                : 'text-white/70 hover:text-white'
+                                        "
+                                        @click="setFilterMode('category')"
+                                    >
+                                        Categories
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="rounded-full px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] transition"
+                                        :class="
+                                            filterMode === 'group'
+                                                ? 'bg-white text-slate-900'
+                                                : 'text-white/70 hover:text-white'
+                                        "
+                                        @click="setFilterMode('group')"
+                                    >
+                                        Groups
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    @click="setActiveFilter(null)"
+                                    :class="[
+                                        'rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] transition',
+                                        !activeFilterSlug
+                                            ? 'border border-primary-300 bg-white text-slate-900'
+                                            : 'border border-white/20 text-white hover:border-white',
+                                    ]"
+                                >
+                                    All
+                                </button>
+                                <button
+                                    v-for="entry in currentFilterEntries"
+                                    :key="entry.slug ?? entry.id"
+                                    type="button"
+                                    @click="setActiveFilter(entry.slug ?? null)"
+                                    :class="[
+                                        'rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] transition',
+                                        activeFilterSlug === entry.slug
+                                            ? 'border border-primary-300 bg-primary-500/10 text-primary-200'
+                                            : 'border border-white/20 text-white hover:border-white',
+                                    ]"
+                                >
+                                    {{ entry.name }}
+                                </button>
+                            </div>
                         </div>
                         <label class="w-full md:w-auto">
                             <span class="sr-only">Search menu</span>
@@ -135,7 +168,7 @@
                         <span class="text-white">{{
                             displayProducts.length
                         }}</span>
-                        {{ activeCategoryName }}
+                        {{ activeFilterLabel }}
                         <span v-if="searchTerm">
                             matching "{{ searchTerm }}"</span
                         >
@@ -337,12 +370,17 @@ type Branch = {
     is_active?: boolean;
 };
 
-type Category = {
+type MenuCollection = {
     id: number;
     name: string;
     slug?: string;
+    featured_image_url?: string;
     products?: Product[];
 };
+
+type Category = MenuCollection;
+type Group = MenuCollection;
+type FilterMode = "category" | "group";
 
 const props = defineProps<{
     tenant: {
@@ -351,7 +389,10 @@ const props = defineProps<{
     };
     branches?: Branch[];
     categories?: Category[];
-    selectedCategorySlug?: string;
+    groups?: Group[];
+    selectedCategorySlug?: string | null;
+    selectedGroupSlug?: string | null;
+    filterMode?: FilterMode;
     searchQuery?: string;
 }>();
 
@@ -393,32 +434,63 @@ const sampleProducts: Product[] = [
 ];
 
 const categoriesList = computed<Category[]>(() => props.categories ?? []);
+const groupsList = computed<Group[]>(() => props.groups ?? []);
+const filterMode = ref<FilterMode>(props.filterMode ?? "category");
 const activeCategorySlug = ref<string | null>(
     props.selectedCategorySlug ?? null
 );
+const activeGroupSlug = ref<string | null>(props.selectedGroupSlug ?? null);
 const searchTerm = ref(props.searchQuery ?? "");
 
-const hasConfiguredProducts = computed(() =>
-    categoriesList.value.some(
+const menuCollectionsHaveProducts = computed(() => {
+    const categoryHasProducts = categoriesList.value.some(
         (category) => (category.products?.length ?? 0) > 0
+    );
+    const groupHasProducts = groupsList.value.some(
+        (group) => (group.products?.length ?? 0) > 0
+    );
+    return categoryHasProducts || groupHasProducts;
+});
+
+const currentFilterEntries = computed<MenuCollection[]>(() =>
+    filterMode.value === "group" ? groupsList.value : categoriesList.value
+);
+
+const activeFilterSlug = computed<string | null>(() =>
+    filterMode.value === "group"
+        ? activeGroupSlug.value
+        : activeCategorySlug.value
+);
+
+const hasEntriesInCurrentMode = computed(() =>
+    currentFilterEntries.value.some(
+        (entry) => (entry.products?.length ?? 0) > 0
     )
 );
 
-const filteredProducts = computed<Product[]>(() => {
-    let products: Product[] = [];
-
-    if (activeCategorySlug.value) {
-        const selected = categoriesList.value.find(
-            (category) => category.slug === activeCategorySlug.value
-        );
-        products = selected?.products ?? [];
-    } else if (hasConfiguredProducts.value) {
-        products = categoriesList.value.flatMap(
-            (category) => category.products ?? []
-        );
+const gatherProducts = (
+    collection: Array<Category | Group>,
+    slug: string | null
+): Product[] => {
+    if (!collection.length) {
+        return [];
     }
 
-    if (!products.length && !hasConfiguredProducts.value) {
+    if (slug) {
+        const selected = collection.find((entry) => entry.slug === slug);
+        return selected?.products ?? [];
+    }
+
+    return collection.flatMap((entry) => entry.products ?? []);
+};
+
+const filteredProducts = computed<Product[]>(() => {
+    let products = gatherProducts(
+        currentFilterEntries.value,
+        activeFilterSlug.value
+    );
+
+    if (!products.length && !menuCollectionsHaveProducts.value) {
         products = sampleProducts;
     }
 
@@ -434,16 +506,24 @@ const filteredProducts = computed<Product[]>(() => {
     return products;
 });
 
-const activeCategoryName = computed(() => {
-    if (activeCategorySlug.value) {
+const activeFilterLabel = computed(() => {
+    if (activeFilterSlug.value) {
         return (
-            categoriesList.value.find(
-                (category) => category.slug === activeCategorySlug.value
-            )?.name ?? "category"
+            currentFilterEntries.value.find(
+                (entry) => entry.slug === activeFilterSlug.value
+            )?.name ?? (filterMode.value === "group" ? "group" : "category")
         );
     }
 
-    return hasConfiguredProducts.value ? "all categories" : "sample menu";
+    if (hasEntriesInCurrentMode.value) {
+        return filterMode.value === "group" ? "all groups" : "all categories";
+    }
+
+    if (menuCollectionsHaveProducts.value) {
+        return filterMode.value === "group" ? "categories" : "groups";
+    }
+
+    return "sample menu";
 });
 
 const brandName = computed(
@@ -460,9 +540,17 @@ const branchCountLabel = computed(() => {
 });
 const heroTeaser =
     "Discover our most loved dishes, seasonal favorites, and exclusive specials through vibrant visuals—so choosing what to order feels effortless.";
-const heroParagraph =
-    "Give guests a peek into every branch, every hero dish, and the people operating them—then guide them straight to your menu with one bold action.";
-const setCategoryFilter = (slug: string | null) => {
+
+const setFilterMode = (mode: FilterMode) => {
+    filterMode.value = mode;
+};
+
+const setActiveFilter = (slug: string | null) => {
+    if (filterMode.value === "group") {
+        activeGroupSlug.value = slug;
+        return;
+    }
+
     activeCategorySlug.value = slug;
 };
 

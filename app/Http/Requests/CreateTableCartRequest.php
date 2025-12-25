@@ -24,6 +24,7 @@ class CreateTableCartRequest extends FormRequest
             'table_id'   => 'required|integer|exists:table_rooms,id',
             'pax'        => 'nullable|integer|min:1',
             'guest_name' => 'nullable|string|max:75',
+            'customer_id'=> 'nullable|integer|exists:customers,id',
         ];
     }
 }

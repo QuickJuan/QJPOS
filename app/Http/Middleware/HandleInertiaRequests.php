@@ -281,15 +281,44 @@ class HandleInertiaRequests extends Middleware
     private function loadTenantCurrencies(): array
     {
         if (!tenant()) {
+            \Log::warning('loadTenantCurrencies called without tenant context');
             return [];
         }
 
         try {
-            return Currency::active()
+            $currencies = Currency::active()
+                ->with(['activeDenominations' => function ($query) {
+                    $query->select('id', 'currency_id', 'value', 'label', 'sort_order', 'is_active');
+                }])
                 ->orderByDesc('is_default')
                 ->orderBy('name')
-                ->get(['id', 'code', 'name', 'symbol', 'exchange_rate', 'is_default'])
-                ->toArray();
+                ->get(['id', 'code', 'name', 'symbol', 'exchange_rate', 'is_default']);
+
+            \Log::info('Loaded tenant currencies', [
+                'tenant_id' => tenant('id'),
+                'count' => $currencies->count(),
+            ]);
+
+            return $currencies->map(function (Currency $currency) {
+                $currencySymbol = $currency->symbol ?? 'PHP ';
+
+                return [
+                    'id' => $currency->id,
+                    'code' => $currency->code,
+                    'name' => $currency->name,
+                    'symbol' => $currencySymbol,
+                    'exchange_rate' => $currency->exchange_rate ?? 1,
+                    'is_default' => (bool) $currency->is_default,
+                    'denominations' => $currency->activeDenominations
+                        ->filter(fn($denom) => $denom->is_active)
+                        ->map(fn($denom) => [
+                            'id' => $denom->id,
+                            'value' => (float) $denom->value,
+                            'label' => $denom->label ?? sprintf('%s%s', $currencySymbol, number_format((float) $denom->value, 2)),
+                            'sort_order' => $denom->sort_order,
+                        ])->values()->toArray(),
+                ];
+            })->toArray();
         } catch (\Exception $e) {
             \Log::error('Failed to load currencies in HandleInertiaRequests: ' . $e->getMessage());
             return [];

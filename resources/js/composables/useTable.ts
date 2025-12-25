@@ -62,7 +62,10 @@ export const useTable = () => {
        return response;
     };
 
-    const takeOrder = (tableId: number, data: { pax: number; guest_name: string; }) => {
+    const takeOrder = (
+        tableId: number,
+        data: { pax: number; guest_name?: string; customer_id?: number | null }
+    ) => {
         if (!tableId) {
             toast.add({
                 severity: "error",
@@ -78,7 +81,8 @@ export const useTable = () => {
             {
                 table_id: tableId,
                 pax: data.pax,
-                guest_name: data.guest_name || 'Guest',
+                guest_name: data.guest_name || "Guest",
+                customer_id: data.customer_id ?? null,
             },
             {
                 preserveScroll: false,

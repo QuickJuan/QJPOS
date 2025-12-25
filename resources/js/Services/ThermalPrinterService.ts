@@ -150,6 +150,38 @@ interface BluetoothPrintService {
     characteristic: BluetoothRemoteGATTCharacteristic | null;
 }
 
+interface StructuredDenominationCurrency {
+    currency_id: number | string;
+    currency_code: string;
+    currency_name: string;
+    symbol?: string | null;
+    exchange_rate: number;
+    amount_in_currency: number;
+    amount_in_base: number;
+    denominations?: Array<{
+        id?: number | string;
+        label?: string;
+        value: number;
+        count: number;
+        total: number;
+    }>;
+}
+
+interface StructuredCashDenominationDetails {
+    base_currency_id: number | string | null;
+    base_currency_code: string | null;
+    base_currency_symbol?: string | null;
+    grand_total_in_base?: number;
+    gift_check_total?: number;
+    totals?: {
+        cash_in_base: number;
+        gift_check_in_base: number;
+        combined_in_base: number;
+        variance_in_base?: number;
+    };
+    currencies: StructuredDenominationCurrency[];
+}
+
 interface SessionSummaryData {
     id: number;
     shift_start: string;
@@ -174,7 +206,7 @@ interface SessionSummaryData {
     beginning_cash: number;
     total_sales: number;
     cash_denomination_total: number;
-    cash_denomination_details: Record<string, number>;
+    cash_denomination_details: StructuredCashDenominationDetails | Record<string, number> | null;
     meta_data: {
         less_tax: number;
         net_sales: number;
@@ -899,6 +931,17 @@ class ThermalPrinterService {
      */
     private stringToBytes(str: string): number[] {
         return Array.from(new TextEncoder().encode(str));
+    }
+
+    private isStructuredDenomination(
+        details: SessionSummaryData['cash_denomination_details']
+    ): details is StructuredCashDenominationDetails {
+        return (
+            !!details &&
+            typeof details === 'object' &&
+            'currencies' in details &&
+            Array.isArray((details as StructuredCashDenominationDetails).currencies)
+        );
     }
 
     /**
@@ -1840,16 +1883,49 @@ class ThermalPrinterService {
                 commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
                 commands.push(...this.ESC_POS.LINE_FEED);
 
-                const denominations = ['1000', '500', '200', '100', '50', '20', '10', '5', '1', '0.5', '0.25'];
-                denominations.forEach(denom => {
-                    const count = sessionData.cash_denomination_details[denom];
-                    if (count && count > 0) {
-                        const total = parseFloat(denom) * count;
-                        commands.push(...this.stringToBytes(this.formatInfoLine(`${denom} x ${count}:`, total.toFixed(2))));
+                const details = sessionData.cash_denomination_details;
+
+                if (this.isStructuredDenomination(details)) {
+                    details.currencies.forEach((currency) => {
+                        const currencyLabel = `${currency.currency_code}${currency.symbol ? ` (${currency.symbol})` : ''}`;
+                        commands.push(...this.stringToBytes(currencyLabel));
                         commands.push(...this.ESC_POS.LINE_FEED);
+
+                        (currency.denominations || []).forEach((denom) => {
+                            const total = denom.total ?? denom.value * denom.count;
+                            const label = `${denom.label ?? denom.value} x ${denom.count}:`;
+                            commands.push(...this.stringToBytes(this.formatInfoLine(label, total.toFixed(2))));
+                            commands.push(...this.ESC_POS.LINE_FEED);
+                        });
+
+                        const subtotal = typeof currency.amount_in_currency === 'number' ? currency.amount_in_currency : 0;
+                        const baseTotal = typeof currency.amount_in_base === 'number'
+                            ? currency.amount_in_base
+                            : subtotal * (currency.exchange_rate || 1);
+
+                        commands.push(...this.stringToBytes(this.formatInfoLine('Subtotal:', subtotal.toFixed(2))));
+                        commands.push(...this.ESC_POS.LINE_FEED);
+                        commands.push(...this.stringToBytes(this.formatInfoLine('≈ Base:', baseTotal.toFixed(2))));
+                        commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+                    });
+
+                    const giftCheck = details.gift_check_total ?? details.totals?.gift_check_in_base;
+                    if (giftCheck && giftCheck > 0) {
+                        commands.push(...this.stringToBytes(this.formatTotalLine('Gift Checks:', giftCheck)));
+                        commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
                     }
-                });
-                commands.push(...this.ESC_POS.LINE_FEED);
+                } else {
+                    const denominations = ['1000', '500', '200', '100', '50', '20', '10', '5', '1', '0.5', '0.25'];
+                    denominations.forEach(denom => {
+                        const count = (details as Record<string, number>)[denom];
+                        if (count && count > 0) {
+                            const total = parseFloat(denom) * count;
+                            commands.push(...this.stringToBytes(this.formatInfoLine(`${denom} x ${count}:`, total.toFixed(2))));
+                            commands.push(...this.ESC_POS.LINE_FEED);
+                        }
+                    });
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                }
             }
 
             // Footer separator

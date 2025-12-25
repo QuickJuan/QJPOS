@@ -3,10 +3,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Branch;
 use App\Models\User;
+use Illuminate\Auth\Events\Lockout;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
@@ -48,9 +51,12 @@ class AuthController extends Controller
             'branch'   => 'required|exists:branches,id',
         ]);
 
+        $this->ensureIsNotRateLimited($request);
+
         $user = User::where('email', $request->email)->first();
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
+            RateLimiter::hit($this->throttleKey($request));
             return back()->withErrors([
                 'email' => 'The provided credentials are incorrect.',
             ]);
@@ -97,6 +103,8 @@ class AuthController extends Controller
 
         Auth::login($user);
 
+        RateLimiter::clear($this->throttleKey($request));
+
         // Save session explicitly before redirecting
         $request->session()->save();
 
@@ -128,5 +136,28 @@ class AuthController extends Controller
         DB::table('sessions')
             ->where('user_id', $user->id)
             ->delete();
+    }
+
+    protected function ensureIsNotRateLimited(Request $request): void
+    {
+        if (! RateLimiter::tooManyAttempts($this->throttleKey($request), 5)) {
+            return;
+        }
+
+        event(new Lockout($request));
+
+        $seconds = RateLimiter::availableIn($this->throttleKey($request));
+
+        throw ValidationException::withMessages([
+            'email' => trans('auth.throttle', [
+                'seconds' => $seconds,
+                'minutes' => ceil($seconds / 60),
+            ]),
+        ]);
+    }
+
+    protected function throttleKey(Request $request): string
+    {
+        return Str::lower($request->input('email')) . '|' . $request->ip();
     }
 }

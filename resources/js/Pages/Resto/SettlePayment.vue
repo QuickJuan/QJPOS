@@ -562,13 +562,27 @@ const availablePaymentMethods = computed(() => {
         return orderA - orderB;
     });
 });
-const currencies = computed(() => page.props.currencies ?? []);
 const fallbackCurrency = {
     id: null,
     code: "PHP",
+    name: "Philippine Peso",
     symbol: "₱",
     exchange_rate: 1,
+    is_default: true,
 };
+const currencies = computed(() => {
+    const sharedCurrencies = page.props.currencies;
+
+    if (Array.isArray(sharedCurrencies) && sharedCurrencies.length > 0) {
+        return sharedCurrencies;
+    }
+
+    if (page.props.default_currency) {
+        return [page.props.default_currency];
+    }
+
+    return [fallbackCurrency];
+});
 const defaultCurrency = computed(() => {
     if (page.props.default_currency) {
         return page.props.default_currency;

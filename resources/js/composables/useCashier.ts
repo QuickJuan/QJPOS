@@ -55,6 +55,37 @@ export interface SettlePaymentPayload {
     payment_details?: Record<string, any>;
 }
 
+export interface ClosingCashBreakdownPayload {
+    base_currency_id: number | string | null;
+    base_currency_code: string | null;
+    base_currency_symbol?: string | null;
+    gift_check_total?: number;
+    totals?: {
+        cash_in_base: number;
+        gift_check_in_base: number;
+        combined_in_base: number;
+        variance_in_base?: number;
+    };
+    currencies: Array<{
+        currency_id: number | string;
+        currency_code: string;
+        currency_name: string;
+        symbol?: string;
+        exchange_rate: number;
+        amount_in_currency: number;
+        amount_in_base: number;
+        total_amount?: number; // legacy support
+        total_in_base?: number; // legacy support
+        denominations?: Array<{
+            id?: number | string;
+            label?: string;
+            value: number;
+            count: number;
+            total: number;
+        }>;
+    }>;
+}
+
 const CASHIER_STORAGE_KEY = "quickjuan_cashier_state";
 
 // Initialize reactive state
@@ -276,7 +307,7 @@ export const useCashier = () => {
 
     // Close cashier shift
     const closeShift = async (payload: {
-        cash_denomination_details: any;
+        cash_denomination_details: ClosingCashBreakdownPayload;
         cash_denomination: number;
         shift_no: number;
         cashier_id: number;
