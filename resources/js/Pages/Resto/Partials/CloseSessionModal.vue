@@ -2,7 +2,7 @@
     <Dialog
         v-model:visible="props.showCloseDialog"
         modal
-        header="End of Shift - Closing Cash"
+        header="End of Shift"
         :style="{ width: '46rem' }"
         class="bg-white"
         @hide="handleClose"
