@@ -234,6 +234,7 @@ const startSession = () => {
                 //
             },
             onError: (errors) => {
+                console.log("errors :", errors);
                 toast.add({
                     severity: "error",
                     summary: "Error",

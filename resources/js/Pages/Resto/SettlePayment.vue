@@ -249,6 +249,7 @@
                                 Currency
                             </label>
                             <SelectField
+                                v-if="hasMultipleCurrencies"
                                 id="currency_id"
                                 v-model="selectedCurrencyId"
                                 :options="currencies"
@@ -257,6 +258,20 @@
                                 placeholder="Select currency"
                                 :disabled="currencies.length === 0"
                             />
+                            <div
+                                v-else
+                                class="px-3 py-2 rounded-lg border border-gray-200 bg-gray-50"
+                            >
+                                <p class="text-sm font-semibold text-gray-900">
+                                    {{
+                                        selectedCurrency?.name ||
+                                        paymentCurrencyCode
+                                    }}
+                                </p>
+                                <p class="text-xs text-gray-500">
+                                    {{ paymentCurrencyCode }}
+                                </p>
+                            </div>
                             <p class="text-xs text-gray-500">
                                 1 {{ paymentCurrencyCode }} =
                                 {{
@@ -596,6 +611,8 @@ const defaultCurrency = computed(() => {
 const defaultCurrencyCode = computed(
     () => defaultCurrency.value?.code || "PHP"
 );
+
+const hasMultipleCurrencies = computed(() => currencies.value.length > 1);
 
 const selectedPaymentMethodId = ref<number | null>(
     availablePaymentMethods.value[0]?.id ?? null

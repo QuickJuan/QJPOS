@@ -136,6 +136,18 @@
                     />
 
                     <Button
+                        v-if="canPrintBill"
+                        label="Print Bill"
+                        icon="pi pi-print"
+                        class="table-action-btn w-full h-14 justify-start gap-3 rounded-xl text-left"
+                        severity="secondary"
+                        outlined
+                        :loading="isPrintingBill"
+                        :disabled="isPrintingBill"
+                        @click="handlePrintBill"
+                    />
+
+                    <Button
                         v-if="
                             !isTakeoutOccupied &&
                             table &&
@@ -147,6 +159,26 @@
                         severity="warn"
                         outlined
                         @click="handleTransferGuest"
+                    />
+
+                    <Button
+                        v-if="hasMergedTables"
+                        label="Unmerge Tables"
+                        icon="pi pi-unlink"
+                        class="table-action-btn w-full h-14 justify-start gap-3 rounded-xl text-left"
+                        severity="danger"
+                        outlined
+                        @click="handleUnmergeTables"
+                    />
+
+                    <Button
+                        v-if="table?.mergedTo"
+                        label="Leave Merge"
+                        icon="pi pi-sign-out"
+                        class="table-action-btn w-full h-14 justify-start gap-3 rounded-xl text-left"
+                        severity="secondary"
+                        outlined
+                        @click="handleUnmergeFromTable"
                     />
                 </div>
 

@@ -65,6 +65,8 @@ export interface ClosingCashBreakdownPayload {
         gift_check_in_base: number;
         combined_in_base: number;
         variance_in_base?: number;
+        expected_cash_in_base?: number;
+        change_paid_in_base?: number;
     };
     currencies: Array<{
         currency_id: number | string;
@@ -76,6 +78,10 @@ export interface ClosingCashBreakdownPayload {
         amount_in_base: number;
         total_amount?: number; // legacy support
         total_in_base?: number; // legacy support
+        expected_in_currency?: number;
+        expected_in_base?: number;
+        variance_in_currency?: number;
+        variance_in_base?: number;
         denominations?: Array<{
             id?: number | string;
             label?: string;

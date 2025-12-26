@@ -158,6 +158,12 @@ interface StructuredDenominationCurrency {
     exchange_rate: number;
     amount_in_currency: number;
     amount_in_base: number;
+    total_amount?: number;
+    total_in_base?: number;
+    expected_in_currency?: number;
+    expected_in_base?: number;
+    variance_in_currency?: number;
+    variance_in_base?: number;
     denominations?: Array<{
         id?: number | string;
         label?: string;
@@ -178,6 +184,9 @@ interface StructuredCashDenominationDetails {
         gift_check_in_base: number;
         combined_in_base: number;
         variance_in_base?: number;
+        expected_cash_in_base?: number;
+        change_paid_in_base?: number;
+        expected_gift_check_in_base?: number;
     };
     currencies: StructuredDenominationCurrency[];
 }
@@ -225,6 +234,7 @@ interface SessionSummaryData {
         min_invoice_no: number;
         total_quantity: number;
         vat_exempt_sales: number;
+        service_charge?: number;
         discounts?: Array<{
             discount_name: string;
             total_discount: string;
@@ -238,6 +248,17 @@ interface SessionSummaryData {
         zero_rated_sales: number;
         refund_from_other_shifts_count: number;
         refund_from_other_shifts_amount: number;
+        expected_cash_in_base?: number;
+        expected_cash?: number;
+        variance?: number;
+        change_paid_in_base?: number;
+        gift_check_received?: number;
+        gift_checks_received?: number;
+        gift_check_total?: number;
+        gift_checks_total?: number;
+        gift_check_sales?: number;
+        gift_check_amount?: number;
+        expected_gift_check_in_base?: number;
     };
 }
 
@@ -942,6 +963,95 @@ class ThermalPrinterService {
             'currencies' in details &&
             Array.isArray((details as StructuredCashDenominationDetails).currencies)
         );
+    }
+
+
+    private coerceToNumber(value: unknown): number | null {
+        if (typeof value === 'number' && Number.isFinite(value)) {
+            return value;
+        }
+
+        if (typeof value === 'string') {
+            const parsed = parseFloat(value);
+            return Number.isFinite(parsed) ? parsed : null;
+        }
+
+        return null;
+    }
+
+    private pickNumber(...values: Array<unknown>): number | null {
+        for (const value of values) {
+            const parsed = this.coerceToNumber(value);
+            if (parsed !== null) {
+                return parsed;
+            }
+        }
+        return null;
+    }
+
+    private formatMoneyWithSymbol(amount: number | null): string {
+        if (amount === null) {
+            return '--';
+        }
+
+        return this.formatNumberWithComma(amount.toFixed(2));
+    }
+
+    private composeCurrencyComparisonLine(
+        label: string,
+        currencyAmount: number | null,
+
+    ): string {
+        const currencyText = this.formatMoneyWithSymbol(currencyAmount);
+
+        return `${label}: ${currencyText}`;
+    }
+
+    private printCurrencyComparison(
+        commands: number[],
+        label: string,
+        currencyAmount: number | null,
+
+    ): void {
+        const line = this.composeCurrencyComparisonLine(
+            label,
+            currencyAmount
+
+        );
+
+        commands.push(...this.stringToBytes(line));
+        commands.push(...this.ESC_POS.LINE_FEED);
+    }
+
+    private computeGiftCheckComparison(
+        details: SessionSummaryData['cash_denomination_details'],
+        metaData?: SessionSummaryData['meta_data']
+    ): { actual: number; expected: number; variance: number } {
+        const structured = this.isStructuredDenomination(details) ? details : null;
+
+        const actual = this.pickNumber(
+            structured?.gift_check_total,
+            structured?.totals?.gift_check_in_base,
+            (details as Record<string, unknown> | null | undefined)?.gift_check_total,
+            (details as Record<string, unknown> | null | undefined)?.gift_check_in_base
+        ) ?? 0;
+
+        const expected = this.pickNumber(
+            structured?.totals?.expected_gift_check_in_base,
+            metaData?.expected_gift_check_in_base,
+            metaData?.gift_check_received,
+            metaData?.gift_checks_received,
+            metaData?.gift_check_total,
+            metaData?.gift_checks_total,
+            metaData?.gift_check_sales,
+            metaData?.gift_check_amount
+        ) ?? actual;
+
+        return {
+            actual,
+            expected,
+            variance: actual - expected,
+        };
     }
 
     /**
@@ -1856,68 +1966,133 @@ class ThermalPrinterService {
                 commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
             }
 
-            // Cash denomination
+            const denominationDetails = sessionData.cash_denomination_details;
+            const structuredBreakdown = this.isStructuredDenomination(denominationDetails)
+                ? denominationDetails
+                : null;
+            const actualCash = this.pickNumber(
+                structuredBreakdown?.totals?.cash_in_base,
+                structuredBreakdown?.grand_total_in_base,
+                sessionData.cash_denomination_total
+            ) ?? 0;
+            const fallbackExpected = (this.coerceToNumber(sessionData.meta_data?.net_sales) ?? 0)
+                + (this.coerceToNumber(sessionData.meta_data?.service_charge) ?? 0);
+            const expectedCash = this.pickNumber(
+                structuredBreakdown?.totals?.expected_cash_in_base,
+                sessionData.meta_data?.expected_cash_in_base,
+                sessionData.meta_data?.expected_cash,
+                fallbackExpected
+            ) ?? 0;
+            const varianceValue = this.pickNumber(
+                structuredBreakdown?.totals?.variance_in_base,
+                sessionData.meta_data?.variance,
+                actualCash - expectedCash
+            ) ?? (actualCash - expectedCash);
+            const giftCheckSummary = this.computeGiftCheckComparison(
+                denominationDetails,
+                sessionData.meta_data
+            );
+
+            // Cash denomination summary
+            commands.push(...this.ESC_POS.BOLD_ON);
             commands.push(...this.stringToBytes('CASH DENOMINATION'));
+            commands.push(...this.ESC_POS.BOLD_OFF);
             commands.push(...this.ESC_POS.LINE_FEED);
             commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
             commands.push(...this.ESC_POS.LINE_FEED);
             commands.push(...this.stringToBytes(this.formatTotalLine('Beginning Cash:', sessionData.beginning_cash)));
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatTotalLine('Actual Cash Count:', sessionData.cash_denomination_total)));
-            commands.push(...this.ESC_POS.BOLD_OFF);
+            commands.push(...this.stringToBytes(this.formatTotalLine('Cash Denomination:', sessionData.cash_denomination_total)));
             commands.push(...this.ESC_POS.LINE_FEED);
-            let expectedCash = parseFloat(sessionData.meta_data.net_sales) + parseFloat(sessionData.meta_data.service_charge)
-            commands.push(...this.stringToBytes(this.formatTotalLine('Expected Cash:', expectedCash )));
-            commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.ESC_POS.BOLD_ON);
-            commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
-            const variance = sessionData.cash_denomination_total - (expectedCash);
-            const varianceLabel = variance >= 0 ? 'Overage:' : 'Shortage:';
-            commands.push(...this.stringToBytes(this.formatTotalLine(varianceLabel, Math.abs(variance))));
-            commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+
+            // if (structuredBreakdown) {
+            //     commands.push(...this.stringToBytes(this.formatTotalLine('Actual Cash (Converted):', actualCash)));
+            //     commands.push(...this.ESC_POS.LINE_FEED);
+            // }
+
+            if (giftCheckSummary.actual > 0 || giftCheckSummary.expected > 0) {
+                commands.push(...this.stringToBytes(this.formatTotalLine('Gift Checks (Closing):', giftCheckSummary.actual)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+                commands.push(...this.stringToBytes(this.formatTotalLine('Gift Checks (Received):', giftCheckSummary.expected)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+                const giftVarianceLabel = giftCheckSummary.variance >= 0 ? 'Gift Check Overage:' : 'Gift Check Shortage:';
+                commands.push(...this.stringToBytes(this.formatTotalLine(giftVarianceLabel, Math.abs(giftCheckSummary.variance))));
+                commands.push(...this.ESC_POS.LINE_FEED);
+            }
+
+            // commands.push(...this.stringToBytes(this.formatTotalLine('Expected Cash:', expectedCash)));
+            // commands.push(...this.ESC_POS.LINE_FEED);
+            // const varianceLabel = varianceValue >= 0 ? 'Cash Overage:' : 'Cash Shortage:';
+            // commands.push(...this.stringToBytes(this.formatTotalLine(varianceLabel, Math.abs(varianceValue))));
+            // commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
             // Cash denomination details
-            if (sessionData.cash_denomination_details) {
-                commands.push(...this.stringToBytes('DENOMINATION BREAKDOWN'));
+            if (denominationDetails) {
+                commands.push(...this.ESC_POS.LINE_FEED);
+                commands.push(...this.stringToBytes('CLOSING CASH BREAKDOWN'));
                 commands.push(...this.ESC_POS.LINE_FEED);
                 commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
                 commands.push(...this.ESC_POS.LINE_FEED);
 
-                const details = sessionData.cash_denomination_details;
-
-                if (this.isStructuredDenomination(details)) {
-                    details.currencies.forEach((currency) => {
-                        const currencyLabel = `${currency.currency_code}${currency.symbol ? ` (${currency.symbol})` : ''}`;
+                if (structuredBreakdown) {
+                    structuredBreakdown.currencies.forEach((currency) => {
+                        const currencyLabel = `${currency.currency_name || currency.currency_code || 'Currency'}`;
+                        commands.push(...this.ESC_POS.BOLD_ON);
                         commands.push(...this.stringToBytes(currencyLabel));
+                        commands.push(...this.ESC_POS.BOLD_OFF);
                         commands.push(...this.ESC_POS.LINE_FEED);
 
-                        (currency.denominations || []).forEach((denom) => {
-                            const total = denom.total ?? denom.value * denom.count;
-                            const label = `${denom.label ?? denom.value} x ${denom.count}:`;
-                            commands.push(...this.stringToBytes(this.formatInfoLine(label, total.toFixed(2))));
-                            commands.push(...this.ESC_POS.LINE_FEED);
-                        });
+                        const actualCurrency = this.coerceToNumber(currency.amount_in_currency ?? currency.total_amount) ?? 0;
+                        // const actualBase = this.coerceToNumber(
+                        //     currency.amount_in_base ?? currency.total_in_base ?? (actualCurrency * (currency.exchange_rate || 1))
+                        // ) ?? 0;
+                        const expectedCurrency = this.coerceToNumber(currency.expected_in_currency);
+                        const expectedBase = this.coerceToNumber(currency.expected_in_base);
+                        const varianceCurrency = this.coerceToNumber(currency.variance_in_currency)
+                            ?? (expectedCurrency !== null ? actualCurrency - expectedCurrency : null);
+                        const varianceBase = this.coerceToNumber(currency.variance_in_base)
+                            ?? (expectedBase !== null ? actualBase - expectedBase : null);
 
-                        const subtotal = typeof currency.amount_in_currency === 'number' ? currency.amount_in_currency : 0;
-                        const baseTotal = typeof currency.amount_in_base === 'number'
-                            ? currency.amount_in_base
-                            : subtotal * (currency.exchange_rate || 1);
+                        this.printCurrencyComparison(
+                            commands,
+                            '  Actual',
+                            actualCurrency,
 
-                        commands.push(...this.stringToBytes(this.formatInfoLine('Subtotal:', subtotal.toFixed(2))));
+                        );
+
+                        if (expectedCurrency !== null || expectedBase !== null) {
+                            this.printCurrencyComparison(
+                                commands,
+                                '  Expected',
+                                expectedCurrency,
+
+                            );
+                        }
+
+                        if (varianceCurrency !== null || varianceBase !== null) {
+                            this.printCurrencyComparison(
+                                commands,
+                                '  Variance',
+                                varianceCurrency,
+                                varianceBase
+                            );
+                        }
+
+                        if (currency.denominations?.length) {
+                            currency.denominations.forEach((denom) => {
+                                const total = denom.total ?? denom.value * denom.count;
+                                const label = `${denom.label ?? denom.value} x ${denom.count}:`;
+                                commands.push(...this.stringToBytes(this.formatInfoLine(label, total.toFixed(2))));
+                                commands.push(...this.ESC_POS.LINE_FEED);
+                            });
+                        }
+
                         commands.push(...this.ESC_POS.LINE_FEED);
-                        commands.push(...this.stringToBytes(this.formatInfoLine('≈ Base:', baseTotal.toFixed(2))));
-                        commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
                     });
-
-                    const giftCheck = details.gift_check_total ?? details.totals?.gift_check_in_base;
-                    if (giftCheck && giftCheck > 0) {
-                        commands.push(...this.stringToBytes(this.formatTotalLine('Gift Checks:', giftCheck)));
-                        commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
-                    }
                 } else {
-                    const denominations = ['1000', '500', '200', '100', '50', '20', '10', '5', '1', '0.5', '0.25'];
-                    denominations.forEach(denom => {
-                        const count = (details as Record<string, number>)[denom];
+                    const legacyDenominations = ['1000', '500', '200', '100', '50', '20', '10', '5', '1', '0.5', '0.25'];
+                    legacyDenominations.forEach(denom => {
+                        const count = (denominationDetails as Record<string, number>)[denom];
                         if (count && count > 0) {
                             const total = parseFloat(denom) * count;
                             commands.push(...this.stringToBytes(this.formatInfoLine(`${denom} x ${count}:`, total.toFixed(2))));

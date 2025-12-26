@@ -18,6 +18,7 @@ use App\Services\CashierSessionService;
 use App\Http\Resources\XReadingResource;
 use App\Services\ProductCategoryService;
 use App\Http\Requests\CashierSessionRequest;
+use App\Http\Requests\StartCashierSessionRequest;
 
 class CashierSessionController extends Controller
 {
@@ -157,7 +158,7 @@ class CashierSessionController extends Controller
         ]);
     }
 
-    public function startSession(CashierSessionRequest $request): RedirectResponse
+    public function startSession(StartCashierSessionRequest $request): RedirectResponse
     {
         try {
             $this->cashierSessionService->startSession($request);
