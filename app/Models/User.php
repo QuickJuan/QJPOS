@@ -39,6 +39,9 @@ class User extends Authenticatable
         'password',
         'employee_code',
         'branch_id',
+        'otp_secret',
+        'otp_enabled',
+        'otp_enabled_at',
     ];
 
     /**
@@ -51,6 +54,7 @@ class User extends Authenticatable
         'remember_token',
         'two_factor_recovery_codes',
         'two_factor_secret',
+        'otp_secret',
     ];
 
     /**
@@ -72,6 +76,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password'          => 'hashed',
+            'otp_enabled'       => 'boolean',
+            'otp_enabled_at'    => 'datetime',
         ];
     }
 

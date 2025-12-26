@@ -1,7 +1,7 @@
 <?php
 
 use Laravel\Fortify\Features;
-use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
+use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 
 return [
@@ -103,7 +103,11 @@ return [
     |
     */
 
-    'middleware' => ['web', InitializeTenancyByDomain::class,  PreventAccessFromCentralDomains::class,],
+    'middleware' => [
+        InitializeTenancyBySubdomain::class,
+        PreventAccessFromCentralDomains::class,
+        'web',
+    ],
 
     /*
     |--------------------------------------------------------------------------

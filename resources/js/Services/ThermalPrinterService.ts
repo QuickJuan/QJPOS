@@ -133,6 +133,12 @@ interface ReceiptData {
     birAccreditationFooter?: any;
     footerMessage?: string;
     isReprint?: boolean;
+    refundMeta?: {
+        requested_by: string;
+        supervisor: string;
+        refunded_at: string;
+        notes: string;
+    } | null;
 }
 
 interface PrinterDevice {
@@ -577,6 +583,20 @@ class ThermalPrinterService {
             }
             if (receiptData.cashier) {
                 commands.push(...this.stringToBytes(this.formatInfoLine('Cashier:', receiptData.cashier)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+            }
+
+            // Refund indicator if this order is refunded
+            if (receiptData.refundMeta) {
+                commands.push(...this.ESC_POS.LINE_FEED);
+                commands.push(...this.ESC_POS.ALIGN_CENTER);
+                commands.push(...this.ESC_POS.BOLD_ON);
+                commands.push(...this.stringToBytes('!!! REFUNDED !!!'));
+                commands.push(...this.ESC_POS.BOLD_OFF);
+                commands.push(...this.ESC_POS.ALIGN_LEFT);
+                commands.push(...this.ESC_POS.LINE_FEED);
+                commands.push(...this.stringToBytes(this.formatInfoLine('Refunded by:', receiptData.refundMeta.supervisor)));
+                commands.push(...this.ESC_POS.LINE_FEED);
                 commands.push(...this.ESC_POS.LINE_FEED);
             }
 

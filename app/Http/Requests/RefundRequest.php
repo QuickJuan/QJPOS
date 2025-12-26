@@ -2,6 +2,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class RefundRequest extends FormRequest
 {
@@ -10,7 +11,9 @@ class RefundRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        // Any authenticated user can request a refund
+        // The actual authorization is done via OTP verification in the controller
+        return $this->user() !== null;
     }
 
     /**
@@ -21,8 +24,18 @@ class RefundRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'notes'           => 'required|string',
-            'supervisor_name' => 'required|string',
+            'notes'           => ['required', 'string', 'max:500'],
+            'supervisor_id'   => ['required', 'integer', 'exists:users,id'],
+            'otp_code'        => ['required', 'string', 'min:6', 'max:6'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'supervisor_id.required' => 'Please select a supervisor for authorization.',
+            'supervisor_id.exists' => 'The selected supervisor does not exist.',
+            'otp_code.required' => 'OTP code is required.',
         ];
     }
 }

@@ -16,7 +16,7 @@
                 />
             </div>
         </template>
-        <div class="flex flex-col h-full px-4 md:px-6 lg:px-8 py-4">
+        <div class="flex flex-col flex-1 px-4 md:px-6 lg:px-8 py-4">
             <div class="flex flex-col md:flex-row gap-4 md:gap-6 h-full">
                 <!-- Sidebar -->
                 <div
@@ -31,7 +31,7 @@
                 </div>
 
                 <!-- Detail Pane -->
-                <div class="flex flex-col w-full h-auto md:h-full">
+                <div class="flex flex-col w-full h-[700px] overflow-auto">
                     <div v-if="activeOrder" class="flex flex-col h-full">
                         <div
                             class="px-4 py-5 md:px-6 md:py-6 border-b border-gray-100 bg-white flex-shrink-0"
@@ -164,9 +164,7 @@
                             </div>
                         </div>
 
-                        <div
-                            class="px-4 py-5 md:px-6 md:py-6 space-y-8 flex-1 overflow-y-auto"
-                        >
+                        <div class="px-4 md:px-6 flex-1 overflow-auto">
                             <div class="flex flex-col lg:flex-row gap-4">
                                 <!-- <Receipt
                                     :receipt-id="activeOrder.id.toString()"
@@ -197,6 +195,7 @@
                                         activeOrder.branch
                                             .bir_accreditation_footer
                                     "
+                                    :refund-meta="refundMeta"
                                 />
                                 <div class="flex flex-col w-full lg:w-auto">
                                     <div
@@ -257,10 +256,20 @@
         <RefundDialog
             v-model:visible="showRefundModal"
             v-model:notes="refundForm.notes"
-            v-model:supervisor-name="refundForm.supervisor_name"
+            v-model:supervisor-id="refundForm.supervisor_id"
+            v-model:otp-code="refundForm.otp_code"
+            :supervisors="availableApprovers"
             :loading="refundLoading"
+            :error="refundError"
             @submit="submitRefund"
             @closed="handleRefundDialogClosed"
+        />
+
+        <EmailReceiptDialog
+            v-model:visible="showEmailModal"
+            v-model:emails="emailForm.emails"
+            :loading="emailLoading"
+            @submit="submitEmailReceipt"
         />
 
         <!-- Thermal Printer Dialog -->
@@ -286,7 +295,7 @@
 import { ref, computed, watch, reactive, onMounted, onUnmounted } from "vue";
 import { usePage, router } from "@inertiajs/vue3";
 import { route } from "ziggy-js";
-import axios from "axios";
+import { useToast } from "primevue/usetoast";
 import TransactionsLayout from "@/Layouts/TransactionsLayout.vue";
 import PageProps from "@/Types/PageProps";
 import Button from "primevue/button";
@@ -295,6 +304,7 @@ import Order from "@/Types/Order/Order";
 import SearchAndFIlter from "./Partials/SearchAndFIlter.vue";
 import Transactions from "./Partials/Transactions.vue";
 import RefundDialog from "./Partials/RefundDialog.vue";
+import EmailReceiptDialog from "./Partials/EmailReceiptDialog.vue";
 import Receipt from "../Receipt.vue";
 import ThermalPrinterManager from "@/Components/ThermalPrinter/ThermalPrinterManager.vue";
 import { thermalPrinter } from "@/Services/ThermalPrinterService";
@@ -323,6 +333,7 @@ const props = defineProps<{
 }>();
 
 const page = usePage<PageProps>();
+const toast = useToast();
 const cashierOptions = computed(() => page.props?.cashiers || []);
 const cashierDropdownOptions = computed(() =>
     cashierOptions.value.map((cashier: { id: number; name: string }) => ({
@@ -367,12 +378,21 @@ const activeOrder = ref<Order | null>(null);
 const refundOrder = ref<Order | null>(null);
 const refundForm = ref({
     notes: "",
-    supervisor_name: "",
+    supervisor_id: null as number | null,
+    otp_code: "",
 });
+const availableApprovers = ref<Array<{ id: number; name: string }>>([]);
 const refundLoading = ref(false);
+const refundError = ref<string | null>(null);
 const refundMeta = computed(() => activeOrder.value?.meta?.refund || null);
 const showActionMenu = ref(false);
 const showThermalPrinter = ref(false);
+const showEmailModal = ref(false);
+const emailOrder = ref<Order | null>(null);
+const emailForm = ref({
+    emails: "",
+});
+const emailLoading = ref(false);
 
 const receiptDate = computed(() => {
     if (!activeOrder.value) return null;
@@ -400,6 +420,7 @@ const thermalReceiptData = computed(() => {
         birAccreditationFooter:
             activeOrder.value?.branch?.bir_accreditation_footer,
         isReprint: true,
+        refundMeta: refundMeta.value,
     };
 });
 
@@ -427,7 +448,52 @@ onUnmounted(() => {
 });
 
 const sendReceiptEmail = (order: Order) => {
-    alert(`Sending receipt #${order.id} to customer's email...`);
+    emailOrder.value = order;
+    emailForm.value = {
+        emails: order.customer?.email || "",
+    };
+    showEmailModal.value = true;
+};
+
+const submitEmailReceipt = async () => {
+    if (!emailOrder.value) return;
+
+    emailLoading.value = true;
+    try {
+        // Parse emails from comma-separated string
+        const emails = emailForm.value.emails
+            .split(",")
+            .map((e) => e.trim())
+            .filter((e) => e);
+
+        await axios.post(
+            route("transactions.api.send-receipt-email", {
+                order: emailOrder.value.id,
+            }),
+            {
+                emails,
+                exportAsPdf: emailForm.value.exportAsPdf,
+            }
+        );
+
+        showEmailModal.value = false;
+        toast.add({
+            severity: "success",
+            summary: "Success",
+            detail: `Receipt sent to ${emails.length} email(s)`,
+            life: 3000,
+        });
+    } catch (error) {
+        toast.add({
+            severity: "error",
+            summary: "Error",
+            detail: "Failed to send receipt email",
+            life: 3000,
+        });
+        console.error("Error sending receipt:", error);
+    } finally {
+        emailLoading.value = false;
+    }
 };
 
 const formatDetailedDate = (dateString: string) => {
@@ -441,14 +507,25 @@ const formatDetailedDate = (dateString: string) => {
     });
 };
 
-const openRefundModal = (order: Order) => {
+const openRefundModal = async (order: Order) => {
     refundOrder.value = order;
-    refundForm.value = { notes: "", supervisor_name: "" };
+    refundForm.value = { notes: "", supervisor_id: null, otp_code: "" };
+
+    // Fetch available approvers for current branch
+    try {
+        const response = await axios.get(route("transactions.api.approvers"));
+        availableApprovers.value = response.data;
+    } catch (error) {
+        console.error("Error fetching approvers:", error);
+        availableApprovers.value = [];
+    }
+
     showRefundModal.value = true;
 };
 
 const closeRefundModal = () => {
     showRefundModal.value = false;
+    refundError.value = null;
     handleRefundDialogClosed();
 };
 
@@ -457,16 +534,69 @@ const submitRefund = async () => {
 
     refundLoading.value = true;
     try {
-        await axios.post(
+        router.post(
             route("transactions.api.orders.refund", {
                 order: refundOrder.value.id,
             }),
-            refundForm.value
+            refundForm.value,
+            {
+                onSuccess: () => {
+                    // Check if there are errors in the page props (from withErrors redirect)
+                    if (
+                        page.props.errors &&
+                        Object.keys(page.props.errors).length > 0
+                    ) {
+                        // Extract error messages from the errors object
+                        const errorMessages = Object.values(page.props.errors)
+                            .flat()
+                            .filter(Boolean);
+
+                        refundError.value =
+                            errorMessages.join(", ") ||
+                            "Failed to refund order";
+                        refundLoading.value = false;
+                        return;
+                    }
+
+                    // Success case
+                    toast.add({
+                        severity: "success",
+                        summary: "Success",
+                        detail: "Order refunded successfully",
+                        life: 3000,
+                    });
+                    closeRefundModal();
+                    // router.reload();
+                },
+                onError: (errors) => {
+                    console.error("Error refunding order:", errors);
+                    // Extract error messages from error object
+                    let errorDetail = "Failed to refund order";
+
+                    if (errors && typeof errors === "object") {
+                        // Check for direct message property
+                        if (errors.message) {
+                            errorDetail = errors.message;
+                        } else {
+                            // Try to extract from nested error structure
+                            const errorMessages = Object.values(errors)
+                                .flat()
+                                .filter(Boolean);
+                            if (errorMessages.length > 0) {
+                                errorDetail = errorMessages.join(", ");
+                            }
+                        }
+                    }
+
+                    refundError.value = errorDetail;
+                },
+                onFinish: () => {
+                    refundLoading.value = false;
+                },
+            }
         );
-        closeRefundModal();
     } catch (error) {
         console.error("Error refunding order:", error);
-    } finally {
         refundLoading.value = false;
     }
 };

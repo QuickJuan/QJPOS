@@ -162,4 +162,9 @@ class Order extends Model
     {
         return $this->meta_data['payment_info'] ?? null;
     }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
+    }
 }

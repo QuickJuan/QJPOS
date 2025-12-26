@@ -189,6 +189,105 @@ class InventoryStockService
         });
     }
 
+    public function restoreOrderInventory(Order $order): void
+    {
+        DB::transaction(function () use ($order) {
+            $order->loadMissing([
+                'orderItems.product.inventoryRecipes.inventory.unitConversions',
+                'orderItems.product.inventoryRecipes.inventory.packagings',
+                'orderItems.product.inventoryRecipes.inventory.defaultLocation',
+                'orderItems.product.inventoryRecipes.inventory.locationStocks',
+            ]);
+
+            foreach ($order->orderItems as $orderItem) {
+                if ($orderItem->is_void) {
+                    continue;
+                }
+
+                $product = $orderItem->product;
+
+                if (! $product) {
+                    continue;
+                }
+
+                if (! $product->track_inventory) {
+                    continue;
+                }
+
+                if ($product->inventoryRecipes->isEmpty()) {
+                    continue;
+                }
+
+                foreach ($product->inventoryRecipes as $recipe) {
+                    $inventory = $recipe->inventory;
+
+                    if (! $inventory) {
+                        continue;
+                    }
+
+                    $locationId = $inventory->default_location;
+
+                    if (! $locationId) {
+                        $locationId = $inventory->locationStocks
+                            ->sortByDesc(fn ($stock) => (float) ($stock->current_stock ?? 0))
+                            ->first()?->location_id;
+                    }
+
+                    if (! $locationId) {
+                        Log::warning('Inventory restoration skipped due to missing default location.', [
+                            'inventory_id' => $inventory->id,
+                            'order_id'     => $order->id,
+                            'order_item_id'=> $orderItem->id,
+                        ]);
+                        continue;
+                    }
+
+                    $basePerUnit = $this->convertRecipeQuantityToBase($recipe);
+
+                    if ($basePerUnit <= 0) {
+                        continue;
+                    }
+
+                    $totalBase = $basePerUnit * (float) $orderItem->quantity;
+
+                    if ($totalBase <= 0) {
+                        continue;
+                    }
+
+                    try {
+                        // Add inventory back (reverse the deduction)
+                        $this->runAdjustment([
+                            'inventory_id'  => $inventory->id,
+                            'location_id'   => $locationId,
+                            'movement_type' => 'in',
+                            'quantity_mode' => 'base',
+                            'base_quantity' => $totalBase,
+                            'notes'         => sprintf(
+                                'Refund: Order #%s item %s',
+                                $order->invoice_no ?? $order->id,
+                                $orderItem->id
+                            ),
+                        ]);
+                    } catch (ValidationException $exception) {
+                        Log::error('Inventory restoration failed', [
+                            'inventory_id' => $inventory->id,
+                            'order_id'     => $order->id,
+                            'order_item_id'=> $orderItem->id,
+                            'error'        => $exception->getMessage(),
+                        ]);
+                        throw ValidationException::withMessages([
+                            'inventory' => sprintf(
+                                'Failed to restore inventory for %s (item #%s). Please contact support.',
+                                $product->name,
+                                $orderItem->id
+                            ),
+                        ]);
+                    }
+                }
+            }
+        });
+    }
+
     /**
      * @param  array<string, mixed>  $data
      */

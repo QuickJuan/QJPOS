@@ -17,6 +17,7 @@ use App\Enums\TableRoomStatusType;
 use Illuminate\Support\Facades\DB;
 use App\Http\Resources\CartResource;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use App\Http\Resources\PreparationItemCollectionResource;
 
 class CartService
@@ -599,7 +600,7 @@ class CartService
         ]);
     }
 
-    public function voidCartItem(Request $request, int $cartItemId): mixed
+    public function voidCartItem(string $reason, int $cartItemId, User $user): mixed
     {
 
         try {
@@ -607,10 +608,19 @@ class CartService
             if (! $cartItem) {
                 throw new Exception('Cart item not found.');
             }
-            return $cartItem->update([
+
+            $updated = $cartItem->update([
                 'is_void' => true,
-                'reason'  => $request->reason,
+                'reason'  => $reason,
             ]);
+
+            Log::info('Cart item voided via OTP verification.', [
+                'cart_item_id' => $cartItemId,
+                'voided_by'    => $user->id,
+                'voided_name'  => $user->name,
+            ]);
+
+            return $updated;
         } catch (Exception $e) {
             throw new Exception('Error voiding cart item.');
         }

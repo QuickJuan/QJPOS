@@ -18,6 +18,13 @@ use Laravel\Fortify\Http\Controllers\NewPasswordController;
 use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
+use Laravel\Fortify\Http\Controllers\TwoFactorAuthenticationController;
+use Laravel\Fortify\Http\Controllers\TwoFactorQrCodeController;
+use Laravel\Fortify\Http\Controllers\TwoFactorSecretKeyController;
+use Laravel\Fortify\Http\Controllers\RecoveryCodeController;
+use Laravel\Fortify\Http\Controllers\ConfirmedTwoFactorAuthenticationController;
+use Laravel\Fortify\Http\Controllers\ConfirmablePasswordController;
+use Laravel\Fortify\Http\Controllers\ConfirmedPasswordStatusController;
 
 /*
 |--------------------------------------------------------------------------
@@ -33,6 +40,8 @@ use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 
 // Only register tenant routes if NOT on central domain
 if (!isCentralDomain()) {
+    require __DIR__.'/jetstream.php';
+
     Route::middleware([
         InitializeTenancyBySubdomain::class,
         PreventAccessFromCentralDomains::class,
@@ -76,6 +85,19 @@ if (!isCentralDomain()) {
             Route::post('reset-password', 'store')->name('password.update');
         });
 
+    // PASSWORD CONFIRMATION ROUTES
+    Route::middleware(['auth:sanctum'])
+        ->group(function () {
+            Route::get('/user/confirm-password', [ConfirmablePasswordController::class, 'show'])
+                ->name('password.confirm');
+
+            Route::get('/user/confirmed-password-status', [ConfirmedPasswordStatusController::class, 'show'])
+                ->name('password.confirmation');
+
+            Route::post('/user/confirm-password', [ConfirmablePasswordController::class, 'store'])
+                ->name('password.confirm.store');
+        });
+
     // ROUTE FOR PUBLIC LANDING PAGE
     Route::get('/', TenantLandingController::class)->name('landing');
 
@@ -109,6 +131,30 @@ if (!isCentralDomain()) {
                     'receiptId' => $id,
                 ]);
             })->name('receipt');
+
+            // TWO-FACTOR AUTHENTICATION ROUTES
+            Route::middleware(['password.confirm'])
+                ->group(function () {
+                    Route::post('/user/two-factor-authentication', [TwoFactorAuthenticationController::class, 'store'])
+                        ->name('two-factor.enable');
+
+                    Route::post('/user/confirmed-two-factor-authentication', [ConfirmedTwoFactorAuthenticationController::class, 'store'])
+                        ->name('two-factor.confirm');
+
+                    Route::delete('/user/two-factor-authentication', [TwoFactorAuthenticationController::class, 'destroy'])
+                        ->name('two-factor.disable');
+
+                    Route::get('/user/two-factor-qr-code', [TwoFactorQrCodeController::class, 'show'])
+                        ->name('two-factor.qr-code');
+
+                    Route::get('/user/two-factor-secret-key', [TwoFactorSecretKeyController::class, 'show'])
+                        ->name('two-factor.secret-key');
+
+                    Route::get('/user/two-factor-recovery-codes', [RecoveryCodeController::class, 'index'])
+                        ->name('two-factor.recovery-codes');
+
+                    Route::post('/user/two-factor-recovery-codes', [RecoveryCodeController::class, 'store']);
+                });
 
             // ROUTE FOR ATTENDANCE
             Route::as('attendance.')
@@ -170,6 +216,8 @@ if (!isCentralDomain()) {
                             Route::put('/cart/item/clear-discount/{cartItemId}', 'clearDiscountToCartItem')->name('cart.clear-discount');
                             Route::put('/cart/item/void/{cartItemId}', 'voidCartItem')->name('cart.void-cart');
                             Route::delete('/cart/item/{cartItemId}', 'deleteCartItem')->name('cart.delete');
+                            Route::post('/cart/item/delete-with-approval', 'deleteCartItemWithApproval')->name('cart.delete-with-approval');
+                            Route::get('/cart/item/{cartItemId}/approvers', 'getApproversForItem')->name('cart.get-approvers');
                         });
 
                     // Category routes (wildcard routes should come last)
@@ -217,6 +265,9 @@ if (!isCentralDomain()) {
                     Route::get('/api/orders', 'index')->name('api.orders');
                     Route::get('/api/orders/{order}', 'show')->name('api.orders.show');
                     Route::post('/api/orders/{order}/refund', 'refund')->name('api.orders.refund');
+                    Route::post('/api/orders/{order}/send-receipt-email', 'sendReceiptEmail')->name('api.send-receipt-email');
+                    Route::get('/api/approvers', 'getApprovers')->name('api.approvers');
+                    Route::get('/download-receipt/{order}', 'downloadReceipt')->name('download-receipt');
                 });
 
             // ROUTES FOR CUSTOMERS

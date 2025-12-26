@@ -1,5 +1,6 @@
 <template>
     <div
+        id="receipt-content"
         class="receipt-container max-w-xs mx-auto bg-white p-4 font-mono text-sm leading-tight border-2 border-gray-300"
     >
         <!-- Header -->
@@ -44,9 +45,27 @@
                 <span>Table:</span>
                 <span>{{ tableNumber }}</span>
             </div>
-            <div class="flex justify-between" v-if="props.cashier.name">
+            <div class="flex justify-between" v-if="props.cashier">
                 <span>Cashier:</span>
-                <span>{{ props.cashier.name }}</span>
+                <span>{{
+                    typeof props.cashier === "string"
+                        ? props.cashier
+                        : props.cashier.name
+                }}</span>
+            </div>
+
+            <!-- Refund Indicator -->
+            <div
+                v-if="props.refundMeta"
+                class="mt-4 pt-4 border-t-2 border-red-500"
+            >
+                <div class="text-center font-bold text-red-600 text-sm mb-2">
+                    !!! REFUNDED !!!
+                </div>
+                <div class="flex justify-between text-xs text-red-600">
+                    <span>Refunded by:</span>
+                    <span>{{ props.refundMeta.supervisor }}</span>
+                </div>
             </div>
         </div>
 
@@ -332,6 +351,12 @@ const props = defineProps<{
     receiptHeader?: any;
     receiptFooter: any;
     birAccreditationFooter?: any;
+    refundMeta?: {
+        requested_by: string;
+        supervisor: string;
+        refunded_at: string;
+        notes: string;
+    } | null;
 }>();
 
 const branch = computed(() => props.branch ?? ({} as Branch));

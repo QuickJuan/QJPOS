@@ -1,6 +1,8 @@
 <template>
     <div class="h-screen flex flex-col">
-        <header class="bg-white border-b border-gray-200 shadow-lg">
+        <header
+            class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-lg"
+        >
             <div class="px-4 md:px-6 lg:px-8 py-3 md:py-4">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
@@ -52,7 +54,7 @@
                 </div>
             </div>
         </header>
-        <div class="flex flex-grow h-full flex-col">
+        <div class="flex-1 overflow-hidden flex flex-col">
             <slot />
         </div>
     </div>

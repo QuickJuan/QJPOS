@@ -16,12 +16,14 @@ class OrderService
             $query->search($filters['search']);
         }
 
-        // Date range filters - use current date if not provided
-        $dateFrom = !empty($filters['date_from']) ? $filters['date_from'] : Carbon::today()->toDateString();
-        $dateTo = !empty($filters['date_to']) ? $filters['date_to'] : Carbon::today()->toDateString();
+        // Date range filters - only apply if explicitly provided
+        if (!empty($filters['date_from']) || !empty($filters['date_to'])) {
+            $dateFrom = !empty($filters['date_from']) ? $filters['date_from'] : Carbon::minValue()->toDateString();
+            $dateTo = !empty($filters['date_to']) ? $filters['date_to'] : Carbon::now()->toDateString();
 
-        $query->whereDate('created_at', '>=', $dateFrom)
-            ->whereDate('created_at', '<=', $dateTo);
+            $query->whereDate('created_at', '>=', $dateFrom)
+                ->whereDate('created_at', '<=', $dateTo);
+        }
 
         // Cashier filter
         if (!empty($filters['cashier_id'])) {
