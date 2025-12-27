@@ -1,10 +1,11 @@
 <template>
     <div class="flex flex-col gap-2">
         <div
-            class="flex justify-between items-end text-gray-700 dark:text-gray-300"
+            class="flex justify-between items-end text-neutral-700 dark:text-neutral-300"
         >
             <InputLabel :for="id">
-                {{ label }} <span v-if="required" class="text-red-500">*</span>
+                {{ label }}
+                <span v-if="required" class="text-error-500">*</span>
             </InputLabel>
         </div>
         <div class="relative">
@@ -13,7 +14,7 @@
                 :type="showPassword ? 'text' : 'password'"
                 :id="props.id"
                 :name="props.id"
-                class="w-full pr-12 pl-4 py-3 border border-gray-300 bg-white font-medium text-gray-900 rounded-lg shadow-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 placeholder-gray-400"
+                class="w-full pr-12 pl-4 py-3 border border-neutral-300 bg-white font-medium text-neutral-900 rounded-lg shadow-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 placeholder-neutral-400"
                 :placeholder="props.placeholder"
                 :disabled="props.disabled"
                 autocomplete="current-password"
@@ -24,7 +25,7 @@
             <button
                 type="button"
                 @click="togglePassword"
-                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none focus:text-primary transition-colors duration-200"
+                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-neutral-500 hover:text-neutral-700 focus:outline-none focus:text-primary transition-colors duration-200"
                 :aria-label="showPassword ? 'Hide password' : 'Show password'"
             >
                 <svg
@@ -68,7 +69,7 @@
         <p
             v-if="props.error"
             :id="`${props.id}-error`"
-            class="text-red-500 text-sm font-medium"
+            class="text-error-500 text-sm font-medium"
             role="alert"
         >
             {{ props.error }}

@@ -2,10 +2,11 @@
     <div class="flex flex-col">
         <div
             v-if="!hideLabel"
-            class="flex justify-between items-end text-gray-700 dark:text-gray-300"
+            class="flex justify-between items-end text-neutral-700 dark:text-neutral-300"
         >
             <InputLabel :for="id">
-                {{ label }} <span v-if="required" class="text-red-500">*</span>
+                {{ label }}
+                <span v-if="required" class="text-error-500">*</span>
             </InputLabel>
         </div>
 
@@ -22,8 +23,8 @@
             :filter="searchable"
             @filter="onFilter"
             :showClear="showClear"
-            class="w-full text-gray-900 bg-white border border-gray-300 rounded-lg shadow-sm"
-            panelClass="shadow-lg border border-gray-200 rounded-lg"
+            class="w-full text-neutral-900 bg-white border border-neutral-300 rounded-lg shadow-sm"
+            panelClass="shadow-lg border border-neutral-200 rounded-lg"
         />
 
         <InputError :message="error" />

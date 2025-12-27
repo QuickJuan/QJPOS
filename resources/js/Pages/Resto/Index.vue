@@ -242,9 +242,12 @@ const props = defineProps<{
     selectedCategorySlug?: string | null;
     products?: any[];
     categoryName?: string;
-    currentTable: any;
+    currentTable?: any;
     tableId?: string | number;
     orderType?: string;
+    currentUser?: any;
+    pendingCashiering?: any;
+    sessionSummary?: any;
 }>();
 
 const page = usePage<PageProps>();
@@ -340,7 +343,7 @@ const handleShowReceipt = (data: any) => {
     const taxAmount = discountedSubtotal * 0.12; // 12% VAT
 
     receiptData.value = {
-        receiptNumber: props.receiptNumber,
+        receiptNumber: props.currentUser?.receipt_number || "",
         date: new Date().toISOString(),
         subtotal: subtotal,
         taxAmount: taxAmount,
@@ -398,7 +401,11 @@ onMounted(() => {
     }
 
     // Load discounts (keeping existing logic)
-    if (props.availableDiscounts && props.availableDiscounts.length > 0) {
+    if (
+        props.availableDiscounts &&
+        Array.isArray(props.availableDiscounts) &&
+        props.availableDiscounts.length > 0
+    ) {
         loadDiscounts(props.availableDiscounts);
     }
 });
