@@ -33,8 +33,10 @@ const form = reactive({
 
 const passwordInput = ref(null);
 
+const relativeRoute = (name, params = undefined) => route(name, params, false);
+
 const startConfirmingPassword = () => {
-    axios.get(route("password.confirmation")).then((response) => {
+    axios.get(relativeRoute("password.confirmation")).then((response) => {
         if (response.data.confirmed) {
             emit("confirmed");
         } else {
@@ -49,7 +51,7 @@ const confirmPassword = () => {
     form.processing = true;
 
     axios
-        .post(route("password.confirm"), {
+        .post(relativeRoute("password.confirm"), {
             password: form.password,
         })
         .then(() => {

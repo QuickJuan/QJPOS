@@ -24,7 +24,13 @@ class CashierSessionRequest extends FormRequest
             // 'beginning_cash'            => 'sometimes|required|numeric|min:0',
             'shift_no' => 'sometimes|required|numeric|exists:cashier_sessions,id',
             'cashier_id'                => 'sometimes|required|exists:users,id',
-            // 'cash_denomination'         => 'sometimes|required|numeric|min:0',
+            'cash_denomination_details' => ['required', 'array'],
+            'cash_denomination_details.currencies' => ['present', 'array'],
+            'cash_denomination_details.currencies.*.currency_id' => ['required'],
+            'cash_denomination_details.currencies.*.amount_in_currency' => ['required', 'numeric', 'min:0'],
+            'cash_denomination_details.currencies.*.amount_in_base' => ['required', 'numeric', 'min:0'],
+            'cash_denomination_details.gift_check_total' => ['nullable', 'numeric', 'min:0'],
+            'cash_denomination'         => 'nullable|numeric|min:0',
             // 'table_id'                  => 'sometimes|nullable|exists:table_rooms,id',
         ];
     }

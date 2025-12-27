@@ -1,78 +1,13 @@
 <template>
-    <div class="h-screen bg-gray-50 flex flex-col">
-        <!-- Header (Desktop Only) -->
-        <header
-            class="hidden lg:block bg-white border-b border-gray-200 relative z-50"
-        >
-            <div class="px-6 py-4">
-                <div class="flex items-center justify-between">
-                    <!-- Left: Cashier Info -->
-                    <div class="flex-shrink-0">
-                        <div class="text-sm">
-                            <p class="text-gray-500">Cashier</p>
-                            <p class="font-semibold text-gray-900">
-                                {{ cashierName }}
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Right: Action Buttons -->
-                    <div class="flex items-center gap-3">
-                        <!-- More Options Dropdown -->
-                        <div class="relative">
-                            <button
-                                @click="showMoreOptions = !showMoreOptions"
-                                class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium text-sm flex items-center gap-2"
-                            >
-                                More Options
-                                <ChevronDownIcon class="w-4 h-4" />
-                            </button>
-
-                            <!-- Dropdown Menu -->
-                            <div
-                                v-if="showMoreOptions"
-                                class="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50"
-                            >
-                                <button
-                                    @click="handleReviewTransactionsClick"
-                                    class="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-3"
-                                >
-                                    <DocumentTextIcon class="w-5 h-5" />
-                                    <span>Review Transactions</span>
-                                </button>
-                                <button
-                                    @click="handleReviewXReadingClick"
-                                    class="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-3"
-                                >
-                                    <DocumentChartBarIcon class="w-5 h-5" />
-                                    <span>Review X Reading</span>
-                                </button>
-                                <button
-                                    @click="handlePrinterConfigClick"
-                                    class="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-3"
-                                >
-                                    <PrinterIcon class="w-5 h-5" />
-                                    <span>Printer Configuration</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <button
-                            @click="handleCloseShift"
-                            class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium text-sm"
-                        >
-                            Close Shift
-                        </button>
-                        <button
-                            @click="handleLogout"
-                            class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm"
-                        >
-                            Logout
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </header>
+    <div class="h-screen bg-neutral-50 flex flex-col">
+        <!-- Header Component -->
+        <CashierHeader
+            :cashier-name="cashierName"
+            :company-name="companyName"
+            @close-shift="handleCloseShift"
+            @logout="handleLogout"
+            @review-transactions="handleReviewTransactionsClick"
+        />
 
         <!-- Sidebar Overlay (Mobile/Tablet) -->
         <div
@@ -91,16 +26,18 @@
         >
             <div class="p-6">
                 <!-- Cashier Info -->
-                <div class="mb-6 pb-6 border-b border-gray-200">
-                    <p class="text-sm text-gray-500 mb-1">Cashier</p>
-                    <p class="text-lg font-bold text-gray-900">
+                <div class="mb-6 pb-6 border-b border-neutral-200">
+                    <p class="text-sm text-neutral-500 mb-1">Cashier</p>
+                    <p class="text-lg font-bold text-neutral-900">
                         {{ cashierName }}
                     </p>
                 </div>
 
                 <!-- Barcode Scanner -->
                 <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                    <label
+                        class="block text-sm font-medium text-neutral-700 mb-2"
+                    >
                         Scan Product
                     </label>
                     <div class="flex gap-2">
@@ -108,7 +45,7 @@
                             v-model="barcodeInput"
                             type="text"
                             placeholder="Scan barcode..."
-                            class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                            class="flex-1 px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
                             @keyup.enter="handleBarcodeSearch"
                         />
                         <button
@@ -125,15 +62,31 @@
                     <button
                         v-if="!checkCurrentRoute('resto.tables')"
                         @click="handleTablesClick"
-                        class="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                        class="w-full flex items-center gap-3 px-4 py-3 text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors"
                     >
                         <TableCellsIcon class="w-5 h-5" />
                         <span class="font-medium">Tables</span>
                     </button>
 
                     <button
+                        @click="handleCashOutClick"
+                        class="w-full flex items-center gap-3 px-4 py-3 text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors"
+                    >
+                        <BanknotesIcon class="w-5 h-5" />
+                        <span class="font-medium">Log Cash Movement</span>
+                    </button>
+
+                    <button
+                        @click="handleCashDrawerLogClick"
+                        class="w-full flex items-center gap-3 px-4 py-3 text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors"
+                    >
+                        <ClipboardDocumentListIcon class="w-5 h-5" />
+                        <span class="font-medium">Cash Drawer Log</span>
+                    </button>
+
+                    <button
                         @click="handleReviewTransactionsClick"
-                        class="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                        class="w-full flex items-center gap-3 px-4 py-3 text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors"
                     >
                         <DocumentTextIcon class="w-5 h-5" />
                         <span class="font-medium">Review Transactions</span>
@@ -141,16 +94,16 @@
                 </div>
 
                 <!-- Bottom Actions -->
-                <div class="mt-6 pt-6 border-t border-gray-200 space-y-3">
+                <div class="mt-6 pt-6 border-t border-neutral-200 space-y-3">
                     <button
                         @click="handleCloseShift"
-                        class="w-full px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium"
+                        class="w-full px-4 py-3 bg-warning text-white rounded-lg hover:bg-warning-600 transition-colors font-medium"
                     >
                         Close Shift
                     </button>
                     <button
                         @click="handleLogout"
-                        class="w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                        class="w-full px-4 py-3 bg-error text-white rounded-lg hover:bg-error-700 transition-colors font-medium"
                     >
                         Logout
                     </button>
@@ -158,7 +111,7 @@
             </div>
         </aside>
 
-        <div class="flex-1 flex flex-col bg-gray-50 overflow-y-auto">
+        <div class="flex-1 flex flex-col bg-neutral-50 overflow-y-auto">
             <slot />
         </div>
 
@@ -199,15 +152,14 @@ import { ConfirmPopup, Toast } from "primevue";
 import CloseSessionModal from "@/Pages/Resto/Partials/CloseSessionModal.vue";
 import SessionSummaryModal from "@/Pages/Resto/Partials/SessionSummaryModal.vue";
 import PWAInstallBanner from "@/Components/PWAInstallBanner.vue";
+import CashierHeader from "@/Components/CashierHeader.vue";
 import { useCashier } from "@/composables/useCashier";
+import { thermalPrinter } from "@/Services/ThermalPrinterService";
 import {
     QrCodeIcon,
     TableCellsIcon,
     DocumentTextIcon,
-    ChevronDownIcon,
-    PrinterIcon,
-    ClockIcon,
-    DocumentChartBarIcon,
+    ClipboardDocumentListIcon,
 } from "@heroicons/vue/24/outline";
 
 const page = usePage();
@@ -224,7 +176,6 @@ const props = defineProps<{
 
 // Reactive data
 const barcodeInput = ref("");
-const showMoreOptions = ref(false);
 const showSidebar = ref(false);
 const showCloseDialog = ref(false);
 
@@ -239,6 +190,10 @@ const cashierName = computed(() => {
         (page.props as any).auth?.user?.name ||
         "Unknown Cashier"
     );
+});
+
+const companyName = computed(() => {
+    return (page.props as any)?.company_info?.company_name || "Restaurant";
 });
 
 const checkCurrentRoute = (currentRoute: any) => {
@@ -280,23 +235,17 @@ const handleTablesClick = () => {
 
 const handleReviewTransactionsClick = () => {
     showSidebar.value = false;
-    showMoreOptions.value = false;
     router.visit(route("transactions.index"));
 };
 
-const handleReviewXReadingClick = () => {
-    showMoreOptions.value = false;
-    router.visit(route("resto.review-x-readings"));
+const handleCashOutClick = () => {
+    showSidebar.value = false;
+    router.visit(route("resto.cashier-cashouts.create"));
 };
 
-const handlePrinterConfigClick = () => {
-    showMoreOptions.value = false;
-    router.visit(route("printer-config.index"));
-};
-
-const handleEndShiftClick = () => {
-    showMoreOptions.value = false;
-    handleCloseShift();
+const handleCashDrawerLogClick = () => {
+    showSidebar.value = false;
+    router.visit(route("resto.cashier-cashouts.index"));
 };
 
 const handleCloseShift = () => {
@@ -320,8 +269,8 @@ const handleLogout = () => {
 };
 
 const handleConfirmCloseSession = async (data: any) => {
-    let payload = {
-        cash_denomination_details: data.denominationData,
+    const payload = {
+        cash_denomination_details: data.currencyBreakdown,
         cash_denomination: data.totalCashCounted,
         shift_no: page.props.current_cashier_session?.id,
         cashier_id: page.props.current_cashier_session?.cashier_id,
@@ -401,21 +350,21 @@ const handleCloseSummaryModal = () => {
     router.post(route("logout"));
 };
 
-// Close dropdown when clicking outside
-const handleClickOutside = (event: Event) => {
+// Close sidebar when clicking outside
+const handleClickOutsideSidebar = (event: Event) => {
     const target = event.target as HTMLElement;
-    if (!target.closest(".relative")) {
-        showMoreOptions.value = false;
+    if (!target.closest("aside") && !target.closest("[data-sidebar-toggle]")) {
+        showSidebar.value = false;
     }
 };
 
 onMounted(() => {
-    document.addEventListener("click", handleClickOutside);
+    document.addEventListener("click", handleClickOutsideSidebar);
     window.addEventListener("toggle-sidebar", toggleSidebar);
 });
 
 onUnmounted(() => {
-    document.removeEventListener("click", handleClickOutside);
+    document.removeEventListener("click", handleClickOutsideSidebar);
     window.removeEventListener("toggle-sidebar", toggleSidebar);
 });
 </script>

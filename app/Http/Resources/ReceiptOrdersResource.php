@@ -1,11 +1,15 @@
 <?php
 namespace App\Http\Resources;
 
+use App\Enums\PaymentType;
+use App\Models\Currency;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class ReceiptOrdersResource extends JsonResource
 {
+    protected static ?array $defaultCurrencyCache = null;
+
     /**
      * Transform the resource into an array.
      *
@@ -13,6 +17,11 @@ class ReceiptOrdersResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $primaryPayment = $this->whenLoaded('payments') ? $this->payments->first() : null;
+        $defaultCurrency = $this->getDefaultCurrencyMeta();
+
+        $paymentData = $this->formatPaymentData($primaryPayment, $defaultCurrency);
+
         return [
             // Order Information
             'id'           => $this->id,
@@ -67,12 +76,7 @@ class ReceiptOrdersResource extends JsonResource
             ],
 
             // Payment Information
-            'payment'      => [
-                'method'      => $this->payment_method,
-                'amount_paid' => (float) $this->amount_tendered,
-                'change'      => (float) ($this->amount_tendered - ($this->total_due + $this->service_charge)),
-                'status'      => $this->payment_status,
-            ],
+            'payment'      => $paymentData,
 
             // Order Items (using ReceiptOrderItemsResource)
             'order_items'  => new ReceiptOrderItemsResource($this->orderItems),
@@ -83,5 +87,101 @@ class ReceiptOrdersResource extends JsonResource
                 'receipt_type' => 'customer_receipt',
             ],
         ];
+    }
+
+    private function formatPaymentData($primaryPayment, array $defaultCurrency): ?array
+    {
+        if ($primaryPayment) {
+            $paymentType = $primaryPayment->paymentMethod?->payment_type;
+            $paymentTypeLabel = $paymentType instanceof PaymentType
+                ? $paymentType->label()
+                : $paymentType;
+            $paymentDetails = (array) ($primaryPayment->payment_details ?? []);
+            $paymentTypeValue = $paymentType instanceof PaymentType
+                ? $paymentType->value
+                : (is_string($paymentType) ? strtolower($paymentType) : null);
+            $giftCheckAmount = $paymentDetails['gift_check_amount'] ?? null;
+            $giftCheckAmountValue = is_numeric($giftCheckAmount) ? (float) $giftCheckAmount : null;
+
+            return [
+                'method' => $primaryPayment->paymentMethod?->name,
+                'payment_type' => $paymentTypeLabel,
+                'payment_type_value' => $paymentTypeValue,
+                'amount_paid' => (float) $primaryPayment->amount,
+                'amount_in_payment_currency' => (float) ($primaryPayment->amount_in_payment_currency ?? $primaryPayment->amount),
+                'currency' => $primaryPayment->currency ? [
+                    'code' => $primaryPayment->currency->code,
+                    'symbol' => $primaryPayment->currency->symbol,
+                    'exchange_rate' => $primaryPayment->currency->exchange_rate,
+                    'is_default' => (bool) $primaryPayment->currency->is_default,
+                ] : null,
+                'base_currency' => $defaultCurrency,
+                'change' => (float) $primaryPayment->change_amount,
+                'customer_name' => $paymentDetails['customer_name'] ?? null,
+                'customer_contact' => $paymentDetails['customer_contact'] ?? null,
+                'reference_number' => $paymentDetails['reference_number']
+                    ?? $paymentDetails['gift_check_number']
+                    ?? null,
+                'approval_code' => $paymentDetails['approval_code'] ?? null,
+                'card_holder_name' => $paymentDetails['card_holder_name'] ?? null,
+                'gift_check_number' => $paymentDetails['gift_check_number'] ?? null,
+                'gift_check_amount' => $giftCheckAmountValue,
+                'status' => $this->payment_status,
+            ];
+        }
+
+        $metaPayment = $this->payment_info;
+
+        if (! $metaPayment) {
+            return null;
+        }
+
+        $metaDetails = (array) ($metaPayment['payment_details'] ?? []);
+        $metaPaymentTypeRaw = $metaPayment['payment_type'] ?? null;
+        $metaPaymentTypeValue = is_string($metaPaymentTypeRaw)
+            ? strtolower($metaPaymentTypeRaw)
+            : null;
+        $metaGiftAmount = $metaDetails['gift_check_amount'] ?? null;
+        $metaGiftAmountValue = is_numeric($metaGiftAmount) ? (float) $metaGiftAmount : null;
+
+        return [
+            'method' => $metaPayment['method'] ?? null,
+            'payment_type' => $metaPayment['payment_type'] ?? null,
+            'payment_type_value' => $metaPaymentTypeValue,
+            'amount_paid' => (float) ($metaPayment['amount_in_default_currency'] ?? $this->amount_tendered ?? 0),
+            'amount_in_payment_currency' => (float) ($metaPayment['amount_in_payment_currency'] ?? $metaPayment['amount_in_default_currency'] ?? 0),
+            'currency' => $metaPayment['currency'] ?? null,
+            'base_currency' => $defaultCurrency,
+            'change' => (float) ($metaPayment['change'] ?? ($this->amount_tendered - ($this->total_due + $this->service_charge))),
+            'customer_name' => $metaDetails['customer_name'] ?? ($metaPayment['customer_name'] ?? null),
+            'customer_contact' => $metaDetails['customer_contact'] ?? ($metaPayment['customer_contact'] ?? null),
+            'reference_number' => $metaDetails['reference_number']
+                ?? $metaPayment['reference_number']
+                ?? $metaDetails['gift_check_number']
+                ?? null,
+            'approval_code' => $metaDetails['approval_code'] ?? null,
+            'card_holder_name' => $metaDetails['card_holder_name'] ?? null,
+            'gift_check_number' => $metaDetails['gift_check_number'] ?? null,
+            'gift_check_amount' => $metaGiftAmountValue,
+            'status' => $this->payment_status,
+        ];
+    }
+
+    private function getDefaultCurrencyMeta(): array
+    {
+        if (static::$defaultCurrencyCache !== null) {
+            return static::$defaultCurrencyCache;
+        }
+
+        $currency = Currency::default()->select('code', 'symbol', 'exchange_rate')->first();
+
+        static::$defaultCurrencyCache = [
+            'code' => $currency?->code ?? 'PHP',
+            'symbol' => $currency?->symbol ?? '₱',
+            'exchange_rate' => $currency?->exchange_rate ?? 1,
+            'is_default' => true,
+        ];
+
+        return static::$defaultCurrencyCache;
     }
 }

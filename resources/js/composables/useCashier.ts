@@ -43,6 +43,55 @@ export interface CashierState {
     locationType: string | null;
 }
 
+export interface SettlePaymentPayload {
+    cart_id: number;
+    payment_method_id: number;
+    currency_id: number | null;
+    amount_in_payment_currency: number;
+    total_amount: number;
+    amount_paid?: number;
+    reference_number?: string;
+    notes?: string;
+    payment_details?: Record<string, any>;
+}
+
+export interface ClosingCashBreakdownPayload {
+    base_currency_id: number | string | null;
+    base_currency_code: string | null;
+    base_currency_symbol?: string | null;
+    gift_check_total?: number;
+    totals?: {
+        cash_in_base: number;
+        gift_check_in_base: number;
+        combined_in_base: number;
+        variance_in_base?: number;
+        expected_cash_in_base?: number;
+        change_paid_in_base?: number;
+    };
+    currencies: Array<{
+        currency_id: number | string;
+        currency_code: string;
+        currency_name: string;
+        symbol?: string;
+        exchange_rate: number;
+        amount_in_currency: number;
+        amount_in_base: number;
+        total_amount?: number; // legacy support
+        total_in_base?: number; // legacy support
+        expected_in_currency?: number;
+        expected_in_base?: number;
+        variance_in_currency?: number;
+        variance_in_base?: number;
+        denominations?: Array<{
+            id?: number | string;
+            label?: string;
+            value: number;
+            count: number;
+            total: number;
+        }>;
+    }>;
+}
+
 const CASHIER_STORAGE_KEY = "quickjuan_cashier_state";
 
 // Initialize reactive state
@@ -225,17 +274,19 @@ export const useCashier = () => {
     };
 
     // Settle payment for a cart
-    const settlePayment = async (paymentData: {
-        cart_id: number;
-        amount_paid: number;
-        total_amount: number;
-    }) => {
+    const settlePayment = async (paymentData: SettlePaymentPayload) => {
         const response = await httpPost(
             route("resto.cart.settle-bill"),
             {
                 cart_id: paymentData.cart_id,
+                payment_method_id: paymentData.payment_method_id,
+                currency_id: paymentData.currency_id,
+                amount_in_payment_currency: paymentData.amount_in_payment_currency,
                 amount_paid: paymentData.amount_paid,
                 total_amount: paymentData.total_amount,
+                reference_number: paymentData.reference_number,
+                notes: paymentData.notes,
+                payment_details: paymentData.payment_details,
             }
         );
 
@@ -262,7 +313,7 @@ export const useCashier = () => {
 
     // Close cashier shift
     const closeShift = async (payload: {
-        cash_denomination_details: any;
+        cash_denomination_details: ClosingCashBreakdownPayload;
         cash_denomination: number;
         shift_no: number;
         cashier_id: number;

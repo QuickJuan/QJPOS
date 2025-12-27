@@ -1,12 +1,16 @@
 <?php
 namespace App\Services;
 
+use App\Enums\PaymentType;
 use App\Enums\TableRoomLocation\LocationType;
 use App\Enums\TableRoomStatusType;
 use App\Models\Cart;
 use App\Models\CartItem;
+use App\Models\Currency;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Payment;
+use App\Models\PaymentMethod;
 use App\Models\TableRoom;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -26,14 +30,19 @@ class PaymentService
     {
         try {
             return DB::transaction(function () use ($payload) {
+                $paymentContext = $this->preparePaymentContext($payload);
+
                 $cart = Cart::with(['cartItems', 'tableRoom.tableRoomLocation', 'cashierSession'])->findOrFail($payload['cart_id']);
 
                 // Save cart and cart items to order (will throw exception if fails)
-                $order = $this->saveCartToOrder($cart, $payload);
+                [$order, $changeAmount] = $this->saveCartToOrder($cart, $payload, $paymentContext);
                 $this->saveCartItemsToOrderItems($cart->cartItems, $order);
                 $this->saveVoidCartItemsToOrderItems($cart, $order);
 
                 $this->inventoryStockService->deductOrderInventory($order);
+
+                $paymentContext['change_amount'] = $changeAmount;
+                $this->recordPayment($order, $paymentContext);
 
                 // Update table status if applicable
                 if ($cart->table_room_id
@@ -53,7 +62,14 @@ class PaymentService
                 CartItem::where('cart_id', $cart->id)->delete();
                 $cart->delete();
 
-                return $order->load(['orderItems', 'orderItems.product', 'cashierSession.branch', 'customer']);
+                return $order->load([
+                    'orderItems',
+                    'orderItems.product',
+                    'cashierSession.branch',
+                    'customer',
+                    'payments.paymentMethod',
+                    'payments.currency',
+                ]);
             });
         } catch (\Exception $e) {
              info('Settle bill failed', ['error' => $e->getMessage(), 'cartId' => $payload['cart_id']]);
@@ -62,7 +78,7 @@ class PaymentService
         }
     }
 
-    private function saveCartToOrder($cart, $payload)
+    private function saveCartToOrder($cart, $payload, array $paymentContext)
     {
         // Get cart items for processing
         $serviceCharge = $cart->tableRoom->calculateServiceCharge($cart);
@@ -83,8 +99,32 @@ class PaymentService
 
         // Get cart meta_data and add change and settled_at
         $metaData               = is_array($cart->meta_data) ? $cart->meta_data : [];
-        $metaData['change']     = $payload['amount_paid'] - ($totalDue + $serviceCharge);
+        $baseAmountPaid         = $paymentContext['base_amount_paid'];
+        $totalWithCharges       = $totalDue + $serviceCharge;
+        $changeAmount           = max(0, $baseAmountPaid - $totalWithCharges);
+
+        $metaData['change']     = $changeAmount;
         $metaData['settled_at'] = now();
+        $paymentType = $paymentContext['method']->payment_type instanceof PaymentType
+            ? $paymentContext['method']->payment_type->value
+            : $paymentContext['method']->payment_type;
+
+        $metaData['payment_info'] = [
+            'method' => $paymentContext['method']->name,
+            'payment_type' => $paymentType,
+            'currency' => [
+                'id' => $paymentContext['currency']->id,
+                'code' => $paymentContext['currency']->code,
+                'symbol' => $paymentContext['currency']->symbol,
+                'exchange_rate' => $paymentContext['currency']->exchange_rate,
+                'is_default' => $paymentContext['currency']->is_default,
+            ],
+            'amount_in_payment_currency' => $paymentContext['amount_in_payment_currency'],
+            'amount_in_default_currency' => $baseAmountPaid,
+            'exchange_rate' => $paymentContext['currency']->exchange_rate,
+            'change' => $changeAmount,
+            'details' => $paymentContext['payment_details'] ?? [],
+        ];
 
         // Get branch_id from cart's cashier session, or fallback to current user's branch
         $branchId = $cart->cashierSession?->branch_id ?? $cashier->branch_id ?? $cart->branch_id;
@@ -96,7 +136,7 @@ class PaymentService
         $invoiceNumber = $this->branchService->getNextInvoiceNumber($branchId);
 
         // Create the order
-        return Order::create([
+        $order = Order::create([
             'invoice_no'         => $invoiceNumber,
             'cashier_id'         => $cashier->id,
             'cashier_session_id' => $cashier->cashierSession?->id ?? $cart->cashier_session_id,
@@ -111,7 +151,7 @@ class PaymentService
             'less_tax'           => $lessTax,
             'item_discount'      => $itemDiscount,
             'total_due'          => $totalDue,
-            'amount_tendered'    => $payload['amount_paid'],
+            'amount_tendered'    => $baseAmountPaid,
             'service_charge'     => $serviceCharge,
             'notes'              => $cart->notes,
             'meta_data'          => $metaData,
@@ -121,6 +161,8 @@ class PaymentService
             'zero_rated_sales'   => $zeroRatedSales,
             'non_vat'            => $nonVatSales,
         ]);
+
+        return [$order, $changeAmount];
     }
 
     private function saveCartItemsToOrderItems($cartItems, $order)
@@ -193,6 +235,52 @@ class PaymentService
             'served_by'            => $cartItem->served_by,
             'serving_number'       => $cartItem->serving_number,
         ];
+    }
+
+    private function preparePaymentContext(array $payload): array
+    {
+        $paymentMethod = PaymentMethod::with('currency')->findOrFail($payload['payment_method_id']);
+
+        $currencyId = $payload['currency_id'] ?? $paymentMethod->currency_id;
+        $currency = Currency::findOrFail($currencyId);
+        $paymentDetails = $payload['payment_details'] ?? [];
+        if (! is_array($paymentDetails)) {
+            $paymentDetails = [];
+        }
+
+        $amountInPaymentCurrency = (float) ($payload['amount_in_payment_currency'] ?? $payload['amount_paid'] ?? 0);
+
+        if ($amountInPaymentCurrency <= 0) {
+            throw new \InvalidArgumentException('Amount tendered must be greater than zero.');
+        }
+
+        $baseAmountPaid = (float) ($payload['computed_amount_paid'] ?? round($amountInPaymentCurrency * (float) $currency->exchange_rate, 2));
+
+        return [
+            'method' => $paymentMethod,
+            'currency' => $currency,
+            'amount_in_payment_currency' => $amountInPaymentCurrency,
+            'base_amount_paid' => $baseAmountPaid,
+            'reference_number' => $payload['reference_number'] ?? null,
+            'notes' => $payload['notes'] ?? null,
+            'payment_details' => $paymentDetails,
+        ];
+    }
+
+    private function recordPayment(Order $order, array $paymentContext): Payment
+    {
+        return Payment::create([
+            'order_id' => $order->id,
+            'payment_method_id' => $paymentContext['method']->id,
+            'currency_id' => $paymentContext['currency']->id,
+            'amount' => $paymentContext['base_amount_paid'],
+            'amount_in_payment_currency' => $paymentContext['amount_in_payment_currency'],
+            'exchange_rate' => $paymentContext['currency']->exchange_rate,
+            'change_amount' => $paymentContext['change_amount'] ?? 0,
+            'reference_number' => $paymentContext['reference_number'],
+            'notes' => $paymentContext['notes'],
+            'payment_details' => $paymentContext['payment_details'] ?? [],
+        ]);
     }
 
 }

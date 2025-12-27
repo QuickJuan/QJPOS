@@ -17,6 +17,7 @@ use App\Enums\TableRoomStatusType;
 use Illuminate\Support\Facades\DB;
 use App\Http\Resources\CartResource;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use App\Http\Resources\PreparationItemCollectionResource;
 
 class CartService
@@ -41,12 +42,25 @@ class CartService
                 }
 
                 //find if ther is a cart that is associated with the table
-                $cart = Cart::firstOrCreate([
-                    'cashier_id'         => Auth::id(),
-                    'cashier_session_id' => Auth::user()->cashierSession->id,
-                    'table_room_id'      => $table->id,
-                    'branch_id'          => $payload['branch_id'],
+                $cart = Cart::firstOrCreate(
+                    [
+                        'cashier_id'         => Auth::id(),
+                        'cashier_session_id' => Auth::user()->cashierSession->id,
+                        'table_room_id'      => $table->id,
+                        'branch_id'          => $payload['branch_id'],
+                    ],
+                    [
+                        'customer_id' => $payload['customer_id'] ?? null,
+                    ]
+                );
+
+                $cart->fill([
+                    'customer_id' => $payload['customer_id'] ?? null,
                 ]);
+
+                if ($cart->isDirty('customer_id')) {
+                    $cart->save();
+                }
 
                 $table->update([
                     'status'        => TableRoomStatusType::OCCUPIED->value,
@@ -95,10 +109,11 @@ class CartService
         if (!$cart) {
 
             $payload = [
-                'table_id'  => $tableId,
-                'branch_id' => $request->user()->branch_id,
-                'pax'       => $request->input('pax', 1),
-                'guest_name'=> $request->input('guest_name', 'Guest'),
+                'table_id'    => $tableId,
+                'branch_id'   => $request->user()->branch_id,
+                'pax'         => $request->input('pax', 1),
+                'guest_name'  => $request->input('guest_name', 'Guest'),
+                'customer_id' => $request->input('customer_id'),
             ];
            $cart =  $this->createCart($payload);
         }
@@ -585,7 +600,7 @@ class CartService
         ]);
     }
 
-    public function voidCartItem(Request $request, int $cartItemId): mixed
+    public function voidCartItem(string $reason, int $cartItemId, User $user): mixed
     {
 
         try {
@@ -593,10 +608,19 @@ class CartService
             if (! $cartItem) {
                 throw new Exception('Cart item not found.');
             }
-            return $cartItem->update([
+
+            $updated = $cartItem->update([
                 'is_void' => true,
-                'reason'  => $request->reason,
+                'reason'  => $reason,
             ]);
+
+            Log::info('Cart item voided via OTP verification.', [
+                'cart_item_id' => $cartItemId,
+                'voided_by'    => $user->id,
+                'voided_name'  => $user->name,
+            ]);
+
+            return $updated;
         } catch (Exception $e) {
             throw new Exception('Error voiding cart item.');
         }

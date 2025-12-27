@@ -1,5 +1,6 @@
 <template>
     <div
+        id="receipt-content"
         class="receipt-container max-w-xs mx-auto bg-white p-4 font-mono text-sm leading-tight border-2 border-gray-300"
     >
         <!-- Header -->
@@ -44,9 +45,27 @@
                 <span>Table:</span>
                 <span>{{ tableNumber }}</span>
             </div>
-            <div class="flex justify-between" v-if="props.cashier.name">
+            <div class="flex justify-between" v-if="props.cashier">
                 <span>Cashier:</span>
-                <span>{{ props.cashier.name }}</span>
+                <span>{{
+                    typeof props.cashier === "string"
+                        ? props.cashier
+                        : props.cashier.name
+                }}</span>
+            </div>
+
+            <!-- Refund Indicator -->
+            <div
+                v-if="props.refundMeta"
+                class="mt-4 pt-4 border-t-2 border-red-500"
+            >
+                <div class="text-center font-bold text-red-600 text-sm mb-2">
+                    !!! REFUNDED !!!
+                </div>
+                <div class="flex justify-between text-xs text-red-600">
+                    <span>Refunded by:</span>
+                    <span>{{ props.refundMeta.supervisor }}</span>
+                </div>
             </div>
         </div>
 
@@ -199,11 +218,55 @@
             </div>
             <div class="flex justify-between" v-if="props.payment">
                 <span>Payment Received:</span>
-                <span>{{ formatMoney(props.payment.amount_paid) }}</span>
+                <span>
+                    {{ formatMoney(amountPaidBase, baseCurrencyCode) }}
+                </span>
+            </div>
+            <div
+                class="flex justify-between"
+                v-if="
+                    props.payment?.currency &&
+                    !props.payment.currency?.is_default &&
+                    paymentCurrencyAmount !== null
+                "
+            >
+                <span> Paid in {{ props.payment.currency.code }}: </span>
+                <span>
+                    {{
+                        formatMoney(
+                            paymentCurrencyAmount,
+                            props.payment.currency.code
+                        )
+                    }}
+                </span>
+            </div>
+            <div
+                class="flex justify-between text-xs text-gray-600"
+                v-if="foreignExchangeRateDisplay"
+            >
+                <span>Exchange Rate:</span>
+                <span>{{ foreignExchangeRateDisplay }}</span>
             </div>
             <div class="flex justify-between" v-if="props.payment">
                 <span>Change:</span>
-                <span>{{ formatMoney(customerChange) }}</span>
+                <span>
+                    {{ formatMoney(customerChange, baseCurrencyCode) }}
+                </span>
+            </div>
+            <div
+                v-if="paymentDetailRows.length"
+                class="mt-2 space-y-1 text-sm text-gray-700"
+            >
+                <div
+                    v-for="detail in paymentDetailRows"
+                    :key="`${detail.label}-${detail.value}`"
+                    class="flex justify-between gap-4"
+                >
+                    <span>{{ detail.label }}</span>
+                    <span class="font-semibold text-right ml-auto">
+                        {{ detail.value }}
+                    </span>
+                </div>
             </div>
         </div>
 
@@ -269,6 +332,11 @@ import Branch from "@/Types/Branch";
 import { formatMoney } from "@/Utils/FormatMoney";
 import { computed } from "vue";
 
+type PaymentDetailRow = {
+    label: string;
+    value: string;
+};
+
 const props = defineProps<{
     businessLogo?: string;
     storeName?: string;
@@ -283,6 +351,12 @@ const props = defineProps<{
     receiptHeader?: any;
     receiptFooter: any;
     birAccreditationFooter?: any;
+    refundMeta?: {
+        requested_by: string;
+        supervisor: string;
+        refunded_at: string;
+        notes: string;
+    } | null;
 }>();
 
 const branch = computed(() => props.branch ?? ({} as Branch));
@@ -439,18 +513,143 @@ const getChildAmount = (option: any) => {
 };
 
 const totalAmountDue = computed(() => {
+    const totalDue = parseFloat(props.totals?.total_due) || 0;
+    const serviceCharge = parseFloat(props.totals?.service_charge) || 0;
+    return totalDue + serviceCharge;
+});
+
+const amountPaidBase = computed(() => {
+    if (!props.payment) {
+        return 0;
+    }
+
+    const amount = parseNumeric(props.payment.amount_paid);
+    return amount ?? 0;
+});
+
+const paymentCurrencyAmount = computed(() => {
+    if (!props.payment) {
+        return null;
+    }
+
+    return parseNumeric(props.payment.amount_in_payment_currency);
+});
+
+const baseCurrencyCode = computed(() => {
     return (
-        parseFloat(props.totals?.total_due) +
-            parseFloat(props.totals?.service_charge) || 0
+        props.payment?.base_currency?.code ||
+        props.payment?.currency?.code ||
+        "PHP"
     );
+});
+
+const foreignExchangeRateDisplay = computed(() => {
+    if (
+        !props.payment?.currency ||
+        props.payment.currency.is_default ||
+        props.payment.currency.exchange_rate === undefined ||
+        props.payment.currency.exchange_rate === null
+    ) {
+        return null;
+    }
+
+    const exchangeRate = parseNumeric(props.payment.currency.exchange_rate);
+    if (!exchangeRate || exchangeRate <= 0) {
+        return null;
+    }
+
+    const paymentCurrencyCode = props.payment.currency.code || "";
+    const formattedRate = formatMoney(exchangeRate, baseCurrencyCode.value);
+
+    if (paymentCurrencyCode) {
+        return `1 ${paymentCurrencyCode} = ${formattedRate}`;
+    }
+
+    return formattedRate;
+});
+
+const normalizedPaymentType = computed(() => {
+    const typeValue =
+        props.payment?.payment_type_value ?? props.payment?.payment_type ?? "";
+    return typeof typeValue === "string" ? typeValue.toLowerCase() : "";
+});
+
+const isCreditPayment = computed(
+    () => normalizedPaymentType.value === "credit"
+);
+const isEWalletPayment = computed(
+    () => normalizedPaymentType.value === "e-wallet"
+);
+const isGiftCheckPayment = computed(
+    () => normalizedPaymentType.value === "gift-check"
+);
+const isCardPayment = computed(() => normalizedPaymentType.value === "card");
+
+const paymentDetailRows = computed<PaymentDetailRow[]>(() => {
+    if (!props.payment) {
+        return [];
+    }
+
+    const rows: PaymentDetailRow[] = [];
+
+    if (props.payment.method) {
+        rows.push({ label: "Payment Method:", value: props.payment.method });
+    }
+
+    if (isCreditPayment.value && props.payment.customer_name) {
+        rows.push({ label: "Customer:", value: props.payment.customer_name });
+    }
+
+    if (isEWalletPayment.value) {
+        const reference = props.payment.reference_number;
+        if (reference) {
+            rows.push({ label: "Reference No.:", value: reference });
+        }
+    }
+
+    if (isGiftCheckPayment.value) {
+        const reference =
+            props.payment.reference_number || props.payment.gift_check_number;
+        if (reference) {
+            rows.push({ label: "Reference No.:", value: reference });
+        }
+
+        const giftAmount = parseNumeric(props.payment.gift_check_amount);
+        if (giftAmount !== null) {
+            rows.push({
+                label: "Gift Check Amount:",
+                value: formatMoney(giftAmount, baseCurrencyCode.value),
+            });
+        }
+    }
+
+    if (isCardPayment.value) {
+        if (props.payment.approval_code) {
+            rows.push({
+                label: "Approval Code:",
+                value: props.payment.approval_code,
+            });
+        }
+
+        if (props.payment.card_holder_name) {
+            rows.push({
+                label: "Cardholder:",
+                value: props.payment.card_holder_name,
+            });
+        }
+    }
+
+    return rows;
 });
 
 const customerChange = computed(() => {
     if (props.payment) {
-        return (
-            parseFloat(props.payment.amount_paid) -
-            parseFloat(totalAmountDue.value)
-        );
+        const change = parseNumeric(props.payment.change);
+        if (change !== null) {
+            return change;
+        }
+
+        return amountPaidBase.value - totalAmountDue.value;
     }
     return 0;
 });

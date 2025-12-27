@@ -81,4 +81,23 @@ class Currency extends Model
     {
         return $this->hasMany(Payment::class);
     }
+
+    /**
+     * Get denominations configured for this currency.
+     */
+    public function denominations(): HasMany
+    {
+        return $this->hasMany(CurrencyDenomination::class);
+    }
+
+    /**
+     * Convenience accessor for active denominations ordered for display.
+     */
+    public function activeDenominations(): HasMany
+    {
+        return $this->denominations()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderByDesc('value');
+    }
 }

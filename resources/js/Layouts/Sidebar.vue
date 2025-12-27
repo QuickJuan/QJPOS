@@ -1,72 +1,143 @@
 <template>
-    <aside class="w-64 bg-purple-700 text-white flex flex-col">
-        <div class="p-4 text-2xl font-bold">
-            QJPOS - {{ $page?.props?.active_branch?.name }}
+    <aside
+        class="flex w-64 flex-col bg-slate-950 text-white shadow-xl ring-1 ring-white/5"
+    >
+        <div class="border-b border-white/5 px-6 py-5">
+            <p class="text-xs uppercase tracking-[0.35em] text-slate-500">
+                Active Branch
+            </p>
+            <p class="mt-2 text-xl font-semibold leading-tight">
+                {{ branchName }}
+            </p>
         </div>
-        <nav class="flex-1 px-2 space-y-2">
-            <a
+
+        <nav class="flex-1 space-y-1 px-3 py-4">
+            <Link
                 v-for="item in navigation"
                 :key="item.name"
                 :href="item.href"
+                class="group flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition"
                 :class="[
-                    item.current ? 'bg-purple-800' : 'hover:bg-purple-600',
-                    'group flex items-center px-2 py-2 text-sm font-medium rounded-md',
+                    item.active
+                        ? 'bg-primary-500/10 text-white shadow-inner ring-1 ring-primary-400/40'
+                        : 'text-slate-300 hover:bg-white/5 hover:text-white',
                 ]"
+                :aria-current="item.active ? 'page' : undefined"
             >
-                <component :is="item.icon" class="h-6 w-6 mr-3" />
-                {{ item.name }}
-            </a>
+                <span
+                    class="h-10 w-1 rounded-full"
+                    :class="
+                        item.active
+                            ? 'bg-primary-400 shadow-[0_0_12px_rgba(56,189,248,0.65)]'
+                            : 'bg-transparent'
+                    "
+                />
+                <component
+                    :is="item.icon"
+                    class="h-5 w-5 flex-shrink-0"
+                    :class="
+                        item.active
+                            ? 'text-primary-200'
+                            : 'text-slate-500 group-hover:text-primary-200'
+                    "
+                />
+                <span
+                    class="truncate"
+                    :class="
+                        item.active
+                            ? 'tracking-[0.25em] text-[11px] uppercase text-primary-100'
+                            : ''
+                    "
+                >
+                    {{ item.name }}
+                </span>
+                <span
+                    v-if="item.active"
+                    class="ml-auto h-2.5 w-2.5 rounded-full bg-primary-300/90 shadow-[0_0_8px_rgba(56,189,248,0.6)]"
+                />
+            </Link>
         </nav>
-        <div class="p-4">
-            <a
-                href="#"
-                @click.prevent="logout"
-                class="group flex items-center px-2 py-2 text-sm font-medium rounded-md hover:bg-purple-600"
+
+        <div class="border-t border-white/5 px-3 py-4">
+            <button
+                type="button"
+                class="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-slate-100 transition hover:bg-red-500/10 hover:text-red-200"
+                @click="handleLogout"
             >
-                <LogoutIcon class="h-6 w-6 mr-3" />
+                <LogoutIcon class="h-5 w-5" />
                 Logout
-            </a>
+            </button>
         </div>
     </aside>
 </template>
 
 <script setup>
+import { computed } from "vue";
+import { Link, usePage } from "@inertiajs/vue3";
 import {
-    HomeIcon,
-    RectangleGroupIcon,
-    RectangleStackIcon,
-    TagIcon,
-    ShieldCheckIcon,
-    MapPinIcon,
-    UsersIcon,
-    ChartBarIcon,
+    UserCircleIcon,
+    EnvelopeIcon,
+    ClockIcon,
+    BanknotesIcon,
+    BuildingLibraryIcon,
     ArrowRightOnRectangleIcon as LogoutIcon,
-    ReceiptRefundIcon,
-    PrinterIcon,
 } from "@heroicons/vue/24/outline";
-import { ref } from "vue";
 
 const props = defineProps({
     logout: Function,
 });
 
-const navigation = ref([
-    { name: "Dashbord", href: "/dashboard", icon: HomeIcon, current: true },
-    { name: "Sales", href: "#", icon: RectangleGroupIcon, current: false },
-    { name: "Inventory", href: "#", icon: RectangleStackIcon, current: false },
-    { name: "Attendance", href: "#", icon: TagIcon, current: false },
+const page = usePage();
+
+const branchName = computed(
+    () => page?.props?.active_branch?.name || "QuickJuan Branch"
+);
+
+const currentUrl = computed(() => page?.url || window.location.pathname);
+
+const rawNavigation = [
     {
-        name: "Transactions",
-        href: "/transactions",
-        icon: ReceiptRefundIcon,
-        current: false,
+        name: "Profile",
+        href: "/user/profile",
+        icon: UserCircleIcon,
     },
     {
-        name: "Printer Config",
-        href: "/printer-config",
-        icon: PrinterIcon,
-        current: false,
+        name: "Inbox",
+        href: "/user/inbox",
+        icon: EnvelopeIcon,
     },
-    { name: "Reports", href: "#", icon: ChartBarIcon, current: false },
-]);
+    {
+        name: "Attendance",
+        href: "/user/attendance",
+        icon: ClockIcon,
+    },
+    {
+        name: "Payroll",
+        href: "/user/payroll",
+        icon: BanknotesIcon,
+    },
+    {
+        name: "Loans",
+        href: "/user/loans",
+        icon: BuildingLibraryIcon,
+    },
+    {
+        name: "Back to Cashiering",
+        href: "/resto/home",
+        icon: ShopingCartIcon,
+    },
+];
+
+const navigation = computed(() =>
+    rawNavigation.map((item) => ({
+        ...item,
+        active: currentUrl.value.startsWith(item.href),
+    }))
+);
+
+const handleLogout = () => {
+    if (props.logout) {
+        props.logout();
+    }
+};
 </script>

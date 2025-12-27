@@ -2,9 +2,16 @@
 namespace App\Http\Controllers;
 
 use Exception;
+use Inertia\Inertia;
+use Inertia\Response;
 use Illuminate\Http\Request;
+use App\Models\Cart;
+use App\Models\User;
+use App\Models\CartItem;
 use App\Services\CartService;
 use App\Services\PaymentService;
+use App\Services\OtpVerificationService;
+use App\Services\OtpSecretService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 use App\Http\Resources\CartResource;
@@ -16,17 +23,20 @@ use App\Http\Requests\TransferItemsRequest;
 use App\Http\Requests\CreateTableCartRequest;
 use App\Http\Resources\ReceiptOrdersResource;
 use App\Http\Requests\ApplyDiscountToCartItemRequest;
+use App\Http\Requests\VoidCartItemRequest;
 
 class CartController extends Controller
 {
     public function __construct(
         protected CartService $cartService,
         protected CashierSessionService $cashierSessionService,
-        protected PaymentService $paymentService
+        protected PaymentService $paymentService,
+        protected OtpVerificationService $otpVerificationService
     ) {
         $this->cartService           = $cartService;
         $this->cashierSessionService = $cashierSessionService;
         $this->paymentService        = $paymentService;
+        $this->otpVerificationService = $otpVerificationService;
     }
 
     public function create(CreateTableCartRequest $request)
@@ -104,15 +114,22 @@ class CartController extends Controller
         }
     }
 
-    public function voidCartItem(Request $request, int $cartItemId): RedirectResponse
+    public function voidCartItem(VoidCartItemRequest $request, int $cartItemId): RedirectResponse
     {
         try {
             if (! $cartItemId) {
                 return redirect()->back()->with('error', 'Cart item ID is empty.');
             }
 
+            $validated = $request->validated();
 
-            $this->cartService->voidCartItem($request, $cartItemId);
+            $this->otpVerificationService->verify($request->user(), $validated['otp_code']);
+
+            $this->cartService->voidCartItem(
+                reason: $validated['reason'],
+                cartItemId: $cartItemId,
+                user: $request->user()
+            );
 
             return redirect()->back()->with('success', 'Cart item removed successfully.');
         } catch (Exception $e) {
@@ -168,18 +185,156 @@ class CartController extends Controller
         }
     }
 
-    public function deleteCartItem(int $cartItemId): RedirectResponse
+    public function deleteCartItem(int $cartItemId): RedirectResponse|JsonResponse
     {
         try {
             if (! $cartItemId) {
                 return redirect()->back()->with('error', 'Cart item ID is empty.');
             }
 
+            $cartItem = CartItem::findOrFail($cartItemId);
+
+            // If order is placed, require OTP approval
+            if ($cartItem->placed_order) {
+                // Get eligible approvers (manager, supervisor, OIC, admin, super admin)
+                $eligibleRoles = ['manager', 'supervisor', 'oic', 'admin', 'super admin'];
+                $approvers = User::whereHas('roles', function ($query) use ($eligibleRoles) {
+                    $query->whereIn('name', $eligibleRoles);
+                })
+                ->where('branch_id', auth()->user()->branch_id)
+                ->where('otp_enabled', true)
+                ->select('id', 'name', 'email')
+                ->get();
+
+                // Return JSON response with approvers list for modal
+                return response()->json([
+                    'success' => false,
+                    'requires_approval' => true,
+                    'cart_item_id' => $cartItemId,
+                    'approvers' => $approvers,
+                    'message' => 'This item is from a placed order. OTP approval from an authorized user is required to delete it.',
+                ], 422);
+            }
+
+            // If not a placed order, delete directly
             $this->cartService->deleteCartItem($cartItemId);
 
             return redirect()->back()->with('success', 'Cart item deleted successfully.');
         } catch (Exception $e) {
+            Log::error('Delete cart item error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'There was an error deleting cart item.');
+        }
+    }
+
+    /**
+     * Delete a cart item with OTP approval from an authorized user
+     */
+    public function deleteCartItemWithApproval(Request $request): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'cart_item_id' => 'required|integer|exists:cart_items,id',
+                'approver_id' => 'required|integer|exists:users,id',
+                'otp_code' => 'required|string|digits:6',
+            ]);
+
+            $cartItem = CartItem::findOrFail($validated['cart_item_id']);
+            $approver = User::findOrFail($validated['approver_id']);
+
+            // Verify approver has OTP enabled
+            if (!$approver->otp_enabled || !$approver->otp_secret) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Selected approver does not have OTP enabled.',
+                ], 422);
+            }
+
+            // Verify approver is in the same branch
+            if ($approver->branch_id !== auth()->user()->branch_id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Approver must be from the same branch.',
+                ], 422);
+            }
+
+            // Verify OTP code using approver's secret
+            if (!OtpSecretService::verifyCode($approver->otp_secret, $validated['otp_code'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid OTP code. Please try again.',
+                ], 422);
+            }
+
+            // Delete the cart item
+            $this->cartService->deleteCartItem($validated['cart_item_id']);
+
+            // Log the approval action
+            Log::info('Cart item deleted with OTP approval', [
+                'cart_item_id' => $validated['cart_item_id'],
+                'deleted_by' => auth()->id(),
+                'approved_by' => $approver->id,
+                'timestamp' => now(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Cart item deleted successfully with approval.',
+            ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (Exception $e) {
+            Log::error('Delete cart item with approval error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'There was an error deleting the cart item.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Get eligible approvers for a cart item deletion
+     */
+    public function getApproversForItem(int $cartItemId): JsonResponse
+    {
+        try {
+            $cartItem = CartItem::findOrFail($cartItemId);
+
+            // If not a placed order, no approvers needed
+            if (!$cartItem->placed_order) {
+                return response()->json([
+                    'success' => true,
+                    'approvers' => [],
+                    'message' => 'No approvers needed for non-placed orders.',
+                ], 200);
+            }
+
+            // Get eligible approvers (admin, manager, supervisor, OIC)
+            $eligibleRoles = ['admin', 'manager', 'supervisor', 'oic'];
+            $approvers = User::whereHas('roles', function ($query) use ($eligibleRoles) {
+                $query->whereIn('name', $eligibleRoles);
+            })
+                ->where('branch_id', auth()->user()->branch_id)
+                ->where('otp_enabled', true)
+                ->select('id', 'name', 'email')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'approvers' => $approvers,
+                'message' => 'Approvers retrieved successfully.',
+            ], 200);
+
+        } catch (Exception $e) {
+            Log::error('Get approvers error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'There was an error retrieving approvers.',
+            ], 500);
         }
     }
 
@@ -227,6 +382,28 @@ class CartController extends Controller
                 'message' => $e->getMessage() ?? 'Failed to re-print order.',
             ], 404);
         }
+    }
+
+    public function showSettlePayment(Cart $cart): Response
+    {
+        $cart->load([
+            'cartItems',
+            'cartItems.product',
+            'cartItems.productPackaging',
+            'cartItems.children',
+            'cartItems.children.product',
+            'cartItems.children.productPackaging',
+            'cartItems.servedBy:id,name',
+            'cashier',
+            'cashierSession',
+            'branch',
+            'customer',
+            'tableRoom.tableRoomLocation',
+        ]);
+
+        return Inertia::render('Resto/SettlePayment', [
+            'cart' => new CartResource($cart),
+        ]);
     }
 
     public function settleBill(SettleBillRequest $request): JsonResponse | RedirectResponse

@@ -540,32 +540,65 @@ const handleModifierAdded = (modifierData: any) => {
 };
 
 const handleRequiredReason = (data: any) => {
-    router.put(
-        route("resto.cart.void-cart", {
-            cartItemId: data.orderItem.id,
-        }),
-        {
-            reason: data.reason,
-        },
-        {
-            onSuccess: () => {
+    // If it's a placed order with approver and OTP, use the approval workflow
+    if (data.orderItem?.placed_order && data.approverId && data.otpCode) {
+        axios
+            .post(route("resto.cart.delete-with-approval"), {
+                cart_item_id: data.orderItem.id,
+                approver_id: data.approverId,
+                otp_code: data.otpCode,
+            })
+            .then((response) => {
                 toast.add({
                     severity: "success",
                     summary: "Success",
-                    detail: page.props.flash.success,
+                    detail: "Item deleted successfully with approval",
                     life: 3000,
                 });
-            },
-            onError: (errors) => {
+                // Refresh the cart
+                router.reload();
+            })
+            .catch((error) => {
+                let errorMessage = "Failed to delete item";
+                if (error.response?.data?.message) {
+                    errorMessage = error.response.data.message;
+                }
                 toast.add({
                     severity: "error",
                     summary: "Error",
-                    detail: page.props.flash.error,
+                    detail: errorMessage,
                     life: 3000,
                 });
+            });
+    } else {
+        // Regular void operation without OTP
+        router.put(
+            route("resto.cart.void-cart", {
+                cartItemId: data.orderItem.id,
+            }),
+            {
+                reason: data.reason,
             },
-        }
-    );
+            {
+                onSuccess: () => {
+                    toast.add({
+                        severity: "success",
+                        summary: "Success",
+                        detail: page.props.flash.success,
+                        life: 3000,
+                    });
+                },
+                onError: (errors) => {
+                    toast.add({
+                        severity: "error",
+                        summary: "Error",
+                        detail: page.props.flash.error,
+                        life: 3000,
+                    });
+                },
+            }
+        );
+    }
 };
 
 const handleApplyDiscount = (discountData: any) => {
@@ -673,8 +706,8 @@ const handleEndOfShift = () => {
 };
 
 const handleConfirmCloseSession = async (data: any) => {
-    let payload = {
-        cash_denomination_details: data.denominationData,
+    const payload = {
+        cash_denomination_details: data.currencyBreakdown,
         cash_denomination: data.totalCashCounted,
         shift_no: page.props.current_cashier_session?.id,
         cashier_id: page.props.current_cashier_session?.cashier_id,
