@@ -117,13 +117,12 @@
 
                 <!-- Forgot Password Link -->
                 <div class="text-center pt-2">
-                    <a
-                        :href="forgotPasswordUrl"
-                        target="_blank"
+                    <Link
+                        :href="route('password.request')"
                         class="text-sm text-primary-600 hover:text-primary-700 underline font-medium transition-colors duration-200"
                     >
                         Forgot your password?
-                    </a>
+                    </Link>
                 </div>
             </form>
 
@@ -160,19 +159,6 @@ const currentYear = computed(() => new Date().getFullYear());
 
 const companyName = computed(() => {
     return page.props.company_info?.company_name || "QJPOS";
-});
-
-// Get the central domain for Filament password reset
-const centralDomain = computed(() => {
-    // Get the central domain from config or use default
-    const domain = import.meta.env.VITE_CENTRAL_DOMAIN || "storepos.online";
-    return domain;
-});
-
-const forgotPasswordUrl = computed(() => {
-    // Construct the Filament password reset URL
-    const protocol = window.location.protocol;
-    return `${protocol}//${centralDomain.value}/central/password/reset`;
 });
 
 const form = useForm({
