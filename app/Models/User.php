@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\QueryException;
+use Spatie\Permission\Models\Role;
 
 class User extends Authenticatable
 {
@@ -103,27 +105,37 @@ class User extends Authenticatable
     }
 
     /**
-     * Override roles relationship to only work in tenant context
+     * Override roles relationship to handle missing table gracefully
+     * This prevents errors when tenancy is not yet initialized
      */
     public function roles(): BelongsToMany
     {
-        if (!function_exists('tenancy') || !tenancy()->initialized) {
-            return $this->belongsToMany(
-                config('permission.models.role'),
+        try {
+            // Make sure we're using the correct connection (tenant's connection)
+            $query = $this->morphToMany(
+                Role::class,
+                config('permission.column_names.model_morph_key'),
                 config('permission.table_names.model_has_roles'),
-                'model_id',
+                null,
                 'role_id'
-            )->where('id', 0); // Return empty relationship
-        }
+            )->where(config('permission.table_names.roles').'.guard_name', '=', $this->getDefaultGuardName());
 
-        // Call the trait's roles method
-        return $this->morphToMany(
-            config('permission.models.role'),
-            'model',
-            config('permission.table_names.model_has_roles'),
-            config('permission.column_names.model_morph_key'),
-            'role_id'
-        );
+            return $query;
+        } catch (QueryException $e) {
+            // If roles table doesn't exist, return empty relationship
+            if (strpos($e->getMessage(), 'Base table or view not found') !== false ||
+                strpos($e->getMessage(), 'doesn\'t exist') !== false) {
+                // Return an empty collection via a query that returns nothing
+                return $this->morphToMany(
+                    Role::class,
+                    config('permission.column_names.model_morph_key'),
+                    config('permission.table_names.model_has_roles'),
+                    null,
+                    'role_id'
+                )->whereRaw('1=0');
+            }
+            throw $e;
+        }
     }
 
     /**
@@ -131,7 +143,8 @@ class User extends Authenticatable
      */
     public function permissions(): BelongsToMany
     {
-        if (!function_exists('tenancy') || !tenancy()->initialized) {
+        // Check if tenancy is initialized and permissions table exists
+        if (!$this->canAccessRolesTable()) {
             return $this->belongsToMany(
                 config('permission.models.permission'),
                 config('permission.table_names.model_has_permissions'),
@@ -148,6 +161,25 @@ class User extends Authenticatable
             config('permission.column_names.model_morph_key'),
             'permission_id'
         );
+    }
+
+    /**
+     * Check if we can safely access the roles table
+     */
+    private function canAccessRolesTable(): bool
+    {
+        try {
+            // Check if tenancy is initialized
+            if (!function_exists('tenancy') || !tenancy()->initialized) {
+                return false;
+            }
+
+            // Check if the roles table exists
+            $table = config('permission.table_names.roles');
+            return \Illuminate\Support\Facades\Schema::hasTable($table);
+        } catch (\Exception $e) {
+            return false;
+        }
     }
 
     /**

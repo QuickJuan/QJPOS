@@ -22,6 +22,9 @@ class TenantApplication extends Model implements HasMedia
         'business_permit_number',
         'status', // pending, approved, rejected
         'notes',
+        'accept_terms',
+        'accept_privacy',
+        'accept_promotions',
     ];
 
     protected $casts = [

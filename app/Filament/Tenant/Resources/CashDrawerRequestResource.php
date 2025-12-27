@@ -27,13 +27,18 @@ class CashDrawerRequestResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        $user = auth()->user();
+        try {
+            $user = auth()->user();
 
-        if (! $user) {
+            if (! $user) {
+                return false;
+            }
+
+            return $user->hasAnyRole(['Admin', 'Manager']);
+        } catch (\Exception $e) {
+            // If roles table is not accessible, don't show navigation
             return false;
         }
-
-        return $user->hasAnyRole(['Admin', 'Manager']);
     }
 
     public static function getNavigationBadge(): ?string
