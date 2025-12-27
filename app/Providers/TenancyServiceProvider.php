@@ -148,9 +148,8 @@ class TenancyServiceProvider extends ServiceProvider
     protected function makeTenancyMiddlewareHighestPriority()
     {
         $tenancyMiddleware = [
+            // DO NOT include PreventAccessFromCentralDomains here - it should only be in tenant routes
             // Even higher priority than the initialization middleware
-            Middleware\PreventAccessFromCentralDomains::class,
-
             Middleware\InitializeTenancyByDomain::class,
             Middleware\InitializeTenancyBySubdomain::class,
             Middleware\InitializeTenancyByDomainOrSubdomain::class,
