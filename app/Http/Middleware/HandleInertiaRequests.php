@@ -221,7 +221,7 @@ class HandleInertiaRequests extends Middleware
                         $session = CashierSession::where('cashier_id', Auth::id())
                             ->whereNull('closing_time')
                             ->with('cashier:id,name,email')
-                            ->select('id', 'cashier_id', 'branch_id', 'opening_time', 'closing_time')
+                            ->select('id', 'cashier_id', 'branch_id', 'started_time', 'closing_time')
                             ->first();
                         return $session?->toArray();
                     } catch (\Exception $e) {
