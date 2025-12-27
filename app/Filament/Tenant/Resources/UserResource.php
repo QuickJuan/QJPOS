@@ -101,13 +101,6 @@ class UserResource extends Resource
                     ->searchable()
                     ->toggleable(),
 
-                TextColumn::make('roles.name')
-                    ->label('Roles')
-                    ->badge()
-                    ->color('success')
-                    ->sortable()
-                    ->searchable(),
-
                 TextColumn::make('branches.name')
                     ->label('Branches')
                     ->badge()

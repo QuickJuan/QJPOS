@@ -2,31 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreTenantApplicationRequest;
 use App\Mail\TenantApplicationReceived;
 use App\Models\Central\TenantApplication;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class TenantRegistrationController extends Controller
 {
-    /**
-     * Validation rules for tenant application
-     */
-    private function validationRules(): array
-    {
-        return [
-            'business_name' => 'required|string|max:255|min:2',
-            'business_address' => 'required|string|max:500|min:5',
-            'owner_name' => 'required|string|max:255|min:2',
-            'owner_email' => 'required|email|max:255',
-            'owner_phone' => 'required|string|max:20|min:7',
-            'business_permit_number' => 'nullable|string|max:255',
-            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
-        ];
-    }
-
     /**
      * Show the tenant registration form
      */
@@ -38,9 +22,9 @@ class TenantRegistrationController extends Controller
     /**
      * Handle tenant registration submission
      */
-    public function store(Request $request)
+    public function store(StoreTenantApplicationRequest $request)
     {
-        $validated = $request->validate($this->validationRules());
+        $validated = $request->validated();
 
         try {
             // Create tenant application
@@ -52,6 +36,9 @@ class TenantRegistrationController extends Controller
                 'owner_phone' => trim($validated['owner_phone']),
                 'business_permit_number' => trim($validated['business_permit_number'] ?? ''),
                 'status' => 'pending',
+                'accept_terms' => (bool) $validated['accept_terms'],
+                'accept_privacy' => (bool) $validated['accept_privacy'],
+                'accept_promotions' => (bool) $validated['accept_promotions'] ?? false,
             ]);
 
             // Handle logo upload with media library
