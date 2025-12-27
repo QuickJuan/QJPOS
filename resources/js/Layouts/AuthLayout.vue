@@ -1,13 +1,13 @@
 <template>
     <Head :title="props.title" />
     <main
-        class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100"
+        class="min-h-screen bg-gradient-to-br from-neutral-900 via-primary-900/20 to-neutral-800"
         role="main"
     >
         <div class="grid md:grid-cols-2 lg:grid-cols-5 min-h-screen">
             <!-- Left Panel - Welcome Section -->
             <div
-                class="hidden md:block md:col-span-1 lg:col-span-3 relative overflow-hidden bg-gradient-to-br from-primary via-primary-light to-secondary"
+                class="hidden md:block md:col-span-1 lg:col-span-3 relative overflow-hidden bg-gradient-to-br from-primary-600 via-primary-700 to-secondary-900"
                 role="banner"
                 aria-label="QJPOS welcome section"
             >
@@ -58,10 +58,10 @@
                                     class="text-6xl lg:text-7xl font-bold text-white mb-4"
                                     id="brand-heading"
                                 >
-                                    QJ<span class="text-fourth-light">POS</span>
+                                    QJ<span class="text-tertiary-100">POS</span>
                                 </h2>
                                 <div
-                                    class="h-1 w-32 bg-gradient-to-r from-fourth-light to-white rounded-full mx-auto"
+                                    class="h-1 w-32 bg-gradient-to-r from-tertiary-100 to-white rounded-full mx-auto"
                                     aria-hidden="true"
                                 ></div>
                             </div>
@@ -71,7 +71,7 @@
                                     Ready to manage your business?
                                 </p>
                                 <p
-                                    class="text-lg text-gray-100 max-w-md mx-auto"
+                                    class="text-lg text-neutral-100 max-w-md mx-auto"
                                 >
                                     Sign in to access your dashboard and
                                     continue where you left off.
@@ -92,13 +92,13 @@
                                     class="flex items-center justify-center mb-2"
                                 >
                                     <div
-                                        class="w-3 h-3 bg-green-400 rounded-full mr-2"
+                                        class="w-3 h-3 bg-success-400 rounded-full mr-2"
                                     ></div>
                                     <span class="text-white font-semibold"
                                         >System Online</span
                                     >
                                 </div>
-                                <p class="text-gray-100 text-sm">
+                                <p class="text-neutral-100 text-sm">
                                     All services running
                                 </p>
                             </div>
@@ -112,13 +112,13 @@
                                     class="flex items-center justify-center mb-2"
                                 >
                                     <div
-                                        class="w-3 h-3 bg-blue-400 rounded-full mr-2"
+                                        class="w-3 h-3 bg-primary-400 rounded-full mr-2"
                                     ></div>
                                     <span class="text-white font-semibold"
                                         >Support Ready</span
                                     >
                                 </div>
-                                <p class="text-gray-100 text-sm">
+                                <p class="text-neutral-100 text-sm">
                                     Help when you need it
                                 </p>
                             </div>
@@ -126,7 +126,7 @@
 
                         <!-- Simple Footer -->
                         <div class="mt-20">
-                            <p class="text-gray-200 text-sm">
+                            <p class="text-neutral-200 text-sm">
                                 Secure • Reliable • Always Available
                             </p>
                         </div>
@@ -135,7 +135,7 @@
             </div>
 
             <div
-                class="md:col-span-1 lg:col-span-2 flex items-center justify-center p-8 bg-white"
+                class="md:col-span-1 lg:col-span-2 flex items-center justify-center p-8 bg-gradient-to-br from-white/95 to-neutral-50/95 backdrop-blur-sm"
                 role="form"
                 aria-label="Login form section"
             >

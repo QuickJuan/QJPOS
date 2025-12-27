@@ -35,10 +35,12 @@ const emit = defineEmits(["update:modelValue"]);
 
 <template>
     <div class="flex flex-col">
-        <div class="flex justify-between items-end text-gray-700 dark:text-gray-300">
+        <div
+            class="flex justify-between items-end text-neutral-700 dark:text-neutral-300"
+        >
             <InputLabel :for="id">
                 {{ label }}
-                <span v-if="label && required" class="text-gray-500">*</span>
+                <span v-if="label && required" class="text-neutral-500">*</span>
             </InputLabel>
         </div>
         <InputText
@@ -48,7 +50,7 @@ const emit = defineEmits(["update:modelValue"]);
             :placeholder="placeholder"
             :aria-placeholder="placeholder"
             @input="input($event)"
-            :class="error ? 'border-red-500' : 'border-gray-300'"
+            :class="error ? 'border-error-500' : 'border-neutral-300'"
             :type="type ?? 'text'"
             :id="id"
             :value="modelValue"
@@ -58,7 +60,7 @@ const emit = defineEmits(["update:modelValue"]);
             :max="props.max"
         />
 
-        <p v-if="helper" class="text-xs text-gray-500">{{ helper }}</p>
+        <p v-if="helper" class="text-xs text-neutral-500">{{ helper }}</p>
 
         <InputError :message="error" />
     </div>

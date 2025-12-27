@@ -121,6 +121,12 @@ class AuthController extends Controller
     {
         auth()->logout();
 
+        // Clear session data
+        $request->session()->flush();
+
+        // Regenerate the CSRF token
+        $request->session()->regenerateToken();
+
         return redirect()->route('login');
     }
 

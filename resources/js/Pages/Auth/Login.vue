@@ -2,17 +2,37 @@
     <AuthLayout title="Login">
         <div class="space-y-8">
             <!-- Header -->
-            <div class="text-center">
-                <h2 class="text-3xl font-bold text-gray-900 mb-2">
+            <div class="text-center space-y-2">
+                <div class="flex justify-center mb-4">
+                    <div
+                        class="w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl shadow-lg flex items-center justify-center"
+                    >
+                        <svg
+                            class="w-8 h-8 text-white"
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                        >
+                            <path
+                                d="M12 2L2 7V10C2 16 6 20.5 12 22C18 20.5 22 16 22 10V7L12 2ZM12 4.19L19 7.3V10C19 15.85 15.74 19.94 12 20.96C8.26 19.94 5 15.85 5 10V7.3L12 4.19ZM12 8C10.34 8 9 9.34 9 11S10.34 14 12 14S15 12.66 15 11S13.66 8 12 8ZM12 10C12.55 10 13 10.45 13 11S12.55 12 12 12S11 11.55 11 11S11.45 10 12 10Z"
+                            />
+                        </svg>
+                    </div>
+                </div>
+                <h2
+                    class="text-4xl font-bold bg-gradient-to-r from-neutral-900 to-neutral-700 bg-clip-text text-transparent"
+                >
                     Welcome Back
                 </h2>
-                <p class="text-gray-600">Sign in to your QJPOS account</p>
+                <p class="text-neutral-600 text-lg">
+                    Sign in to your {{ companyName }} account
+                </p>
             </div>
 
             <!-- Login Form -->
-            <form @submit.prevent="login" class="space-y-6">
+            <form @submit.prevent="login" class="space-y-5">
                 <!-- Branch Selection -->
-                <div class="space-y-1">
+                <div class="space-y-2">
                     <SelectField
                         id="branch"
                         v-model="form.branch"
@@ -29,7 +49,7 @@
                 </div>
 
                 <!-- Email Field -->
-                <div class="space-y-1">
+                <div class="space-y-2">
                     <TextField
                         id="email"
                         v-model="form.email"
@@ -42,7 +62,7 @@
                 </div>
 
                 <!-- Password Field -->
-                <div class="space-y-1">
+                <div class="space-y-2">
                     <PasswordField
                         id="password"
                         v-model="form.password"
@@ -63,6 +83,7 @@
                             !form.email ||
                             !form.password
                         "
+                        class="w-full bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 shadow-lg"
                     >
                         <span
                             v-if="form.processing"
@@ -95,11 +116,11 @@
                 </div>
 
                 <!-- Forgot Password Link -->
-                <div class="text-center pt-4">
+                <div class="text-center pt-2">
                     <a
                         :href="forgotPasswordUrl"
                         target="_blank"
-                        class="text-sm text-primary hover:text-primary-light underline font-medium transition-colors duration-200"
+                        class="text-sm text-primary-600 hover:text-primary-700 underline font-medium transition-colors duration-200"
                     >
                         Forgot your password?
                     </a>
@@ -107,8 +128,13 @@
             </form>
 
             <!-- Footer -->
-            <div class="text-center text-sm text-gray-500 border-t pt-6">
-                <p>&copy; {{ currentYear }} QJPOS. All rights reserved.</p>
+            <div
+                class="text-center text-xs text-neutral-500 border-t border-neutral-200 pt-6"
+            >
+                <p>
+                    &copy; {{ currentYear }} {{ companyName }}. All rights
+                    reserved.
+                </p>
             </div>
         </div>
     </AuthLayout>
@@ -131,6 +157,10 @@ const props = defineProps({
 });
 
 const currentYear = computed(() => new Date().getFullYear());
+
+const companyName = computed(() => {
+    return page.props.company_info?.company_name || "QJPOS";
+});
 
 // Get the central domain for Filament password reset
 const centralDomain = computed(() => {

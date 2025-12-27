@@ -137,23 +137,31 @@ class HandleInertiaRequests extends Middleware
             // Always fetch fresh cart data with relationships
             $cart = app(CartService::class)->getCartByTable((int) $tableId);
 
-            if ($cart) {
-                $cart->refresh();
-                $cart->load([
-                    'cartItems.product',
-                    'cartItems.productPackaging',
-                    'cartItems.children.product',
-                    'cartItems.children.productPackaging',
-                    'tableRoom',
-                ]);
+            if (! $cart) {
+                return null;
             }
 
-            return $cart ? $cart->toArray() : null;
+            // Refresh to get latest data
+            $cart->refresh();
+
+            // Load only essential relationships to avoid N+1 and timeout issues
+            $cart->load(['tableRoom']);
+
+            // Load cart items with their products separately to avoid deep nesting
+            if ($cart->relationLoaded('cartItems') || $cart->cartItems) {
+                $cart->cartItems->load(['product', 'productPackaging']);
+            } else {
+                $cart->load(['cartItems.product', 'cartItems.productPackaging']);
+            }
+
+            return $cart->toArray();
         } catch (\Exception $e) {
             \Log::error('Failed to load cart in HandleInertiaRequests: ' . $e->getMessage(), [
                 'tableId' => $tableId,
                 'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
             ]);
+            // Return null instead of throwing to prevent 502
             return null;
         }
     }
@@ -187,9 +195,12 @@ class HandleInertiaRequests extends Middleware
             'company_info'            => fn() => $this->getCompanyInfo(),
             'current_cashier_session' => function() {
                 try {
-                    return CashierSession::openSession()->with('cashier')->first();
+                    $session = CashierSession::openSession()->with('cashier')->first();
+                    return $session?->toArray();
                 } catch (\Exception $e) {
-                    \Log::error('Failed to load cashier session: ' . $e->getMessage());
+                    \Log::error('Failed to load cashier session: ' . $e->getMessage(), [
+                        'trace' => $e->getTraceAsString(),
+                    ]);
                     return null;
                 }
             },
