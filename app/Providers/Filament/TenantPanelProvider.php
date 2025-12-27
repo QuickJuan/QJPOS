@@ -67,6 +67,11 @@ class TenantPanelProvider extends PanelProvider
     private function registerMiddlewares(): array
     {
         return [
+            // CRITICAL: Initialize tenancy FIRST, before authentication
+            // This ensures User model queries use tenant database
+            ConditionalInitializeTenancyBySubdomain::class,
+            ConditionalPreventAccessFromCentralDomains::class,
+
             EncryptCookies::class,
             AddQueuedCookiesToResponse::class,
             StartSession::class,
@@ -76,9 +81,7 @@ class TenantPanelProvider extends PanelProvider
             SubstituteBindings::class,
             DisableBladeIconComponents::class,
             DispatchServingFilamentEvent::class,
-            // Use conditional middleware that checks at REQUEST time whether to initialize tenancy
-            ConditionalInitializeTenancyBySubdomain::class,
-            ConditionalPreventAccessFromCentralDomains::class,
-        ];    }
+        ];
+    }
 
 }
