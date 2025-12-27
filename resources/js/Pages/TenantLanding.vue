@@ -227,12 +227,13 @@
                                     {{ formatPrice(product.price) }}
                                 </span>
                             </div>
-                            <p class="mt-3 text-sm text-slate-300 flex-1">
-                                {{
+                            <p
+                                class="mt-3 text-sm text-slate-300 flex-1"
+                                v-html="
                                     product.description ??
-                                    "Description coming soon."
-                                }}
-                            </p>
+                                    'Description coming soon.'
+                                "
+                            ></p>
                         </article>
                     </div>
                 </div>

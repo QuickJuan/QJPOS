@@ -1,19 +1,20 @@
 <?php
 namespace App\Http\Middleware;
 
-use App\Models\Branch;
 use App\Models\Cart;
-use App\Models\CashierSession;
-use App\Models\Currency;
-use App\Models\PaymentMethod;
 use App\Models\User;
+use App\Models\Branch;
+use Inertia\Middleware;
+use App\Models\Currency;
+use Illuminate\Http\Request;
+use App\Models\PaymentMethod;
 use App\Services\CartService;
+use App\Models\CashierSession;
 use App\Services\DiscountService;
 use App\Services\ModifierService;
-use App\Services\GeneralSettingsService;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
-use Inertia\Middleware;
+use App\Services\GeneralSettingsService;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -48,6 +49,16 @@ class HandleInertiaRequests extends Middleware
     {
 
         // $openSession  = CashierSession::openSession()->with('cashier')->first();
+
+        // Log request for debugging 502 issues
+        if (env('APP_DEBUG')) {
+            \Log::debug('HandleInertiaRequests.share() called', [
+                'url' => $request->url(),
+                'method' => $request->method(),
+                'tenant' => tenant('id') ?? 'none',
+                'user_id' => $request->user()?->id,
+            ]);
+        }
 
         return array_merge(parent::share($request), [
             'flash'                   => [
@@ -179,38 +190,55 @@ class HandleInertiaRequests extends Middleware
 
         $sharedData = [
             // Tenant-specific services - wrap in closures to lazy load
-            'active_branch'           => fn() => $this->getActiveBranch($request),
+            'active_branch'           => fn() => $this->debugLoadProperty('active_branch', fn() => $this->getActiveBranch($request)),
             'receipt_headers'         => function() use ($request) {
-                $branch = $this->getActiveBranch($request);
-                return $branch['receipt_headers'] ?? [];
+                return $this->debugLoadProperty('receipt_headers', function() use ($request) {
+                    $branch = $this->getActiveBranch($request);
+                    return $branch['receipt_headers'] ?? [];
+                });
             },
             'receipt_footers'         => function() use ($request) {
-                $branch = $this->getActiveBranch($request);
-                return $branch['receipt_footer'] ?? [];
+                return $this->debugLoadProperty('receipt_footers', function() use ($request) {
+                    $branch = $this->getActiveBranch($request);
+                    return $branch['receipt_footer'] ?? [];
+                });
             },
             'bill_footer'             => function() use ($request) {
-                $branch = $this->getActiveBranch($request);
-                return $branch['receipt_footer'] ?? [];
+                return $this->debugLoadProperty('bill_footer', function() use ($request) {
+                    $branch = $this->getActiveBranch($request);
+                    return $branch['receipt_footer'] ?? [];
+                });
             },
-            'company_info'            => fn() => $this->getCompanyInfo(),
+            'company_info'            => fn() => $this->debugLoadProperty('company_info', fn() => $this->getCompanyInfo()),
             'current_cashier_session' => function() {
-                try {
-                    $session = CashierSession::openSession()->with('cashier')->first();
-                    return $session?->toArray();
-                } catch (\Exception $e) {
-                    \Log::error('Failed to load cashier session: ' . $e->getMessage(), [
-                        'trace' => $e->getTraceAsString(),
-                    ]);
-                    return null;
-                }
+                return $this->debugLoadProperty('current_cashier_session', function() {
+                    // Only load if user is authenticated
+                    if (!Auth::check()) {
+                        return null;
+                    }
+
+                    try {
+                        $session = CashierSession::where('cashier_id', Auth::id())
+                            ->whereNull('closing_time')
+                            ->with('cashier:id,name,email')
+                            ->select('id', 'cashier_id', 'branch_id', 'opening_time', 'closing_time')
+                            ->first();
+                        return $session?->toArray();
+                    } catch (\Exception $e) {
+                        \Log::error('Failed to load cashier session: ' . $e->getMessage(), [
+                            'trace' => $e->getTraceAsString(),
+                        ]);
+                        return null;
+                    }
+                });
             },
-            'available_discounts' => fn() => $this->loadTenantDiscounts(),
-            'cart' => fn() => $this->getCartByTableId($request),
-            'available_modifiers' => fn() => $this->loadTenantModifiers(),
-            'available_servers' => fn() => $this->getAvailableServers(),
-            'currencies' => fn() => $this->loadTenantCurrencies(),
-            'default_currency' => fn() => $this->getDefaultCurrency(),
-            'payment_methods' => fn() => $this->loadTenantPaymentMethods(),
+            'available_discounts' => fn() => $this->debugLoadProperty('available_discounts', fn() => $this->loadTenantDiscounts()),
+            'cart' => fn() => $this->debugLoadProperty('cart', fn() => $this->getCartByTableId($request)),
+            'available_modifiers' => fn() => $this->debugLoadProperty('available_modifiers', fn() => $this->loadTenantModifiers()),
+            'available_servers' => fn() => $this->debugLoadProperty('available_servers', fn() => $this->getAvailableServersOptimized()),
+            'currencies' => fn() => $this->debugLoadProperty('currencies', fn() => $this->loadTenantCurrencies()),
+            'default_currency' => fn() => $this->debugLoadProperty('default_currency', fn() => $this->getDefaultCurrency()),
+            'payment_methods' => fn() => $this->debugLoadProperty('payment_methods', fn() => $this->loadTenantPaymentMethods()),
         ];
 
         return $sharedData;
@@ -238,7 +266,11 @@ class HandleInertiaRequests extends Middleware
     private function loadTenantDiscounts(): array
     {
         try {
-            return app(DiscountService::class)->getAvailableDiscounts() ?? [];
+            // Cache discounts for 10 minutes
+            $cacheKey = 'tenant_discounts_' . tenant('id');
+            return cache()->remember($cacheKey, now()->addMinutes(10), function () {
+                return app(DiscountService::class)->getAvailableDiscounts() ?? [];
+            });
         } catch (\Exception $e) {
             \Log::error('Failed to load discounts in HandleInertiaRequests: ' . $e->getMessage());
             return [];
@@ -251,7 +283,11 @@ class HandleInertiaRequests extends Middleware
     public function loadTenantModifiers(): array
     {
         try {
-            return app(ModifierService::class)->getAvailableModifiers() ?? [];
+            // Cache modifiers for 10 minutes
+            $cacheKey = 'tenant_modifiers_' . tenant('id');
+            return cache()->remember($cacheKey, now()->addMinutes(10), function () {
+                return app(ModifierService::class)->getAvailableModifiers() ?? [];
+            });
         } catch (\Exception $e) {
             \Log::error('Failed to load modifiers in HandleInertiaRequests: ' . $e->getMessage());
             return [];
@@ -262,6 +298,36 @@ class HandleInertiaRequests extends Middleware
      * Get available servers/waiters
      * Use direct database query to avoid Spatie Permission scope issues
      */
+    private function getAvailableServersOptimized(): array
+    {
+        if (!tenant()) {
+            return [];
+        }
+
+        try {
+            // Cache servers for 5 minutes to avoid repeated queries
+            $cacheKey = 'tenant_servers_' . tenant('id');
+
+            return cache()->remember($cacheKey, now()->addMinutes(5), function () {
+                return User::distinct()
+                    ->join('model_has_roles', 'users.id', '=', 'model_has_roles.model_id')
+                    ->join('roles', 'model_has_roles.role_id', '=', 'roles.id')
+                    ->whereIn('roles.name', ['Server', 'Waiter'])
+                    ->select('users.id', 'users.name', 'users.employee_code')
+                    ->orderBy('users.name')
+                    ->get()
+                    ->toArray();
+            });
+        } catch (\Exception $e) {
+            \Log::error('Failed to load servers in HandleInertiaRequests: ' . $e->getMessage(), [
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+            // Return empty array on error to prevent 502
+            return [];
+        }
+    }
+
     private function getAvailableServers(): array
     {
         if (!tenant()) {
@@ -297,39 +363,43 @@ class HandleInertiaRequests extends Middleware
         }
 
         try {
-            $currencies = Currency::active()
-                ->with(['activeDenominations' => function ($query) {
-                    $query->select('id', 'currency_id', 'value', 'label', 'sort_order', 'is_active');
-                }])
-                ->orderByDesc('is_default')
-                ->orderBy('name')
-                ->get(['id', 'code', 'name', 'symbol', 'exchange_rate', 'is_default']);
+            // Cache currencies for 30 minutes
+            $cacheKey = 'tenant_currencies_' . tenant('id');
+            return cache()->remember($cacheKey, now()->addMinutes(30), function () {
+                $currencies = Currency::active()
+                    ->with(['activeDenominations' => function ($query) {
+                        $query->select('id', 'currency_id', 'value', 'label', 'sort_order', 'is_active');
+                    }])
+                    ->orderByDesc('is_default')
+                    ->orderBy('name')
+                    ->get(['id', 'code', 'name', 'symbol', 'exchange_rate', 'is_default']);
 
-            \Log::info('Loaded tenant currencies', [
-                'tenant_id' => tenant('id'),
-                'count' => $currencies->count(),
-            ]);
+                \Log::info('Loaded tenant currencies', [
+                    'tenant_id' => tenant('id'),
+                    'count' => $currencies->count(),
+                ]);
 
-            return $currencies->map(function (Currency $currency) {
-                $currencySymbol = $currency->symbol ?? 'PHP ';
+                return $currencies->map(function (Currency $currency) {
+                    $currencySymbol = $currency->symbol ?? 'PHP ';
 
-                return [
-                    'id' => $currency->id,
-                    'code' => $currency->code,
-                    'name' => $currency->name,
-                    'symbol' => $currencySymbol,
-                    'exchange_rate' => $currency->exchange_rate ?? 1,
-                    'is_default' => (bool) $currency->is_default,
-                    'denominations' => $currency->activeDenominations
-                        ->filter(fn($denom) => $denom->is_active)
-                        ->map(fn($denom) => [
-                            'id' => $denom->id,
-                            'value' => (float) $denom->value,
-                            'label' => $denom->label ?? sprintf('%s%s', $currencySymbol, number_format((float) $denom->value, 2)),
-                            'sort_order' => $denom->sort_order,
-                        ])->values()->toArray(),
-                ];
-            })->toArray();
+                    return [
+                        'id' => $currency->id,
+                        'code' => $currency->code,
+                        'name' => $currency->name,
+                        'symbol' => $currencySymbol,
+                        'exchange_rate' => $currency->exchange_rate ?? 1,
+                        'is_default' => (bool) $currency->is_default,
+                        'denominations' => $currency->activeDenominations
+                            ->filter(fn($denom) => $denom->is_active)
+                            ->map(fn($denom) => [
+                                'id' => $denom->id,
+                                'value' => (float) $denom->value,
+                                'label' => $denom->label ?? sprintf('%s%s', $currencySymbol, number_format((float) $denom->value, 2)),
+                                'sort_order' => $denom->sort_order,
+                            ])->values()->toArray(),
+                    ];
+                })->toArray();
+            });
         } catch (\Exception $e) {
             \Log::error('Failed to load currencies in HandleInertiaRequests: ' . $e->getMessage());
             return [];
@@ -365,14 +435,68 @@ class HandleInertiaRequests extends Middleware
         }
 
         try {
-            return PaymentMethod::active()
-                ->ordered()
-                ->with('currency:id,code,name,symbol,exchange_rate,is_default')
-                ->get(['id', 'name', 'payment_type', 'currency_id', 'is_active', 'sort_order'])
-                ->toArray();
+            // Cache payment methods for 30 minutes
+            $cacheKey = 'tenant_payment_methods_' . tenant('id');
+            return cache()->remember($cacheKey, now()->addMinutes(30), function () {
+                return PaymentMethod::active()
+                    ->ordered()
+                    ->with('currency:id,code,name,symbol,exchange_rate,is_default')
+                    ->get(['id', 'name', 'payment_type', 'currency_id', 'is_active', 'sort_order'])
+                    ->toArray();
+            });
         } catch (\Exception $e) {
             \Log::error('Failed to load payment methods in HandleInertiaRequests: ' . $e->getMessage());
             return [];
         }
     }
+
+    /**
+     * Debug helper to track which property is timing out
+     */
+    private function debugLoadProperty(string $propertyName, callable $callback): mixed
+    {
+        $startTime = microtime(true);
+
+        try {
+            $result = $callback();
+            $duration = microtime(true) - $startTime;
+
+            // Log slow queries (over 1 second)
+            if ($duration > 1) {
+                \Log::warning("Slow property load in HandleInertiaRequests: {$propertyName}", [
+                    'duration_ms' => round($duration * 1000, 2),
+                    'tenant_id' => tenant('id') ?? 'none',
+                    'url' => request()->url(),
+                ]);
+            }
+
+            // Log if DEBUG mode is on
+            if (env('APP_DEBUG')) {
+                \Log::debug("Property loaded: {$propertyName}", [
+                    'duration_ms' => round($duration * 1000, 2),
+                ]);
+            }
+
+            return $result;
+        } catch (\Exception $e) {
+            $duration = microtime(true) - $startTime;
+            \Log::error("CRITICAL: Property load failed: {$propertyName}", [
+                'duration_ms' => round($duration * 1000, 2),
+                'error' => $e->getMessage(),
+                'tenant_id' => tenant('id') ?? 'none',
+                'url' => request()->url(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            // Return sensible defaults to prevent 502
+            return match($propertyName) {
+                'active_branch' => null,
+                'current_cashier_session' => null,
+                'default_currency' => null,
+                default => [],
+            };
+        }
+    }
 }
+
+
