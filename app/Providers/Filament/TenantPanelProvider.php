@@ -14,15 +14,13 @@ use Filament\Http\Middleware\AuthenticateSession;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
-use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use ShuvroRoy\FilamentSpatieLaravelBackup\FilamentSpatieLaravelBackupPlugin;
 use Althinect\FilamentSpatieRolesPermissions\FilamentSpatieRolesPermissionsPlugin;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
-use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
-use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
-use Stancl\Tenancy\Middleware\InitializeTenancyByDomainOrSubdomain;
+use App\Http\Middleware\ConditionalInitializeTenancyBySubdomain;
+use App\Http\Middleware\ConditionalPreventAccessFromCentralDomains;
 
 class TenantPanelProvider extends PanelProvider
 {
@@ -65,10 +63,10 @@ class TenantPanelProvider extends PanelProvider
             ]);
     }
 
-    // Register middlewares depending when the domain is central or tenant
+    // Register middlewares - use conditional middleware that checks at request time
     private function registerMiddlewares(): array
     {
-        $baseMiddlewares = [
+        return [
             EncryptCookies::class,
             AddQueuedCookiesToResponse::class,
             StartSession::class,
@@ -78,18 +76,9 @@ class TenantPanelProvider extends PanelProvider
             SubstituteBindings::class,
             DisableBladeIconComponents::class,
             DispatchServingFilamentEvent::class,
-        ];
-
-        // Only apply tenant middleware on tenant domains
-        if (!isCentralDomain()) {
-            return array_merge([
-                PreventAccessFromCentralDomains::class,
-                InitializeTenancyBySubdomain::class,
-            ], $baseMiddlewares);
-        }
-
-        // On central domain, don't apply tenant middleware
-        return $baseMiddlewares;
-    }
+            // Use conditional middleware that checks at REQUEST time whether to initialize tenancy
+            ConditionalInitializeTenancyBySubdomain::class,
+            ConditionalPreventAccessFromCentralDomains::class,
+        ];    }
 
 }
