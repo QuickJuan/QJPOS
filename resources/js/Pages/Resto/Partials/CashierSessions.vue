@@ -14,10 +14,10 @@
                     )"
                     :key="index"
                     :class="[
-                        'px-3 py-2 text-sm border rounded',
+                        'px-3 py-2 text-sm border rounded transition-colors',
                         link.active
-                            ? 'bg-blue-500 text-white border-blue-500'
-                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50',
+                            ? 'bg-primary-500 text-white border-primary-500 hover:bg-primary-600'
+                            : 'bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-50',
                         !link.url ? 'opacity-50 cursor-not-allowed' : '',
                     ]"
                     :disabled="!link.url"
@@ -28,10 +28,12 @@
         </div>
 
         <!-- Sessions List -->
-        <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div
+            class="bg-white border border-neutral-200 rounded-lg overflow-hidden"
+        >
             <!-- List Header (Hidden on mobile) -->
             <div
-                class="hidden sm:grid sm:grid-cols-12 gap-4 px-4 py-3 bg-gray-50 border-b border-gray-200 text-sm font-medium text-gray-700"
+                class="hidden sm:grid sm:grid-cols-12 gap-4 px-4 py-3 bg-neutral-50 border-b border-neutral-200 text-sm font-medium text-neutral-700"
             >
                 <div class="col-span-2">Shift #</div>
                 <div class="col-span-3">Cashier</div>
@@ -47,10 +49,10 @@
                 :class="[
                     'cursor-pointer transition-colors',
                     activeSession?.id === session.id
-                        ? 'bg-blue-50'
-                        : 'hover:bg-gray-50',
+                        ? 'bg-primary-50'
+                        : 'hover:bg-neutral-50',
                     index !== sessions.length - 1
-                        ? 'border-b border-gray-200'
+                        ? 'border-b border-neutral-200'
                         : '',
                 ]"
                 @click="$emit('selectSession', session)"
@@ -59,24 +61,24 @@
                 <div class="sm:hidden px-4 py-3">
                     <div class="flex items-start justify-between mb-2">
                         <div>
-                            <p class="font-medium text-gray-900">
+                            <p class="font-medium text-neutral-900">
                                 Shift #{{ session.id }}
                             </p>
-                            <p class="text-sm text-gray-600">
+                            <p class="text-sm text-neutral-600">
                                 {{ session.cashier || "Unknown Cashier" }}
                             </p>
                         </div>
                         <span
-                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-success-100 text-success-800"
                         >
                             Closed
                         </span>
                     </div>
                     <div class="flex items-center justify-between text-sm">
-                        <p class="text-gray-500">
+                        <p class="text-neutral-500">
                             {{ formatDate(session.closing_time) }}
                         </p>
-                        <p class="font-medium text-gray-900">
+                        <p class="font-medium text-neutral-900">
                             ₱{{ formatMoney(session.total_sales) }}
                         </p>
                     </div>
@@ -86,23 +88,23 @@
                 <div
                     class="hidden sm:grid sm:grid-cols-12 gap-4 px-4 py-3 text-sm"
                 >
-                    <div class="col-span-2 font-medium text-gray-900">
+                    <div class="col-span-2 font-medium text-neutral-900">
                         #{{ session.id }}
                     </div>
-                    <div class="col-span-3 text-gray-900">
+                    <div class="col-span-3 text-neutral-900">
                         {{ session.cashier || "Unknown Cashier" }}
                     </div>
-                    <div class="col-span-3 text-gray-600">
+                    <div class="col-span-3 text-neutral-600">
                         {{ formatDate(session.shift_end) }}
                     </div>
                     <div
-                        class="col-span-2 text-right font-medium text-gray-900"
+                        class="col-span-2 text-right font-medium text-neutral-900"
                     >
                         ₱{{ formatMoney(session.total_sales) }}
                     </div>
                     <div class="col-span-2 text-right">
                         <span
-                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-success-100 text-success-800"
                         >
                             Closed
                         </span>
@@ -113,7 +115,7 @@
             <!-- Empty State -->
             <div
                 v-if="sessions.length === 0"
-                class="px-4 py-8 text-center text-gray-500"
+                class="px-4 py-8 text-center text-neutral-500"
             >
                 No sessions found
             </div>

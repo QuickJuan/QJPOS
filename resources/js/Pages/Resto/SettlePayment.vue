@@ -1,8 +1,8 @@
 <template>
-    <div class="min-h-screen bg-gray-50">
+    <div class="min-h-screen bg-neutral-50">
         <Head title="Settle Payment" />
 
-        <div class="bg-white border-b border-gray-200 shadow-sm">
+        <div class="bg-white border-b border-neutral-200 shadow-sm">
             <div
                 class="max-w-6xl mx-auto px-4 py-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
             >
@@ -10,28 +10,28 @@
                     <button
                         type="button"
                         @click="navigateBack"
-                        class="p-2 rounded-full border border-gray-200 text-gray-600 hover:text-primary-600 hover:border-primary-200 transition-colors"
+                        class="p-2 rounded-full border border-neutral-200 text-neutral-600 hover:text-primary-600 hover:border-primary-200 transition-colors"
                     >
                         <ArrowLeftIcon class="w-5 h-5" />
                     </button>
                     <div>
-                        <p class="text-sm font-semibold text-gray-800">
+                        <p class="text-sm font-semibold text-neutral-800">
                             Settle Payment
                         </p>
-                        <p class="text-xs text-gray-500">
+                        <p class="text-xs text-neutral-500">
                             Choose a payment method and enter the required
                             details below.
                         </p>
                     </div>
                 </div>
                 <div class="text-right">
-                    <p class="text-sm font-medium text-gray-600">
+                    <p class="text-sm font-medium text-neutral-600">
                         Total Due ({{ defaultCurrencyCode }})
                     </p>
                     <p class="text-3xl font-black text-primary-600">
                         {{ formatMoney(totalDue, defaultCurrencyCode) }}
                     </p>
-                    <p class="text-xs text-gray-500 mt-1">
+                    <p class="text-xs text-neutral-500 mt-1">
                         Cart #{{ formattedCartNumber }}
                     </p>
                 </div>
@@ -41,15 +41,15 @@
         <div v-if="hasCart" class="max-w-6xl mx-auto px-4 py-6">
             <div class="grid gap-6 lg:grid-cols-[360px_1fr] items-start">
                 <section
-                    class="bg-white border border-gray-200 rounded-2xl shadow-sm p-5 space-y-6"
+                    class="bg-white border border-neutral-200 rounded-2xl shadow-sm p-5 space-y-6"
                 >
                     <div class="space-y-3">
                         <div class="flex items-center justify-between">
-                            <h3 class="text-sm font-semibold text-gray-800">
+                            <h3 class="text-sm font-semibold text-neutral-800">
                                 Payment Method
                             </h3>
                             <span
-                                class="text-xs text-gray-500"
+                                class="text-xs text-neutral-500"
                                 v-if="availablePaymentMethods.length"
                             >
                                 {{ availablePaymentMethods.length }} configured
@@ -65,7 +65,7 @@
                                     'w-full rounded-2xl border text-left p-3 transition-all flex flex-col gap-1',
                                     selectedPaymentMethodId === method.id
                                         ? 'bg-primary-50 text-primary-800 border-primary-300 ring-1 ring-primary-200 shadow-sm'
-                                        : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-white',
+                                        : 'bg-neutral-50 text-neutral-700 border-neutral-200 hover:bg-white',
                                 ]"
                                 :aria-pressed="
                                     selectedPaymentMethodId === method.id
@@ -74,7 +74,7 @@
                                 <span class="text-sm font-semibold">
                                     {{ method.name }}
                                 </span>
-                                <span class="text-xs text-gray-500">
+                                <span class="text-xs text-neutral-500">
                                     {{
                                         getPaymentTypeLabel(method.payment_type)
                                     }}
@@ -95,9 +95,9 @@
                         </div>
                         <div
                             v-if="requiresAdditionalFields"
-                            class="space-y-4 border border-dashed border-gray-200 rounded-xl p-4 bg-gray-50"
+                            class="space-y-4 border border-dashed border-neutral-200 rounded-xl p-4 bg-neutral-50"
                         >
-                            <p class="text-sm font-semibold text-gray-800">
+                            <p class="text-sm font-semibold text-neutral-800">
                                 Payment Details
                             </p>
 
@@ -109,7 +109,7 @@
                                     placeholder="Enter transaction reference"
                                     required
                                 />
-                                <p class="text-xs text-gray-500">
+                                <p class="text-xs text-neutral-500">
                                     Provide the reference number from the
                                     e-wallet confirmation.
                                 </p>
@@ -142,19 +142,19 @@
                                         type="search"
                                         :disabled="isCustomerSearchDisabled"
                                     />
-                                    <p class="text-xs text-gray-500">
+                                    <p class="text-xs text-neutral-500">
                                         Start typing (min. 2 characters) to
                                         search existing customers.
                                     </p>
                                     <div
                                         v-if="customerSearchLoading"
-                                        class="text-xs text-gray-500"
+                                        class="text-xs text-neutral-500"
                                     >
                                         Searching customers...
                                     </div>
                                     <div
                                         v-else-if="customerSearchError"
-                                        class="text-xs text-red-500"
+                                        class="text-xs text-error-500"
                                     >
                                         {{ customerSearchError }}
                                     </div>
@@ -163,7 +163,7 @@
                                             customerResults.length > 0 &&
                                             !customerSearchLoading
                                         "
-                                        class="border border-gray-200 rounded-lg divide-y divide-gray-100 max-h-48 overflow-y-auto"
+                                        class="border border-neutral-200 rounded-lg divide-y divide-gray-100 max-h-48 overflow-y-auto"
                                     >
                                         <li
                                             v-for="customer in customerResults"
@@ -177,12 +177,12 @@
                                                 "
                                             >
                                                 <p
-                                                    class="text-sm font-semibold text-gray-800"
+                                                    class="text-sm font-semibold text-neutral-800"
                                                 >
                                                     {{ customer.customer_name }}
                                                 </p>
                                                 <p
-                                                    class="text-xs text-gray-500"
+                                                    class="text-xs text-neutral-500"
                                                 >
                                                     {{
                                                         customer.contact_no ||
@@ -199,7 +199,7 @@
                                             !customerSearchLoading &&
                                             !customerSearchError
                                         "
-                                        class="text-xs text-gray-500"
+                                        class="text-xs text-neutral-500"
                                     >
                                         No customers found.
                                     </p>
@@ -244,7 +244,7 @@
 
                         <div v-if="isCashMethod" class="space-y-2">
                             <label
-                                class="block text-sm font-medium text-gray-700"
+                                class="block text-sm font-medium text-neutral-700"
                             >
                                 Currency
                             </label>
@@ -260,19 +260,21 @@
                             />
                             <div
                                 v-else
-                                class="px-3 py-2 rounded-lg border border-gray-200 bg-gray-50"
+                                class="px-3 py-2 rounded-lg border border-neutral-200 bg-neutral-50"
                             >
-                                <p class="text-sm font-semibold text-gray-900">
+                                <p
+                                    class="text-sm font-semibold text-neutral-900"
+                                >
                                     {{
                                         selectedCurrency?.name ||
                                         paymentCurrencyCode
                                     }}
                                 </p>
-                                <p class="text-xs text-gray-500">
+                                <p class="text-xs text-neutral-500">
                                     {{ paymentCurrencyCode }}
                                 </p>
                             </div>
-                            <p class="text-xs text-gray-500">
+                            <p class="text-xs text-neutral-500">
                                 1 {{ paymentCurrencyCode }} =
                                 {{
                                     formatMoney(
@@ -287,10 +289,10 @@
                             <div
                                 class="flex items-center justify-between text-sm"
                             >
-                                <span class="text-gray-600">
+                                <span class="text-neutral-600">
                                     Amount Tendered ({{ paymentCurrencyCode }})
                                 </span>
-                                <span class="font-semibold text-gray-900">
+                                <span class="font-semibold text-neutral-900">
                                     {{
                                         formatMoney(
                                             amountTenderedNumber,
@@ -302,10 +304,10 @@
                             <div
                                 class="flex items-center justify-between text-sm"
                             >
-                                <span class="text-gray-600">
+                                <span class="text-neutral-600">
                                     Converted Amount ({{ defaultCurrencyCode }})
                                 </span>
-                                <span class="font-semibold text-gray-900">
+                                <span class="font-semibold text-neutral-900">
                                     {{
                                         formatMoney(
                                             amountPaidBase,
@@ -319,11 +321,11 @@
                 </section>
 
                 <section
-                    class="bg-white border border-gray-200 rounded-2xl shadow-sm p-5 space-y-5"
+                    class="bg-white border border-neutral-200 rounded-2xl shadow-sm p-5 space-y-5"
                 >
                     <div>
                         <label
-                            class="block text-sm font-medium text-gray-700 mb-3"
+                            class="block text-sm font-medium text-neutral-700 mb-3"
                         >
                             Amount Tendered ({{ paymentCurrencyCode }})
                         </label>
@@ -359,10 +361,10 @@
                                         type="button"
                                         @click="appendDigit(digit)"
                                         :class="[
-                                            'py-4 rounded-xl text-lg font-semibold bg-white border border-gray-200 hover:bg-primary-600 hover:text-white transition-all duration-150 shadow-sm',
+                                            'py-4 rounded-xl text-lg font-semibold bg-white border border-neutral-200 hover:bg-primary-600 hover:text-white transition-all duration-150 shadow-sm',
 
                                             !isCashMethod
-                                                ? 'opacity-50 cursor-not-allowed hover:bg-white hover:text-gray-500'
+                                                ? 'opacity-50 cursor-not-allowed hover:bg-white hover:text-neutral-500'
                                                 : '',
                                         ]"
                                         :disabled="!isCashMethod"
@@ -373,9 +375,9 @@
                                         type="button"
                                         @click="backSpace"
                                         :class="[
-                                            'py-4 rounded-xl text-lg font-semibold bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-all duration-150 shadow-sm',
+                                            'py-4 rounded-xl text-lg font-semibold bg-error-50 text-red-600 border border-red-200 hover:bg-red-100 transition-all duration-150 shadow-sm',
                                             !isCashMethod
-                                                ? 'opacity-50 cursor-not-allowed hover:bg-red-50 hover:text-red-600'
+                                                ? 'opacity-50 cursor-not-allowed hover:bg-error-50 hover:text-red-600'
                                                 : '',
                                         ]"
                                         :disabled="!isCashMethod"
@@ -386,9 +388,9 @@
                                         type="button"
                                         @click="clearAmount"
                                         :class="[
-                                            'py-4 rounded-xl text-lg font-semibold bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-all duration-150 shadow-sm',
+                                            'py-4 rounded-xl text-lg font-semibold bg-error-50 text-red-600 border border-red-200 hover:bg-red-100 transition-all duration-150 shadow-sm',
                                             !isCashMethod
-                                                ? 'opacity-50 cursor-not-allowed hover:bg-red-50 hover:text-red-600'
+                                                ? 'opacity-50 cursor-not-allowed hover:bg-error-50 hover:text-red-600'
                                                 : '',
                                         ]"
                                         :disabled="!isCashMethod"
@@ -410,7 +412,7 @@
                                         :key="option.base"
                                         type="button"
                                         @click="addAmountPaid(option.amount)"
-                                        class="py-3 px-2 rounded-lg font-semibold text-sm transition-all duration-200 bg-gray-100 text-gray-700 hover:bg-primary-600 hover:text-white active:scale-95"
+                                        class="py-3 px-2 rounded-lg font-semibold text-sm transition-all duration-200 bg-neutral-100 text-neutral-700 hover:bg-primary-600 hover:text-white active:scale-95"
                                     >
                                         +{{ option.label }}
                                     </button>
@@ -420,7 +422,7 @@
                                         v-if="isCashMethod && totalDue > 0"
                                         type="button"
                                         @click="setExactAmount"
-                                        class="mt-2 w-full h-11 py-2 px-4 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-medium text-sm transition-colors"
+                                        class="mt-2 w-full h-11 py-2 px-4 bg-primary-50 text-primary-600 rounded-lg hover:bg-blue-100 font-medium text-sm transition-colors"
                                     >
                                         Exact Amount (
                                         {{
@@ -434,15 +436,15 @@
 
                                     <div
                                         v-if="showConversionSummary"
-                                        class="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-1"
+                                        class="bg-neutral-50 border border-neutral-200 rounded-lg p-4 space-y-1"
                                     >
-                                        <p class="text-xs text-gray-600">
+                                        <p class="text-xs text-neutral-600">
                                             Converted Amount ({{
                                                 defaultCurrencyCode
                                             }})
                                         </p>
                                         <p
-                                            class="text-base font-semibold text-gray-900"
+                                            class="text-base font-semibold text-neutral-900"
                                         >
                                             {{
                                                 formatMoney(
@@ -461,7 +463,7 @@
                         <button
                             type="button"
                             @click="navigateBack"
-                            class="flex-1 py-3 px-4 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
+                            class="flex-1 py-3 px-4 bg-gray-200 text-neutral-800 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
                         >
                             Cancel
                         </button>
@@ -485,7 +487,7 @@
 
         <div
             v-else
-            class="max-w-4xl mx-auto px-4 py-24 text-center text-gray-600 space-y-4"
+            class="max-w-4xl mx-auto px-4 py-24 text-center text-neutral-600 space-y-4"
         >
             <p class="text-2xl font-semibold">No active cart found.</p>
             <p>

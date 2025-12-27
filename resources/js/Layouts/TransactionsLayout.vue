@@ -1,14 +1,14 @@
 <template>
     <div class="h-screen flex flex-col">
         <header
-            class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-lg"
+            class="sticky top-0 z-50 bg-white border-b border-neutral-200 shadow-lg"
         >
             <div class="px-4 md:px-6 lg:px-8 py-3 md:py-4">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         <button
                             @click="goBack"
-                            class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white"
+                            class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-600 transition-colors"
                         >
                             <ArrowLeftIcon class="w-5 h-5" />
                             <span class="font-semibold"
@@ -18,8 +18,8 @@
                     </div>
                     <div class="flex items-center gap-4">
                         <div class="hidden md:block text-right">
-                            <p class="text-xs text-gray-500">Branch</p>
-                            <p class="text-sm font-semibold text-gray-900">
+                            <p class="text-xs text-neutral-500">Branch</p>
+                            <p class="text-sm font-semibold text-neutral-900">
                                 {{ branchName }}
                             </p>
                         </div>
@@ -41,8 +41,10 @@
                                 {{ userInitials }}
                             </div>
                             <div class="text-right">
-                                <p class="text-xs text-gray-500">User</p>
-                                <p class="text-sm font-semibold text-gray-900">
+                                <p class="text-xs text-neutral-500">User</p>
+                                <p
+                                    class="text-sm font-semibold text-neutral-900"
+                                >
                                     {{ userName }}
                                 </p>
                             </div>

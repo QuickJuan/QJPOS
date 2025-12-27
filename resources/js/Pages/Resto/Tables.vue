@@ -2,7 +2,7 @@
     <CashieringLayout :current-user="props.currentUser">
         <!-- Fixed Header for Mobile/Tablet -->
         <div
-            class="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-md"
+            class="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-neutral-200 shadow-md"
         >
             <div class="flex items-center justify-between px-3 py-2">
                 <!-- Left: Menu Toggle -->
@@ -26,12 +26,12 @@
                 </button>
 
                 <!-- Center: Title -->
-                <h1 class="text-base font-bold text-gray-800">Tables</h1>
+                <h1 class="text-base font-bold text-neutral-900">Tables</h1>
 
                 <!-- Right: Back to Cashier -->
                 <button
                     @click="goBackToCashier"
-                    class="bg-gray-600 text-white rounded-lg p-2.5 shadow hover:bg-gray-700 transition-all"
+                    class="bg-neutral-600 text-white rounded-lg p-2.5 shadow hover:bg-neutral-700 transition-all"
                 >
                     <svg
                         class="w-5 h-5"
@@ -51,7 +51,7 @@
         </div>
 
         <div
-            class="flex flex-col h-screen bg-gray-100 overflow-y-hidden pt-[56px] lg:pt-0"
+            class="flex flex-col h-screen bg-neutral-100 overflow-y-hidden pt-[56px] lg:pt-0"
         >
             <!-- Toolbar (sticky on desktop, part of content flow on mobile) -->
             <div class="p-3 bg-white shadow lg:sticky lg:top-0">
@@ -63,11 +63,11 @@
                         class="space-y-2"
                     >
                         <div
-                            class="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-wide text-gray-500"
+                            class="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-wide text-neutral-500"
                         >
                             <span>{{ group.label }}</span>
-                            <span class="h-px flex-1 bg-gray-200"></span>
-                            <span class="text-gray-400">
+                            <span class="h-px flex-1 bg-neutral-200"></span>
+                            <span class="text-neutral-400">
                                 {{ group.locations.length }} area{{
                                     group.locations.length === 1 ? "" : "s"
                                 }}
@@ -84,8 +84,8 @@
                                 :class="[
                                     'h-14 cursor-pointer px-2 py-1 rounded text-[11px] sm:text-xs font-semibold border flex flex-col sm:flex-row items-center justify-center gap-1 transition-colors',
                                     selectedLocationId === loc.id
-                                        ? 'bg-blue-600 text-white border-blue-600 shadow'
-                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300',
+                                        ? 'bg-primary text-white border-primary shadow'
+                                        : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200 border-neutral-300',
                                 ]"
                             >
                                 <span class="truncate">{{ loc.name }}</span>
@@ -118,7 +118,7 @@
                         <!-- Parent Table -->
                         <div
                             @click="openTableModal(table)"
-                            class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all cursor-pointer hover:scale-105 relative"
+                            class="bg-white rounded-lg shadow-sm border border-neutral-200 p-4 hover:shadow-md transition-all cursor-pointer hover:scale-105 relative"
                             :class="getTableStatusClasses(table.status)"
                         >
                             <!-- Status Badge -->
@@ -128,23 +128,23 @@
                                         :class="[
                                             'w-3 h-3 rounded-full',
                                             table.status === 'occupied' &&
-                                                'bg-red-500',
+                                                'bg-error',
                                             table.status === 'reserved' &&
-                                                'bg-yellow-500',
+                                                'bg-warning',
                                             table.status === 'available' &&
-                                                'bg-green-500',
+                                                'bg-success',
                                             table.status === 'merged' &&
-                                                'bg-purple-500',
+                                                'bg-secondary',
                                         ]"
                                     ></div>
                                     <span
-                                        class="text-xs font-medium text-gray-600 capitalize"
+                                        class="text-xs font-medium text-neutral-600 capitalize"
                                     >
                                         {{ table.status }}
                                     </span>
                                 </div>
                                 <div class="space-y-0.5">
-                                    <p class="text-gray-700 font-medium">
+                                    <p class="text-neutral-700 font-medium">
                                         {{
                                             table.status === "occupied"
                                                 ? table.numberOfPax
@@ -159,14 +159,16 @@
                             <div
                                 class="flex flex-col items-center text-center mb-3"
                             >
-                                <h3 class="font-semibold text-gray-900 text-lg">
+                                <h3
+                                    class="font-semibold text-neutral-900 text-lg"
+                                >
                                     {{ table.name }}
                                 </h3>
                             </div>
 
                             <!-- Table Info -->
                             <div
-                                class="text-center text-sm text-gray-600 space-y-1"
+                                class="text-center text-sm text-neutral-600 space-y-1"
                             >
                                 <div
                                     v-if="
@@ -196,7 +198,7 @@
                                 <!-- Merged Table Card -->
                                 <div
                                     @click="openTableModal(mergedTable)"
-                                    class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all cursor-pointer hover:scale-105 relative opacity-75"
+                                    class="bg-white rounded-lg shadow-sm border border-neutral-200 p-4 hover:shadow-md transition-all cursor-pointer hover:scale-105 relative opacity-75"
                                     :class="
                                         getTableStatusClasses(
                                             mergedTable.status
@@ -213,20 +215,20 @@
                                                     'w-3 h-3 rounded-full',
                                                     mergedTable.status ===
                                                         'occupied' &&
-                                                        'bg-red-500',
+                                                        'bg-error',
                                                     mergedTable.status ===
                                                         'reserved' &&
-                                                        'bg-yellow-500',
+                                                        'bg-warning',
                                                     mergedTable.status ===
                                                         'available' &&
-                                                        'bg-green-500',
+                                                        'bg-success',
                                                     mergedTable.status ===
                                                         'merged' &&
-                                                        'bg-purple-500',
+                                                        'bg-secondary',
                                                 ]"
                                             ></div>
                                             <span
-                                                class="text-xs font-medium text-gray-600 capitalize"
+                                                class="text-xs font-medium text-neutral-600 capitalize"
                                             >
                                                 {{ mergedTable.status }}
                                             </span>
@@ -237,11 +239,11 @@
                                     <div
                                         class="flex flex-col items-center text-center mb-3"
                                     >
-                                        <h4 class="text-gray-900 text-xs">
+                                        <h4 class="text-neutral-900 text-xs">
                                             {{ mergedTable.name }}
                                         </h4>
                                         <h3
-                                            class="w-fit bg-purple-100 text-purple-800 text-sm px-2 py-1 rounded-full font-medium flex items-center gap-1 mb-2"
+                                            class="w-fit bg-secondary-100 text-secondary-800 text-sm px-2 py-1 rounded-full font-medium flex items-center gap-1 mb-2"
                                         >
                                             <i class="pi pi-link text-lg"></i>
                                             Merged to {{ table.name }}
@@ -250,11 +252,11 @@
 
                                     <!-- Table Info -->
                                     <div
-                                        class="text-center text-sm text-gray-600 space-y-1"
+                                        class="text-center text-sm text-neutral-600 space-y-1"
                                     >
                                         <p
                                             v-if="mergedTable.current_order"
-                                            class="text-blue-600 font-medium"
+                                            class="text-primary font-medium"
                                         >
                                             Order #{{
                                                 mergedTable.current_order.id
@@ -269,14 +271,14 @@
                                             class="space-y-0.5"
                                         >
                                             <p
-                                                class="text-gray-700 font-medium"
+                                                class="text-neutral-700 font-medium"
                                             >
                                                 {{ mergedTable.number_of_pax }}
                                                 pax
                                             </p>
                                             <p
                                                 v-if="mergedTable.time_in"
-                                                class="text-xs text-gray-500"
+                                                class="text-xs text-neutral-500"
                                             >
                                                 {{
                                                     formatTimeOccupied(
@@ -301,7 +303,7 @@
                                         @click="
                                             openTableModal(nestedMergedTable)
                                         "
-                                        class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all cursor-pointer hover:scale-105 relative opacity-50"
+                                        class="bg-white rounded-lg shadow-sm border border-neutral-200 p-4 hover:shadow-md transition-all cursor-pointer hover:scale-105 relative opacity-50"
                                         :class="
                                             getTableStatusClasses(
                                                 nestedMergedTable.status
@@ -320,20 +322,20 @@
                                                         'w-3 h-3 rounded-full',
                                                         nestedMergedTable.status ===
                                                             'occupied' &&
-                                                            'bg-red-500',
+                                                            'bg-error',
                                                         nestedMergedTable.status ===
                                                             'reserved' &&
-                                                            'bg-yellow-500',
+                                                            'bg-warning',
                                                         nestedMergedTable.status ===
                                                             'available' &&
-                                                            'bg-green-500',
+                                                            'bg-success',
                                                         nestedMergedTable.status ===
                                                             'merged' &&
-                                                            'bg-purple-500',
+                                                            'bg-secondary',
                                                     ]"
                                                 ></div>
                                                 <span
-                                                    class="text-xs font-medium text-gray-600 capitalize"
+                                                    class="text-xs font-medium text-neutral-600 capitalize"
                                                 >
                                                     {{
                                                         nestedMergedTable.status
@@ -346,11 +348,13 @@
                                         <div
                                             class="flex flex-col items-center text-center mb-3"
                                         >
-                                            <h4 class="text-gray-900 text-xs">
+                                            <h4
+                                                class="text-neutral-900 text-xs"
+                                            >
                                                 {{ nestedMergedTable.name }}
                                             </h4>
                                             <h3
-                                                class="w-fit bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium flex items-center gap-1 mb-2"
+                                                class="w-fit bg-primary-100 text-primary-800 text-xs px-2 py-1 rounded-full font-medium flex items-center gap-1 mb-2"
                                             >
                                                 <i
                                                     class="pi pi-link text-sm"
@@ -362,13 +366,13 @@
 
                                         <!-- Table Info -->
                                         <div
-                                            class="text-center text-xs text-gray-600 space-y-1"
+                                            class="text-center text-xs text-neutral-600 space-y-1"
                                         >
                                             <p
                                                 v-if="
                                                     nestedMergedTable.current_order
                                                 "
-                                                class="text-blue-600 font-medium"
+                                                class="text-primary font-medium"
                                             >
                                                 Order #{{
                                                     nestedMergedTable
@@ -384,7 +388,7 @@
                                                 class="space-y-0.5"
                                             >
                                                 <p
-                                                    class="text-gray-700 font-medium"
+                                                    class="text-neutral-700 font-medium"
                                                 >
                                                     {{
                                                         nestedMergedTable.number_of_pax
@@ -395,7 +399,7 @@
                                                     v-if="
                                                         nestedMergedTable.time_in
                                                     "
-                                                    class="text-xs text-gray-500"
+                                                    class="text-xs text-neutral-500"
                                                 >
                                                     {{
                                                         formatTimeOccupied(
@@ -417,11 +421,11 @@
                     v-if="filteredTables.length === 0"
                     class="text-center py-12"
                 >
-                    <i class="pi pi-table text-4xl text-gray-300 mb-4"></i>
-                    <h3 class="text-lg font-medium text-gray-900 mb-2">
+                    <i class="pi pi-table text-4xl text-neutral-300 mb-4"></i>
+                    <h3 class="text-lg font-medium text-neutral-900 mb-2">
                         No tables found
                     </h3>
-                    <p class="text-gray-600">
+                    <p class="text-neutral-600">
                         {{
                             selectedLocationId
                                 ? "No tables in this location yet."
@@ -684,16 +688,16 @@ const availableTransferTargets = computed(() => {
 });
 
 const getTableStatusClasses = (status: string) => {
-    const baseClasses = "hover:border-gray-300";
+    const baseClasses = "hover:border-neutral-300";
     switch (status) {
         case "occupied":
-            return `${baseClasses} border-red-200 bg-red-50`;
+            return `${baseClasses} border-error-200 bg-error-50`;
         case "reserved":
-            return `${baseClasses} border-yellow-200 bg-yellow-50`;
+            return `${baseClasses} border-warning-200 bg-warning-50`;
         case "available":
-            return `${baseClasses} border-green-200 bg-green-50`;
+            return `${baseClasses} border-success-200 bg-success-50`;
         case "merged":
-            return `${baseClasses} border-purple-200 bg-purple-50`;
+            return `${baseClasses} border-secondary-200 bg-secondary-50`;
         default:
             return baseClasses;
     }

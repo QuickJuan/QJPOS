@@ -1,7 +1,10 @@
 <template>
-    <TransactionsLayout>
-        <template #header>
-            <div>
+    <CashieringLayout :current-user="page.props.currentUser">
+        <div class="flex flex-col h-full overflow-hidden">
+            <!-- Filters Section -->
+            <div
+                class="flex-shrink-0 px-4 md:px-6 lg:px-8 py-4 bg-white border-b border-neutral-200"
+            >
                 <SearchAndFIlter
                     :search="search"
                     :dateRange="dateRange"
@@ -15,280 +18,300 @@
                     @cashier_id="(value: string) => { filters.cashier_id = value }"
                 />
             </div>
-        </template>
-        <div class="flex flex-col flex-1 px-4 md:px-6 lg:px-8 py-4">
-            <div class="flex flex-col md:flex-row gap-4 md:gap-6 h-full">
-                <!-- Sidebar -->
-                <div
-                    class="w-full md:w-3/5 2xl:w-1/4 h-auto md:h-full flex flex-col min-h-[300px] md:min-h-0"
-                >
-                    <Transactions
-                        :orders="orders"
-                        :activeOrder="activeOrder"
-                        @selectOrder="selectOrder"
-                        @goToPage="goToPage"
-                    />
-                </div>
+            <div class="flex flex-col flex-1 px-4 md:px-6 lg:px-8 py-4">
+                <div class="flex flex-col md:flex-row gap-4 md:gap-6 h-full">
+                    <!-- Sidebar -->
+                    <div
+                        class="w-full md:w-3/5 2xl:w-1/4 h-auto md:h-full flex flex-col min-h-[300px] md:min-h-0"
+                    >
+                        <Transactions
+                            :orders="orders"
+                            :activeOrder="activeOrder"
+                            @selectOrder="selectOrder"
+                            @goToPage="goToPage"
+                        />
+                    </div>
 
-                <!-- Detail Pane -->
-                <div class="flex flex-col w-full h-[700px] overflow-auto">
-                    <div v-if="activeOrder" class="flex flex-col h-full">
-                        <div
-                            class="px-4 py-5 md:px-6 md:py-6 border-b border-gray-100 bg-white flex-shrink-0"
-                        >
+                    <!-- Detail Pane -->
+                    <div class="flex flex-col w-full h-[700px] overflow-auto">
+                        <div v-if="activeOrder" class="flex flex-col h-full">
                             <div
-                                class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between"
+                                class="px-4 py-5 md:px-6 md:py-6 border-b border-neutral-100 bg-white flex-shrink-0"
                             >
-                                <div>
-                                    <p class="text-sm text-gray-500">
-                                        {{
-                                            activeOrder.customer?.name ||
-                                            activeOrder.table_number ||
-                                            "Walk-in Customer"
-                                        }}
-                                    </p>
-                                </div>
                                 <div
-                                    class="flex flex-wrap items-center gap-3 justify-end"
+                                    class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between"
                                 >
-                                    <span
-                                        :class="[
-                                            'px-3 py-1 rounded-full text-xs font-semibold',
-                                            getStatusClass(activeOrder.status),
-                                        ]"
-                                    >
-                                        {{ getStatusLabel(activeOrder.status) }}
-                                    </span>
-
-                                    <!-- Desktop action buttons -->
-                                    <div class="hidden lg:flex flex-wrap gap-2">
-                                        <Button
-                                            label="Print"
-                                            icon="pi pi-print"
-                                            outlined
-                                            :class="subtleActionButtonClass"
-                                            @click="handleThermalPrint"
-                                        />
-                                        <Button
-                                            label="Send to Email"
-                                            icon="pi pi-envelope"
-                                            outlined
-                                            :class="subtleActionButtonClass"
-                                            @click="
-                                                sendReceiptEmail(activeOrder)
-                                            "
-                                        />
-                                        <Button
-                                            v-if="
-                                                activeOrder.status === 'settled'
-                                            "
-                                            label="Refund"
-                                            icon="pi pi-undo"
-                                            outlined
-                                            :class="cautionActionButtonClass"
-                                            @click="
-                                                openRefundModal(activeOrder)
-                                            "
-                                        />
+                                    <div>
+                                        <p class="text-sm text-neutral-500">
+                                            {{
+                                                activeOrder.customer?.name ||
+                                                activeOrder.table_number ||
+                                                "Walk-in Customer"
+                                            }}
+                                        </p>
                                     </div>
+                                    <div
+                                        class="flex flex-wrap items-center gap-3 justify-end"
+                                    >
+                                        <span
+                                            :class="[
+                                                'px-3 py-1 rounded-full text-xs font-semibold',
+                                                getStatusClass(
+                                                    activeOrder.status
+                                                ),
+                                            ]"
+                                        >
+                                            {{
+                                                getStatusLabel(
+                                                    activeOrder.status
+                                                )
+                                            }}
+                                        </span>
 
-                                    <!-- Mobile hamburger menu -->
-                                    <div class="lg:hidden relative z-50">
-                                        <Button
-                                            icon="pi pi-ellipsis-v"
-                                            outlined
-                                            :class="subtleActionButtonClass"
-                                            @click="toggleActionMenu"
-                                        />
+                                        <!-- Desktop action buttons -->
                                         <div
-                                            v-if="showActionMenu"
-                                            class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-[100]"
+                                            class="hidden lg:flex flex-wrap gap-2"
                                         >
-                                            class="fixed inset-0 z-[90]
-                                            lg:hidden" @click="toggleActionMenu"
-                                            >
-                                        </div>
-                                        <!-- Mobile menu -->
-                                        <div
-                                            v-if="showActionMenu"
-                                            class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-[100]"
-                                            data-menu-container
-                                        >
-                                            <button
-                                                class="w-full text-left px-4 py-3 hover:bg-blue-50 flex items-center gap-3 text-sm text-blue-700 transition-colors duration-150"
+                                            <Button
+                                                label="Print"
+                                                icon="pi pi-print"
+                                                outlined
+                                                :class="subtleActionButtonClass"
+                                                @click="handleThermalPrint"
+                                            />
+                                            <Button
+                                                label="Send to Email"
+                                                icon="pi pi-envelope"
+                                                outlined
+                                                :class="subtleActionButtonClass"
                                                 @click="
-                                                    () => {
-                                                        handleThermalPrint();
-                                                        toggleActionMenu();
-                                                    }
+                                                    sendReceiptEmail(
+                                                        activeOrder
+                                                    )
                                                 "
-                                            >
-                                                <i class="pi pi-print"></i>
-                                                Print
-                                            </button>
-                                            <button
-                                                class="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-3 text-sm border-t border-gray-100 transition-colors duration-150"
-                                                @click="
-                                                    () => {
-                                                        sendReceiptEmail(
-                                                            activeOrder
-                                                        );
-                                                        toggleActionMenu();
-                                                    }
-                                                "
-                                            >
-                                                <i class="pi pi-envelope"></i>
-                                                Send to Email
-                                            </button>
-                                            <button
+                                            />
+                                            <Button
                                                 v-if="
                                                     activeOrder.status ===
                                                     'settled'
                                                 "
-                                                class="w-full text-left px-4 py-3 hover:bg-amber-50 flex items-center gap-3 text-sm border-t border-gray-100 text-amber-700"
-                                                @click="
-                                                    () => {
-                                                        openRefundModal(
-                                                            activeOrder
-                                                        );
-                                                        toggleActionMenu();
-                                                    }
+                                                label="Refund"
+                                                icon="pi pi-undo"
+                                                outlined
+                                                :class="
+                                                    cautionActionButtonClass
                                                 "
+                                                @click="
+                                                    openRefundModal(activeOrder)
+                                                "
+                                            />
+                                        </div>
+
+                                        <!-- Mobile hamburger menu -->
+                                        <div class="lg:hidden relative z-50">
+                                            <Button
+                                                icon="pi pi-ellipsis-v"
+                                                outlined
+                                                :class="subtleActionButtonClass"
+                                                @click="toggleActionMenu"
+                                            />
+                                            <div
+                                                v-if="showActionMenu"
+                                                class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-neutral-200 z-[100]"
                                             >
-                                                <i class="pi pi-undo"></i>
-                                                Refund
-                                            </button>
+                                                class="fixed inset-0 z-[90]
+                                                lg:hidden"
+                                                @click="toggleActionMenu" >
+                                            </div>
+                                            <!-- Mobile menu -->
+                                            <div
+                                                v-if="showActionMenu"
+                                                class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-neutral-200 z-[100]"
+                                                data-menu-container
+                                            >
+                                                <button
+                                                    class="w-full text-left px-4 py-3 hover:bg-primary-50 flex items-center gap-3 text-sm text-primary font-medium transition-colors duration-150"
+                                                    @click="
+                                                        () => {
+                                                            handleThermalPrint();
+                                                            toggleActionMenu();
+                                                        }
+                                                    "
+                                                >
+                                                    <i class="pi pi-print"></i>
+                                                    Print
+                                                </button>
+                                                <button
+                                                    class="w-full text-left px-4 py-3 hover:bg-neutral-50 flex items-center gap-3 text-sm border-t border-neutral-100 transition-colors duration-150"
+                                                    @click="
+                                                        () => {
+                                                            sendReceiptEmail(
+                                                                activeOrder
+                                                            );
+                                                            toggleActionMenu();
+                                                        }
+                                                    "
+                                                >
+                                                    <i
+                                                        class="pi pi-envelope"
+                                                    ></i>
+                                                    Send to Email
+                                                </button>
+                                                <button
+                                                    v-if="
+                                                        activeOrder.status ===
+                                                        'settled'
+                                                    "
+                                                    class="w-full text-left px-4 py-3 hover:bg-warning-50 flex items-center gap-3 text-sm border-t border-neutral-100 text-warning-700"
+                                                    @click="
+                                                        () => {
+                                                            openRefundModal(
+                                                                activeOrder
+                                                            );
+                                                            toggleActionMenu();
+                                                        }
+                                                    "
+                                                >
+                                                    <i class="pi pi-undo"></i>
+                                                    Refund
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="px-4 md:px-6 flex-1 overflow-auto">
-                            <div class="flex flex-col lg:flex-row gap-4">
-                                <!-- <Receipt
+                            <div class="px-4 md:px-6 flex-1 overflow-auto">
+                                <div class="flex flex-col lg:flex-row gap-4">
+                                    <!-- <Receipt
                                     :receipt-id="activeOrder.id.toString()"
                                     :receiptData="activeOrder"
                                     :receipt-footer="props.receiptFooter"
                                     :general-settings="props.generalSettings"
                                 /> -->
-                                <ReceiptLayout
-                                    :store-name="
-                                        props.generalSettings.company_name
-                                    "
-                                    :branch="activeOrder.branch"
-                                    :invoice-number="activeOrder.invoice_no"
-                                    :receipt-date="receiptDate"
-                                    :table-number="activeOrder.table_number"
-                                    :cashier="activeOrder.cashier?.name"
-                                    :items="activeOrder.order_items"
-                                    :totals="activeOrder.totals"
-                                    :payment="activeOrder.payment"
-                                    :receipt-footer="
-                                        activeOrder?.branch?.receipt_footer ||
-                                        props.receiptFooter
-                                    "
-                                    :receipt-header="
-                                        activeOrder?.branch?.receipt_headers
-                                    "
-                                    :bir-accreditation-footer="
-                                        activeOrder.branch
-                                            .bir_accreditation_footer
-                                    "
-                                    :refund-meta="refundMeta"
-                                />
-                                <div class="flex flex-col w-full lg:w-auto">
-                                    <div
-                                        v-if="refundMeta"
-                                        class="rounded-2xl border border-red-100 bg-red-50/60 p-6 space-y-3"
-                                    >
-                                        <p
-                                            class="text-xs uppercase tracking-wide text-red-500"
+                                    <ReceiptLayout
+                                        :store-name="
+                                            props.generalSettings.company_name
+                                        "
+                                        :branch="activeOrder.branch"
+                                        :invoice-number="activeOrder.invoice_no"
+                                        :receipt-date="receiptDate"
+                                        :table-number="activeOrder.table_number"
+                                        :cashier="activeOrder.cashier?.name"
+                                        :items="activeOrder.order_items"
+                                        :totals="activeOrder.totals"
+                                        :payment="activeOrder.payment"
+                                        :receipt-footer="
+                                            activeOrder?.branch
+                                                ?.receipt_footer ||
+                                            props.receiptFooter
+                                        "
+                                        :receipt-header="
+                                            activeOrder?.branch?.receipt_headers
+                                        "
+                                        :bir-accreditation-footer="
+                                            activeOrder.branch
+                                                .bir_accreditation_footer
+                                        "
+                                        :refund-meta="refundMeta"
+                                    />
+                                    <div class="flex flex-col w-full lg:w-auto">
+                                        <div
+                                            v-if="refundMeta"
+                                            class="rounded-2xl border border-error-100 bg-error-50 p-6 space-y-3"
                                         >
-                                            Refund Details
-                                        </p>
-                                        <p class="text-sm text-gray-700">
-                                            Requested by
-                                            <span
-                                                class="font-semibold text-gray-900"
+                                            <p
+                                                class="text-xs uppercase tracking-wide text-error-500"
                                             >
-                                                {{ refundMeta.requested_by }}
-                                            </span>
-                                            &middot; Approved by
-                                            <span
-                                                class="font-semibold text-gray-900"
+                                                Refund Details
+                                            </p>
+                                            <p class="text-sm text-neutral-700">
+                                                Requested by
+                                                <span
+                                                    class="font-semibold text-neutral-900"
+                                                >
+                                                    {{
+                                                        refundMeta.requested_by
+                                                    }}
+                                                </span>
+                                                &middot; Approved by
+                                                <span
+                                                    class="font-semibold text-neutral-900"
+                                                >
+                                                    {{ refundMeta.supervisor }}
+                                                </span>
+                                            </p>
+                                            <p class="text-xs text-neutral-500">
+                                                Refunded
+                                                {{
+                                                    formatDetailedDate(
+                                                        refundMeta.refunded_at
+                                                    )
+                                                }}
+                                            </p>
+                                            <p
+                                                class="text-sm text-neutral-600 italic"
                                             >
-                                                {{ refundMeta.supervisor }}
-                                            </span>
-                                        </p>
-                                        <p class="text-xs text-gray-500">
-                                            Refunded
-                                            {{
-                                                formatDetailedDate(
-                                                    refundMeta.refunded_at
-                                                )
-                                            }}
-                                        </p>
-                                        <p class="text-sm text-gray-600 italic">
-                                            "{{ refundMeta.notes }}"
-                                        </p>
+                                                "{{ refundMeta.notes }}"
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <div
-                        v-else
-                        class="flex flex-col items-center justify-center h-full py-16 text-center text-gray-400"
-                    >
-                        <p class="text-lg font-semibold">
-                            No transaction selected
-                        </p>
-                        <p class="text-sm mt-2">
-                            Use the list on the left to pick a receipt to
-                            review.
-                        </p>
+                        <div
+                            v-else
+                            class="flex flex-col items-center justify-center h-full py-16 text-center text-neutral-400"
+                        >
+                            <p class="text-lg font-semibold">
+                                No transaction selected
+                            </p>
+                            <p class="text-sm mt-2">
+                                Use the list on the left to pick a receipt to
+                                review.
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <RefundDialog
-            v-model:visible="showRefundModal"
-            v-model:notes="refundForm.notes"
-            v-model:supervisor-id="refundForm.supervisor_id"
-            v-model:otp-code="refundForm.otp_code"
-            :supervisors="availableApprovers"
-            :loading="refundLoading"
-            :error="refundError"
-            @submit="submitRefund"
-            @closed="handleRefundDialogClosed"
-        />
-
-        <EmailReceiptDialog
-            v-model:visible="showEmailModal"
-            v-model:emails="emailForm.emails"
-            :loading="emailLoading"
-            @submit="submitEmailReceipt"
-        />
-
-        <!-- Thermal Printer Dialog -->
-        <Dialog
-            v-model:visible="showThermalPrinter"
-            modal
-            header="Thermal Printer"
-            :style="{ width: '28rem' }"
-            :breakpoints="{ '1199px': '75vw', '575px': '90vw' }"
-        >
-            <ThermalPrinterManager
-                :receipt-data="thermalReceiptData"
-                :auto-print="true"
-                @connected="handlePrinterConnected"
-                @printed="handlePrinterPrinted"
-                @open-settings="handleOpenPrinterSettings"
+            <RefundDialog
+                v-model:visible="showRefundModal"
+                v-model:notes="refundForm.notes"
+                v-model:supervisor-id="refundForm.supervisor_id"
+                v-model:otp-code="refundForm.otp_code"
+                :supervisors="availableApprovers"
+                :loading="refundLoading"
+                :error="refundError"
+                @submit="submitRefund"
+                @closed="handleRefundDialogClosed"
             />
-        </Dialog>
-    </TransactionsLayout>
+
+            <EmailReceiptDialog
+                v-model:visible="showEmailModal"
+                v-model:emails="emailForm.emails"
+                :loading="emailLoading"
+                @submit="submitEmailReceipt"
+            />
+
+            <!-- Thermal Printer Dialog -->
+            <Dialog
+                v-model:visible="showThermalPrinter"
+                modal
+                header="Thermal Printer"
+                :style="{ width: '28rem' }"
+                :breakpoints="{ '1199px': '75vw', '575px': '90vw' }"
+            >
+                <ThermalPrinterManager
+                    :receipt-data="thermalReceiptData"
+                    :auto-print="true"
+                    @connected="handlePrinterConnected"
+                    @printed="handlePrinterPrinted"
+                    @open-settings="handleOpenPrinterSettings"
+                />
+            </Dialog>
+        </div>
+    </CashieringLayout>
 </template>
 
 <script setup lang="ts">
@@ -296,7 +319,7 @@ import { ref, computed, watch, reactive, onMounted, onUnmounted } from "vue";
 import { usePage, router } from "@inertiajs/vue3";
 import { route } from "ziggy-js";
 import { useToast } from "primevue/usetoast";
-import TransactionsLayout from "@/Layouts/TransactionsLayout.vue";
+import CashieringLayout from "@/Layouts/CashieringLayout.vue";
 import PageProps from "@/Types/PageProps";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
@@ -723,18 +746,18 @@ const handleOpenPrinterSettings = () => {
 const subtleActionButtonClass =
     "!rounded-full !border !border-primary/20 !bg-primary/5 !text-primary !px-4 !py-2 !text-sm !font-semibold hover:!bg-primary/10";
 const cautionActionButtonClass =
-    "!rounded-full !border !border-amber-300 !bg-amber-50 !text-amber-700 !px-4 !py-2 !text-sm !font-semibold hover:!bg-amber-100";
+    "!rounded-full !border !border-warning-300 !bg-warning-50 !text-warning-700 !px-4 !py-2 !text-sm !font-semibold hover:!bg-warning-100";
 
 const getStatusClass = (status: string) => {
     switch (status) {
         case "settled":
-            return "bg-green-100 text-green-800";
+            return "bg-success-100 text-success-800";
         case "refund":
-            return "bg-red-100 text-red-800";
+            return "bg-error-100 text-error-800";
         case "credit":
-            return "bg-yellow-100 text-yellow-800";
+            return "bg-tertiary-100 text-tertiary-800";
         default:
-            return "bg-gray-100 text-gray-800";
+            return "bg-neutral-100 text-neutral-800";
     }
 };
 

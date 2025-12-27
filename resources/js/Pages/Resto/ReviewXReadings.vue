@@ -3,12 +3,12 @@
         <div class="flex flex-col h-full overflow-hidden">
             <!-- Sticky Header -->
             <div
-                class="flex-shrink-0 px-4 md:px-6 lg:px-8 py-4 bg-white border-b border-gray-200"
+                class="flex-shrink-0 px-4 md:px-6 lg:px-8 py-4 bg-white border-b border-neutral-200"
             >
                 <div
                     class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4"
                 >
-                    <h1 class="text-2xl font-bold text-gray-900">
+                    <h1 class="text-2xl font-bold text-neutral-900">
                         Review X Readings
                     </h1>
 
@@ -62,7 +62,6 @@
                             v-model="selectedYear"
                             @change="handleMonthYearChange"
                         >
-                            <option value="">All Years</option>
                             <option
                                 v-for="year in yearOptions"
                                 :key="year"
@@ -75,7 +74,7 @@
                         <!-- Clear Filters Button -->
                         <button
                             @click="clearFilters"
-                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                            class="px-4 py-2 text-sm font-medium text-neutral-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
                         >
                             Clear Filters
                         </button>
@@ -110,22 +109,22 @@
                         class="flex flex-col h-full overflow-hidden"
                     >
                         <div
-                            class="px-4 py-5 md:px-6 md:py-6 border-b border-gray-100 bg-white flex-shrink-0 sticky top-0 z-10"
+                            class="px-4 py-5 md:px-6 md:py-6 border-b border-neutral-100 bg-white flex-shrink-0 sticky top-0 z-10"
                         >
                             <div
                                 class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between"
                             >
                                 <div class="flex flex-col lg:flex-row lg:gap-6">
-                                    <p class="text-sm text-gray-500">
+                                    <p class="text-sm text-neutral-500">
                                         Shift #{{ activeSession.id }} -
                                         {{ activeSession.cashier }}
                                     </p>
 
-                                    <p class="text-sm text-gray-500">
+                                    <p class="text-sm text-neutral-500">
                                         Shift Started:
                                         {{ activeSession.shift_start }}
                                     </p>
-                                    <p class="text-sm text-gray-500">
+                                    <p class="text-sm text-neutral-500">
                                         Shift Closed:
                                         {{ activeSession.shift_end }}
                                     </p>
@@ -162,7 +161,7 @@
                                         />
                                         <div
                                             v-if="showActionMenu"
-                                            class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-[100]"
+                                            class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-neutral-200 z-[100]"
                                         >
                                             <div
                                                 class="fixed inset-0 z-[90] lg:hidden"
@@ -171,11 +170,11 @@
                                             <!-- Mobile menu -->
                                             <div
                                                 v-if="showActionMenu"
-                                                class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 z-[100]"
+                                                class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-neutral-200 z-[100]"
                                                 data-menu-container
                                             >
                                                 <button
-                                                    class="w-full text-left px-4 py-3 hover:bg-blue-50 flex items-center gap-3 text-sm text-blue-700 transition-colors duration-150"
+                                                    class="w-full text-left px-4 py-3 hover:bg-blue-50 flex items-center gap-3 text-sm text-primary-700 transition-colors duration-150"
                                                     @click="
                                                         () => {
                                                             handlePrintReport();
@@ -191,7 +190,7 @@
                                                         activeSession.shift_end ==
                                                         null
                                                     "
-                                                    class="w-full text-left px-4 py-3 hover:bg-amber-50 flex items-center gap-3 text-sm border-t border-gray-100 text-amber-700"
+                                                    class="w-full text-left px-4 py-3 hover:bg-warning-50 flex items-center gap-3 text-sm border-t border-neutral-100 text-warning-700"
                                                     @click="
                                                         () => {
                                                             closeSession(
@@ -220,10 +219,10 @@
                                     <!-- Session Summary Details -->
                                     <div
                                         v-if="sessionSummary"
-                                        class="rounded-2xl border border-gray-100 bg-white p-6 space-y-6 mt-4"
+                                        class="rounded-2xl border border-neutral-100 bg-white p-6 space-y-6 mt-4"
                                     >
                                         <p
-                                            class="text-xs uppercase tracking-wide text-gray-500"
+                                            class="text-xs uppercase tracking-wide text-neutral-500"
                                         >
                                             Shift Summary
                                         </p>
@@ -235,7 +234,7 @@
                                             <div class="space-y-4">
                                                 <div class="">
                                                     <h4
-                                                        class="text-sm font-semibold text-gray-700 mb-2"
+                                                        class="text-sm font-semibold text-neutral-700 mb-2"
                                                     >
                                                         Cash Summary
                                                     </h4>
@@ -243,7 +242,7 @@
                                                         class="flex flex-col lg:flex-row lg:justify-between"
                                                     >
                                                         <p
-                                                            class="text-sm text-gray-600"
+                                                            class="text-sm text-neutral-600"
                                                         >
                                                             Beginning Cash
                                                         </p>
@@ -263,7 +262,7 @@
                                                         class="flex flex-col lg:flex-row lg:justify-between"
                                                     >
                                                         <p
-                                                            class="text-sm text-gray-600"
+                                                            class="text-sm text-neutral-600"
                                                         >
                                                             Cash Denomination
                                                         </p>
@@ -287,7 +286,7 @@
                                                         class="flex flex-col lg:flex-row lg:justify-between"
                                                     >
                                                         <p
-                                                            class="text-sm text-gray-600"
+                                                            class="text-sm text-neutral-600"
                                                         >
                                                             Gift Checks
                                                         </p>
@@ -307,7 +306,7 @@
                                                         class="flex flex-col lg:flex-row lg:justify-between"
                                                     >
                                                         <p
-                                                            class="text-sm text-gray-600"
+                                                            class="text-sm text-neutral-600"
                                                         >
                                                             Expected Cash
                                                         </p>
@@ -326,7 +325,7 @@
                                                         class="flex flex-col lg:flex-row lg:justify-between"
                                                     >
                                                         <p
-                                                            class="text-sm text-gray-600"
+                                                            class="text-sm text-neutral-600"
                                                         >
                                                             Variance
                                                         </p>
@@ -335,8 +334,8 @@
                                                                 'font-semibold',
                                                                 varianceOver >=
                                                                 0
-                                                                    ? 'text-green-600'
-                                                                    : 'text-red-600',
+                                                                    ? 'text-success-600'
+                                                                    : 'text-error-600',
                                                             ]"
                                                         >
                                                             ₱{{
@@ -361,7 +360,7 @@
                                                 <!-- Sales Summary Column -->
                                                 <div>
                                                     <h4
-                                                        class="text-sm font-semibold text-gray-700 mb-3"
+                                                        class="text-sm font-semibold text-neutral-700 mb-3"
                                                     >
                                                         Sales Summary
                                                     </h4>
@@ -371,7 +370,7 @@
                                                                 class="flex justify-between"
                                                             >
                                                                 <p
-                                                                    class="text-sm text-gray-600"
+                                                                    class="text-sm text-neutral-600"
                                                                 >
                                                                     Total Orders
                                                                 </p>
@@ -390,7 +389,7 @@
                                                                 class="flex justify-between"
                                                             >
                                                                 <p
-                                                                    class="text-sm text-gray-600"
+                                                                    class="text-sm text-neutral-600"
                                                                 >
                                                                     Total SKU
                                                                 </p>
@@ -409,7 +408,7 @@
                                                                 class="flex justify-between"
                                                             >
                                                                 <p
-                                                                    class="text-sm text-gray-600"
+                                                                    class="text-sm text-neutral-600"
                                                                 >
                                                                     Total
                                                                     Quantity
@@ -431,7 +430,7 @@
                                                                 class="flex justify-between"
                                                             >
                                                                 <p
-                                                                    class="text-sm text-gray-600"
+                                                                    class="text-sm text-neutral-600"
                                                                 >
                                                                     Gross Sales
                                                                 </p>
@@ -452,7 +451,7 @@
                                                                 class="flex justify-between"
                                                             >
                                                                 <p
-                                                                    class="text-sm text-gray-600"
+                                                                    class="text-sm text-neutral-600"
                                                                 >
                                                                     Total
                                                                     Discount
@@ -474,7 +473,7 @@
                                                                 class="flex justify-between"
                                                             >
                                                                 <p
-                                                                    class="text-sm text-gray-600"
+                                                                    class="text-sm text-neutral-600"
                                                                 >
                                                                     Total Less
                                                                     Tax
@@ -496,7 +495,7 @@
                                                                 class="flex justify-between"
                                                             >
                                                                 <p
-                                                                    class="text-sm text-gray-600"
+                                                                    class="text-sm text-neutral-600"
                                                                 >
                                                                     Net Sales
                                                                 </p>
@@ -519,7 +518,7 @@
                                                                 class="flex justify-between"
                                                             >
                                                                 <p
-                                                                    class="text-sm text-gray-600"
+                                                                    class="text-sm text-neutral-600"
                                                                 >
                                                                     VATable
                                                                     Sales
@@ -541,7 +540,7 @@
                                                                 class="flex justify-between"
                                                             >
                                                                 <p
-                                                                    class="text-sm text-gray-600"
+                                                                    class="text-sm text-neutral-600"
                                                                 >
                                                                     VAT Amount
                                                                 </p>
@@ -562,7 +561,7 @@
                                                                 class="flex justify-between"
                                                             >
                                                                 <p
-                                                                    class="text-sm text-gray-600"
+                                                                    class="text-sm text-neutral-600"
                                                                 >
                                                                     VAT Exempt
                                                                     Sales
@@ -584,7 +583,7 @@
                                                                 class="flex justify-between"
                                                             >
                                                                 <p
-                                                                    class="text-sm text-gray-600"
+                                                                    class="text-sm text-neutral-600"
                                                                 >
                                                                     Non VAT
                                                                     Sales
@@ -609,7 +608,7 @@
                                                                 class="flex flex-col lg:flex-row lg:justify-between"
                                                             >
                                                                 <p
-                                                                    class="text-sm text-gray-600"
+                                                                    class="text-sm text-neutral-600"
                                                                 >
                                                                     Starting
                                                                     Bill No.
@@ -627,7 +626,7 @@
                                                                 class="flex flex-col lg:flex-row lg:justify-between"
                                                             >
                                                                 <p
-                                                                    class="text-sm text-gray-600"
+                                                                    class="text-sm text-neutral-600"
                                                                 >
                                                                     Ending Bill
                                                                     No.
@@ -644,7 +643,7 @@
                                                                 class="flex flex-col lg:flex-row lg:justify-between"
                                                             >
                                                                 <p
-                                                                    class="text-sm text-gray-600"
+                                                                    class="text-sm text-neutral-600"
                                                                 >
                                                                     Starting
                                                                     Invoice No.
@@ -662,7 +661,7 @@
                                                                 class="flex flex-col lg:flex-row lg:justify-between"
                                                             >
                                                                 <p
-                                                                    class="text-sm text-gray-600"
+                                                                    class="text-sm text-neutral-600"
                                                                 >
                                                                     Ending Bill
                                                                     No.
@@ -680,7 +679,7 @@
                                                                 class="flex flex-col lg:flex-row lg:justify-between"
                                                             >
                                                                 <p
-                                                                    class="text-sm text-gray-600"
+                                                                    class="text-sm text-neutral-600"
                                                                 >
                                                                     Total
                                                                     Service
@@ -701,7 +700,7 @@
                                                                 class="flex flex-col lg:flex-row lg:justify-between"
                                                             >
                                                                 <p
-                                                                    class="text-sm text-gray-600"
+                                                                    class="text-sm text-neutral-600"
                                                                 >
                                                                     Total
                                                                     Refunds
@@ -790,7 +789,7 @@ const perPage = ref(props.filters.per_page || 10);
 
 // Date filters
 const selectedMonth = ref("");
-const selectedYear = ref("");
+const selectedYear = ref(new Date().getFullYear().toString());
 
 const netSalesWithServiceCharge = computed(() => {
     if (!activeSession.value) return 0;
@@ -966,7 +965,7 @@ const clearFilters = () => {
     filters.date_from = "";
     filters.date_to = "";
     selectedMonth.value = "";
-    selectedYear.value = "";
+    selectedYear.value = new Date().getFullYear().toString();
     perPage.value = 10;
     search.value = "";
 
@@ -1031,7 +1030,7 @@ const handlePrintReport = async () => {
 const subtleActionButtonClass =
     "!rounded-full !border !border-primary/20 !bg-primary/5 !text-primary !px-4 !py-2 !text-sm !font-semibold hover:!bg-primary/10";
 const cautionActionButtonClass =
-    "!rounded-full !border !border-amber-300 !bg-amber-50 !text-amber-700 !px-4 !py-2 !text-sm !font-semibold hover:!bg-amber-100";
+    "!rounded-full !border !border-amber-300 !bg-warning-50 !text-warning-700 !px-4 !py-2 !text-sm !font-semibold hover:!bg-amber-100";
 
 const getStatusClass = (status: string) => {
     switch (status) {

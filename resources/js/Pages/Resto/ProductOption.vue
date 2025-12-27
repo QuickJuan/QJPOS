@@ -1,595 +1,632 @@
 <template>
-    <div class="min-h-screen bg-slate-100 pb-24">
-        <Header />
+    <CashieringLayout :current-user="page.props.currentUser">
+        <div class="min-h-screen bg-slate-100 pb-24">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                <button
+                    @click="goBack"
+                    class="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition"
+                >
+                    <ChevronLeftIcon class="w-4 h-4" />
+                    Back to Menu
+                </button>
 
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-            <button
-                @click="goBack"
-                class="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition"
-            >
-                <ChevronLeftIcon class="w-4 h-4" />
-                Back to Menu
-            </button>
-
-            <div class="grid lg:grid-cols-3 gap-8 mt-8 items-start">
-                <section class="lg:col-span-2">
-                    <div
-                        class="lg:max-h-[calc(100vh-200px)] lg:overflow-y-auto lg:pr-4"
-                    >
+                <div class="grid lg:grid-cols-3 gap-8 mt-8 items-start">
+                    <section class="lg:col-span-2">
                         <div
-                            class="bg-white rounded-3xl shadow-xl p-6 lg:p-8 space-y-8"
+                            class="lg:max-h-[calc(100vh-200px)] lg:overflow-y-auto lg:pr-4"
                         >
-                            <div class="flex flex-col gap-2">
-                                <span
-                                    class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500"
-                                >
-                                    Customize
-                                </span>
+                            <div
+                                class="bg-white rounded-3xl shadow-xl p-6 lg:p-8 space-y-8"
+                            >
+                                <div class="flex flex-col gap-2">
+                                    <span
+                                        class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500"
+                                    >
+                                        Customize
+                                    </span>
+                                    <div
+                                        class="flex flex-col md:flex-row md:items-center md:justify-between gap-3"
+                                    >
+                                        <h2
+                                            class="text-2xl font-bold text-slate-900"
+                                        >
+                                            Build your bundle
+                                        </h2>
+                                        <p
+                                            class="text-sm text-slate-500"
+                                            v-if="hasCustomizableOptions"
+                                        >
+                                            {{ selectionHint }}
+                                        </p>
+                                    </div>
+                                </div>
+
                                 <div
-                                    class="flex flex-col md:flex-row md:items-center md:justify-between gap-3"
+                                    v-if="hasCustomizableOptions"
+                                    class="space-y-6"
                                 >
-                                    <h2
-                                        class="text-2xl font-bold text-slate-900"
+                                    <div
+                                        v-for="(
+                                            option, index
+                                        ) in customizableOptions"
+                                        :key="option.id"
+                                        class="flex gap-6 border border-slate-200 rounded-3xl p-5 lg:p-6 bg-slate-50"
                                     >
-                                        Build your bundle
-                                    </h2>
+                                        <div class="flex flex-col items-center">
+                                            <div
+                                                class="w-11 h-11 rounded-full bg-sky-600 text-white font-semibold flex items-center justify-center"
+                                            >
+                                                {{ index + 1 }}
+                                            </div>
+                                            <div
+                                                v-if="
+                                                    index !==
+                                                    customizableOptions.length -
+                                                        1
+                                                "
+                                                class="w-px flex-1 bg-slate-200 mt-3 hidden lg:block"
+                                            ></div>
+                                        </div>
+                                        <div class="flex-1 space-y-5">
+                                            <div
+                                                class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between"
+                                            >
+                                                <div>
+                                                    <p
+                                                        class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400"
+                                                    >
+                                                        Step {{ index + 1 }}
+                                                    </p>
+                                                    <h3
+                                                        class="text-xl font-semibold text-slate-900"
+                                                    >
+                                                        {{ option.option_name }}
+                                                    </h3>
+                                                    <p
+                                                        class="text-sm text-slate-500"
+                                                    >
+                                                        {{
+                                                            getMaxQuantity(
+                                                                option
+                                                            )
+                                                                ? `Pick ${getMaxQuantity(
+                                                                      option
+                                                                  )} item${
+                                                                      getMaxQuantity(
+                                                                          option
+                                                                      ) > 1
+                                                                          ? "s"
+                                                                          : ""
+                                                                  }`
+                                                                : "Choose as many as you like"
+                                                        }}
+                                                    </p>
+                                                </div>
+                                                <div
+                                                    class="text-sm font-semibold text-slate-600"
+                                                >
+                                                    <template
+                                                        v-if="
+                                                            getMaxQuantity(
+                                                                option
+                                                            )
+                                                        "
+                                                    >
+                                                        {{
+                                                            getTotalSelected(
+                                                                option.id
+                                                            )
+                                                        }}
+                                                        /
+                                                        {{
+                                                            getMaxQuantity(
+                                                                option
+                                                            )
+                                                        }}
+                                                        selected
+                                                    </template>
+                                                    <template v-else>
+                                                        {{
+                                                            getTotalSelected(
+                                                                option.id
+                                                            )
+                                                        }}
+                                                        selected
+                                                    </template>
+                                                </div>
+                                            </div>
+
+                                            <div
+                                                v-if="
+                                                    option.optionItems?.length
+                                                "
+                                                class="grid gap-5 md:grid-cols-2"
+                                            >
+                                                <div
+                                                    v-for="item in option.optionItems"
+                                                    :key="item.id"
+                                                    :class="[
+                                                        'relative rounded-2xl border p-5 bg-white flex flex-col gap-4 transition hover:shadow-lg',
+                                                        getSelectionValue(
+                                                            option.id,
+                                                            item.id
+                                                        ) > 0
+                                                            ? 'border-sky-500 shadow-sky-100'
+                                                            : 'border-slate-200',
+                                                    ]"
+                                                >
+                                                    <div
+                                                        class="flex items-start gap-4"
+                                                    >
+                                                        <div
+                                                            class="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center overflow-hidden"
+                                                        >
+                                                            <img
+                                                                v-if="
+                                                                    item
+                                                                        ?.product
+                                                                        ?.media
+                                                                        ?.length
+                                                                "
+                                                                :src="
+                                                                    item.product
+                                                                        .media[0]
+                                                                        ?.original_url
+                                                                "
+                                                                :alt="
+                                                                    item.product
+                                                                        .media[0]
+                                                                        ?.name
+                                                                "
+                                                                class="w-full h-full object-cover"
+                                                            />
+                                                            <div
+                                                                v-else
+                                                                class="text-slate-500"
+                                                            >
+                                                                <ImageIcon
+                                                                    class="w-7 h-7"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                        <div class="flex-1">
+                                                            <p
+                                                                class="font-semibold text-slate-900"
+                                                            >
+                                                                {{
+                                                                    item
+                                                                        ?.product
+                                                                        ?.name ||
+                                                                    "Option item"
+                                                                }}
+                                                                <span
+                                                                    v-if="
+                                                                        item
+                                                                            ?.product_packaging
+                                                                            ?.name
+                                                                    "
+                                                                    class="text-sm text-slate-500"
+                                                                >
+                                                                    ({{
+                                                                        item
+                                                                            .product_packaging
+                                                                            .name
+                                                                    }})
+                                                                </span>
+                                                            </p>
+                                                            <p
+                                                                class="text-sm text-slate-500"
+                                                            >
+                                                                {{
+                                                                    item
+                                                                        ?.product_packaging
+                                                                        ?.name ||
+                                                                    "Single serve"
+                                                                }}
+                                                            </p>
+                                                        </div>
+                                                        <div
+                                                            class="text-sm font-semibold text-emerald-600"
+                                                            v-if="
+                                                                Number(
+                                                                    item.price
+                                                                ) > 0
+                                                            "
+                                                        >
+                                                            +{{
+                                                                formatPrice(
+                                                                    Number(
+                                                                        item.price
+                                                                    )
+                                                                )
+                                                            }}
+                                                        </div>
+                                                        <div
+                                                            v-else
+                                                            class="text-sm text-slate-500"
+                                                        >
+                                                            Included
+                                                        </div>
+                                                    </div>
+
+                                                    <div
+                                                        class="flex items-center justify-between"
+                                                    >
+                                                        <span
+                                                            class="text-sm text-slate-500"
+                                                            >Quantity</span
+                                                        >
+                                                        <div
+                                                            class="flex items-center gap-2"
+                                                        >
+                                                            <button
+                                                                type="button"
+                                                                class="w-10 h-10 rounded-full border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                                                                @click="
+                                                                    adjustQuantity(
+                                                                        option,
+                                                                        item.id,
+                                                                        -1
+                                                                    )
+                                                                "
+                                                                :disabled="
+                                                                    getSelectionValue(
+                                                                        option.id,
+                                                                        item.id
+                                                                    ) === 0
+                                                                "
+                                                            >
+                                                                <span
+                                                                    aria-hidden="true"
+                                                                    >−</span
+                                                                >
+                                                                <span
+                                                                    class="sr-only"
+                                                                    >Decrease
+                                                                    quantity</span
+                                                                >
+                                                            </button>
+                                                            <span
+                                                                class="w-10 text-center font-semibold text-slate-900"
+                                                            >
+                                                                {{
+                                                                    getSelectionValue(
+                                                                        option.id,
+                                                                        item.id
+                                                                    )
+                                                                }}
+                                                            </span>
+                                                            <button
+                                                                type="button"
+                                                                class="w-10 h-10 rounded-full border border-sky-500 text-sky-600 hover:bg-sky-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                                                                @click="
+                                                                    adjustQuantity(
+                                                                        option,
+                                                                        item.id,
+                                                                        1
+                                                                    )
+                                                                "
+                                                                :disabled="
+                                                                    isIncrementDisabled(
+                                                                        option,
+                                                                        item.id
+                                                                    )
+                                                                "
+                                                            >
+                                                                <span
+                                                                    aria-hidden="true"
+                                                                    >+</span
+                                                                >
+                                                                <span
+                                                                    class="sr-only"
+                                                                    >Increase
+                                                                    quantity</span
+                                                                >
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div
+                                                v-else
+                                                class="border border-dashed border-slate-200 rounded-2xl p-6 text-sm text-slate-500 bg-white"
+                                            >
+                                                No option items available for
+                                                this group yet.
+                                            </div>
+
+                                            <div
+                                                v-if="
+                                                    getMaxQuantity(option) &&
+                                                    getPendingSelections(option)
+                                                "
+                                                class="text-sm text-rose-500"
+                                            >
+                                                Choose
+                                                {{
+                                                    getPendingSelections(option)
+                                                }}
+                                                more item(s) to complete this
+                                                option.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div
+                                    v-else
+                                    class="border border-dashed border-slate-300 rounded-2xl p-8 text-center text-slate-500 bg-slate-50"
+                                >
+                                    All required components are already
+                                    included. You can add this bundle right
+                                    away.
+                                </div>
+
+                                <div
+                                    class="border-t border-slate-200 pt-6 space-y-3"
+                                >
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-slate-500"
+                                            >Base Price</span
+                                        >
+                                        <span
+                                            class="font-semibold text-slate-900"
+                                        >
+                                            {{ formatPrice(basePriceValue) }}
+                                        </span>
+                                    </div>
+                                    <div
+                                        class="flex justify-between text-lg font-bold text-slate-900"
+                                    >
+                                        <span>Total</span>
+                                        <span>{{
+                                            formatPrice(totalAmount)
+                                        }}</span>
+                                    </div>
+                                    <div class="grid gap-3 sm:grid-cols-2">
+                                        <button
+                                            type="button"
+                                            @click="goBack"
+                                            class="px-4 py-3 border border-slate-200 rounded-2xl text-slate-600 font-semibold hover:bg-slate-50"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="button"
+                                            :disabled="
+                                                hasCustomizableOptions &&
+                                                !selectionsAreComplete()
+                                            "
+                                            @click="addToCart"
+                                            class="px-4 py-3 rounded-2xl font-semibold text-white shadow-lg transition"
+                                            :class="[
+                                                hasCustomizableOptions &&
+                                                !selectionsAreComplete()
+                                                    ? 'bg-slate-300 cursor-not-allowed'
+                                                    : 'bg-sky-600 hover:bg-sky-700',
+                                            ]"
+                                        >
+                                            Add to Order
+                                        </button>
+                                    </div>
                                     <p
-                                        class="text-sm text-slate-500"
-                                        v-if="hasCustomizableOptions"
+                                        v-if="
+                                            hasCustomizableOptions &&
+                                            !selectionsAreComplete()
+                                        "
+                                        class="text-xs text-rose-500"
                                     >
-                                        {{ selectionHint }}
+                                        Complete each option's required quantity
+                                        to continue.
                                     </p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <aside class="lg:col-span-1">
+                        <div class="space-y-6 lg:sticky lg:top-6">
+                            <div
+                                class="bg-white rounded-3xl shadow-xl p-6 lg:p-7 space-y-6"
+                            >
+                                <div class="flex gap-4">
+                                    <div
+                                        class="w-28 h-28 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center overflow-hidden"
+                                    >
+                                        <img
+                                            v-if="coverImage"
+                                            :src="coverImage"
+                                            :alt="productData?.name"
+                                            class="w-full h-full object-cover"
+                                        />
+                                        <div v-else class="text-slate-500">
+                                            <ImageIcon class="w-9 h-9" />
+                                        </div>
+                                    </div>
+                                    <div class="flex-1 space-y-2">
+                                        <p
+                                            class="text-xs uppercase tracking-[0.25em] text-slate-400"
+                                        >
+                                            Bundle
+                                        </p>
+                                        <h1
+                                            class="text-2xl font-bold text-slate-900"
+                                        >
+                                            {{ productData?.name }}
+                                        </h1>
+                                        <p
+                                            v-if="productDescription"
+                                            class="text-sm text-slate-600 leading-relaxed"
+                                            v-html="productDescription"
+                                        ></p>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p
+                                            class="text-xs uppercase text-slate-500"
+                                        >
+                                            Base Price
+                                        </p>
+                                        <p
+                                            class="text-xl font-bold text-slate-900"
+                                        >
+                                            {{ formatPrice(basePriceValue) }}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p
+                                            class="text-xs uppercase text-slate-500"
+                                        >
+                                            Current Total
+                                        </p>
+                                        <p
+                                            class="text-xl font-semibold text-emerald-600"
+                                        >
+                                            {{ formatPrice(totalAmount) }}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
 
                             <div
-                                v-if="hasCustomizableOptions"
-                                class="space-y-6"
+                                class="bg-white rounded-3xl shadow-xl p-6 lg:p-7 space-y-6"
                             >
-                                <div
-                                    v-for="(
-                                        option, index
-                                    ) in customizableOptions"
-                                    :key="option.id"
-                                    class="flex gap-6 border border-slate-200 rounded-3xl p-5 lg:p-6 bg-slate-50"
-                                >
-                                    <div class="flex flex-col items-center">
+                                <div>
+                                    <p
+                                        class="text-xs uppercase tracking-[0.3em] text-slate-500"
+                                    >
+                                        Included
+                                    </p>
+                                    <div
+                                        v-if="defaultOptionSummary.length"
+                                        class="mt-3 space-y-3"
+                                    >
                                         <div
-                                            class="w-11 h-11 rounded-full bg-sky-600 text-white font-semibold flex items-center justify-center"
+                                            v-for="group in defaultOptionSummary"
+                                            :key="group.id"
+                                            class="border border-slate-200 rounded-2xl p-4"
                                         >
-                                            {{ index + 1 }}
-                                        </div>
-                                        <div
-                                            v-if="
-                                                index !==
-                                                customizableOptions.length - 1
-                                            "
-                                            class="w-px flex-1 bg-slate-200 mt-3 hidden lg:block"
-                                        ></div>
-                                    </div>
-                                    <div class="flex-1 space-y-5">
-                                        <div
-                                            class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between"
-                                        >
-                                            <div>
-                                                <p
-                                                    class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400"
-                                                >
-                                                    Step {{ index + 1 }}
-                                                </p>
-                                                <h3
-                                                    class="text-xl font-semibold text-slate-900"
-                                                >
-                                                    {{ option.option_name }}
-                                                </h3>
-                                                <p
-                                                    class="text-sm text-slate-500"
-                                                >
-                                                    {{
-                                                        getMaxQuantity(option)
-                                                            ? `Pick ${getMaxQuantity(
-                                                                  option
-                                                              )} item${
-                                                                  getMaxQuantity(
-                                                                      option
-                                                                  ) > 1
-                                                                      ? "s"
-                                                                      : ""
-                                                              }`
-                                                            : "Choose as many as you like"
-                                                    }}
-                                                </p>
-                                            </div>
-                                            <div
-                                                class="text-sm font-semibold text-slate-600"
+                                            <p
+                                                class="text-sm font-semibold text-slate-900"
                                             >
-                                                <template
-                                                    v-if="
-                                                        getMaxQuantity(option)
-                                                    "
-                                                >
-                                                    {{
-                                                        getTotalSelected(
-                                                            option.id
-                                                        )
-                                                    }}
-                                                    /
-                                                    {{ getMaxQuantity(option) }}
-                                                    selected
-                                                </template>
-                                                <template v-else>
-                                                    {{
-                                                        getTotalSelected(
-                                                            option.id
-                                                        )
-                                                    }}
-                                                    selected
-                                                </template>
-                                            </div>
-                                        </div>
-
-                                        <div
-                                            v-if="option.optionItems?.length"
-                                            class="grid gap-5 md:grid-cols-2"
-                                        >
-                                            <div
-                                                v-for="item in option.optionItems"
-                                                :key="item.id"
-                                                :class="[
-                                                    'relative rounded-2xl border p-5 bg-white flex flex-col gap-4 transition hover:shadow-lg',
-                                                    getSelectionValue(
-                                                        option.id,
-                                                        item.id
-                                                    ) > 0
-                                                        ? 'border-sky-500 shadow-sky-100'
-                                                        : 'border-slate-200',
-                                                ]"
+                                                {{ group.name }}
+                                            </p>
+                                            <ul
+                                                class="mt-2 space-y-1 text-sm text-slate-600"
                                             >
-                                                <div
-                                                    class="flex items-start gap-4"
+                                                <li
+                                                    v-for="item in group.items"
+                                                    :key="item.id"
+                                                    class="flex justify-between"
                                                 >
-                                                    <div
-                                                        class="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center overflow-hidden"
-                                                    >
-                                                        <img
-                                                            v-if="
-                                                                item?.product
-                                                                    ?.media
-                                                                    ?.length
-                                                            "
-                                                            :src="
-                                                                item.product
-                                                                    .media[0]
-                                                                    ?.original_url
-                                                            "
-                                                            :alt="
-                                                                item.product
-                                                                    .media[0]
-                                                                    ?.name
-                                                            "
-                                                            class="w-full h-full object-cover"
-                                                        />
-                                                        <div
-                                                            v-else
-                                                            class="text-slate-500"
-                                                        >
-                                                            <ImageIcon
-                                                                class="w-7 h-7"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                    <div class="flex-1">
-                                                        <p
-                                                            class="font-semibold text-slate-900"
-                                                        >
-                                                            {{
-                                                                item?.product
-                                                                    ?.name ||
-                                                                "Option item"
-                                                            }}
-                                                            <span
-                                                                v-if="
-                                                                    item
-                                                                        ?.product_packaging
-                                                                        ?.name
-                                                                "
-                                                                class="text-sm text-slate-500"
-                                                            >
-                                                                ({{
-                                                                    item
-                                                                        .product_packaging
-                                                                        .name
-                                                                }})
-                                                            </span>
-                                                        </p>
-                                                        <p
-                                                            class="text-sm text-slate-500"
-                                                        >
-                                                            {{
-                                                                item
-                                                                    ?.product_packaging
-                                                                    ?.name ||
-                                                                "Single serve"
-                                                            }}
-                                                        </p>
-                                                    </div>
-                                                    <div
-                                                        class="text-sm font-semibold text-emerald-600"
+                                                    <span>
+                                                        {{ item.quantity }} ×
+                                                        {{ item.name }}
+                                                    </span>
+                                                    <span
                                                         v-if="
                                                             Number(item.price) >
                                                             0
                                                         "
+                                                        class="text-emerald-600"
                                                     >
                                                         +{{
                                                             formatPrice(
-                                                                Number(
-                                                                    item.price
-                                                                )
+                                                                item.price
                                                             )
                                                         }}
-                                                    </div>
-                                                    <div
+                                                    </span>
+                                                    <span
                                                         v-else
-                                                        class="text-sm text-slate-500"
+                                                        class="text-slate-400"
                                                     >
                                                         Included
-                                                    </div>
-                                                </div>
+                                                    </span>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <p
+                                        v-else
+                                        class="text-sm text-slate-500 mt-2"
+                                    >
+                                        No automatic inclusions for this bundle.
+                                    </p>
+                                </div>
 
-                                                <div
-                                                    class="flex items-center justify-between"
+                                <div>
+                                    <p
+                                        class="text-xs uppercase tracking-[0.3em] text-slate-500"
+                                    >
+                                        Your Selections
+                                    </p>
+                                    <div
+                                        v-if="hasCustomizableSelections"
+                                        class="mt-3 space-y-3"
+                                    >
+                                        <div
+                                            v-for="group in customizableSelectionSummary"
+                                            :key="group.id"
+                                            class="border border-slate-200 rounded-2xl p-4"
+                                        >
+                                            <p
+                                                class="text-sm font-semibold text-slate-900"
+                                            >
+                                                {{ group.name }}
+                                            </p>
+                                            <ul
+                                                class="mt-2 space-y-1 text-sm text-slate-600"
+                                            >
+                                                <li
+                                                    v-for="item in group.items"
+                                                    :key="item.id"
+                                                    class="flex justify-between"
                                                 >
+                                                    <span>
+                                                        {{ item.quantity }} ×
+                                                        {{ item.name }}
+                                                    </span>
                                                     <span
-                                                        class="text-sm text-slate-500"
-                                                        >Quantity</span
+                                                        v-if="
+                                                            Number(item.price) >
+                                                            0
+                                                        "
+                                                        class="text-emerald-600"
                                                     >
-                                                    <div
-                                                        class="flex items-center gap-2"
+                                                        +{{
+                                                            formatPrice(
+                                                                item.price *
+                                                                    item.quantity
+                                                            )
+                                                        }}
+                                                    </span>
+                                                    <span
+                                                        v-else
+                                                        class="text-slate-400"
                                                     >
-                                                        <button
-                                                            type="button"
-                                                            class="w-10 h-10 rounded-full border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
-                                                            @click="
-                                                                adjustQuantity(
-                                                                    option,
-                                                                    item.id,
-                                                                    -1
-                                                                )
-                                                            "
-                                                            :disabled="
-                                                                getSelectionValue(
-                                                                    option.id,
-                                                                    item.id
-                                                                ) === 0
-                                                            "
-                                                        >
-                                                            <span
-                                                                aria-hidden="true"
-                                                                >−</span
-                                                            >
-                                                            <span
-                                                                class="sr-only"
-                                                                >Decrease
-                                                                quantity</span
-                                                            >
-                                                        </button>
-                                                        <span
-                                                            class="w-10 text-center font-semibold text-slate-900"
-                                                        >
-                                                            {{
-                                                                getSelectionValue(
-                                                                    option.id,
-                                                                    item.id
-                                                                )
-                                                            }}
-                                                        </span>
-                                                        <button
-                                                            type="button"
-                                                            class="w-10 h-10 rounded-full border border-sky-500 text-sky-600 hover:bg-sky-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                                                            @click="
-                                                                adjustQuantity(
-                                                                    option,
-                                                                    item.id,
-                                                                    1
-                                                                )
-                                                            "
-                                                            :disabled="
-                                                                isIncrementDisabled(
-                                                                    option,
-                                                                    item.id
-                                                                )
-                                                            "
-                                                        >
-                                                            <span
-                                                                aria-hidden="true"
-                                                                >+</span
-                                                            >
-                                                            <span
-                                                                class="sr-only"
-                                                                >Increase
-                                                                quantity</span
-                                                            >
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div
-                                            v-else
-                                            class="border border-dashed border-slate-200 rounded-2xl p-6 text-sm text-slate-500 bg-white"
-                                        >
-                                            No option items available for this
-                                            group yet.
-                                        </div>
-
-                                        <div
-                                            v-if="
-                                                getMaxQuantity(option) &&
-                                                getPendingSelections(option)
-                                            "
-                                            class="text-sm text-rose-500"
-                                        >
-                                            Choose
-                                            {{ getPendingSelections(option) }}
-                                            more item(s) to complete this
-                                            option.
+                                                        Included
+                                                    </span>
+                                                </li>
+                                            </ul>
                                         </div>
                                     </div>
-                                </div>
-                            </div>
-
-                            <div
-                                v-else
-                                class="border border-dashed border-slate-300 rounded-2xl p-8 text-center text-slate-500 bg-slate-50"
-                            >
-                                All required components are already included.
-                                You can add this bundle right away.
-                            </div>
-
-                            <div
-                                class="border-t border-slate-200 pt-6 space-y-3"
-                            >
-                                <div class="flex justify-between text-sm">
-                                    <span class="text-slate-500"
-                                        >Base Price</span
-                                    >
-                                    <span class="font-semibold text-slate-900">
-                                        {{ formatPrice(basePriceValue) }}
-                                    </span>
-                                </div>
-                                <div
-                                    class="flex justify-between text-lg font-bold text-slate-900"
-                                >
-                                    <span>Total</span>
-                                    <span>{{ formatPrice(totalAmount) }}</span>
-                                </div>
-                                <div class="grid gap-3 sm:grid-cols-2">
-                                    <button
-                                        type="button"
-                                        @click="goBack"
-                                        class="px-4 py-3 border border-slate-200 rounded-2xl text-slate-600 font-semibold hover:bg-slate-50"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="button"
-                                        :disabled="
-                                            hasCustomizableOptions &&
-                                            !selectionsAreComplete()
-                                        "
-                                        @click="addToCart"
-                                        class="px-4 py-3 rounded-2xl font-semibold text-white shadow-lg transition"
-                                        :class="[
-                                            hasCustomizableOptions &&
-                                            !selectionsAreComplete()
-                                                ? 'bg-slate-300 cursor-not-allowed'
-                                                : 'bg-sky-600 hover:bg-sky-700',
-                                        ]"
-                                    >
-                                        Add to Order
-                                    </button>
-                                </div>
-                                <p
-                                    v-if="
-                                        hasCustomizableOptions &&
-                                        !selectionsAreComplete()
-                                    "
-                                    class="text-xs text-rose-500"
-                                >
-                                    Complete each option's required quantity to
-                                    continue.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <aside class="lg:col-span-1">
-                    <div class="space-y-6 lg:sticky lg:top-6">
-                        <div
-                            class="bg-white rounded-3xl shadow-xl p-6 lg:p-7 space-y-6"
-                        >
-                            <div class="flex gap-4">
-                                <div
-                                    class="w-28 h-28 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center overflow-hidden"
-                                >
-                                    <img
-                                        v-if="coverImage"
-                                        :src="coverImage"
-                                        :alt="productData?.name"
-                                        class="w-full h-full object-cover"
-                                    />
-                                    <div v-else class="text-slate-500">
-                                        <ImageIcon class="w-9 h-9" />
-                                    </div>
-                                </div>
-                                <div class="flex-1 space-y-2">
                                     <p
-                                        class="text-xs uppercase tracking-[0.25em] text-slate-400"
+                                        v-else
+                                        class="text-sm text-slate-500 mt-2"
                                     >
-                                        Bundle
-                                    </p>
-                                    <h1
-                                        class="text-2xl font-bold text-slate-900"
-                                    >
-                                        {{ productData?.name }}
-                                    </h1>
-                                    <p
-                                        v-if="productDescription"
-                                        class="text-sm text-slate-600 leading-relaxed"
-                                        v-html="productDescription"
-                                    ></p>
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p class="text-xs uppercase text-slate-500">
-                                        Base Price
-                                    </p>
-                                    <p class="text-xl font-bold text-slate-900">
-                                        {{ formatPrice(basePriceValue) }}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p class="text-xs uppercase text-slate-500">
-                                        Current Total
-                                    </p>
-                                    <p
-                                        class="text-xl font-semibold text-emerald-600"
-                                    >
-                                        {{ formatPrice(totalAmount) }}
+                                        Your custom picks will appear here once
+                                        selected.
                                     </p>
                                 </div>
                             </div>
                         </div>
-
-                        <div
-                            class="bg-white rounded-3xl shadow-xl p-6 lg:p-7 space-y-6"
-                        >
-                            <div>
-                                <p
-                                    class="text-xs uppercase tracking-[0.3em] text-slate-500"
-                                >
-                                    Included
-                                </p>
-                                <div
-                                    v-if="defaultOptionSummary.length"
-                                    class="mt-3 space-y-3"
-                                >
-                                    <div
-                                        v-for="group in defaultOptionSummary"
-                                        :key="group.id"
-                                        class="border border-slate-200 rounded-2xl p-4"
-                                    >
-                                        <p
-                                            class="text-sm font-semibold text-slate-900"
-                                        >
-                                            {{ group.name }}
-                                        </p>
-                                        <ul
-                                            class="mt-2 space-y-1 text-sm text-slate-600"
-                                        >
-                                            <li
-                                                v-for="item in group.items"
-                                                :key="item.id"
-                                                class="flex justify-between"
-                                            >
-                                                <span>
-                                                    {{ item.quantity }} ×
-                                                    {{ item.name }}
-                                                </span>
-                                                <span
-                                                    v-if="
-                                                        Number(item.price) > 0
-                                                    "
-                                                    class="text-emerald-600"
-                                                >
-                                                    +{{
-                                                        formatPrice(item.price)
-                                                    }}
-                                                </span>
-                                                <span
-                                                    v-else
-                                                    class="text-slate-400"
-                                                >
-                                                    Included
-                                                </span>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
-                                <p v-else class="text-sm text-slate-500 mt-2">
-                                    No automatic inclusions for this bundle.
-                                </p>
-                            </div>
-
-                            <div>
-                                <p
-                                    class="text-xs uppercase tracking-[0.3em] text-slate-500"
-                                >
-                                    Your Selections
-                                </p>
-                                <div
-                                    v-if="hasCustomizableSelections"
-                                    class="mt-3 space-y-3"
-                                >
-                                    <div
-                                        v-for="group in customizableSelectionSummary"
-                                        :key="group.id"
-                                        class="border border-slate-200 rounded-2xl p-4"
-                                    >
-                                        <p
-                                            class="text-sm font-semibold text-slate-900"
-                                        >
-                                            {{ group.name }}
-                                        </p>
-                                        <ul
-                                            class="mt-2 space-y-1 text-sm text-slate-600"
-                                        >
-                                            <li
-                                                v-for="item in group.items"
-                                                :key="item.id"
-                                                class="flex justify-between"
-                                            >
-                                                <span>
-                                                    {{ item.quantity }} ×
-                                                    {{ item.name }}
-                                                </span>
-                                                <span
-                                                    v-if="
-                                                        Number(item.price) > 0
-                                                    "
-                                                    class="text-emerald-600"
-                                                >
-                                                    +{{
-                                                        formatPrice(
-                                                            item.price *
-                                                                item.quantity
-                                                        )
-                                                    }}
-                                                </span>
-                                                <span
-                                                    v-else
-                                                    class="text-slate-400"
-                                                >
-                                                    Included
-                                                </span>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
-                                <p v-else class="text-sm text-slate-500 mt-2">
-                                    Your custom picks will appear here once
-                                    selected.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </aside>
+                    </aside>
+                </div>
             </div>
         </div>
-    </div>
+    </CashieringLayout>
 </template>
 
 <script setup lang="ts">
@@ -597,7 +634,7 @@ import { computed, ref, watch } from "vue";
 import { route } from "ziggy-js";
 import { router, usePage } from "@inertiajs/vue3";
 import { useToast } from "primevue";
-import Header from "./Partials/Header.vue";
+import CashieringLayout from "@/Layouts/CashieringLayout.vue";
 import ChevronLeftIcon from "@/Components/icons/ChevronLeftIcon.vue";
 import ImageIcon from "@/Components/icons/ImageIcon.vue";
 import Product from "@/Types/Product";
