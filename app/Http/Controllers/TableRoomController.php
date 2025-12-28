@@ -66,7 +66,7 @@ class TableRoomController extends Controller
                 'location_type' => $location->location_type,
             ]);
 
-        return Inertia::render('TableManagement/List', [
+        return Inertia::render('Resto/TableManagement/List', [
             'tables'    => $tableRooms,
             'locations' => $locations,
         ]);
@@ -88,25 +88,39 @@ class TableRoomController extends Controller
             $table = $this->tableRoomService->store($request);
 
             if ($request->hasFile('featured_image')) {
-                $table->clearMediaCollection('featured_image');
-                $table->addMediaFromRequest('featured_image')
-                    ->toMediaCollection('featured_image');
+                $file = $request->file('featured_image');
+                if ($file && $file->isValid()) {
+                    $table->clearMediaCollection('featured_image');
+                    $table->addMedia($file)
+                        ->toMediaCollection('featured_image');
+                }
             }
 
             return redirect()->back()->with('success', 'Table/Room created successfully.');
         } catch (Exception $e) {
-            return redirect()->back()->with('error', 'Failed to create Table/Room.');
+            \Log::error('TableRoomController::store error: ' . $e->getMessage() . ' Trace: ' . $e->getTraceAsString());
+            return redirect()->back()->with('error', 'Failed to create Table/Room: ' . $e->getMessage());
         }
     }
 
     public function update(TableRoomRequest $request, int $tableId): RedirectResponse
     {
         try {
-            $this->tableRoomService->update($request, $tableId);
+            $tableRoom = $this->tableRoomService->update($request, $tableId);
+
+            if ($request->hasFile('featured_image')) {
+                $file = $request->file('featured_image');
+                if ($file && $file->isValid()) {
+                    $tableRoom->clearMediaCollection('featured_image');
+                    $tableRoom->addMedia($file)
+                        ->toMediaCollection('featured_image');
+                }
+            }
 
             return redirect()->back()->with('success', 'Table updated successfully.');
         } catch (Exception $e) {
-            return redirect()->back()->with('error', 'Failed to update table.');
+            \Log::error('TableRoomController::update error: ' . $e->getMessage() . ' Trace: ' . $e->getTraceAsString());
+            return redirect()->back()->with('error', 'Failed to update table: ' . $e->getMessage());
         }
     }
 

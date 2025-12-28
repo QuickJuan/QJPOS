@@ -49,7 +49,7 @@ class TableManagementController extends Controller
                 'name' => $location->name,
             ]);
 
-        return Inertia::render('TableManagement/Index', [
+        return Inertia::render('Resto/TableManagement/Index', [
             'tables'           => $tableRooms,
             'locations'        => $locations,
             'selectedLocation' => $selectedLocation,
