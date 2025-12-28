@@ -222,11 +222,10 @@ if (!isCentralDomain()) {
                         });
 
                     Route::controller(\App\Http\Controllers\PendingOrdersController::class)
-                        ->prefix('/pending-orders')
                         ->as('pending-orders.')
                         ->group(function () {
-                            Route::get('/', 'index')->name('index');
-                            Route::put('/item/{itemId}/toggle-served', 'toggleServed')->name('toggle-served');
+                            Route::get('/pending-orders', 'index')->name('index');
+                            Route::put('/pending-orders/item/{itemId}/toggle-served', 'toggleServed')->name('toggle-served');
                         });
 
                     // Category routes (wildcard routes should come last)
