@@ -82,13 +82,7 @@ return [
                     'scheme' => env('REVERB_SCHEME', 'https'),
                     'useTLS' => env('REVERB_SCHEME', 'https') === 'https',
                 ],
-                'allowed_origins' => ['*'], // In production, restrict this to your tenant domains
-                'allowed_origin_callback' => function ($origin) {
-                    // Allow all tenant subdomains
-                    $centralDomain = config('tenancy.central_domains')[0] ?? 'localhost';
-                    $pattern = '/^https?:\/\/([a-zA-Z0-9-]+\.)?' . preg_quote($centralDomain, '/') . '(:[0-9]+)?$/';
-                    return preg_match($pattern, $origin) === 1;
-                },
+                'allowed_origins' => ['*'],
                 'ping_interval' => env('REVERB_APP_PING_INTERVAL', 60),
                 'activity_timeout' => env('REVERB_APP_ACTIVITY_TIMEOUT', 30),
                 'max_connections' => env('REVERB_APP_MAX_CONNECTIONS'),
