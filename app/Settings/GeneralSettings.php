@@ -15,6 +15,7 @@ class GeneralSettings extends Settings
     public ?string $company_contact;
     public ?string $company_logo;
     public ?string $hero_image;
+    public ?string $timezone = 'UTC';
 
 
     public static function group(): string

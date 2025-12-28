@@ -105,6 +105,12 @@ const actions = [
         icon: CashieringIcon,
     },
     {
+        route: "resto.pending-orders.index",
+        name: "Pending Orders",
+        description: "View and manage pending kitchen orders",
+        icon: TableOrderingIcon,
+    },
+    {
         route: "table-management.index",
         name: "Table Management",
         description: "Manage restaurant orders and table service",

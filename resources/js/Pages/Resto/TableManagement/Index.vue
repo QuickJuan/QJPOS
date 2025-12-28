@@ -15,7 +15,7 @@
                             :key="loc.id"
                             @click="selectedLocation = loc.id"
                             :class="[
-                                'cursor-pointer whitespace-nowrap px-3 py-1 rounded text-sm font-semibold border flex items-center gap-1 transition-colors',
+                                'cursor-pointer whitespace-nowrap px-3 py-1  rounded text-sm font-semibold border flex items-center gap-1 transition-colors',
                                 selectedLocation === loc.id
                                     ? 'bg-blue-600 text-white border-blue-600 shadow'
                                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300',
@@ -92,6 +92,8 @@
                             top: table.y + 'px',
                             width: table.width + 'px',
                             height: table.height + 'px',
+                            minWidth: '96px',
+                            minHeight: '96px',
                         }"
                         @mousedown="startDrag($event, table.id)"
                         @click="!designMode ? openEditTableModal(index) : null"
@@ -139,7 +141,7 @@
                             />
                             <div class="flex items-center justify-center">
                                 <div
-                                    class="rounded-full bg-white/90 backdrop-blur-sm shadow px-3 py-2 flex items-center justify-center"
+                                    class="px-3 py-2 flex items-center justify-center"
                                 >
                                     <span
                                         class="text-[11px] font-semibold text-gray-800 whitespace-nowrap"

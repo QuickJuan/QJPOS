@@ -176,6 +176,7 @@ if (!isCentralDomain()) {
                     Route::controller(CashierSessionController::class)
                         ->group(function () {
                             Route::get('/preview', 'preview')->name('preview');
+                            Route::get('/close-shift', 'showCloseShift')->name('close-shift');
                             Route::get('/review/x-readings', 'reviewXTransactions')->name('review-x-readings');
                             Route::get('/product/{product}/options', 'productOptions')->name('product.options');
                             Route::post('/session/start', 'startSession')->name('session.start');
@@ -218,6 +219,14 @@ if (!isCentralDomain()) {
                             Route::delete('/cart/item/{cartItemId}', 'deleteCartItem')->name('cart.delete');
                             Route::post('/cart/item/delete-with-approval', 'deleteCartItemWithApproval')->name('cart.delete-with-approval');
                             Route::get('/cart/item/{cartItemId}/approvers', 'getApproversForItem')->name('cart.get-approvers');
+                        });
+
+                    Route::controller(\App\Http\Controllers\PendingOrdersController::class)
+                        ->prefix('/pending-orders')
+                        ->as('pending-orders.')
+                        ->group(function () {
+                            Route::get('/', 'index')->name('index');
+                            Route::put('/item/{itemId}/toggle-served', 'toggleServed')->name('toggle-served');
                         });
 
                     // Category routes (wildcard routes should come last)

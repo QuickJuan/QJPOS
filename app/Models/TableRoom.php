@@ -51,7 +51,7 @@ class TableRoom extends Model implements HasMedia
 
     public function scopeActiveBranch(Builder $query): mixed
     {
-        return $query->where('branch_id', session('active_branch')['id']);
+        return $query->where('branch_id', auth()->user()->branch_id);
     }
 
     public function scopeSelectedLocation(Builder $query, $locationId): Builder

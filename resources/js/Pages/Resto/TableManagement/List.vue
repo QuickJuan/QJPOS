@@ -36,9 +36,9 @@
                     <Button
                         v-for="location in locations"
                         :key="location.id"
-                        :label="`${location.name} - ${location.location_type} (${getTableCount(
-                            location.id
-                        )})`"
+                        :label="`${location.name} - ${
+                            location.location_type
+                        } (${getTableCount(location.id)})`"
                         :outlined="selectedLocation !== location.id"
                         @click="selectedLocation = location.id"
                         class="text-sm"
@@ -69,13 +69,32 @@
                             </p>
                         </div>
                         <div class="flex gap-2">
-                            <Button
-                                icon="pi pi-pencil"
-                                severity="secondary"
-                                size="small"
-                                text
+                            <button
                                 @click="openEditTableModal(table)"
-                            />
+                                class="w-8 h-8 rounded-full bg-secondary-100 hover:bg-secondary-200 flex items-center justify-center transition-colors group"
+                                title="Edit Table"
+                            >
+                                <img
+                                    v-if="table.featured_image_url"
+                                    :src="table.featured_image_url"
+                                    :alt="table.name"
+                                    class="w-5 h-5 object-contain"
+                                />
+                                <svg
+                                    v-else
+                                    class="w-4 h-4 text-secondary"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                    />
+                                </svg>
+                            </button>
                             <Button
                                 icon="pi pi-trash"
                                 severity="danger"
@@ -113,25 +132,37 @@
                     <div class="flex items-center gap-4">
                         <div class="flex-1">
                             <div class="text-xs text-gray-500 mb-1">
-                                Dimensions
+                                Running Total
                             </div>
-                            <div class="text-sm">
-                                {{ table.table_width }} ×
-                                {{ table.table_height }} px
+                            <div class="text-sm font-semibold text-gray-900">
+                                {{ getRunningTotal(table) }} of
+                                {{ totalTables }}
                             </div>
                         </div>
-                        <!-- <div
-                            class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center"
+                        <div
+                            class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0"
                         >
                             <img
-                                :src="
-                                    table?.getFeaturedImageUrl ||
-                                    getDefaultTableImage(table.chairs)
-                                "
-                                :alt="`Table with ${table.chairs} chairs`"
+                                v-if="table.featured_image_url"
+                                :src="table.featured_image_url"
+                                :alt="`${table.name} image`"
                                 class="w-8 h-8 object-contain"
                             />
-                        </div> -->
+                            <svg
+                                v-else
+                                class="w-6 h-6 text-gray-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                />
+                            </svg>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -189,6 +220,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { router, usePage } from "@inertiajs/vue3";
 import { Button, useConfirm, useToast } from "primevue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import TableManagementLayout from "@/Layouts/TableManagementLayout.vue";
@@ -237,6 +269,17 @@ const getDefaultTableImage = (chairs: number) => {
     return images[chairs] || "/images/round-4.png";
 };
 
+const getRunningTotal = (table: any) => {
+    const displayTables =
+        selectedLocation.value === null
+            ? tables.value
+            : tables.value.filter(
+                  (t) => t.table_room_location_id === selectedLocation.value
+              );
+    const index = displayTables.findIndex((t) => t.id === table.id);
+    return index !== -1 ? index + 1 : 0;
+};
+
 // ===== MODAL FUNCTIONS =====
 const openAddTableModal = () => {
     showAddTableModal.value = true;
@@ -250,51 +293,36 @@ const openEditTableModal = (table: any) => {
 // ===== TABLE MANAGEMENT FUNCTIONS =====
 const handleAddTableSubmit = async (formData: any) => {
     try {
-        const response = await fetch("/table-management/tables", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRF-TOKEN": document
-                    .querySelector('meta[name="csrf-token"]')
-                    ?.getAttribute("content"),
-            },
-            body: JSON.stringify({
-                name: formData.name,
-                chairs: formData.chairs,
-                table_room_location_id: formData.table_room_location_id,
-                table_width: formData.width,
-                table_height: formData.height,
-                table_x: formData.x || 0,
-                table_y: formData.y || 0,
-            }),
-        });
+        const data = new FormData();
+        data.append("name", formData.name);
+        data.append("chairs", formData.chairs);
+        data.append("table_room_location_id", formData.table_room_location_id);
+        data.append("table_width", formData.width);
+        data.append("table_height", formData.height);
+        data.append("table_x", formData.x || 0);
+        data.append("table_y", formData.y || 0);
 
-        if (response.ok) {
-            const result = await response.json();
-            tables.value.push({
-                id: result.table.id,
-                name: result.table.name,
-                chairs: result.table.chairs,
-                status: result.table.status,
-                table_x: result.table.table_x || 0,
-                table_y: result.table.table_y || 0,
-                table_width: result.table.table_width || 150,
-                table_height: result.table.table_height || 100,
-                getFeaturedImageUrl: () =>
-                    result.table.getFeaturedImageUrl() ||
-                    getDefaultTableImage(result.table.chairs),
-                tableRoomLocation: locations.value.find(
-                    (loc) => loc.id === result.table.table_room_location_id
-                ),
-                table_room_location_id: result.table.table_room_location_id,
-                branch_id: result.table.branch_id,
-            });
-            showAddTableModal.value = false;
-        } else {
-            console.error("Failed to add table");
+        if (formData.imageFile) {
+            data.append("featured_image", formData.imageFile);
+            console.log("Image file to upload:", formData.imageFile);
         }
+
+        console.log("Add Table Payload - FormData entries:");
+        for (let [key, value] of data.entries()) {
+            console.log(`  ${key}:`, value);
+        }
+
+        router.post("/table-rooms/tables", data, {
+            onSuccess: () => {
+                console.log("Table added successfully");
+                showAddTableModal.value = false;
+            },
+            onError: (errors) => {
+                console.error("Error adding table:", errors);
+            },
+        });
     } catch (error) {
-        console.error("Error adding table:", error);
+        console.error("Error in handleAddTableSubmit:", error);
     }
 };
 
@@ -302,51 +330,43 @@ const handleEditTableSubmit = async (formData: any) => {
     if (!editTableData.value) return;
 
     try {
-        const response = await fetch(
-            `/table-management/tables/${editTableData.value.id}`,
-            {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRF-TOKEN": document
-                        .querySelector('meta[name="csrf-token"]')
-                        ?.getAttribute("content"),
-                },
-                body: JSON.stringify({
-                    name: formData.name,
-                    chairs: formData.chairs,
-                    table_room_location_id: formData.table_room_location_id,
-                    table_width: formData.width,
-                    table_height: formData.height,
-                    table_x: formData.x || 0,
-                    table_y: formData.y || 0,
-                }),
-            }
-        );
+        const data = new FormData();
+        data.append("_method", "PUT");
+        data.append("name", formData.name);
+        data.append("chairs", formData.chairs);
+        data.append("table_room_location_id", formData.table_room_location_id);
+        data.append("table_width", formData.width);
+        data.append("table_height", formData.height);
+        data.append("table_x", formData.x || 0);
+        data.append("table_y", formData.y || 0);
 
-        if (response.ok) {
-            const result = await response.json();
-            const index = tables.value.findIndex(
-                (t) => t.id === editTableData.value.id
+        // Only append image if it's an actual File object (not a string/URL)
+        if (formData.imageFile && formData.imageFile instanceof File) {
+            data.append("featured_image", formData.imageFile);
+            console.log("Image file to upload:", formData.imageFile);
+        } else if (formData.imageFile) {
+            console.log(
+                "Image file is not a File object, skipping upload:",
+                formData.imageFile
             );
-            if (index !== -1) {
-                tables.value[index] = {
-                    ...tables.value[index],
-                    ...result.table,
-                    getFeaturedImageUrl: () =>
-                        result.table.getFeaturedImageUrl() ||
-                        getDefaultTableImage(result.table.chairs),
-                    tableRoomLocation: locations.value.find(
-                        (loc) => loc.id === result.table.table_room_location_id
-                    ),
-                };
-            }
-            showEditTableModal.value = false;
-        } else {
-            console.error("Failed to update table");
         }
+
+        console.log("Edit Table Payload - FormData entries:");
+        for (let [key, value] of data.entries()) {
+            console.log(`  ${key}:`, value);
+        }
+
+        router.post(`/table-rooms/tables/${editTableData.value.id}`, data, {
+            onSuccess: () => {
+                console.log("Table updated successfully");
+                showEditTableModal.value = false;
+            },
+            onError: (errors) => {
+                console.error("Error updating table:", errors);
+            },
+        });
     } catch (error) {
-        console.error("Error updating table:", error);
+        console.error("Error in handleEditTableSubmit:", error);
     }
 };
 
@@ -355,7 +375,7 @@ const handleDeleteTableSubmit = async () => {
 
     try {
         const response = await fetch(
-            `/table-management/tables/${editTableData.value.id}`,
+            `/table-rooms/tables/${editTableData.value.id}`,
             {
                 method: "DELETE",
                 headers: {

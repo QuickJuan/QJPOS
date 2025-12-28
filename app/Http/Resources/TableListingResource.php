@@ -5,6 +5,8 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use App\Http\Resources\CartResource;
+use Carbon\Carbon;
+use App\Settings\GeneralSettings;
 
 class TableListingResource extends JsonResource
 {
@@ -15,6 +17,9 @@ class TableListingResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $generalSettings = app(GeneralSettings::class);
+        $timezone = $generalSettings->timezone ?? 'UTC';
+
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -25,7 +30,7 @@ class TableListingResource extends JsonResource
             'status' => $this->status,
             'branch' => $this->whenLoaded('branch'),
             'branchId' => $this->branch_id,
-            'tableRoomLocation' => $this->whenLoaded('tableRoomLocation'),
+            'tableRoomLocation' => new TableRoomLocationResource($this->whenLoaded('tableRoomLocation')),
             'chairs' => $this->chairs,
             'mergedTables' => Self::collection($this->mergedTables),
             'cart' => CartResource::make($this->whenLoaded('cart')),
@@ -35,6 +40,8 @@ class TableListingResource extends JsonResource
             'tableWidth' => $this->table_width ?? 150,
             'numberOfPax' => $this->number_of_pax ?? 1,
             'featuredImageUrl' => $this->getFeaturedImageUrl(),
+            'dining_start' => $this->dining_start ? Carbon::parse($this->dining_start)->setTimezone($timezone)->format('h:i A') : null,
+            'dining_end' => $this->dining_end ? Carbon::parse($this->dining_end)->setTimezone($timezone)->format('h:i A') : null,
         ];
     }
 }

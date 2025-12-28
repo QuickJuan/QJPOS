@@ -46,7 +46,7 @@ class TableRoomService
         }
 
         $tableRoom->update([
-            'branch_id'              => session('active_branch')['id'],
+            'branch_id'              => auth()->user()->branch_id,
             'name'                   => $request->input('name'),
             'chairs'                 => $request->input('chairs'),
             'table_room_location_id' => $request->input('table_room_location_id'),
@@ -59,12 +59,6 @@ class TableRoomService
 
         if (! $tableRoom) {
             throw new Exception('Failed to update table room.');
-        }
-
-        if (! empty($request->file('featured_image'))) {
-            $tableRoom->clearMediaCollection('featured_image');
-            $tableRoom->addMediaFromRequest('featured_image')
-                ->toMediaCollection('featured_image');
         }
 
         return $tableRoom;
@@ -143,6 +137,7 @@ class TableRoomService
                     ->whereNull('merge_to')
                     ->orderBy('name')
                     ->with([
+                        'tableRoomLocation',
                         'mergedTables' => function ($mergedQuery) {
                             $mergedQuery->with(['mergedTables', 'cart.cartItems']);
                         },

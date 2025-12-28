@@ -65,6 +65,7 @@ class CartService
                 $table->update([
                     'status'        => TableRoomStatusType::OCCUPIED->value,
                     'time_in'       => now(),
+                    'dining_start'  => now(),
                     'number_of_pax' => $payload['pax'],
                     'customer_name' => $payload['guest_name'],
                 ]);
@@ -852,6 +853,7 @@ class CartService
                             'batch_number' => $orderNumber,
                             'served_by' => $payload['served_by'],
                             'serving_number' => $payload['serving_number'] ?? null,
+                            'placed_order_time' => now(),
                         ]);
 
                     $cart->update([
