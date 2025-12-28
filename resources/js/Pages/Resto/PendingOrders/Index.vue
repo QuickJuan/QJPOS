@@ -16,7 +16,7 @@
 
             <!-- Grid of Batches -->
             <div
-                class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 lg:gap-6"
+                class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 3xl:grid-cols-5 gap-3 lg:gap-6"
             >
                 <div
                     v-for="batch in pendingOrdersWithMinutes"
@@ -221,6 +221,7 @@ const longestWaitTime = computed(() => {
 
 // Update current time every second for real-time updates
 let timerInterval: NodeJS.Timeout | null = null;
+let pollingInterval: NodeJS.Timeout | null = null;
 
 onMounted(() => {
     // Update every second for real-time minute calculation
@@ -228,22 +229,18 @@ onMounted(() => {
         currentTime.value = moment();
     }, 1000);
 
-    // Listen for new orders via Laravel Echo
-    if (window.Echo) {
-        const channelName = `pending-orders.${branchId.value}`;
-        window.Echo.channel(channelName).listen("order-placed", (data: any) => {
-            // Refresh pending orders when a new order is placed
-            router.get(
-                route("resto.pending-orders.index"),
-                {},
-                {
-                    preserveState: true,
-                    replace: true,
-                    only: ["pendingOrders"],
-                }
-            );
-        });
-    }
+    // Poll for new orders every 5 seconds
+    pollingInterval = setInterval(() => {
+        router.get(
+            route("resto.pending-orders.index"),
+            {},
+            {
+                preserveState: true,
+                replace: true,
+                only: ["pendingOrders"],
+            }
+        );
+    }, 5000);
 });
 
 onUnmounted(() => {
@@ -251,9 +248,8 @@ onUnmounted(() => {
         clearInterval(timerInterval);
     }
 
-    // Leave the channel when component unmounts
-    if (window.Echo) {
-        window.Echo.leave(`pending-orders.${branchId.value}`);
+    if (pollingInterval) {
+        clearInterval(pollingInterval);
     }
 });
 

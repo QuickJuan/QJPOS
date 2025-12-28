@@ -141,8 +141,23 @@ class TenancyServiceProvider extends ServiceProvider
                 // Load tenant API routes
                 Route::namespace(static::$controllerNamespace)
                     ->group(base_path('routes/tenant-api.php'));
+
+                // Load tenant broadcast channels
+                $this->loadTenantBroadcastChannels();
             }
         });
+    }
+
+    protected function loadTenantBroadcastChannels()
+    {
+        if (file_exists(base_path('routes/tenant-channels.php'))) {
+            \Illuminate\Support\Facades\Broadcast::routes([
+                'middleware' => ['web', 'auth:sanctum'],
+                'prefix' => 'api',
+            ]);
+
+            require base_path('routes/tenant-channels.php');
+        }
     }
 
     protected function makeTenancyMiddlewareHighestPriority()

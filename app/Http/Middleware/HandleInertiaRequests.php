@@ -404,10 +404,6 @@ class HandleInertiaRequests extends Middleware
                     ->orderBy('name')
                     ->get(['id', 'code', 'name', 'symbol', 'exchange_rate', 'is_default']);
 
-                \Log::info('Loaded tenant currencies', [
-                    'tenant_id' => tenant('id'),
-                    'count' => $currencies->count(),
-                ]);
 
                 return $currencies->map(function (Currency $currency) {
                     $currencySymbol = $currency->symbol ?? 'PHP ';
