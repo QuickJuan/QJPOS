@@ -4,6 +4,7 @@ namespace App\Filament\Tenant\Pages;
 
 use App\Settings\GeneralSettings;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
@@ -32,6 +33,27 @@ class ManageSettings extends SettingsPage
                 TextInput::make('company_contact')
                     ->label('Company Contact')
                     ->maxLength(255),
+
+                Select::make('timezone')
+                    ->label('Timezone')
+                    ->options([
+                        'UTC' => 'UTC (GMT+0)',
+                        'Asia/Manila' => 'Philippines (GMT+8)',
+                        'America/New_York' => 'Eastern Time (GMT-5)',
+                        'America/Chicago' => 'Central Time (GMT-6)',
+                        'America/Denver' => 'Mountain Time (GMT-7)',
+                        'America/Los_Angeles' => 'Pacific Time (GMT-8)',
+                        'Europe/London' => 'London (GMT+0)',
+                        'Europe/Paris' => 'Central European Time (GMT+1)',
+                        'Asia/Tokyo' => 'Tokyo (GMT+9)',
+                        'Asia/Shanghai' => 'Shanghai (GMT+8)',
+                        'Asia/Hong_Kong' => 'Hong Kong (GMT+8)',
+                        'Asia/Singapore' => 'Singapore (GMT+8)',
+                        'Australia/Sydney' => 'Sydney (GMT+10)',
+                        'Pacific/Auckland' => 'Auckland (GMT+12)',
+                    ])
+                    ->default('Asia/Manila')
+                    ->required(),
 
                 FileUpload::make('company_logo')
                     ->image()

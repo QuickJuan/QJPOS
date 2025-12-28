@@ -213,7 +213,9 @@ const companyName = computed(() => {
 
 // Check if we're on the table view (Preview page)
 const isTableView = computed(() => {
-    return page.component === "Resto/Preview";
+    return (
+        page.component === "Resto/Preview" || page.component === "Resto/Tables"
+    );
 });
 
 // Methods

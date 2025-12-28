@@ -135,6 +135,33 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
+     * Get general settings including timezone
+     */
+    private function getGeneralSettings(): array
+    {
+        try {
+            $settings = app(GeneralSettingsService::class)->getCompanySettings();
+            return [
+                'company_name'    => $settings['company_name'] ?? '',
+                'company_address' => $settings['company_address'] ?? '',
+                'company_contact' => $settings['company_contact'] ?? '',
+                'company_logo'    => $settings['company_logo'] ?? '',
+                'hero_image'      => $settings['hero_image'] ?? '',
+                'timezone'        => $settings['timezone'] ?? 'UTC',
+            ];
+        } catch (\Exception $e) {
+            return [
+                'company_name'    => '',
+                'company_address' => '',
+                'company_contact' => '',
+                'company_logo'    => '',
+                'hero_image'      => '',
+                'timezone'        => 'UTC',
+            ];
+        }
+    }
+
+    /**
      * Get cart by table ID from query parameters
      */
     private function getCartByTableId(Request $request): ?array
@@ -210,6 +237,7 @@ class HandleInertiaRequests extends Middleware
                 });
             },
             'company_info'            => fn() => $this->debugLoadProperty('company_info', fn() => $this->getCompanyInfo()),
+            'generalSettings'         => fn() => $this->debugLoadProperty('generalSettings', fn() => $this->getGeneralSettings()),
             'current_cashier_session' => function() {
                 return $this->debugLoadProperty('current_cashier_session', function() {
                     // Only load if user is authenticated

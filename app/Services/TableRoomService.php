@@ -137,6 +137,7 @@ class TableRoomService
                     ->whereNull('merge_to')
                     ->orderBy('name')
                     ->with([
+                        'tableRoomLocation',
                         'mergedTables' => function ($mergedQuery) {
                             $mergedQuery->with(['mergedTables', 'cart.cartItems']);
                         },

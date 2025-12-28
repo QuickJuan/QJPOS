@@ -65,6 +65,7 @@ class CartService
                 $table->update([
                     'status'        => TableRoomStatusType::OCCUPIED->value,
                     'time_in'       => now(),
+                    'dining_start'  => now(),
                     'number_of_pax' => $payload['pax'],
                     'customer_name' => $payload['guest_name'],
                 ]);

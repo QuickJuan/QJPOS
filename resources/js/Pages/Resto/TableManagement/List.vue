@@ -132,11 +132,11 @@
                     <div class="flex items-center gap-4">
                         <div class="flex-1">
                             <div class="text-xs text-gray-500 mb-1">
-                                Dimensions
+                                Running Total
                             </div>
-                            <div class="text-sm">
-                                {{ table.table_width }} ×
-                                {{ table.table_height }} px
+                            <div class="text-sm font-semibold text-gray-900">
+                                {{ getRunningTotal(table) }} of
+                                {{ totalTables }}
                             </div>
                         </div>
                         <div
@@ -267,6 +267,17 @@ const getDefaultTableImage = (chairs: number) => {
         8: "/images/rec-8.png",
     };
     return images[chairs] || "/images/round-4.png";
+};
+
+const getRunningTotal = (table: any) => {
+    const displayTables =
+        selectedLocation.value === null
+            ? tables.value
+            : tables.value.filter(
+                  (t) => t.table_room_location_id === selectedLocation.value
+              );
+    const index = displayTables.findIndex((t) => t.id === table.id);
+    return index !== -1 ? index + 1 : 0;
 };
 
 // ===== MODAL FUNCTIONS =====
