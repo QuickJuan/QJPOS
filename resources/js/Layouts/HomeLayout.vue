@@ -131,6 +131,9 @@
         <!-- Toast Notifications -->
         <Toast />
         <ConfirmPopup />
+
+        <!-- PWA Install Banner -->
+        <PWAInstallBanner />
     </div>
 </template>
 
@@ -139,6 +142,7 @@ import { Head, Link, router, usePage } from "@inertiajs/vue3";
 import { ConfirmPopup, Toast, useToast } from "primevue";
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { route } from "ziggy-js";
+import PWAInstallBanner from "@/Components/PWAInstallBanner.vue";
 
 const page = usePage();
 const toast = useToast();

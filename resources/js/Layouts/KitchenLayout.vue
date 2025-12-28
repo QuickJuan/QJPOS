@@ -69,11 +69,15 @@
                 <slot />
             </div>
         </div>
+
+        <!-- PWA Install Banner -->
+        <PWAInstallBanner />
     </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from "vue";
+import PWAInstallBanner from "@/Components/PWAInstallBanner.vue";
 
 const props = defineProps<{
     isConnected?: boolean;
