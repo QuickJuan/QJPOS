@@ -187,9 +187,9 @@ class HandleInertiaRequests extends Middleware
 
             // Load cart items with their products separately to avoid deep nesting
             if ($cart->relationLoaded('cartItems') || $cart->cartItems) {
-                $cart->cartItems->load(['product', 'productPackaging']);
+                $cart->cartItems->load(['product', 'productPackaging', 'children.product']);
             } else {
-                $cart->load(['cartItems.product', 'cartItems.productPackaging']);
+                $cart->load(['cartItems.product', 'cartItems.productPackaging', 'cartItems.children.product']);
             }
 
             return $cart->toArray();

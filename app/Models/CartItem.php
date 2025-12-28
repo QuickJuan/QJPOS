@@ -37,6 +37,8 @@ class CartItem extends Model
         'meta_data',
         'served_by',
         'serving_number',
+        'placed_order_time',
+        'served_time',
     ];
 
     protected $casts = [

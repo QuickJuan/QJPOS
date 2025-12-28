@@ -853,6 +853,7 @@ class CartService
                             'batch_number' => $orderNumber,
                             'served_by' => $payload['served_by'],
                             'serving_number' => $payload['serving_number'] ?? null,
+                            'placed_order_time' => now(),
                         ]);
 
                     $cart->update([

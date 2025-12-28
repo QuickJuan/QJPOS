@@ -47,6 +47,23 @@
                                 class="space-y-1 py-2 text-sm font-semibold text-slate-700"
                             >
                                 <button
+                                    @click="handlePendingOrdersClick"
+                                    class="flex w-full items-center gap-3 px-4 py-2 transition hover:bg-slate-100"
+                                >
+                                    <DocumentTextIcon class="h-5 w-5" />
+                                    <span>View Pending Orders</span>
+                                </button>
+                                <button
+                                    @click="handleViewTableClick"
+                                    class="flex w-full items-center gap-3 px-4 py-2 transition hover:bg-slate-100"
+                                >
+                                    <DocumentTextIcon class="h-5 w-5" />
+                                    <span>View Table</span>
+                                </button>
+                                <div
+                                    class="border-t border-slate-200 my-1"
+                                ></div>
+                                <button
                                     @click="handleReviewTransactionsClick"
                                     class="flex w-full items-center gap-3 px-4 py-2 transition hover:bg-slate-100"
                                 >
@@ -219,6 +236,16 @@ const isTableView = computed(() => {
 });
 
 // Methods
+const handlePendingOrdersClick = () => {
+    showMoreOptions.value = false;
+    router.visit(route("resto.pending-orders.index"));
+};
+
+const handleViewTableClick = () => {
+    showMoreOptions.value = false;
+    router.visit(route("table-rooms.index"));
+};
+
 const handleReviewTransactionsClick = () => {
     showMoreOptions.value = false;
     router.visit(route("transactions.index"));

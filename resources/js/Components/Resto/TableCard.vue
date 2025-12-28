@@ -7,27 +7,30 @@
         <!-- Header with name and location -->
         <div class="flex items-start justify-between mb-3">
             <div class="flex-1">
-                <h3 class="font-semibold text-neutral-900">
-                    {{ table.name }}
+                <h3
+                    class="flex flex-row justify-between font-semibold text-neutral-900"
+                >
+                    <span> {{ table.name }}</span>
+
+                    <!-- Merged Indicator -->
+                    <span v-if="isMerged">
+                        <p
+                            class="text-xs text-neutral-600 bg-secondary-50 px-2 py-1 rounded inline-block"
+                        >
+                            <i class="pi pi-link text-xs"></i>
+                            Merged to {{ mergedToName }}
+                        </p>
+                    </span>
                 </h3>
+
                 <p class="text-xs text-neutral-500">
                     {{
                         table.tableRoomLocation?.description ||
                         table.tableRoomLocation?.name ||
-                        "N/A"
+                        ""
                     }}
                 </p>
             </div>
-        </div>
-
-        <!-- Merged Indicator -->
-        <div v-if="isMerged" class="mb-2">
-            <p
-                class="text-xs text-neutral-600 bg-secondary-50 px-2 py-1 rounded inline-block"
-            >
-                <i class="pi pi-link text-xs"></i>
-                Merged to {{ mergedToName }}
-            </p>
         </div>
 
         <!-- Status, Pax, and Dining Start -->

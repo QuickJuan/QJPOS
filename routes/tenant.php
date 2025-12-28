@@ -221,6 +221,14 @@ if (!isCentralDomain()) {
                             Route::get('/cart/item/{cartItemId}/approvers', 'getApproversForItem')->name('cart.get-approvers');
                         });
 
+                    Route::controller(\App\Http\Controllers\PendingOrdersController::class)
+                        ->prefix('/pending-orders')
+                        ->as('pending-orders.')
+                        ->group(function () {
+                            Route::get('/', 'index')->name('index');
+                            Route::put('/item/{itemId}/toggle-served', 'toggleServed')->name('toggle-served');
+                        });
+
                     // Category routes (wildcard routes should come last)
                     Route::controller(\App\Http\Controllers\CategoryController::class)
                         ->group(function () {
