@@ -221,7 +221,6 @@ const longestWaitTime = computed(() => {
 
 // Update current time every second for real-time updates
 let timerInterval: NodeJS.Timeout | null = null;
-let pollInterval: NodeJS.Timeout | null = null;
 
 onMounted(() => {
     // Update every second for real-time minute calculation
@@ -229,26 +228,32 @@ onMounted(() => {
         currentTime.value = moment();
     }, 1000);
 
-    // Poll for new orders every 5 seconds
-    pollInterval = setInterval(() => {
-        router.get(
-            route("resto.pending-orders.index"),
-            {},
-            {
-                preserveState: true,
-                replace: true,
-                only: ["pendingOrders"],
-            }
-        );
-    }, 5000);
+    // Listen for new orders via Laravel Echo
+    if (window.Echo) {
+        const channelName = `pending-orders.${branchId.value}`;
+        window.Echo.channel(channelName).listen("order-placed", (data: any) => {
+            // Refresh pending orders when a new order is placed
+            router.get(
+                route("resto.pending-orders.index"),
+                {},
+                {
+                    preserveState: true,
+                    replace: true,
+                    only: ["pendingOrders"],
+                }
+            );
+        });
+    }
 });
 
 onUnmounted(() => {
     if (timerInterval) {
         clearInterval(timerInterval);
     }
-    if (pollInterval) {
-        clearInterval(pollInterval);
+
+    // Leave the channel when component unmounts
+    if (window.Echo) {
+        window.Echo.leave(`pending-orders.${branchId.value}`);
     }
 });
 

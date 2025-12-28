@@ -1,4 +1,6 @@
 import axios from 'axios';
+import Echo from 'laravel-echo';
+import Pusher from 'pusher-js';
 
 window.axios = axios;
 
@@ -47,4 +49,23 @@ window.axios.interceptors.request.use(function (config) {
     return config;
 }, function (error) {
     return Promise.reject(error);
+});
+
+// Initialize Laravel Echo for real-time broadcasting with Reverb
+window.Pusher = Pusher;
+
+// Configure Pusher to not use TLS
+Pusher.logToConsole = true;
+
+window.Echo = new Echo({
+    broadcaster: 'pusher',
+    key: 'quickjuan-secret-key',
+    cluster: 'mt1',
+    wsHost: 'localhost',
+    wsPort: 8081,
+    wssPort: 8081,
+    disableStats: true,
+    forceTLS: false,
+    enabledTransports: ['ws'],
+    useTLS: false,
 });

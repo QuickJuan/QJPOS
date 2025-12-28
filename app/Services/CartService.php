@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\CartItem;
 use App\Models\Discount;
 use App\Models\TableRoom;
+use App\Events\OrderPlaced;
 use Illuminate\Http\Request;
 use App\Models\CashierSession;
 use App\Models\ProductPackaging;
@@ -880,6 +881,14 @@ class CartService
 
                     $servedBy = User::where('id', $payload['served_by'])->first() ?? null;
 
+                    // Broadcast the order placed event
+                    if ($branchId) {
+                        broadcast(new OrderPlaced($branchId, [
+                            'orderNumber' => $orderNumber,
+                            'tableRoom' => $cart->tableRoom,
+                            'timestamp' => now(),
+                        ]))->toOthers();
+                    }
 
                     return [
                         'orderNumber'      => $orderNumber,
