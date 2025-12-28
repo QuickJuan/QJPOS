@@ -107,14 +107,6 @@
             </div>
         </div>
 
-        <!-- Close Session Dialog -->
-        <CloseSessionModal
-            :show-close-dialog="showCloseDialog"
-            :open-session="props.openSession"
-            @close-modal="showCloseDialog = false"
-            @confirm-close-session="confirmCloseSession"
-        />
-
         <!-- Session Summary Modal -->
         <SessionSummaryModal
             :show-session-summary-modal="showSessionSummaryModal"
@@ -139,7 +131,6 @@ import TextField from "@/Components/Form/TextField.vue";
 import { useConfirm, useToast } from "primevue";
 import PageProps from "@/Types/PageProps";
 import HomeLayout from "@/Layouts/HomeLayout.vue";
-import CloseSessionModal from "./Partials/CloseSessionModal.vue";
 import SessionSummaryModal from "./Partials/SessionSummaryModal.vue";
 import { useCashier } from "@/composables/useCashier";
 import CashieringLayout from "@/Layouts/CashieringLayout.vue";
@@ -153,15 +144,14 @@ const toast = useToast();
 const { closeShift } = useCashier();
 
 const beginningCash = ref("");
-const showCloseDialog = ref(false);
 const showSessionSummaryModal = ref(false);
 const sessionSummaryData = ref(null);
 
-// Check for auto_close query parameter and open modal automatically
+// Check for auto_close query parameter and navigate to close shift page automatically
 onMounted(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get("auto_close") === "true" && props.openSession) {
-        showCloseDialog.value = true;
+        router.visit(route("resto.close-shift"));
     }
 });
 
@@ -170,46 +160,7 @@ const continueSession = () => {
 };
 
 const confirmCloseSessionModal = (event: any) => {
-    showCloseDialog.value = true;
-};
-
-const confirmCloseSession = async (data: any) => {
-    const payload = {
-        cash_denomination_details: data.currencyBreakdown,
-        cash_denomination: data.totalCashCounted,
-        shift_no: page.props.current_cashier_session?.id,
-        cashier_id: page.props.current_cashier_session?.cashier_id,
-    };
-
-    const result = await closeShift(payload);
-
-    console.log("close shift result :", result);
-
-    showCloseDialog.value = false;
-
-    if (result.success) {
-        sessionSummaryData.value = result.session;
-        showSessionSummaryModal.value = true;
-
-        toast.add({
-            severity: "success",
-            summary: "Success",
-            detail: result.data.message || "Session closed successfully",
-            life: 3000,
-        });
-
-        // Logout after showing the summary modal
-        setTimeout(() => {
-            router.post(route("logout"));
-        }, 2000);
-    } else {
-        toast.add({
-            severity: "error",
-            summary: "Error",
-            detail: result.error,
-            life: 3000,
-        });
-    }
+    router.visit(route("resto.close-shift"));
 };
 
 const startSession = () => {

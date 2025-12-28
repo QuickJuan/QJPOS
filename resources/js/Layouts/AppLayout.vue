@@ -6,6 +6,7 @@ import Banner from "@/Components/Banner.vue";
 import Dropdown from "@/Components/Dropdown.vue";
 import DropdownLink from "@/Components/DropdownLink.vue";
 import Sidebar from "@/Layouts/Sidebar.vue";
+import PWAInstallBanner from "@/Components/PWAInstallBanner.vue";
 
 defineProps({
     title: String,
@@ -43,5 +44,8 @@ const logout = () => {
                 </main>
             </div>
         </div>
+
+        <!-- PWA Install Banner -->
+        <PWAInstallBanner />
     </div>
 </template>

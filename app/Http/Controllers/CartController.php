@@ -368,10 +368,11 @@ class CartController extends Controller
         }
     }
 
-    public function reprintPlacedOrder(int $batchNumber): JsonResponse
+    public function reprintPlacedOrder(Request $request, int $batchNumber): JsonResponse
     {
         try {
-            $response = $this->cartService->getPlacedOrderByBatchNumber($batchNumber);
+            $served = $request->query('served');
+            $response = $this->cartService->getPlacedOrderByBatchNumber($batchNumber, $served);
 
             return response()->json($response, 200);
         } catch (Exception $e) {

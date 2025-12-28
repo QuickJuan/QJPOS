@@ -122,6 +122,7 @@ class HandleInertiaRequests extends Middleware
                 'company_phone'   => $companySettings['company_phone'] ?? '',
                 'company_logo'    => $companySettings['company_logo'] ?? '',
                 'hero_image'      => $companySettings['hero_image'] ?? '',
+                'timezone'        => $companySettings['timezone'] ?? 'UTC',
             ];
         } catch (\Exception $e) {
             return [
@@ -130,6 +131,34 @@ class HandleInertiaRequests extends Middleware
                 'company_phone'   => '',
                 'company_logo'    => '',
                 'hero_image'      => '',
+                'timezone'        => 'UTC',
+            ];
+        }
+    }
+
+    /**
+     * Get general settings including timezone
+     */
+    private function getGeneralSettings(): array
+    {
+        try {
+            $settings = app(GeneralSettingsService::class)->getCompanySettings();
+            return [
+                'company_name'    => $settings['company_name'] ?? '',
+                'company_address' => $settings['company_address'] ?? '',
+                'company_contact' => $settings['company_contact'] ?? '',
+                'company_logo'    => $settings['company_logo'] ?? '',
+                'hero_image'      => $settings['hero_image'] ?? '',
+                'timezone'        => $settings['timezone'] ?? 'UTC',
+            ];
+        } catch (\Exception $e) {
+            return [
+                'company_name'    => '',
+                'company_address' => '',
+                'company_contact' => '',
+                'company_logo'    => '',
+                'hero_image'      => '',
+                'timezone'        => 'UTC',
             ];
         }
     }
@@ -160,9 +189,9 @@ class HandleInertiaRequests extends Middleware
 
             // Load cart items with their products separately to avoid deep nesting
             if ($cart->relationLoaded('cartItems') || $cart->cartItems) {
-                $cart->cartItems->load(['product', 'productPackaging']);
+                $cart->cartItems->load(['product', 'productPackaging', 'children.product']);
             } else {
-                $cart->load(['cartItems.product', 'cartItems.productPackaging']);
+                $cart->load(['cartItems.product', 'cartItems.productPackaging', 'cartItems.children.product']);
             }
 
             return $cart->toArray();
@@ -210,6 +239,7 @@ class HandleInertiaRequests extends Middleware
                 });
             },
             'company_info'            => fn() => $this->debugLoadProperty('company_info', fn() => $this->getCompanyInfo()),
+            'generalSettings'         => fn() => $this->debugLoadProperty('generalSettings', fn() => $this->getGeneralSettings()),
             'current_cashier_session' => function() {
                 return $this->debugLoadProperty('current_cashier_session', function() {
                     // Only load if user is authenticated
@@ -374,10 +404,6 @@ class HandleInertiaRequests extends Middleware
                     ->orderBy('name')
                     ->get(['id', 'code', 'name', 'symbol', 'exchange_rate', 'is_default']);
 
-                \Log::info('Loaded tenant currencies', [
-                    'tenant_id' => tenant('id'),
-                    'count' => $currencies->count(),
-                ]);
 
                 return $currencies->map(function (Currency $currency) {
                     $currencySymbol = $currency->symbol ?? 'PHP ';

@@ -2,7 +2,7 @@
     <Dialog
         :visible="props.show"
         modal
-        header="Edit Table"
+        header="Edit Tabless"
         :style="{ width: '45rem' }"
         :closable="false"
     >
@@ -83,21 +83,28 @@
             </div>
             <div class="mt-4">
                 <label class="block text-sm font-semibold mb-2 text-gray-700">
-                    Table Preview
+                    Table Image
                 </label>
-                <img
-                    :src="form.img"
-                    :alt="`Preview for ${form.chairs} chairs`"
-                    class="w-full h-20 object-contain bg-gray-50 rounded-lg border mb-3"
-                />
-                <FileUpload
-                    mode="basic"
-                    accept="image/*"
-                    :maxFileSize="1000000"
-                    @select="handleFileChange"
-                    chooseLabel="Choose Image"
-                    class="w-full"
-                />
+                <div
+                    class="relative border-2 border-dashed rounded-lg p-4 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 transition-colors min-h-32"
+                    @dragover.prevent
+                    @dragleave.prevent
+                    @drop.prevent="onDrop"
+                    @click="triggerFileInput"
+                >
+                    <input
+                        ref="fileInput"
+                        type="file"
+                        class="hidden"
+                        accept="image/*"
+                        @change="onFileSelect"
+                    />
+                    <img
+                        :src="form.img"
+                        :alt="`Preview for ${form.name}`"
+                        class="max-h-48 object-contain"
+                    />
+                </div>
             </div>
         </form>
         <template #footer>
@@ -124,7 +131,7 @@
 import SelectField from "@/Components/Form/SelectField.vue";
 import TextField from "@/Components/Form/TextField.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
-import { Button, Dialog, FileUpload, useConfirm, useToast } from "primevue";
+import { Button, Dialog, useConfirm, useToast } from "primevue";
 import { ref, watch } from "vue";
 
 const toast = useToast();
@@ -152,6 +159,9 @@ const form = ref({
     img: "/images/round-4.png",
 });
 
+const imageFile = ref<File | null>(null);
+const fileInput = ref<HTMLInputElement | null>(null);
+
 const tableSizeMap = {
     2: { width: 150, height: 100, img: "/images/round-4.png" },
     4: { width: 150, height: 100, img: "/images/square-4.png" },
@@ -168,9 +178,29 @@ const updateTableDefaults = () => {
     }
 };
 
-const handleFileChange = (event: any) => {
-    const file = event.files?.[0];
-    if (!file) return;
+const triggerFileInput = () => fileInput.value?.click();
+
+const validateAndPreviewFile = (file: File) => {
+    const allowed = ["image/png", "image/jpeg", "image/webp"];
+    if (!allowed.includes(file.type)) {
+        toast.add({
+            severity: "error",
+            summary: "Invalid Image",
+            detail: "Only PNG, JPG, or WEBP allowed.",
+            life: 3000,
+        });
+        return false;
+    }
+    if (file.size > 3 * 1024 * 1024) {
+        toast.add({
+            severity: "error",
+            summary: "Image Too Large",
+            detail: "Max file size 3MB.",
+            life: 3000,
+        });
+        return false;
+    }
+    imageFile.value = file;
     const reader = new FileReader();
     reader.onload = (ev) => {
         if (typeof ev.target?.result === "string") {
@@ -178,6 +208,18 @@ const handleFileChange = (event: any) => {
         }
     };
     reader.readAsDataURL(file);
+    return true;
+};
+
+const onFileSelect = (e: Event) => {
+    const target = e.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (file) validateAndPreviewFile(file);
+};
+
+const onDrop = (e: DragEvent) => {
+    const file = e.dataTransfer?.files?.[0];
+    if (file) validateAndPreviewFile(file);
 };
 
 const handleSubmit = () => {
@@ -201,7 +243,7 @@ const handleSubmit = () => {
         return;
     }
 
-    emit("submit", { ...form.value });
+    emit("submit", { ...form.value, imageFile: imageFile.value });
 };
 
 const handleDelete = () => {
@@ -227,7 +269,17 @@ watch(
     () => props.table,
     (newTable) => {
         if (newTable) {
-            form.value = { ...newTable };
+            form.value = {
+                name: newTable.name || "",
+                chairs: newTable.chairs || 2,
+                table_room_location_id: newTable.table_room_location_id || null,
+                width: newTable.width || newTable.table_width || 150,
+                height: newTable.height || newTable.table_height || 100,
+                x: newTable.x || newTable.table_x || 0,
+                y: newTable.y || newTable.table_y || 0,
+                img: newTable.featured_image_url || "",
+            };
+            imageFile.value = null; // Reset file when table changes
         }
     },
     { immediate: true }

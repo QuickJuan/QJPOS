@@ -21,6 +21,7 @@ class GeneralSettingsService
             'company_phone'   => $generalSettings->company_contact,
             'company_logo'    => $companyLogo,
             'hero_image'      => $heroImage,
+            'timezone'        => $generalSettings->timezone ?? 'UTC',
         ];
     }
 }

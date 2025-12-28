@@ -47,6 +47,23 @@
                                 class="space-y-1 py-2 text-sm font-semibold text-slate-700"
                             >
                                 <button
+                                    @click="handlePendingOrdersClick"
+                                    class="flex w-full items-center gap-3 px-4 py-2 transition hover:bg-slate-100"
+                                >
+                                    <DocumentTextIcon class="h-5 w-5" />
+                                    <span>View Pending Orders</span>
+                                </button>
+                                <button
+                                    @click="handleViewTableClick"
+                                    class="flex w-full items-center gap-3 px-4 py-2 transition hover:bg-slate-100"
+                                >
+                                    <DocumentTextIcon class="h-5 w-5" />
+                                    <span>View Table</span>
+                                </button>
+                                <div
+                                    class="border-t border-slate-200 my-1"
+                                ></div>
+                                <button
                                     @click="handleReviewTransactionsClick"
                                     class="flex w-full items-center gap-3 px-4 py-2 transition hover:bg-slate-100"
                                 >
@@ -88,8 +105,9 @@
                     </transition>
                 </div>
 
-                <!-- Close Shift Button -->
+                <!-- Close Shift Button (Only visible on table view) -->
                 <button
+                    v-if="isTableView"
                     @click="handleCloseShift"
                     class="flex items-center gap-2 rounded-full bg-warning-500 px-6 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-warning-600"
                 >
@@ -210,7 +228,27 @@ const companyName = computed(() => {
     );
 });
 
+// Check if we're on the table view (Preview page)
+const isTableView = computed(() => {
+    return (
+        page.component === "Resto/Preview" || page.component === "Resto/Tables"
+    );
+});
+
 // Methods
+const handlePendingOrdersClick = () => {
+    showMoreOptions.value = false;
+    const activeBranch = (page.props as any)?.active_branch;
+    router.visit(
+        route("resto.pending-orders.index", { branchId: activeBranch?.id })
+    );
+};
+
+const handleViewTableClick = () => {
+    showMoreOptions.value = false;
+    router.visit(route("table-rooms.index"));
+};
+
 const handleReviewTransactionsClick = () => {
     showMoreOptions.value = false;
     router.visit(route("transactions.index"));
@@ -248,22 +286,12 @@ const handleCloseShift = () => {
 
 const handleLogout = () => {
     showCashierDropdown.value = false;
-    confirm.require({
-        message: "Are you sure you want to logout?",
-        header: "Logout Confirmation",
-        icon: "pi pi-exclamation-triangle",
-        rejectClass: "p-button-secondary p-button-outlined",
-        rejectLabel: "Cancel",
-        acceptLabel: "Logout",
-        accept: () => {
-            emit("logout");
-            if (props.onLogout) {
-                props.onLogout();
-            } else {
-                router.post(route("logout"));
-            }
-        },
-    });
+    emit("logout");
+    if (props.onLogout) {
+        props.onLogout();
+    } else {
+        router.post(route("logout"));
+    }
 };
 
 // Close dropdowns when clicking outside
