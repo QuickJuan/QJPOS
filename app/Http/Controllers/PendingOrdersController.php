@@ -8,9 +8,12 @@ use Inertia\Inertia;
 
 class PendingOrdersController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        // Get all pending orders grouped by batch_number
+        // Get branch ID from authenticated user
+        $branchId = $request->user()->branch_id;
+
+        // Get all pending orders filtered by the user's branch ID
         $pendingOrders = CartItem::with([
                 'product',
                 'product.category',
@@ -18,6 +21,9 @@ class PendingOrdersController extends Controller
                 'children.product',
                 'childrenRecursive.product',
             ])
+            ->whereHas('cart', function ($query) use ($branchId) {
+                $query->where('branch_id', $branchId);
+            })
             ->where('placed_order', true)
             ->where('is_served', false)
             ->where('is_void', false)
@@ -76,6 +82,7 @@ class PendingOrdersController extends Controller
 
         return Inertia::render('Resto/PendingOrders/Index', [
             'pendingOrders' => $ordersWithTiming,
+            'branchId' => $branchId,
         ]);
     }
 

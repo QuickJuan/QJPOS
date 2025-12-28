@@ -28,7 +28,13 @@
             <template v-for="(action, key) in actions" :key="key">
                 <!-- Dashboard -->
                 <Link
-                    :href="route(action.route)"
+                    :href="
+                        action.route === 'resto.pending-orders.index'
+                            ? route(action.route, {
+                                  branchId: activeBranch?.id,
+                              })
+                            : route(action.route)
+                    "
                     class="group bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 p-6 border hover:border-primary transform hover:scale-105"
                 >
                     <div

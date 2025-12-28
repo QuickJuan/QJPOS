@@ -1,32 +1,49 @@
 <template>
-    <CashieringLayout>
-        <div class="p-6 bg-gray-50 min-h-screen">
-            <h1 class="text-3xl font-bold mb-8">Pending Orders</h1>
-
-            <div v-if="pendingOrders.length === 0" class="text-center py-24">
-                <p class="text-gray-500 text-xl">No pending orders</p>
+    <KitchenLayout
+        :is-connected="isConnected"
+        :pending-count="pendingOrdersWithMinutes.length"
+        :longest-wait="longestWaitTime"
+    >
+        <div class="p-3 lg:p-6 min-h-screen">
+            <div
+                v-if="pendingOrdersWithMinutes.length === 0"
+                class="text-center py-12 lg:py-24"
+            >
+                <p class="text-gray-700 text-2xl lg:text-4xl font-bold">
+                    No pending orders
+                </p>
             </div>
 
             <!-- Grid of Batches -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div
+                class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 lg:gap-6"
+            >
                 <div
                     v-for="batch in pendingOrdersWithMinutes"
                     :key="batch.batch_number"
-                    class="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition"
+                    class="w-full bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition border border-gray-200"
                 >
                     <!-- Batch Header -->
                     <div
-                        class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4"
+                        class="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 lg:p-6"
                     >
-                        <div class="flex items-start justify-between">
-                            <div class="flex-1">
-                                <h2 class="text-lg font-bold">
+                        <div
+                            class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 lg:gap-0"
+                        >
+                            <div class="">
+                                <h2
+                                    class="text-lg lg:text-xl font-bold text-white mb-1 lg:mb-2"
+                                >
                                     Batch #{{ batch.batch_number }}
                                 </h2>
-                                <p class="text-base text-blue-100">
+                                <p
+                                    class="text-sm lg:text-lg text-blue-100 font-semibold"
+                                >
                                     {{ batch.table_name }}
                                 </p>
-                                <p class="text-base text-blue-200 mt-1">
+                                <p
+                                    class="text-xs lg:text-base text-blue-100 mt-1 lg:mt-2"
+                                >
                                     {{
                                         formatPlacedOrderTime(
                                             batch.placed_order_time
@@ -34,15 +51,18 @@
                                     }}
                                 </p>
                             </div>
-                            <div class="text-right">
-                                <div class="text-3xl font-bold">
-                                    {{ batch.minutes_waiting }}
-                                    <span class="text-xs text-blue-100"
-                                        >Min(s)</span
-                                    >
+                            <div class="text-left lg:text-right">
+                                <div
+                                    class="text-2xl lg:text-xl font-bold text-white mb-1"
+                                >
+                                    {{ batch.minutes_waiting }} min(s)
                                 </div>
 
-                                <p>{{ batch.items.length }} items</p>
+                                <p
+                                    class="text-sm lg:text-lg text-blue-100 mt-2 lg:mt-4 font-semibold"
+                                >
+                                    {{ batch.items.length }} items
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -54,21 +74,27 @@
                             :key="item.id"
                         >
                             <div
-                                class="p-4 hover:bg-gray-50 transition"
-                                :class="item.is_served ? 'bg-green-50' : ''"
+                                class="p-3 lg:p-5 hover:bg-gray-100 transition"
+                                :class="
+                                    item.is_served ? 'bg-green-50' : 'bg-white'
+                                "
                             >
                                 <!-- Main Item -->
                                 <div
-                                    class="flex items-start justify-between gap-2 mb-2"
+                                    class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4"
                                 >
                                     <div class="flex-1">
-                                        <div class="flex items-center gap-2">
+                                        <div
+                                            class="flex items-center gap-2 sm:gap-3"
+                                        >
                                             <span
-                                                class="text-sm font-semibold bg-gray-200 text-gray-800 px-2 py-1 rounded"
+                                                class="text-sm sm:text-lg font-bold bg-blue-100 text-blue-800 px-2 sm:px-3 py-1 sm:py-2 rounded"
                                             >
                                                 {{ item.quantity }}x
                                             </span>
-                                            <h3 class="font-semibold text-sm">
+                                            <h3
+                                                class="font-bold text-base sm:text-xl text-gray-900"
+                                            >
                                                 {{ item.product_name }}
                                             </h3>
                                         </div>
@@ -81,10 +107,10 @@
                                             )
                                         "
                                         :class="[
-                                            'px-3 py-1.5 rounded text-xs font-semibold whitespace-nowrap transition',
+                                            'px-3 sm:px-6 py-2 sm:py-3 rounded text-sm sm:text-base font-bold whitespace-nowrap transition shadow-md',
                                             item.is_served
                                                 ? 'bg-green-600 text-white hover:bg-green-700'
-                                                : 'bg-gray-300 text-gray-700 hover:bg-gray-400',
+                                                : 'bg-orange-500 text-white hover:bg-orange-600',
                                         ]"
                                     >
                                         {{
@@ -101,15 +127,24 @@
                                         item.children &&
                                         item.children.length > 0
                                     "
-                                    class="ml-4 mt-2 space-y-1 text-xs text-gray-600"
+                                    class="ml-4 sm:ml-6 mt-2 sm:mt-3 space-y-1 sm:space-y-2 text-sm sm:text-xl text-gray-900 font-medium"
                                 >
+                                    <p
+                                        class="text-black font-bold text-xs sm:text-base mb-1 sm:mb-2"
+                                    >
+                                        Items to prepare:
+                                    </p>
                                     <div
                                         v-for="child in item.children"
                                         :key="child.id"
-                                        class="flex gap-2"
+                                        class="flex gap-2 sm:gap-3"
                                     >
-                                        <span class="text-gray-400">•</span>
                                         <span
+                                            class="text-black text-lg sm:text-2xl font-bold"
+                                            >•</span
+                                        >
+                                        <span
+                                            class="text-black font-bold text-sm sm:text-lg"
                                             >{{ child.quantity }}x
                                             {{ child.product_name }}</span
                                         >
@@ -122,15 +157,18 @@
                                         item.modifiers &&
                                         item.modifiers.length > 0
                                     "
-                                    class="ml-4 mt-1 space-y-1 text-xs text-gray-600"
+                                    class="ml-4 sm:ml-6 mt-2 space-y-1 sm:space-y-2 text-xs sm:text-sm text-gray-700 font-medium"
                                 >
                                     <div
                                         v-for="modifier in item.modifiers"
                                         :key="modifier.id"
-                                        class="flex gap-2"
+                                        class="flex gap-2 sm:gap-3"
                                     >
-                                        <span class="text-gray-400">+</span>
-                                        <span>{{
+                                        <span
+                                            class="text-purple-600 text-base sm:text-lg font-bold"
+                                            >+</span
+                                        >
+                                        <span class="text-purple-700">{{
                                             modifier.modifier_name
                                         }}</span>
                                     </div>
@@ -138,19 +176,20 @@
                             </div>
                             <div
                                 v-if="index < batch.items.length - 1"
-                                class="border-t border-gray-200"
+                                class="border-t border-gray-300"
                             ></div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </CashieringLayout>
+    </KitchenLayout>
 </template>
 
 <script setup lang="ts">
-import CashieringLayout from "@/Layouts/CashieringLayout.vue";
+import KitchenLayout from "@/Layouts/KitchenLayout.vue";
 import { router, usePage } from "@inertiajs/vue3";
+import { route } from "ziggy-js";
 import { computed, ref, onMounted, onUnmounted } from "vue";
 import moment from "moment-timezone";
 
@@ -160,25 +199,56 @@ const props = defineProps<{
 
 const page = usePage();
 const currentTime = ref(moment());
+const isConnected = ref(true);
+
+// Get branchId from authenticated user
+const branchId = computed(() => {
+    return (page.props.auth as any)?.user?.branch_id || 1;
+});
 
 // Get timezone from page props
 const timezone = computed(() => {
     return (page.props as any)?.generalSettings?.timezone || "UTC";
 });
 
+// Calculate longest wait time
+const longestWaitTime = computed(() => {
+    if (pendingOrdersWithMinutes.value.length === 0) return 0;
+    return Math.max(
+        ...pendingOrdersWithMinutes.value.map((b) => b.minutes_waiting)
+    );
+});
+
 // Update current time every second for real-time updates
 let timerInterval: NodeJS.Timeout | null = null;
+let pollInterval: NodeJS.Timeout | null = null;
 
 onMounted(() => {
     // Update every second for real-time minute calculation
     timerInterval = setInterval(() => {
         currentTime.value = moment();
     }, 1000);
+
+    // Poll for new orders every 5 seconds
+    pollInterval = setInterval(() => {
+        router.get(
+            route("resto.pending-orders.index"),
+            {},
+            {
+                preserveState: true,
+                replace: true,
+                only: ["pendingOrders"],
+            }
+        );
+    }, 5000);
 });
 
 onUnmounted(() => {
     if (timerInterval) {
         clearInterval(timerInterval);
+    }
+    if (pollInterval) {
+        clearInterval(pollInterval);
     }
 });
 
@@ -199,7 +269,9 @@ const pendingOrdersWithMinutes = computed(() => {
 
 const toggleServed = (itemId: number, isServed: boolean) => {
     router.put(
-        route("resto.pending-orders.toggle-served", { itemId }),
+        route("resto.pending-orders.toggle-served", {
+            itemId,
+        }),
         { is_served: isServed },
         {
             preserveScroll: true,

@@ -238,7 +238,10 @@ const isTableView = computed(() => {
 // Methods
 const handlePendingOrdersClick = () => {
     showMoreOptions.value = false;
-    router.visit(route("resto.pending-orders.index"));
+    const activeBranch = (page.props as any)?.active_branch;
+    router.visit(
+        route("resto.pending-orders.index", { branchId: activeBranch?.id })
+    );
 };
 
 const handleViewTableClick = () => {

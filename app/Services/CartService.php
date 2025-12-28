@@ -47,7 +47,7 @@ class CartService
                         'cashier_id'         => Auth::id(),
                         'cashier_session_id' => Auth::user()->cashierSession->id,
                         'table_room_id'      => $table->id,
-                        'branch_id'          => $payload['branch_id'],
+                        'branch_id'          => Auth::user()->branch_id,
                     ],
                     [
                         'customer_id' => $payload['customer_id'] ?? null,
