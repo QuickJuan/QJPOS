@@ -162,6 +162,20 @@
                     />
 
                     <Button
+                        v-if="
+                            table &&
+                            (table.status === 'occupied' ||
+                                table.status === 'reserved')
+                        "
+                        label="Vacant Table"
+                        icon="pi pi-check-circle"
+                        class="table-action-btn w-full h-14 justify-start gap-3 rounded-xl text-left"
+                        severity="success"
+                        outlined
+                        @click="handleVacantTable"
+                    />
+
+                    <Button
                         v-if="hasMergedTables"
                         label="Unmerge Tables"
                         icon="pi pi-unlink"
@@ -179,6 +193,35 @@
                         severity="secondary"
                         outlined
                         @click="handleUnmergeFromTable"
+                    />
+
+                    <!-- <Button
+                        v-if="
+                            !isTakeoutOccupied &&
+                            table &&
+                            table.status === 'available' &&
+                            !table?.mergedTo
+                        "
+                        label="Reserve Table"
+                        icon="pi pi-calendar-plus"
+                        class="table-action-btn w-full h-14 justify-start gap-3 rounded-xl text-left"
+                        severity="info"
+                        outlined
+                        @click="handleReserveTable"
+                    /> -->
+
+                    <Button
+                        v-if="
+                            !isTakeoutOccupied &&
+                            table &&
+                            table.status !== 'available'
+                        "
+                        label="Vacate Table"
+                        icon="pi pi-door-open"
+                        class="table-action-btn w-full h-14 justify-start gap-3 rounded-xl text-left"
+                        severity="danger"
+                        outlined
+                        @click="vacantTable"
                     />
                 </div>
 
@@ -951,6 +994,14 @@ const handleTransferGuest = () => {
 
 const handleReserveTable = () => {
     reserveTable(props.table);
+    handleClose();
+};
+
+const handleVacantTable = () => {
+    if (!props.table?.id) {
+        return;
+    }
+    vacantTableAction(props.table.id);
     handleClose();
 };
 

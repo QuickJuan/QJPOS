@@ -290,7 +290,7 @@
             <!-- Transfer Table Modal -->
             <TransferTableModal
                 :visible="showTransferModal"
-                :source-table="selectedTable"
+                :source-table="transferSourceTable"
                 :available-targets="availableTransferTargets"
                 :selected-target="selectedTransferTarget"
                 @update:visible="closeTransferModal"
@@ -704,6 +704,7 @@ const handleClaimOrder = () => {
 };
 
 const handleTransferNumber = () => {
+    transferSourceTable.value = selectedTable.value;
     selectedTransferTarget.value = null;
     showTransferModal.value = true;
 };
@@ -711,6 +712,7 @@ const handleTransferNumber = () => {
 const closeTransferModal = () => {
     showTransferModal.value = false;
     selectedTransferTarget.value = null;
+    transferSourceTable.value = null;
 };
 
 const handleTransferGuest = () => {
@@ -734,7 +736,7 @@ const selectTransferGuestTarget = (table: any) => {
 };
 
 const confirmTransfer = () => {
-    if (!selectedTable.value || !selectedTransferTarget.value) {
+    if (!transferSourceTable.value || !selectedTransferTarget.value) {
         toast.add({
             severity: "error",
             summary: "Error",
@@ -746,7 +748,7 @@ const confirmTransfer = () => {
 
     router.post(
         route("resto.order.transfer", {
-            tableId: selectedTable.value.id,
+            tableId: transferSourceTable.value.id,
         }),
         {
             target_table_id: selectedTransferTarget.value.id,
@@ -756,11 +758,10 @@ const confirmTransfer = () => {
                 toast.add({
                     severity: "success",
                     summary: "Success",
-                    detail: `Order transferred from ${selectedTable.value.name} to ${selectedTransferTarget.value.name}`,
+                    detail: `Order transferred from ${transferSourceTable.value.name} to ${selectedTransferTarget.value.name}`,
                     life: 3000,
                 });
                 closeTransferModal();
-                closeTableModal();
                 // Refresh tables to show updated status
                 setTimeout(() => {
                     router.reload({ only: ["tables"] });

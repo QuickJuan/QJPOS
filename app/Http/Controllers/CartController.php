@@ -467,6 +467,8 @@ class CartController extends Controller
                 return redirect()->back()->with('error', 'Target table ID is required.');
             }
 
+
+
             $this->cartService->transferOrder($tableId, $request->input('target_table_id'));
 
             return redirect()->back()->with('success', 'Order transferred successfully.');

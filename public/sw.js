@@ -76,8 +76,12 @@ self.addEventListener('fetch', (event) => {
           // Clone the response
           const responseToCache = response.clone();
 
-          // Cache successful responses (except API calls and Inertia requests)
-          if (!request.url.includes('/api/') && !request.url.includes('/resto/pending-orders')) {
+          // Cache successful responses (except API calls, Inertia requests, and table-rooms with query params)
+          if (
+            !request.url.includes('/api/') &&
+            !request.url.includes('/resto/pending-orders') &&
+            !request.url.includes('/table-rooms?')
+          ) {
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(request, responseToCache);
             });

@@ -16,9 +16,10 @@ use App\Models\CashierSession;
 use App\Models\ProductPackaging;
 use App\Enums\TableRoomStatusType;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Http\Resources\CartResource;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
+use App\Enums\TableRoomLocation\LocationType;
 use App\Http\Resources\PreparationItemCollectionResource;
 
 class CartService
@@ -265,6 +266,7 @@ class CartService
             'tax_type'             => $product->vat_type,
             'tax_percentage'       => $product->vat_rate,
             'tax_included'         => $product->vat_inclusive,
+
         ]);
     }
 
@@ -346,6 +348,8 @@ class CartService
                 'vat_amount'           => $pricingData['vat_amount'],
                 'non_vat_sales'        => $pricingData['non_vat_sales'],
                 'less_tax'             => $pricingData['less_tax'],
+                'served_time'          => $parentItem->served_time,
+                'placed_order_time'     => $parentItem->placed_order_time,
                 'meta_data'            => [
                     'option_id'   => $selectedOption['id'] ?? null,
                     'option_name' => $selectedOption['option_name'] ?? null,
@@ -1041,21 +1045,9 @@ class CartService
 
     public function transferOrder(int $sourceTableId, int $targetTableId): mixed
     {
-        $cashierSession = $this->cashierSession->openSession()->first();
 
-        if (! $cashierSession) {
-            throw new Exception('No active cashier session found.');
-        }
-
-        // Find the order for the source table
-        $cart = Cart::where('table_room_id', $sourceTableId)
-            ->where('cashier_id', Auth::id())
-            ->where('cashier_session_id', $cashierSession->id)
-            ->first();
-
-        if (! $cart) {
-            throw new Exception('No active cart found for the source table.');
-        }
+        /// check the table room location type of the source table if dine  it should not look for cart
+        $sourceTable = TableRoom::findOrFail($sourceTableId);
 
         // Verify target table exists and is available
         $targetTable = TableRoom::findOrFail($targetTableId);
@@ -1064,13 +1056,25 @@ class CartService
             throw new Exception('Target table must be available to transfer the cart.');
         }
 
-        // Update the cart's table_room_id
-        $cart->update([
-            'table_room_id' => $targetTableId,
-        ]);
+        if ($sourceTable->tableRoomLocation->location_type === LocationType::DINE_IN->value) {
+             // Find the order for the source table
+            $cart = Cart::where('table_room_id', $sourceTableId)
+                ->latest();
+
+
+            if (! $cart) {
+                throw new Exception('No active cart found for the source table.');
+            }
+
+            // Update the cart's table_room_id
+            $cart->update([
+                    'table_room_id' => $targetTableId,
+            ]);
+        }
+
 
         // Update source table to available
-        $sourceTable = TableRoom::findOrFail($sourceTableId);
+        // $sourceTable = TableRoom::findOrFail($sourceTableId);
         $sourceTable->update([
             'status'        => TableRoomStatusType::AVAILABLE->value,
             'time_in'       => null,

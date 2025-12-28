@@ -63,10 +63,12 @@
 
             <!-- Dining Start Time -->
             <div
-                v-if="table.dining_start"
+                v-if="table.dining_start && table.status != 'available'"
                 class="border-t border-neutral-200 pt-2"
             >
-                <div class="text-xs text-neutral-500 mb-1">Dining Start</div>
+                <div class="text-xs text-neutral-500 mb-1">
+                    {{ startTimeLabel }}
+                </div>
                 <div class="text-sm font-semibold text-neutral-900">
                     {{ table.dining_start }}
                 </div>
@@ -83,6 +85,12 @@ const props = defineProps<{
     isMerged?: boolean;
     mergedToName?: string;
 }>();
+
+const startTimeLabel = computed(() => {
+    return props.table?.tableRoomLocation?.location_type === "takeout"
+        ? "Order Start"
+        : "Dining Start";
+});
 
 const emit = defineEmits<{
     click: [];

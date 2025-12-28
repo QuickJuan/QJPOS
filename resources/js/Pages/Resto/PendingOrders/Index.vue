@@ -129,7 +129,8 @@
                                         @click="
                                             toggleServed(
                                                 item.id,
-                                                !item.is_served
+                                                !item.is_served,
+                                                item.item_type
                                             )
                                         "
                                         :class="[
@@ -298,12 +299,19 @@ const pendingOrdersWithMinutes = computed(() => {
     }));
 });
 
-const toggleServed = (itemId: number, isServed: boolean) => {
+const toggleServed = (
+    itemId: number,
+    isServed: boolean,
+    itemType: string = "cart_item"
+) => {
     router.put(
         route("resto.pending-orders.toggle-served", {
             itemId,
         }),
-        { is_served: isServed },
+        {
+            is_served: isServed,
+            item_type: itemType,
+        },
         {
             preserveScroll: true,
         }

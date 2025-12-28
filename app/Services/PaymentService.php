@@ -141,6 +141,7 @@ class PaymentService
             'cashier_id'         => $cashier->id,
             'cashier_session_id' => $cashier->cashierSession?->id ?? $cart->cashier_session_id,
             'bill_no'            => $cart->bill_no,
+            'branch_id'          => $branchId,
             'table_room_id'      => $cart->table_room_id,
             'customer_id'        => $cart->customer_id,
             'discount_id'        => $cart->discount_id,
@@ -234,6 +235,9 @@ class PaymentService
             'meta_data'            => $cartItem->meta_data ?? [],
             'served_by'            => $cartItem->served_by,
             'serving_number'       => $cartItem->serving_number,
+            'placed_order_time'    => $cartItem->placed_order_time ?? now(),
+            'served_time'          => $cartItem->served_time,
+            'batch_number'          => $cartItem->batch_number ?? null,
         ];
     }
 
