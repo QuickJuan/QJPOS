@@ -122,15 +122,6 @@
         <Toast />
         <ConfirmPopup />
 
-        <!-- Close Session Modal -->
-        <CloseSessionModal
-            :show-close-dialog="showCloseDialog"
-            :open-session="page.props.current_cashier_session"
-            :current-user="props.currentUser"
-            @confirm-close-session="handleConfirmCloseSession"
-            @close-modal="showCloseDialog = false"
-        />
-
         <!-- Session Summary Modal -->
         <SessionSummaryModal
             :show-session-summary-modal="showSessionSummaryModal"
@@ -149,7 +140,6 @@ import { route } from "ziggy-js";
 import { useConfirm } from "primevue";
 import { useToast } from "primevue";
 import { ConfirmPopup, Toast } from "primevue";
-import CloseSessionModal from "@/Pages/Resto/Partials/CloseSessionModal.vue";
 import SessionSummaryModal from "@/Pages/Resto/Partials/SessionSummaryModal.vue";
 import PWAInstallBanner from "@/Components/PWAInstallBanner.vue";
 import CashierHeader from "@/Components/CashierHeader.vue";
@@ -177,7 +167,6 @@ const props = defineProps<{
 // Reactive data
 const barcodeInput = ref("");
 const showSidebar = ref(false);
-const showCloseDialog = ref(false);
 
 const showSessionSummaryModal = ref(false);
 const sessionSummaryData = ref(null);
@@ -250,7 +239,7 @@ const handleCashDrawerLogClick = () => {
 
 const handleCloseShift = () => {
     showSidebar.value = false;
-    showCloseDialog.value = true;
+    router.visit(route("resto.close-shift"));
 };
 
 const handleLogout = () => {
@@ -266,82 +255,6 @@ const handleLogout = () => {
             router.post(route("logout"));
         },
     });
-};
-
-const handleConfirmCloseSession = async (data: any) => {
-    const payload = {
-        cash_denomination_details: data.currencyBreakdown,
-        cash_denomination: data.totalCashCounted,
-        shift_no: page.props.current_cashier_session?.id,
-        cashier_id: page.props.current_cashier_session?.cashier_id,
-    };
-
-    const result = await closeShift(payload);
-
-    console.log("close shift result :", result);
-
-    showCloseDialog.value = false;
-
-    if (result.success) {
-        sessionSummaryData.value = result.session;
-
-        // Try to print using thermal printer first
-        try {
-            // Load receipt printer config
-            await thermalPrinter.loadPrinterConfig("receipt");
-
-            // Connect to printer if not already connected
-            if (!thermalPrinter.isConnected()) {
-                const connected = await thermalPrinter.connectToPrinterType(
-                    "receipt"
-                );
-                if (!connected) {
-                    // Printer not available, show modal
-                    showSessionSummaryModal.value = true;
-                    toast.add({
-                        severity: "warn",
-                        summary: "Printer Unavailable",
-                        detail: "Session closed successfully. Printer not available - please print manually.",
-                        life: 5000,
-                    });
-                    return;
-                }
-            }
-
-            // Print session summary
-            await thermalPrinter.printSessionSummary(result.session);
-
-            // Show success message and logout
-            toast.add({
-                severity: "success",
-                summary: "Success",
-                detail: "Session closed and printed successfully",
-                life: 3000,
-            });
-
-            // Logout after successful print
-            setTimeout(() => {
-                router.post(route("logout"));
-            }, 1500);
-        } catch (error) {
-            console.error("Failed to print session summary:", error);
-            // Show modal as fallback
-            showSessionSummaryModal.value = true;
-            toast.add({
-                severity: "warn",
-                summary: "Print Failed",
-                detail: "Session closed successfully. Failed to print - please print manually.",
-                life: 5000,
-            });
-        }
-    } else {
-        toast.add({
-            severity: "error",
-            summary: "Error",
-            detail: result.error,
-            life: 3000,
-        });
-    }
 };
 
 const handleCloseSummaryModal = () => {

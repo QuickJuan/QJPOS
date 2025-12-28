@@ -192,6 +192,22 @@ class CashierSessionController extends Controller
         ]);
     }
 
+    public function showCloseShift(): Response
+    {
+        $openSession = $this->cashierSessionService->model
+            ->openSession()
+            ->with('cashier')
+            ->first();
+
+        if (!$openSession) {
+            return redirect()->route('resto.index')->with('error', 'No open session found');
+        }
+
+        return Inertia::render('Resto/CloseShift', [
+            'openSession' => $openSession,
+        ]);
+    }
+
     public function closeShift(CashierSessionRequest $request)
     {
         try {

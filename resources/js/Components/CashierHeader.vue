@@ -88,8 +88,9 @@
                     </transition>
                 </div>
 
-                <!-- Close Shift Button -->
+                <!-- Close Shift Button (Only visible on table view) -->
                 <button
+                    v-if="isTableView"
                     @click="handleCloseShift"
                     class="flex items-center gap-2 rounded-full bg-warning-500 px-6 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-warning-600"
                 >
@@ -208,6 +209,11 @@ const companyName = computed(() => {
         (page.props as any)?.company_info?.company_name ||
         "Restaurant"
     );
+});
+
+// Check if we're on the table view (Preview page)
+const isTableView = computed(() => {
+    return page.component === "Resto/Preview";
 });
 
 // Methods

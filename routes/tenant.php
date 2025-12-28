@@ -176,6 +176,7 @@ if (!isCentralDomain()) {
                     Route::controller(CashierSessionController::class)
                         ->group(function () {
                             Route::get('/preview', 'preview')->name('preview');
+                            Route::get('/close-shift', 'showCloseShift')->name('close-shift');
                             Route::get('/review/x-readings', 'reviewXTransactions')->name('review-x-readings');
                             Route::get('/product/{product}/options', 'productOptions')->name('product.options');
                             Route::post('/session/start', 'startSession')->name('session.start');

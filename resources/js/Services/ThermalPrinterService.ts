@@ -185,6 +185,11 @@ interface StructuredCashDenominationDetails {
     base_currency_symbol?: string | null;
     grand_total_in_base?: number;
     gift_check_total?: number;
+    cash_movement?: {
+        opening_balance: number;
+        sales_revenue: number;
+        expected_total: number;
+    };
     totals?: {
         cash_in_base: number;
         gift_check_in_base: number;
@@ -2020,6 +2025,26 @@ class ThermalPrinterService {
             commands.push(...this.ESC_POS.LINE_FEED);
             commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
             commands.push(...this.ESC_POS.LINE_FEED);
+
+            // Cash Movement (only for default currency)
+            if (structuredBreakdown?.cash_movement) {
+                const movement = structuredBreakdown.cash_movement;
+                commands.push(...this.ESC_POS.BOLD_ON);
+                commands.push(...this.stringToBytes('CASH MOVEMENT'));
+                commands.push(...this.ESC_POS.BOLD_OFF);
+                commands.push(...this.ESC_POS.LINE_FEED);
+                commands.push(...this.stringToBytes(this.formatTotalLine('Opening Balance:', movement.opening_balance)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+                commands.push(...this.stringToBytes(this.formatTotalLine('Sales Revenue:', movement.sales_revenue)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+                commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+                commands.push(...this.ESC_POS.BOLD_ON);
+                commands.push(...this.stringToBytes(this.formatTotalLine('Expected Total:', movement.expected_total)));
+                commands.push(...this.ESC_POS.BOLD_OFF);
+                commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+            }
+
             commands.push(...this.stringToBytes(this.formatTotalLine('Beginning Cash:', sessionData.beginning_cash)));
             commands.push(...this.ESC_POS.LINE_FEED);
             commands.push(...this.stringToBytes(this.formatTotalLine('Cash Denomination:', sessionData.cash_denomination_total)));
