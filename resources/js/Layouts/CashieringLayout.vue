@@ -244,17 +244,7 @@ const handleCloseShift = () => {
 
 const handleLogout = () => {
     showSidebar.value = false;
-    confirm.require({
-        message: "Are you sure you want to logout?",
-        header: "Logout Confirmation",
-        icon: "pi pi-exclamation-triangle",
-        rejectClass: "p-button-secondary p-button-outlined",
-        rejectLabel: "Cancel",
-        acceptLabel: "Logout",
-        accept: () => {
-            router.post(route("logout"));
-        },
-    });
+    router.post(route("logout"));
 };
 
 const handleCloseSummaryModal = () => {

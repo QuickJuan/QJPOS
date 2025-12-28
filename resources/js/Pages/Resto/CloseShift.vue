@@ -17,7 +17,7 @@
                 <!-- Currency Denominations Section -->
                 <div class="mb-8 rounded-2xl bg-white p-6 shadow-lg">
                     <h2 class="mb-6 text-xl font-bold text-neutral-900">
-                        Cash Count by Currency
+                        Cash Count
                     </h2>
                     <CurrencyDenominationInput
                         :currencies="availableCurrencies"

@@ -254,22 +254,12 @@ const handleCloseShift = () => {
 
 const handleLogout = () => {
     showCashierDropdown.value = false;
-    confirm.require({
-        message: "Are you sure you want to logout?",
-        header: "Logout Confirmation",
-        icon: "pi pi-exclamation-triangle",
-        rejectClass: "p-button-secondary p-button-outlined",
-        rejectLabel: "Cancel",
-        acceptLabel: "Logout",
-        accept: () => {
-            emit("logout");
-            if (props.onLogout) {
-                props.onLogout();
-            } else {
-                router.post(route("logout"));
-            }
-        },
-    });
+    emit("logout");
+    if (props.onLogout) {
+        props.onLogout();
+    } else {
+        router.post(route("logout"));
+    }
 };
 
 // Close dropdowns when clicking outside
