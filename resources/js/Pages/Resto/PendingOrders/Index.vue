@@ -247,7 +247,7 @@ onMounted(() => {
         currentTime.value = moment();
     }, 1000);
 
-    // Poll for new orders every 5 seconds
+    // Poll for new orders every 10 seconds
     pollingInterval = setInterval(() => {
         router.get(
             route("resto.pending-orders.index"),
@@ -256,9 +256,21 @@ onMounted(() => {
                 preserveState: true,
                 replace: true,
                 only: ["pendingOrders"],
+                onSuccess: () => {
+                    console.log(
+                        "✅ Pending orders refreshed:",
+                        new Date().toLocaleTimeString()
+                    );
+                },
+                onError: (errors) => {
+                    console.error(
+                        "❌ Failed to refresh pending orders:",
+                        errors
+                    );
+                },
             }
         );
-    }, 5000);
+    }, 10000);
 });
 
 onUnmounted(() => {
