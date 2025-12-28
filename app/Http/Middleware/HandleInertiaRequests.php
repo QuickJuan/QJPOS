@@ -122,6 +122,7 @@ class HandleInertiaRequests extends Middleware
                 'company_phone'   => $companySettings['company_phone'] ?? '',
                 'company_logo'    => $companySettings['company_logo'] ?? '',
                 'hero_image'      => $companySettings['hero_image'] ?? '',
+                'timezone'        => $companySettings['timezone'] ?? 'UTC',
             ];
         } catch (\Exception $e) {
             return [
@@ -130,6 +131,7 @@ class HandleInertiaRequests extends Middleware
                 'company_phone'   => '',
                 'company_logo'    => '',
                 'hero_image'      => '',
+                'timezone'        => 'UTC',
             ];
         }
     }

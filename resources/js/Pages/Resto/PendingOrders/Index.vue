@@ -20,18 +20,29 @@
                     >
                         <div class="flex items-start justify-between">
                             <div class="flex-1">
-                                <h2 class="text-xl font-bold">
+                                <h2 class="text-lg font-bold">
                                     Batch #{{ batch.batch_number }}
                                 </h2>
-                                <p class="text-sm text-blue-100">
+                                <p class="text-base text-blue-100">
                                     {{ batch.table_name }}
+                                </p>
+                                <p class="text-base text-blue-200 mt-1">
+                                    {{
+                                        formatPlacedOrderTime(
+                                            batch.placed_order_time
+                                        )
+                                    }}
                                 </p>
                             </div>
                             <div class="text-right">
                                 <div class="text-3xl font-bold">
                                     {{ batch.minutes_waiting }}
+                                    <span class="text-xs text-blue-100"
+                                        >Min(s)</span
+                                    >
                                 </div>
-                                <p class="text-xs text-blue-100">min</p>
+
+                                <p>{{ batch.items.length }} items</p>
                             </div>
                         </div>
                     </div>
@@ -140,7 +151,7 @@
 <script setup lang="ts">
 import CashieringLayout from "@/Layouts/CashieringLayout.vue";
 import { router, usePage } from "@inertiajs/vue3";
-import { computed } from "vue";
+import { computed, ref, onMounted, onUnmounted } from "vue";
 import moment from "moment-timezone";
 
 const props = defineProps<{
@@ -148,18 +159,35 @@ const props = defineProps<{
 }>();
 
 const page = usePage();
+const currentTime = ref(moment());
 
 // Get timezone from page props
 const timezone = computed(() => {
     return (page.props as any)?.generalSettings?.timezone || "UTC";
 });
 
-// Compute minutes waiting for each batch
+// Update current time every second for real-time updates
+let timerInterval: NodeJS.Timeout | null = null;
+
+onMounted(() => {
+    // Update every second for real-time minute calculation
+    timerInterval = setInterval(() => {
+        currentTime.value = moment();
+    }, 1000);
+});
+
+onUnmounted(() => {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+    }
+});
+
+// Compute minutes waiting for each batch in real-time
 const pendingOrdersWithMinutes = computed(() => {
     return props.pendingOrders.map((batch) => ({
         ...batch,
         minutes_waiting: batch.placed_order_time
-            ? moment()
+            ? currentTime.value
                   .tz(timezone.value)
                   .diff(
                       moment.utc(batch.placed_order_time).tz(timezone.value),
@@ -177,5 +205,10 @@ const toggleServed = (itemId: number, isServed: boolean) => {
             preserveScroll: true,
         }
     );
+};
+
+const formatPlacedOrderTime = (placedOrderTime: string | null) => {
+    if (!placedOrderTime) return "";
+    return moment.utc(placedOrderTime).tz(timezone.value).format("h:mm A");
 };
 </script>
