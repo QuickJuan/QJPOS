@@ -1,22 +1,24 @@
 <template>
     <CashieringLayout :current-user="page.props.currentUser">
-        <div class="min-h-screen bg-slate-100 pb-24">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div class="min-h-screen bg-slate-100">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
                 <button
                     @click="goBack"
-                    class="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition"
+                    class="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition mb-4 lg:mb-6"
                 >
                     <ChevronLeftIcon class="w-4 h-4" />
                     Back to Menu
                 </button>
 
-                <div class="grid lg:grid-cols-3 gap-8 mt-8 items-start">
-                    <section class="lg:col-span-2">
+                <div
+                    class="grid lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] gap-6 lg:gap-8 lg:h-[calc(100vh-140px)] items-start"
+                >
+                    <section class="order-2 lg:order-1 lg:h-full">
                         <div
-                            class="lg:max-h-[calc(100vh-200px)] lg:overflow-y-auto lg:pr-4"
+                            class="lg:h-full lg:overflow-y-auto lg:pr-4 custom-scrollbar"
                         >
                             <div
-                                class="bg-white rounded-3xl shadow-xl p-6 lg:p-8 space-y-8"
+                                class="bg-white rounded-2xl lg:rounded-3xl shadow-xl p-5 lg:p-6 xl:p-8 space-y-6 lg:space-y-8 mb-6 lg:mb-0"
                             >
                                 <div class="flex flex-col gap-2">
                                     <span
@@ -43,18 +45,20 @@
 
                                 <div
                                     v-if="hasCustomizableOptions"
-                                    class="space-y-6"
+                                    class="space-y-5 lg:space-y-6"
                                 >
                                     <div
                                         v-for="(
                                             option, index
                                         ) in customizableOptions"
                                         :key="option.id"
-                                        class="flex gap-6 border border-slate-200 rounded-3xl p-5 lg:p-6 bg-slate-50"
+                                        class="flex gap-4 lg:gap-6 border border-slate-200 rounded-2xl lg:rounded-3xl p-4 lg:p-5 xl:p-6 bg-slate-50"
                                     >
-                                        <div class="flex flex-col items-center">
+                                        <div
+                                            class="flex flex-col items-center flex-shrink-0"
+                                        >
                                             <div
-                                                class="w-11 h-11 rounded-full bg-sky-600 text-white font-semibold flex items-center justify-center"
+                                                class="w-10 h-10 lg:w-11 lg:h-11 rounded-full bg-sky-600 text-white text-sm lg:text-base font-semibold flex items-center justify-center"
                                             >
                                                 {{ index + 1 }}
                                             </div>
@@ -64,10 +68,12 @@
                                                     customizableOptions.length -
                                                         1
                                                 "
-                                                class="w-px flex-1 bg-slate-200 mt-3 hidden lg:block"
+                                                class="w-px flex-1 bg-slate-200 mt-2 lg:mt-3 hidden lg:block"
                                             ></div>
                                         </div>
-                                        <div class="flex-1 space-y-5">
+                                        <div
+                                            class="flex-1 space-y-4 lg:space-y-5 min-w-0"
+                                        >
                                             <div
                                                 class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between"
                                             >
@@ -140,190 +146,170 @@
                                                 v-if="
                                                     option.optionItems?.length
                                                 "
-                                                class="grid gap-5 md:grid-cols-2"
+                                                class="space-y-3"
                                             >
                                                 <div
                                                     v-for="item in option.optionItems"
                                                     :key="item.id"
                                                     :class="[
-                                                        'relative rounded-2xl border p-5 bg-white flex flex-col gap-4 transition hover:shadow-lg',
+                                                        'relative rounded-2xl border p-4 bg-white flex items-center gap-4 transition hover:shadow-md',
                                                         getSelectionValue(
                                                             option.id,
                                                             item.id
                                                         ) > 0
-                                                            ? 'border-sky-500 shadow-sky-100'
+                                                            ? 'border-sky-500 shadow-sky-50 bg-sky-50/30'
                                                             : 'border-slate-200',
                                                     ]"
                                                 >
+                                                    <!-- Product Image -->
                                                     <div
-                                                        class="flex items-start gap-4"
+                                                        class="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex-shrink-0 flex items-center justify-center overflow-hidden"
                                                     >
-                                                        <div
-                                                            class="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center overflow-hidden"
-                                                        >
-                                                            <img
-                                                                v-if="
-                                                                    item
-                                                                        ?.product
-                                                                        ?.media
-                                                                        ?.length
-                                                                "
-                                                                :src="
-                                                                    item.product
-                                                                        .media[0]
-                                                                        ?.original_url
-                                                                "
-                                                                :alt="
-                                                                    item.product
-                                                                        .media[0]
-                                                                        ?.name
-                                                                "
-                                                                class="w-full h-full object-cover"
-                                                            />
-                                                            <div
-                                                                v-else
-                                                                class="text-slate-500"
-                                                            >
-                                                                <ImageIcon
-                                                                    class="w-7 h-7"
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                        <div class="flex-1">
-                                                            <p
-                                                                class="font-semibold text-slate-900"
-                                                            >
-                                                                {{
-                                                                    item
-                                                                        ?.product
-                                                                        ?.name ||
-                                                                    "Option item"
-                                                                }}
-                                                                <span
-                                                                    v-if="
-                                                                        item
-                                                                            ?.product_packaging
-                                                                            ?.name
-                                                                    "
-                                                                    class="text-sm text-slate-500"
-                                                                >
-                                                                    ({{
-                                                                        item
-                                                                            .product_packaging
-                                                                            .name
-                                                                    }})
-                                                                </span>
-                                                            </p>
-                                                            <p
-                                                                class="text-sm text-slate-500"
-                                                            >
-                                                                {{
-                                                                    item
-                                                                        ?.product_packaging
-                                                                        ?.name ||
-                                                                    "Single serve"
-                                                                }}
-                                                            </p>
-                                                        </div>
-                                                        <div
-                                                            class="text-sm font-semibold text-emerald-600"
+                                                        <img
                                                             v-if="
-                                                                Number(
-                                                                    item.price
-                                                                ) > 0
+                                                                item?.product
+                                                                    ?.media
+                                                                    ?.length
                                                             "
-                                                        >
-                                                            +{{
-                                                                formatPrice(
-                                                                    Number(
-                                                                        item.price
-                                                                    )
-                                                                )
-                                                            }}
-                                                        </div>
+                                                            :src="
+                                                                item.product
+                                                                    .media[0]
+                                                                    ?.original_url
+                                                            "
+                                                            :alt="
+                                                                item.product
+                                                                    .media[0]
+                                                                    ?.name
+                                                            "
+                                                            class="w-full h-full object-cover"
+                                                        />
                                                         <div
                                                             v-else
-                                                            class="text-sm text-slate-500"
+                                                            class="text-slate-500"
                                                         >
-                                                            Included
+                                                            <ImageIcon
+                                                                class="w-6 h-6"
+                                                            />
                                                         </div>
                                                     </div>
 
-                                                    <div
-                                                        class="flex items-center justify-between"
-                                                    >
-                                                        <span
-                                                            class="text-sm text-slate-500"
-                                                            >Quantity</span
+                                                    <!-- Product Info -->
+                                                    <div class="flex-1 min-w-0">
+                                                        <p
+                                                            class="font-semibold text-slate-900 text-sm sm:text-base truncate"
                                                         >
+                                                            {{
+                                                                item?.product
+                                                                    ?.name ||
+                                                                "Option item"
+                                                            }}
+                                                        </p>
+                                                        <p
+                                                            class="text-xs sm:text-sm text-slate-500 mt-0.5"
+                                                        >
+                                                            {{
+                                                                item
+                                                                    ?.product_packaging
+                                                                    ?.name ||
+                                                                "Single serve"
+                                                            }}
+                                                        </p>
                                                         <div
-                                                            class="flex items-center gap-2"
+                                                            class="mt-1 text-xs sm:text-sm font-semibold"
+                                                            :class="[
+                                                                Number(
+                                                                    item.price
+                                                                ) > 0
+                                                                    ? 'text-emerald-600'
+                                                                    : 'text-slate-500',
+                                                            ]"
                                                         >
-                                                            <button
-                                                                type="button"
-                                                                class="w-10 h-10 rounded-full border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
-                                                                @click="
-                                                                    adjustQuantity(
-                                                                        option,
-                                                                        item.id,
-                                                                        -1
-                                                                    )
-                                                                "
-                                                                :disabled="
-                                                                    getSelectionValue(
-                                                                        option.id,
-                                                                        item.id
-                                                                    ) === 0
-                                                                "
-                                                            >
-                                                                <span
-                                                                    aria-hidden="true"
-                                                                    >−</span
-                                                                >
-                                                                <span
-                                                                    class="sr-only"
-                                                                    >Decrease
-                                                                    quantity</span
-                                                                >
-                                                            </button>
-                                                            <span
-                                                                class="w-10 text-center font-semibold text-slate-900"
-                                                            >
-                                                                {{
-                                                                    getSelectionValue(
-                                                                        option.id,
-                                                                        item.id
-                                                                    )
-                                                                }}
-                                                            </span>
-                                                            <button
-                                                                type="button"
-                                                                class="w-10 h-10 rounded-full border border-sky-500 text-sky-600 hover:bg-sky-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                                                                @click="
-                                                                    adjustQuantity(
-                                                                        option,
-                                                                        item.id,
-                                                                        1
-                                                                    )
-                                                                "
-                                                                :disabled="
-                                                                    isIncrementDisabled(
-                                                                        option,
-                                                                        item.id
-                                                                    )
-                                                                "
-                                                            >
-                                                                <span
-                                                                    aria-hidden="true"
-                                                                    >+</span
-                                                                >
-                                                                <span
-                                                                    class="sr-only"
-                                                                    >Increase
-                                                                    quantity</span
-                                                                >
-                                                            </button>
+                                                            {{
+                                                                Number(
+                                                                    item.price
+                                                                ) > 0
+                                                                    ? "+" +
+                                                                      formatPrice(
+                                                                          Number(
+                                                                              item.price
+                                                                          )
+                                                                      )
+                                                                    : "Included"
+                                                            }}
                                                         </div>
+                                                    </div>
+
+                                                    <!-- Quantity Controls -->
+                                                    <div
+                                                        class="flex items-center gap-2 flex-shrink-0"
+                                                    >
+                                                        <button
+                                                            type="button"
+                                                            class="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-slate-300 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center justify-center"
+                                                            @click="
+                                                                adjustQuantity(
+                                                                    option,
+                                                                    item.id,
+                                                                    -1
+                                                                )
+                                                            "
+                                                            :disabled="
+                                                                getSelectionValue(
+                                                                    option.id,
+                                                                    item.id
+                                                                ) === 0
+                                                            "
+                                                        >
+                                                            <span
+                                                                aria-hidden="true"
+                                                                class="text-lg leading-none"
+                                                                >−</span
+                                                            >
+                                                            <span
+                                                                class="sr-only"
+                                                                >Decrease
+                                                                quantity</span
+                                                            >
+                                                        </button>
+                                                        <span
+                                                            class="w-8 text-center font-semibold text-slate-900 text-sm sm:text-base"
+                                                        >
+                                                            {{
+                                                                getSelectionValue(
+                                                                    option.id,
+                                                                    item.id
+                                                                )
+                                                            }}
+                                                        </span>
+                                                        <button
+                                                            <button
+                                                            type="button"
+                                                            class="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-sky-500 text-sky-600 hover:bg-sky-100 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center justify-center"
+                                                            @click="
+                                                                adjustQuantity(
+                                                                    option,
+                                                                    item.id,
+                                                                    1
+                                                                )
+                                                            "
+                                                            :disabled="
+                                                                isIncrementDisabled(
+                                                                    option,
+                                                                    item.id
+                                                                )
+                                                            "
+                                                        >
+                                                            <span
+                                                                aria-hidden="true"
+                                                                class="text-lg leading-none"
+                                                                >+</span
+                                                            >
+                                                            <span
+                                                                class="sr-only"
+                                                                >Increase
+                                                                quantity</span
+                                                            >
+                                                        </button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -364,7 +350,7 @@
                                 </div>
 
                                 <div
-                                    class="border-t border-slate-200 pt-6 space-y-3"
+                                    class="border-t border-slate-200 pt-5 lg:pt-6 space-y-3 lg:space-y-4"
                                 >
                                     <div class="flex justify-between text-sm">
                                         <span class="text-slate-500"
@@ -377,18 +363,20 @@
                                         </span>
                                     </div>
                                     <div
-                                        class="flex justify-between text-lg font-bold text-slate-900"
+                                        class="flex justify-between text-base lg:text-lg font-bold text-slate-900"
                                     >
                                         <span>Total</span>
                                         <span>{{
                                             formatPrice(totalAmount)
                                         }}</span>
                                     </div>
-                                    <div class="grid gap-3 sm:grid-cols-2">
+                                    <div
+                                        class="grid gap-3 sm:flex sm:gap-3 lg:gap-4"
+                                    >
                                         <button
                                             type="button"
                                             @click="goBack"
-                                            class="px-4 py-3 border border-slate-200 rounded-2xl text-slate-600 font-semibold hover:bg-slate-50"
+                                            class="px-4 py-3 border border-slate-200 rounded-xl sm:rounded-2xl text-slate-600 font-semibold hover:bg-slate-50 transition sm:flex-1"
                                         >
                                             Cancel
                                         </button>
@@ -399,7 +387,7 @@
                                                 !selectionsAreComplete()
                                             "
                                             @click="addToCart"
-                                            class="px-4 py-3 rounded-2xl font-semibold text-white shadow-lg transition"
+                                            class="px-4 py-3 rounded-xl sm:rounded-2xl font-semibold text-white shadow-lg transition sm:flex-1"
                                             :class="[
                                                 hasCustomizableOptions &&
                                                 !selectionsAreComplete()
@@ -425,14 +413,16 @@
                         </div>
                     </section>
 
-                    <aside class="lg:col-span-1">
-                        <div class="space-y-6 lg:sticky lg:top-6">
+                    <aside
+                        class="order-1 lg:order-2 lg:h-full lg:overflow-y-auto custom-scrollbar"
+                    >
+                        <div class="space-y-4 lg:space-y-5 pb-6 lg:pb-0">
                             <div
-                                class="bg-white rounded-3xl shadow-xl p-6 lg:p-7 space-y-6"
+                                class="bg-white rounded-2xl lg:rounded-3xl shadow-xl p-4 sm:p-5 lg:p-7 space-y-4 lg:space-y-6"
                             >
-                                <div class="flex gap-4">
+                                <div class="flex gap-3 sm:gap-4">
                                     <div
-                                        class="w-28 h-28 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center overflow-hidden"
+                                        class="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 rounded-xl lg:rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex-shrink-0 flex items-center justify-center overflow-hidden"
                                     >
                                         <img
                                             v-if="coverImage"
@@ -444,45 +434,47 @@
                                             <ImageIcon class="w-9 h-9" />
                                         </div>
                                     </div>
-                                    <div class="flex-1 space-y-2">
+                                    <div
+                                        class="flex-1 min-w-0 space-y-1 sm:space-y-2"
+                                    >
                                         <p
-                                            class="text-xs uppercase tracking-[0.25em] text-slate-400"
+                                            class="text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.25em] text-slate-400"
                                         >
                                             Bundle
                                         </p>
                                         <h1
-                                            class="text-2xl font-bold text-slate-900"
+                                            class="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900 line-clamp-2"
                                         >
                                             {{ productData?.name }}
                                         </h1>
                                         <p
                                             v-if="productDescription"
-                                            class="text-sm text-slate-600 leading-relaxed"
+                                            class="text-xs sm:text-sm text-slate-600 leading-relaxed line-clamp-2 hidden sm:block"
                                             v-html="productDescription"
                                         ></p>
                                     </div>
                                 </div>
-                                <div class="grid grid-cols-2 gap-4">
+                                <div class="grid grid-cols-2 gap-3 sm:gap-4">
                                     <div>
                                         <p
-                                            class="text-xs uppercase text-slate-500"
+                                            class="text-[10px] sm:text-xs uppercase text-slate-500"
                                         >
                                             Base Price
                                         </p>
                                         <p
-                                            class="text-xl font-bold text-slate-900"
+                                            class="text-base sm:text-lg lg:text-xl font-bold text-slate-900"
                                         >
                                             {{ formatPrice(basePriceValue) }}
                                         </p>
                                     </div>
                                     <div>
                                         <p
-                                            class="text-xs uppercase text-slate-500"
+                                            class="text-[10px] sm:text-xs uppercase text-slate-500"
                                         >
                                             Current Total
                                         </p>
                                         <p
-                                            class="text-xl font-semibold text-emerald-600"
+                                            class="text-base sm:text-lg lg:text-xl font-semibold text-emerald-600"
                                         >
                                             {{ formatPrice(totalAmount) }}
                                         </p>
@@ -491,7 +483,7 @@
                             </div>
 
                             <div
-                                class="bg-white rounded-3xl shadow-xl p-6 lg:p-7 space-y-6"
+                                class="bg-white rounded-2xl lg:rounded-3xl shadow-xl p-4 sm:p-5 lg:p-7 space-y-4 lg:space-y-6"
                             >
                                 <div>
                                     <p
@@ -1085,3 +1077,29 @@ const addToCart = () => {
     );
 };
 </script>
+
+<style scoped>
+/* Custom scrollbar styling */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Firefox scrollbar */
+.custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+</style>

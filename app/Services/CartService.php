@@ -911,9 +911,9 @@ class CartService
         }
     }
 
-    public function getPlacedOrderByBatchNumber(int $batchNumber): array
+    public function getPlacedOrderByBatchNumber(int $batchNumber, ?string $served = null): array
     {
-        $cartItems = CartItem::with([
+        $query = CartItem::with([
                 'product',
                 'product.preparationLocation',
                 'productPackaging',
@@ -923,9 +923,45 @@ class CartService
             ->where('batch_number', $batchNumber)
             ->whereNotNull('batch_number')
             ->where('placed_order', true)
-            ->whereNull('parent_id')
-            ->orderBy('id')
-            ->get();
+            ->whereNull('parent_id');
+
+        // Filter by served_time if served parameter is provided
+        if ($served === 'false') {
+            $query->whereNull('served_time');
+        }
+
+        $cartItems = $query->orderBy('id')->get();
+
+        // Debug log before filtering
+        Log::info('Before filtering', [
+            'batch' => $batchNumber,
+            'served_param' => $served,
+            'parent_items_count' => $cartItems->count(),
+            'parent_items' => $cartItems->map(fn($i) => [
+                'id' => $i->id,
+                'name' => $i->product?->name,
+                'served_time' => $i->served_time,
+                'children_count' => $i->childrenRecursive?->count() ?? 0
+            ])
+        ]);
+
+        // Recursively filter out served children if needed
+        if ($served === 'false') {
+            $cartItems = $cartItems->map(function ($item) {
+                return $this->filterServedChildren($item);
+            })->filter(); // Remove any nulls
+        }
+
+        // Debug log after filtering
+        Log::info('After filtering', [
+            'batch' => $batchNumber,
+            'items_count' => $cartItems->count(),
+            'items' => $cartItems->map(fn($i) => [
+                'id' => $i->id,
+                'name' => $i->product?->name,
+                'children_count' => $i->childrenRecursive?->count() ?? 0
+            ])
+        ]);
 
         if ($cartItems->isEmpty()) {
             throw new Exception('No placed order found for the provided batch number.');
@@ -945,6 +981,26 @@ class CartService
             'success'          => true,
             'message'          => 'Order ready for re-printing.',
         ];
+    }
+
+    /**
+     * Recursively filter out served children from cart items
+     */
+    private function filterServedChildren($item)
+    {
+        if ($item->served_time !== null) {
+            return null;
+        }
+
+        if ($item->relationLoaded('childrenRecursive') && $item->childrenRecursive) {
+            $filteredChildren = $item->childrenRecursive
+                ->map(fn($child) => $this->filterServedChildren($child))
+                ->filter();
+
+            $item->setRelation('childrenRecursive', $filteredChildren);
+        }
+
+        return $item;
     }
 
     public function claimOrder(int $tableId): mixed
