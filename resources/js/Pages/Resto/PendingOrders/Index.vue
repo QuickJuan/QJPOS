@@ -319,7 +319,10 @@ const printBatch = async (batch: any) => {
         // Transform batch.items to match the printer's expected format
         const placedOrderItems = [
             {
-                orderType: "dine-in",
+                orderType:
+                    unservedItems.length > 0
+                        ? unservedItems[0].order_type || "dine-in"
+                        : "dine-in",
                 items: unservedItems.map((item: any) => ({
                     id: item.id,
                     description: item.product_name,
@@ -328,7 +331,7 @@ const printBatch = async (batch: any) => {
                     servingNumber: batch.serving_number || null,
                     modifiers: item.modifiers || [],
                     notes: item.notes || null,
-                    orderType: "dine-in",
+                    orderType: item.order_type || "dine-in",
                     preparationLocation: item.preparation_location || "",
                     printable: true,
                     showOnScreen: true,
