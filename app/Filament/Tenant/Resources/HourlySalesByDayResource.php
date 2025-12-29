@@ -19,7 +19,7 @@ class HourlySalesByDayResource extends Resource
     protected static ?string $model = HourlySalesByDay::class;
     protected static ?string $navigationIcon = 'heroicon-o-clock';
     protected static ?string $navigationLabel = 'Hourly Sales by Day';
-    protected static ?string $navigationGroup = 'Order Reports';
+    protected static ?string $navigationGroup = 'Sales Report';
     protected static ?int $navigationSort = 10;
 
     public static function table(Table $table): Table

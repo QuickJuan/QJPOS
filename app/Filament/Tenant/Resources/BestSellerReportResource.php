@@ -18,7 +18,7 @@ class BestSellerReportResource extends Resource
     protected static ?string $model = BestSellerReport::class;
     protected static ?string $navigationIcon = 'heroicon-o-trophy';
     protected static ?string $navigationLabel = 'Best Seller Report';
-    protected static ?string $navigationGroup = 'Order Reports';
+    protected static ?string $navigationGroup = 'Sales Report';
     protected static ?int $navigationSort = 11;
 
     public static function table(Table $table): Table

@@ -21,7 +21,7 @@ class SalesByDateResource extends Resource
     protected static ?string $model = SalesByDate::class;
     protected static ?string $navigationIcon = 'heroicon-o-calendar';
     protected static ?string $navigationLabel = 'Sales by Date';
-    protected static ?string $navigationGroup = 'Order Reports';
+    protected static ?string $navigationGroup = 'Sales Report';
     protected static ?int $navigationSort = 13;
 
     public static function table(Table $table): Table

@@ -22,7 +22,7 @@ class SalesByCashierServerResource extends Resource
     protected static ?string $model = SalesByCashierServer::class;
     protected static ?string $navigationIcon = 'heroicon-o-users';
     protected static ?string $navigationLabel = 'Sales by Cashier/Server';
-    protected static ?string $navigationGroup = 'Order Reports';
+    protected static ?string $navigationGroup = 'Sales Report';
     protected static ?int $navigationSort = 14;
 
     public static function table(Table $table): Table

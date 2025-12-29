@@ -23,7 +23,7 @@ class DailySummaryReportResource extends Resource
     protected static ?string $model = DailySummaryReport::class;
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
     protected static ?string $navigationLabel = 'Daily Summary Report';
-    protected static ?string $navigationGroup = 'Order Reports';
+    protected static ?string $navigationGroup = 'Sales Report';
     protected static ?int $navigationSort = 12;
 
     public static function table(Table $table): Table
