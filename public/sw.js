@@ -76,9 +76,10 @@ self.addEventListener('fetch', (event) => {
           // Clone the response
           const responseToCache = response.clone();
 
-          // Cache successful responses (except API calls, Inertia requests, and table-rooms with query params)
+          // Cache successful responses (except API calls, Inertia requests, Filament admin, and table-rooms with query params)
           if (
             !request.url.includes('/api/') &&
+            !request.url.includes('/admin/') &&
             !request.url.includes('/resto/pending-orders') &&
             !request.url.includes('/table-rooms?')
           ) {
