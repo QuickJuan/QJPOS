@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\CartItem;
 use App\Models\Discount;
 use App\Models\TableRoom;
+use App\Models\VoidItem;
 use App\Events\OrderPlaced;
 use Illuminate\Http\Request;
 use App\Models\CashierSession;
@@ -606,32 +607,7 @@ class CartService
         ]);
     }
 
-    public function voidCartItem(string $reason, int $cartItemId, User $user): mixed
-    {
 
-        try {
-            $cartItem = CartItem::find($cartItemId);
-            if (! $cartItem) {
-                throw new Exception('Cart item not found.');
-            }
-
-            $updated = $cartItem->update([
-                'is_void' => true,
-                'reason'  => $reason,
-            ]);
-
-            Log::info('Cart item voided via OTP verification.', [
-                'cart_item_id' => $cartItemId,
-                'voided_by'    => $user->id,
-                'voided_name'  => $user->name,
-            ]);
-
-            return $updated;
-        } catch (Exception $e) {
-            throw new Exception('Error voiding cart item.');
-        }
-
-    }
 
     public function applyDiscountToCartItem(Request $request): mixed
     {
@@ -824,14 +800,119 @@ class CartService
         ]);
     }
 
-    public function deleteCartItem(int $cartItemId): mixed
+    public function voidCartItem(string $reason, int $cartItemId, User $user): mixed
     {
+        try {
+            $cartItem = CartItem::with(['cart.cashierSession'])->find($cartItemId);
+            if (! $cartItem) {
+                throw new Exception('Cart item not found.');
+            }
 
-        $cartItem = CartItem::findOrFail($cartItemId);
-        if (! $cartItem) {
-            throw new Exception('Cart item is empty.');
+            DB::beginTransaction();
+
+            // Save to void_items table immediately
+            VoidItem::create([
+                'parent_id'               => $cartItem->parent_id,
+                'product_id'              => $cartItem->product_id,
+                'product_type'            => $cartItem->product->product_type ?? null,
+                'description'             => $cartItem->product->name ?? null,
+                'product_packaging_id'    => $cartItem->product_packaging_id,
+                'quantity'                => $cartItem->quantity,
+                'price'                   => $cartItem->price,
+                'amount'                  => $cartItem->amount,
+                'order_type'              => $cartItem->order_type,
+                'sub_total'               => $cartItem->sub_total,
+                'void_reason'             => $reason,
+                'is_served'               => $cartItem->is_served ?? false,
+                'served_by'               => $cartItem->served_by,
+                'voided_by'               => $user->id,
+                'cashier_id'              => $cartItem->cart?->cashier_id,
+                'cashier_session_id'      => $cartItem->cart?->cashierSession?->id,
+                'serving_number'          => $cartItem->serving_number,
+                'placed_order_time'       => $cartItem->placed_order_time,
+                'voided_at'               => now(),
+                'batch_number'            => $cartItem->batch_number,
+            ]);
+
+            // Mark cart item as void
+            $updated = $cartItem->update([
+                'is_void' => true,
+                'reason'  => $reason,
+            ]);
+
+            DB::commit();
+
+            Log::info('Cart item voided and saved to void_items table.', [
+                'cart_item_id' => $cartItemId,
+                'voided_by'    => $user->id,
+                'voided_name'  => $user->name,
+            ]);
+
+            return $updated;
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error('Error voiding cart item: ' . $e->getMessage());
+            throw new Exception('Error voiding cart item.');
         }
-        return $cartItem->delete();
+    }
+
+    public function deleteCartItem(int $cartItemId, ?User $approver = null, ?string $reason = null): mixed
+    {
+        try {
+            $cartItem = CartItem::with(['cart.cashierSession'])->findOrFail($cartItemId);
+            if (! $cartItem) {
+                throw new Exception('Cart item is empty.');
+            }
+
+            DB::beginTransaction();
+
+            // If item was placed and has an approver, save to void_items table
+            if ($cartItem->placed_order && $approver) {
+                Log::info('Attempting to save void item', [
+                    'cart_item_id' => $cartItemId,
+                    'reason_received' => $reason,
+                    'reason_is_null' => is_null($reason),
+                    'reason_is_empty' => empty($reason),
+                ]);
+
+                VoidItem::create([
+                    'parent_id'               => $cartItem->parent_id,
+                    'cashier_id'              => $cartItem->cart?->cashier_id,
+                    'cashier_session_id'      => $cartItem->cart?->cashierSession?->id,
+                    'product_id'              => $cartItem->product_id,
+                    'product_type'            => $cartItem->product->product_type ?? null,
+                    'description'             => $cartItem->product->name ?? null,
+                    'product_packaging_id'    => $cartItem->product_packaging_id,
+                    'quantity'                => $cartItem->quantity,
+                    'price'                   => $cartItem->price,
+                    'amount'                  => $cartItem->amount,
+                    'order_type'              => $cartItem->order_type,
+                    'sub_total'               => $cartItem->sub_total,
+                    'void_reason'             => $reason ?: 'Deleted with approval',
+                    'is_served'               => $cartItem->is_served ?? false,
+                    'served_by'               => $cartItem->served_by,
+                    'voided_by'               => $approver->id,
+                    'cashier_id'              => $cartItem->cart?->cashier_id,
+                    'cashier_session_id'      => $cartItem->cart?->cashierSession?->id,
+                    'serving_number'          => $cartItem->serving_number,
+                    'placed_order_time'       => $cartItem->placed_order_time,
+                    'served_time'            => $cartItem->served_time,
+                    'voided_at'               => now(),
+                    'batch_number'            => $cartItem->batch_number,
+                ]);
+
+
+            }
+
+            $result = $cartItem->delete();
+
+            DB::commit();
+
+            return $result;
+        } catch (Exception $e) {
+            DB::rollBack();
+            throw new Exception('Error deleting cart item.');
+        }
     }
 
     public function placeOrder($payload): mixed

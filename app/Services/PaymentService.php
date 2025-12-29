@@ -36,8 +36,9 @@ class PaymentService
 
                 // Save cart and cart items to order (will throw exception if fails)
                 [$order, $changeAmount] = $this->saveCartToOrder($cart, $payload, $paymentContext);
+                // Void items are already saved to void_items table when they were voided
                 $this->saveCartItemsToOrderItems($cart->cartItems, $order);
-                $this->saveVoidCartItemsToOrderItems($cart, $order);
+
 
                 $this->inventoryStockService->deductOrderInventory($order);
 
@@ -171,18 +172,8 @@ class PaymentService
         $this->persistCartItemsAsOrderItems($cartItems, $order);
     }
 
-    private function saveVoidCartItemsToOrderItems($cart, $order)
-    {
-        $voidCartItems = CartItem::where('cart_id', $cart->id)
-            ->where('is_void', true)
-            ->get();
-
-        if ($voidCartItems->isEmpty()) {
-            return;
-        }
-
-        $this->persistCartItemsAsOrderItems($voidCartItems, $order, true);
-    }
+    // Void items are now saved immediately when voided in CartService::voidCartItem()
+    // No longer needed here during settlement
 
     private function persistCartItemsAsOrderItems($cartItems, $order, bool $forceVoid = false): void
     {

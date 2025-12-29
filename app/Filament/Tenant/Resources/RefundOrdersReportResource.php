@@ -12,6 +12,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
 use Filament\Forms\Components\DatePicker;
 use Illuminate\Database\Eloquent\Builder;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
 class RefundOrdersReportResource extends Resource
 {
@@ -36,7 +37,7 @@ class RefundOrdersReportResource extends Resource
                     ->label('Date')
                     ->date('M d, Y')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('order_number')
+                Tables\Columns\TextColumn::make('invoice_no')
                     ->label('Order #')
                     ->searchable()
                     ->sortable(),
@@ -44,24 +45,26 @@ class RefundOrdersReportResource extends Resource
                     ->label('Customer')
                     ->searchable()
                     ->default('Walk-in'),
-                Tables\Columns\TextColumn::make('payment_method')
-                    ->label('Payment')
-                    ->badge()
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('sub_total')
+                Tables\Columns\TextColumn::make('total_amount')
                     ->label('Subtotal')
                     ->money('php')
                     ->alignRight(),
-                Tables\Columns\TextColumn::make('discount_amount')
+                Tables\Columns\TextColumn::make('item_discount')
                     ->label('Discount')
                     ->money('php')
+                    ->alignRight()
+                    ->state(fn ($record) => $record->item_discount + $record->less_tax),
+                Tables\Columns\TextColumn::make('service_charge')
+                    ->label('Service Charge')
+                    ->money('php')
                     ->alignRight(),
-                Tables\Columns\TextColumn::make('total')
-                    ->label('Total')
+
+                Tables\Columns\TextColumn::make('total_due')
+                    ->label('Total Due')
                     ->money('php')
                     ->alignRight()
-                    ->weight('bold')
-                    ->color('danger'),
+                    ->state(fn ($record) => $record->total_due + $record->service_charge),
+
                 Tables\Columns\TextColumn::make('cashier.name')
                     ->label('Cashier')
                     ->searchable(),
@@ -109,7 +112,10 @@ class RefundOrdersReportResource extends Resource
                     }),
             ])
             ->filtersFormColumns(2)
-            ->defaultSort('created_at', 'desc');
+            ->defaultSort('created_at', 'desc')
+            ->bulkActions([
+                ExportBulkAction::make(),
+            ]);
     }
 
     public static function getPages(): array

@@ -36,6 +36,8 @@ class Order extends Model
         'notes',
         'meta_data',
         'status',
+        'refunded_at',
+        'refunded_cashier_id',
     ];
 
     protected $casts = [
@@ -167,4 +169,6 @@ class Order extends Model
     {
         return $this->belongsTo(Branch::class);
     }
+
+
 }

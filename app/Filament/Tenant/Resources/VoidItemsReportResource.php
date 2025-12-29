@@ -3,7 +3,7 @@
 namespace App\Filament\Tenant\Resources;
 
 use App\Filament\Tenant\Resources\VoidItemsReportResource\Pages;
-use App\Models\OrderItem;
+use App\Models\VoidItem;
 use App\Models\Branch;
 use App\Models\User;
 use Filament\Resources\Resource;
@@ -13,10 +13,11 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
 use Filament\Forms\Components\DatePicker;
 use Illuminate\Database\Eloquent\Builder;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
 class VoidItemsReportResource extends Resource
 {
-    protected static ?string $model = OrderItem::class;
+    protected static ?string $model = VoidItem::class;
     protected static ?string $navigationIcon = 'heroicon-o-x-circle';
     protected static ?string $navigationLabel = 'Void Items Report';
     protected static ?string $modelLabel = 'Void Item';
@@ -27,20 +28,21 @@ class VoidItemsReportResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query->where('is_void', 1)->with(['order', 'product', 'server']))
             ->columns([
-                Tables\Columns\TextColumn::make('order.branch.name')
-                    ->label('Branch')
+                Tables\Columns\TextColumn::make('cashier.name')
+                    ->label('Cashier')
                     ->searchable()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('order.created_at')
+                    ->sortable()
+                    ->default('N/A'),
+                Tables\Columns\TextColumn::make('voided_at')
                     ->label('Date')
-                    ->date('M d, Y')
+                    ->date('M d, Y h:i A')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('order.order_number')
-                    ->label('Order #')
+                Tables\Columns\TextColumn::make('batch_number')
+                    ->label('Batch #')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->default('N/A'),
                 Tables\Columns\TextColumn::make('product.name')
                     ->label('Product')
                     ->searchable()
@@ -59,8 +61,8 @@ class VoidItemsReportResource extends Resource
                     ->alignRight()
                     ->color('danger')
                     ->weight('bold'),
-                Tables\Columns\TextColumn::make('order.cashier.name')
-                    ->label('Cashier')
+                Tables\Columns\TextColumn::make('voidedBy.name')
+                    ->label('Voided By')
                     ->searchable()
                     ->default('N/A'),
                 Tables\Columns\TextColumn::make('server.name')
@@ -73,11 +75,11 @@ class VoidItemsReportResource extends Resource
                     ->wrap(),
             ])
             ->filters([
-                SelectFilter::make('order.branch_id')
-                    ->label('Branch')
-                    ->relationship('order.branch', 'name')
+                SelectFilter::make('cashier_id')
+                    ->label('Cashier')
+                    ->relationship('cashier', 'name')
                     ->searchable(),
-                Filter::make('created_at')
+                Filter::make('voided_at')
                     ->form([
                         DatePicker::make('from')
                             ->label('From Date'),
@@ -88,11 +90,11 @@ class VoidItemsReportResource extends Resource
                         return $query
                             ->when(
                                 $data['from'],
-                                fn (Builder $query, $date): Builder => $query->whereHas('order', fn ($q) => $q->whereDate('created_at', '>=', $date)),
+                                fn (Builder $query, $date): Builder => $query->whereDate('voided_at', '>=', $date),
                             )
                             ->when(
                                 $data['until'],
-                                fn (Builder $query, $date): Builder => $query->whereHas('order', fn ($q) => $q->whereDate('created_at', '<=', $date)),
+                                fn (Builder $query, $date): Builder => $query->whereDate('voided_at', '<=', $date),
                             );
                     })
                     ->indicateUsing(function (array $data): array {
@@ -107,7 +109,10 @@ class VoidItemsReportResource extends Resource
                     }),
             ])
             ->filtersFormColumns(1)
-            ->defaultSort('order.created_at', 'desc');
+            ->defaultSort('voided_at', 'desc')
+            ->bulkActions([
+                ExportBulkAction::make(),
+            ]);
     }
 
     public static function getPages(): array
