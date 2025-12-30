@@ -17,7 +17,13 @@
                 <!-- Main Content Grid -->
                 <div class="grid grid-cols-1 lg:grid-cols-10 gap-6 mb-6">
                     <!-- Currency Denominations Section - 70% -->
-                    <div :class="otherPaymentMethods.length > 0 ? 'lg:col-span-7' : 'lg:col-span-10'">
+                    <div
+                        :class="
+                            otherPaymentMethods.length > 0
+                                ? 'lg:col-span-7'
+                                : 'lg:col-span-10'
+                        "
+                    >
                         <div class="rounded-2xl bg-white p-6 shadow-lg h-full">
                             <h2 class="mb-4 text-xl font-bold text-neutral-900">
                                 Cash Count
@@ -35,7 +41,7 @@
                     </div>
 
                     <!-- Other Payment Methods - 30% -->
-                    <div 
+                    <div
                         v-if="otherPaymentMethods.length > 0"
                         class="lg:col-span-3"
                     >
