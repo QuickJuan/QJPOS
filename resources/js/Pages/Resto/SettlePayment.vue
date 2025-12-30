@@ -1190,7 +1190,6 @@ const handleSettlePayment = async () => {
         const response = await settlePayment({
             cart_id: props.cart.id,
             payment_method_id: selectedPaymentMethodId.value,
-            payment_method_id: selectedPaymentMethodId.value,
             amount_in_payment_currency: Number(
                 amountTenderedNumber.value.toFixed(2)
             ),
