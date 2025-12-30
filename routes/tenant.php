@@ -320,11 +320,11 @@ if (!isCentralDomain()) {
                 });
 
             // ROUTES FOR REPORTS
-            Route::as('reports.')
-                ->prefix('/reports')
-                ->group(function () {
-                    Route::get('/hourly-sales', [\App\Http\Controllers\HourlySalesReportController::class, 'index'])->name('hourly-sales');
-                });
+            // Route::as('reports.')
+            //     ->prefix('/reports')
+            //     ->group(function () {
+            //         Route::get('/hourly-sales', [\App\Http\Controllers\HourlySalesReportController::class, 'index'])->name('hourly-sales');
+            //     });
         });
 
     // // Web Receipt Route (for browser viewing)
