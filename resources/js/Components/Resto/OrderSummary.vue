@@ -114,10 +114,7 @@
         <!-- Session Summary Modal -->
         <SessionSummaryModal
             :show-session-summary-modal="showSessionSummaryModal"
-            :open-session="page.props.current_cashier_session"
             :session-summary="sessionSummaryData"
-            :current-user="page.props.auth.user"
-            :general-settings="props.generalSettings"
             @close-modal="handleConfirmSessionSummary"
         />
 

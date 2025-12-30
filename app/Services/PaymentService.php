@@ -6,7 +6,6 @@ use App\Enums\TableRoomLocation\LocationType;
 use App\Enums\TableRoomStatusType;
 use App\Models\Cart;
 use App\Models\CartItem;
-use App\Models\Currency;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
@@ -69,7 +68,6 @@ class PaymentService
                     'cashierSession.branch',
                     'customer',
                     'payments.paymentMethod',
-                    'payments.currency',
                 ]);
             });
         } catch (\Exception $e) {
@@ -114,15 +112,13 @@ class PaymentService
             'method' => $paymentContext['method']->name,
             'payment_type' => $paymentType,
             'currency' => [
-                'id' => $paymentContext['currency']->id,
-                'code' => $paymentContext['currency']->code,
-                'symbol' => $paymentContext['currency']->symbol,
-                'exchange_rate' => $paymentContext['currency']->exchange_rate,
-                'is_default' => $paymentContext['currency']->is_default,
+                'code' => $paymentContext['currency_code'],
+                'symbol' => $paymentContext['currency_symbol'],
+                'exchange_rate' => $paymentContext['exchange_rate'],
             ],
             'amount_in_payment_currency' => $paymentContext['amount_in_payment_currency'],
             'amount_in_default_currency' => $baseAmountPaid,
-            'exchange_rate' => $paymentContext['currency']->exchange_rate,
+            'exchange_rate' => $paymentContext['exchange_rate'],
             'change' => $changeAmount,
             'details' => $paymentContext['payment_details'] ?? [],
         ];
@@ -234,10 +230,19 @@ class PaymentService
 
     private function preparePaymentContext(array $payload): array
     {
-        $paymentMethod = PaymentMethod::with('currency')->findOrFail($payload['payment_method_id']);
+        $paymentMethod = PaymentMethod::findOrFail($payload['payment_method_id']);
 
-        $currencyId = $payload['currency_id'] ?? $paymentMethod->currency_id;
-        $currency = Currency::findOrFail($currencyId);
+        // Use payment method's embedded currency for cash, default currency (rate 1) for others
+        $exchangeRate = 1.0;
+        $currencyCode = 'PHP';
+        $currencySymbol = '₱';
+
+        if ($paymentMethod->isCash() && $paymentMethod->currency_code) {
+            $exchangeRate = (float) ($paymentMethod->exchange_rate ?? 1.0);
+            $currencyCode = $paymentMethod->currency_code;
+            $currencySymbol = $paymentMethod->symbol ?? '₱';
+        }
+
         $paymentDetails = $payload['payment_details'] ?? [];
         if (! is_array($paymentDetails)) {
             $paymentDetails = [];
@@ -249,11 +254,13 @@ class PaymentService
             throw new \InvalidArgumentException('Amount tendered must be greater than zero.');
         }
 
-        $baseAmountPaid = (float) ($payload['computed_amount_paid'] ?? round($amountInPaymentCurrency * (float) $currency->exchange_rate, 2));
+        $baseAmountPaid = (float) ($payload['computed_amount_paid'] ?? round($amountInPaymentCurrency * $exchangeRate, 2));
 
         return [
             'method' => $paymentMethod,
-            'currency' => $currency,
+            'currency_code' => $currencyCode,
+            'currency_symbol' => $currencySymbol,
+            'exchange_rate' => $exchangeRate,
             'amount_in_payment_currency' => $amountInPaymentCurrency,
             'base_amount_paid' => $baseAmountPaid,
             'reference_number' => $payload['reference_number'] ?? null,
@@ -267,10 +274,9 @@ class PaymentService
         return Payment::create([
             'order_id' => $order->id,
             'payment_method_id' => $paymentContext['method']->id,
-            'currency_id' => $paymentContext['currency']->id,
             'amount' => $paymentContext['base_amount_paid'],
             'amount_in_payment_currency' => $paymentContext['amount_in_payment_currency'],
-            'exchange_rate' => $paymentContext['currency']->exchange_rate,
+            'exchange_rate' => $paymentContext['exchange_rate'],
             'change_amount' => $paymentContext['change_amount'] ?? 0,
             'reference_number' => $paymentContext['reference_number'],
             'notes' => $paymentContext['notes'],

@@ -12,7 +12,11 @@ class PaymentMethod extends Model
     protected $fillable = [
         'payment_type',
         'name',
-        'currency_id',
+        'currency_code',
+        'currency_name',
+        'symbol',
+        'exchange_rate',
+        'is_default_cash',
         'is_active',
         'sort_order',
     ];
@@ -20,6 +24,8 @@ class PaymentMethod extends Model
     protected $casts = [
         'payment_type' => PaymentType::class,
         'is_active' => 'boolean',
+        'is_default_cash' => 'boolean',
+        'exchange_rate' => 'decimal:4',
         'sort_order' => 'integer',
     ];
 
@@ -32,12 +38,11 @@ class PaymentMethod extends Model
 
         // When saving/updating a payment method
         static::saving(function ($paymentMethod) {
-            // If payment type is not cash, set currency_id to default currency
-            if ($paymentMethod->payment_type !== PaymentType::CASH) {
-                $defaultCurrency = Currency::where('is_default', true)->first();
-                if ($defaultCurrency) {
-                    $paymentMethod->currency_id = $defaultCurrency->id;
-                }
+            // Only one payment method can be default cash
+            if ($paymentMethod->is_default_cash && $paymentMethod->payment_type === PaymentType::CASH) {
+                static::where('id', '!=', $paymentMethod->id)
+                    ->where('payment_type', PaymentType::CASH)
+                    ->update(['is_default_cash' => false]);
             }
         });
     }
@@ -59,6 +64,23 @@ class PaymentMethod extends Model
     }
 
     /**
+     * Scope to get default cash payment method
+     */
+    public function scopeDefaultCash($query)
+    {
+        return $query->where('payment_type', PaymentType::CASH)
+            ->where('is_default_cash', true);
+    }
+
+    /**
+     * Scope to get cash payment methods
+     */
+    public function scopeCash($query)
+    {
+        return $query->where('payment_type', PaymentType::CASH);
+    }
+
+    /**
      * Scope to order by sort order
      */
     public function scopeOrdered($query)
@@ -75,11 +97,11 @@ class PaymentMethod extends Model
     }
 
     /**
-     * Get the currency for this payment method (for cash payments)
+     * Get denominations for this payment method
      */
-    public function currency(): BelongsTo
+    public function denominations(): HasMany
     {
-        return $this->belongsTo(Currency::class);
+        return $this->hasMany(CurrencyDenomination::class);
     }
 
     /**
@@ -89,12 +111,5 @@ class PaymentMethod extends Model
     {
         return $this->payment_type === PaymentType::CASH;
     }
-
-    /**
-     * Check if this payment method requires currency
-     */
-    public function requiresCurrency(): bool
-    {
-        return $this->isCash();
-    }
 }
+

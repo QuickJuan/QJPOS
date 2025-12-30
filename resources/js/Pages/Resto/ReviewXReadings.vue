@@ -743,10 +743,7 @@
         <!-- Session Summary Modal -->
         <SessionSummaryModal
             :show-session-summary-modal="showSessionSummaryModal"
-            :open-session="activeSession"
             :session-summary="sessionSummary"
-            :current-user="page.props.auth.user"
-            :general-settings="page.props.company_info"
             @close-modal="showSessionSummaryModal = false"
         />
     </CashieringLayout>

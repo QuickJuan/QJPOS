@@ -3,7 +3,6 @@
 namespace App\Http\Requests;
 
 use App\Enums\PaymentType;
-use App\Models\Currency;
 use App\Models\PaymentMethod;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -27,7 +26,6 @@ class SettleBillRequest extends FormRequest
         return [
             'cart_id' => ['required', 'integer', 'exists:carts,id'],
             'payment_method_id' => ['required', 'integer', 'exists:payment_methods,id'],
-            'currency_id' => ['nullable', 'integer', 'exists:currencies,id'],
             'amount_in_payment_currency' => ['required', 'numeric', 'min:0'],
             'amount_paid' => ['nullable', 'numeric', 'min:0'],
             'total_amount' => ['required', 'numeric', 'min:0'],
@@ -73,25 +71,21 @@ class SettleBillRequest extends FormRequest
 
             $paymentDetails = is_array($paymentDetailsInput) ? $paymentDetailsInput : [];
 
-            $currencyId = $this->input('currency_id') ?? $paymentMethod->currency_id;
+            // For cash payments, use the payment method's embedded currency
+            // For non-cash payments, use default currency (exchange_rate = 1)
+            $exchangeRate = 1.0;
 
-            if ($paymentMethod->isCash() && ! $currencyId) {
-                $validator->errors()->add('currency_id', 'Please select a currency for cash payments.');
-                return;
+            if ($paymentMethod->isCash()) {
+                // Validate that cash payment method has currency info
+                if (!$paymentMethod->currency_code) {
+                    $validator->errors()->add('payment_method_id', 'Selected cash payment method is missing currency information.');
+                    return;
+                }
+
+                $exchangeRate = (float) ($paymentMethod->exchange_rate ?? 1.0);
             }
 
-            if (! $currencyId) {
-                return;
-            }
-
-            $currency = Currency::find($currencyId);
-
-            if (! $currency) {
-                $validator->errors()->add('currency_id', 'Selected currency is invalid.');
-                return;
-            }
-
-            $baseAmountPaid = round($amountInPaymentCurrency * (float) $currency->exchange_rate, 2);
+            $baseAmountPaid = round($amountInPaymentCurrency * $exchangeRate, 2);
 
             if ($baseAmountPaid + 0.0001 < $totalAmount) {
                 $validator->errors()->add('amount_in_payment_currency', 'Amount tendered is insufficient to settle the bill.');
@@ -173,7 +167,6 @@ class SettleBillRequest extends FormRequest
             }
 
             $this->merge([
-                'currency_id' => $currencyId,
                 'computed_amount_paid' => $baseAmountPaid,
                 'reference_number' => $referenceNumber,
                 'payment_details' => $paymentDetails,

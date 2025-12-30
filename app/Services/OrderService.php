@@ -196,4 +196,40 @@ class OrderService
         return $discounts;
     }
 
+    /**
+     * Get comprehensive shift sales statistics in a single query.
+     * Combines order totals and product counts.
+     */
+    public function getSummarySalesPerShift(int $shiftId)
+    {
+        info('getting summary sales per shift for shift ID: ' . $shiftId);
+        // Single query combining orders and items
+        $stats = \DB::table('orders')
+            ->leftJoin('order_items', 'orders.id', '=', 'order_items.order_id')
+            ->where('orders.cashier_session_id', $shiftId)
+            ->where('orders.status', '=', 'settled')
+            ->selectRaw("
+                COUNT(DISTINCT orders.id) as total_orders,
+                SUM(orders.total_amount) as total_amount,
+                SUM(orders.total_due) as total_due,
+                SUM(orders.item_discount) as item_discount,
+                SUM(orders.service_charge) as service_charge,
+                SUM(orders.less_tax) as less_tax,
+                SUM(orders.vatable_sales) as vatable_sales,
+                SUM(orders.vat_amount) as vat_amount,
+                SUM(orders.vat_exempt_sales) as vat_exempt_sales,
+                SUM(orders.zero_rated_sales) as zero_rated_sales,
+                SUM(orders.non_vat) as non_vat_sales,
+                MIN(orders.invoice_no) as min_invoice_no,
+                MAX(orders.invoice_no) as max_invoice_no,
+                MIN(orders.bill_no) as min_bill_no,
+                MAX(orders.bill_no) as max_bill_no,
+                COUNT(DISTINCT CASE WHEN order_items.is_void = false THEN order_items.product_id END) as total_sku,
+                SUM(CASE WHEN order_items.is_void = false THEN order_items.quantity ELSE 0 END) as total_quantity
+            ")
+            ->first();
+
+        return $stats;
+    }
+
 }

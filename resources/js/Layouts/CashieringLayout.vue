@@ -125,11 +125,8 @@
         <!-- Session Summary Modal -->
         <SessionSummaryModal
             :show-session-summary-modal="showSessionSummaryModal"
-            :open-session="page.props.current_cashier_session"
             :session-summary="sessionSummaryData"
-            :current-user="page.props.auth.user"
             @close-modal="handleCloseSummaryModal"
-            @confirm-close="handleCloseSummaryModal"
         />
     </div>
 </template>
@@ -150,6 +147,7 @@ import {
     TableCellsIcon,
     DocumentTextIcon,
     ClipboardDocumentListIcon,
+    BanknotesIcon,
 } from "@heroicons/vue/24/outline";
 
 const page = usePage();

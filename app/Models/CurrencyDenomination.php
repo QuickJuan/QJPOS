@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class CurrencyDenomination extends Model
 {
     protected $fillable = [
-        'currency_id',
+        'payment_method_id',
         'value',
         'label',
         'sort_order',
@@ -21,8 +21,18 @@ class CurrencyDenomination extends Model
         'is_active' => 'boolean',
     ];
 
-    public function currency(): BelongsTo
+    public function paymentMethod(): BelongsTo
     {
-        return $this->belongsTo(Currency::class);
+        return $this->belongsTo(PaymentMethod::class);
+    }
+
+    /**
+     * Scope to only get denominations for cash payment methods
+     */
+    public function scopeCashOnly($query)
+    {
+        return $query->whereHas('paymentMethod', function ($q) {
+            $q->where('payment_type', 'cash');
+        });
     }
 }

@@ -1,18 +1,19 @@
 <?php
 
-namespace App\Filament\Tenant\Resources\CurrencyResource\RelationManagers;
+namespace App\Filament\Tenant\Resources\PaymentMethodResource\RelationManagers;
 
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class DenominationsRelationManager extends RelationManager
 {
-    protected static string $relationship = 'activeDenominations';
+    protected static string $relationship = 'denominations';
 
-    protected static ?string $recordTitleAttribute = 'label';
+    protected static bool $isLazy = false;
 
     public function form(Form $form): Form
     {
@@ -21,25 +22,25 @@ class DenominationsRelationManager extends RelationManager
                 Forms\Components\TextInput::make('value')
                     ->required()
                     ->numeric()
-                    ->step(0.01)
                     ->label('Denomination Value')
-                    ->helperText('Enter the monetary value of this denomination'),
+                    ->helperText('The numeric value (e.g., 1, 5, 10, 20, 50, 100, 500, 1000)'),
 
                 Forms\Components\TextInput::make('label')
-                    ->maxLength(255)
+                    ->required()
+                    ->maxLength(50)
                     ->label('Label')
-                    ->helperText('Optional display label (e.g., "₱100 Bill")')
-                    ->placeholder('Auto-generated from currency symbol and value'),
+                    ->helperText('Display label (e.g., "₱1", "₱5", "$1", "$5")'),
 
                 Forms\Components\TextInput::make('sort_order')
-                    ->integer()
+                    ->numeric()
                     ->default(0)
                     ->label('Sort Order')
-                    ->helperText('Lower numbers appear first'),
+                    ->helperText('Order in which denominations appear'),
 
                 Forms\Components\Toggle::make('is_active')
+                    ->default(true)
                     ->label('Active')
-                    ->default(true),
+                    ->helperText('Only active denominations will appear in forms'),
             ]);
     }
 
@@ -49,11 +50,12 @@ class DenominationsRelationManager extends RelationManager
             ->recordTitleAttribute('label')
             ->columns([
                 Tables\Columns\TextColumn::make('value')
-                    ->numeric(2)
+                    ->numeric()
                     ->sortable()
                     ->label('Value'),
 
                 Tables\Columns\TextColumn::make('label')
+                    ->searchable()
                     ->label('Label'),
 
                 Tables\Columns\TextColumn::make('sort_order')
@@ -64,15 +66,13 @@ class DenominationsRelationManager extends RelationManager
                 Tables\Columns\IconColumn::make('is_active')
                     ->boolean()
                     ->label('Active'),
-
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->label('Created'),
             ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_active')
-                    ->label('Active'),
+                    ->label('Active Status')
+                    ->placeholder('All denominations')
+                    ->trueLabel('Active only')
+                    ->falseLabel('Inactive only'),
             ])
             ->headerActions([
                 Tables\Actions\CreateAction::make(),
@@ -85,6 +85,13 @@ class DenominationsRelationManager extends RelationManager
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->defaultSort('sort_order', 'asc');
+    }
+
+    public static function canViewForRecord(\Illuminate\Database\Eloquent\Model $ownerRecord, string $pageClass): bool
+    {
+        // Only show denominations tab for cash payment methods
+        return $ownerRecord->payment_type?->value === 'cash' || $ownerRecord->payment_type === 'cash';
     }
 }
