@@ -249,7 +249,7 @@
                                                         <p
                                                             class="font-semibold"
                                                         >
-                                                            ₱{{
+                                                            {{
                                                                 formatMoney(
                                                                     sessionSummary.beginning_cash ||
                                                                         0
@@ -258,25 +258,6 @@
                                                         </p>
                                                     </div>
 
-                                                    <div
-                                                        class="flex flex-col lg:flex-row lg:justify-between"
-                                                    >
-                                                        <p
-                                                            class="text-sm text-neutral-600"
-                                                        >
-                                                            Cash Denomination
-                                                        </p>
-                                                        <p
-                                                            class="font-semibold"
-                                                        >
-                                                            ₱{{
-                                                                formatMoney(
-                                                                    sessionSummary.cash_denomination_total ||
-                                                                        0
-                                                                )
-                                                            }}
-                                                        </p>
-                                                    </div>
                                                     <div
                                                         v-if="
                                                             getGiftCheckTotal(
@@ -308,50 +289,286 @@
                                                         <p
                                                             class="text-sm text-neutral-600"
                                                         >
-                                                            Expected Cash
+                                                            Net Sales
                                                         </p>
                                                         <p
                                                             class="font-semibold"
                                                         >
-                                                            ₱{{
+                                                            {{
                                                                 formatMoney(
                                                                     netSalesWithServiceCharge
                                                                 )
                                                             }}
                                                         </p>
                                                     </div>
-                                                    <hr />
-                                                    <div
-                                                        class="flex flex-col lg:flex-row lg:justify-between"
+                                                </div>
+
+                                                <!-- Cash Movement Section -->
+                                                <div
+                                                    v-if="
+                                                        sessionSummary.meta_data
+                                                            ?.cash_in ||
+                                                        sessionSummary.meta_data
+                                                            ?.cash_out
+                                                    "
+                                                    class="mt-6 p-4 bg-neutral-50 rounded-lg"
+                                                >
+                                                    <h4
+                                                        class="text-sm font-semibold text-neutral-700 mb-3"
                                                     >
-                                                        <p
-                                                            class="text-sm text-neutral-600"
+                                                        Cash Movement
+                                                    </h4>
+                                                    <div class="space-y-2">
+                                                        <div
+                                                            class="flex justify-between"
                                                         >
-                                                            Variance
-                                                        </p>
-                                                        <p
-                                                            :class="[
-                                                                'font-semibold',
-                                                                varianceOver >=
-                                                                0
-                                                                    ? 'text-success-600'
-                                                                    : 'text-error-600',
-                                                            ]"
+                                                            <p
+                                                                class="text-sm text-neutral-600"
+                                                            >
+                                                                Cash In
+                                                            </p>
+                                                            <p
+                                                                class="font-semibold text-success-600"
+                                                            >
+                                                                +{{
+                                                                    formatMoney(
+                                                                        sessionSummary
+                                                                            .meta_data
+                                                                            ?.cash_in ||
+                                                                            0
+                                                                    )
+                                                                }}
+                                                            </p>
+                                                        </div>
+                                                        <div
+                                                            class="flex justify-between"
                                                         >
-                                                            ₱{{
-                                                                formatMoney(
-                                                                    varianceOver
-                                                                )
-                                                            }}
-                                                        </p>
+                                                            <p
+                                                                class="text-sm text-neutral-600"
+                                                            >
+                                                                Cash Out
+                                                            </p>
+                                                            <p
+                                                                class="font-semibold text-error-600"
+                                                            >
+                                                                -{{
+                                                                    formatMoney(
+                                                                        sessionSummary
+                                                                            .meta_data
+                                                                            ?.cash_out ||
+                                                                            0
+                                                                    )
+                                                                }}
+                                                            </p>
+                                                        </div>
                                                     </div>
                                                 </div>
 
-                                                <CashBreakdown
-                                                    :cash-denomination-details="
-                                                        sessionSummary.cash_denomination_details
+                                                <!-- Cash Comparison Section -->
+                                                <div
+                                                    v-if="
+                                                        sessionSummary.meta_data
+                                                            ?.cash_comparison &&
+                                                        sessionSummary.meta_data
+                                                            .cash_comparison
+                                                            .length > 0
                                                     "
-                                                />
+                                                    class="mt-6"
+                                                >
+                                                    <h4
+                                                        class="text-sm font-semibold text-neutral-700 mb-3"
+                                                    >
+                                                        Cash Comparison
+                                                    </h4>
+                                                    <div
+                                                        v-for="comparison in sessionSummary
+                                                            .meta_data
+                                                            .cash_comparison"
+                                                        :key="
+                                                            comparison.payment_method_id
+                                                        "
+                                                        class="mb-4 p-3 bg-white border border-neutral-200 rounded-lg"
+                                                    >
+                                                        <p
+                                                            class="font-semibold text-neutral-800 mb-2"
+                                                        >
+                                                            {{
+                                                                comparison.payment_method_name
+                                                            }}
+                                                            ({{
+                                                                comparison.currency_code
+                                                            }})
+                                                        </p>
+                                                        <div class="space-y-1">
+                                                            <div
+                                                                class="flex justify-between text-sm"
+                                                            >
+                                                                <span
+                                                                    class="text-neutral-600"
+                                                                    >Expected:</span
+                                                                >
+                                                                <span
+                                                                    class="font-medium"
+                                                                    >{{
+                                                                        comparison.symbol
+                                                                    }}{{
+                                                                        formatMoney(
+                                                                            comparison.expected_amount_in_currency
+                                                                        )
+                                                                    }}</span
+                                                                >
+                                                            </div>
+                                                            <div
+                                                                class="flex justify-between text-sm"
+                                                            >
+                                                                <span
+                                                                    class="text-neutral-600"
+                                                                    >Actual:</span
+                                                                >
+                                                                <span
+                                                                    class="font-medium"
+                                                                    >{{
+                                                                        comparison.symbol
+                                                                    }}{{
+                                                                        formatMoney(
+                                                                            comparison.actual_amount_in_currency
+                                                                        )
+                                                                    }}</span
+                                                                >
+                                                            </div>
+                                                            <hr />
+                                                            <div
+                                                                class="flex justify-between text-sm font-semibold"
+                                                            >
+                                                                <span>{{
+                                                                    comparison.variance_in_currency >=
+                                                                    0
+                                                                        ? "Overage:"
+                                                                        : "Shortage:"
+                                                                }}</span>
+                                                                <span
+                                                                    :class="[
+                                                                        comparison.variance_in_currency >=
+                                                                        0
+                                                                            ? 'text-success-600'
+                                                                            : 'text-error-600',
+                                                                    ]"
+                                                                    >{{
+                                                                        comparison.symbol
+                                                                    }}{{
+                                                                        formatMoney(
+                                                                            Math.abs(
+                                                                                comparison.variance_in_currency
+                                                                            )
+                                                                        )
+                                                                    }}</span
+                                                                >
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Other Payments Comparison Section -->
+                                                <div
+                                                    v-if="
+                                                        sessionSummary.meta_data
+                                                            ?.other_payments_comparison &&
+                                                        sessionSummary.meta_data
+                                                            .other_payments_comparison
+                                                            .length > 0
+                                                    "
+                                                    class="mt-6"
+                                                >
+                                                    <h4
+                                                        class="text-sm font-semibold text-neutral-700 mb-3"
+                                                    >
+                                                        Other Payments
+                                                        Comparison
+                                                    </h4>
+                                                    <div
+                                                        v-for="comparison in sessionSummary
+                                                            .meta_data
+                                                            .other_payments_comparison"
+                                                        :key="
+                                                            comparison.payment_method_id
+                                                        "
+                                                        class="mb-4 p-3 bg-white border border-neutral-200 rounded-lg"
+                                                    >
+                                                        <p
+                                                            class="font-semibold text-neutral-800 mb-2"
+                                                        >
+                                                            {{
+                                                                comparison.payment_method_name
+                                                            }}
+                                                            <span
+                                                                class="text-xs text-neutral-500 uppercase"
+                                                                >({{
+                                                                    comparison.payment_type
+                                                                }})</span
+                                                            >
+                                                        </p>
+                                                        <div class="space-y-1">
+                                                            <div
+                                                                class="flex justify-between text-sm"
+                                                            >
+                                                                <span
+                                                                    class="text-neutral-600"
+                                                                    >Expected:</span
+                                                                >
+                                                                <span
+                                                                    class="font-medium"
+                                                                    >₱{{
+                                                                        formatMoney(
+                                                                            comparison.expected_amount_in_base
+                                                                        )
+                                                                    }}</span
+                                                                >
+                                                            </div>
+                                                            <div
+                                                                class="flex justify-between text-sm"
+                                                            >
+                                                                <span
+                                                                    class="text-neutral-600"
+                                                                    >Actual:</span
+                                                                >
+                                                                <span
+                                                                    class="font-medium"
+                                                                    >₱{{
+                                                                        formatMoney(
+                                                                            comparison.actual_amount_in_base
+                                                                        )
+                                                                    }}</span
+                                                                >
+                                                            </div>
+                                                            <hr />
+                                                            <div
+                                                                class="flex justify-between text-sm font-semibold"
+                                                            >
+                                                                <span>{{
+                                                                    comparison.variance_in_base >=
+                                                                    0
+                                                                        ? "Overage:"
+                                                                        : "Shortage:"
+                                                                }}</span>
+                                                                <span
+                                                                    :class="[
+                                                                        comparison.variance_in_base >=
+                                                                        0
+                                                                            ? 'text-success-600'
+                                                                            : 'text-error-600',
+                                                                    ]"
+                                                                    >₱{{
+                                                                        formatMoney(
+                                                                            Math.abs(
+                                                                                comparison.variance_in_base
+                                                                            )
+                                                                        )
+                                                                    }}</span
+                                                                >
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
 
                                             <div class="">

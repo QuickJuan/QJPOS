@@ -89,6 +89,7 @@ class CashierSessionService
         $closingCash = 0;
 
         $cashDenominations = $request->cashDenomination['currencies'];
+        $cashDenominationPayload = $request->cashDenomination['currencies'];
 
 
         foreach ($cashDenominations as $currencyData) {
@@ -160,9 +161,10 @@ class CashierSessionService
          * use DB query to get sum of discount amount per discount type for a specific shift
          */
         $shiftData = [
-            // 'closing_time'              => now(),
+            'closing_time'              => now(),
             'closing_cash'              => $closingCash,
-            'cash_denomination'         => $cashDenominations,
+            'cash_denomination'         => $cashDenominationPayload,
+            'total_sales'               => (float) $ordersTotals->total_due,
             'meta_data'                 => [
                 'total_orders'   => (float) $ordersTotals->total_orders,
                 'gross_sales'  => (float) $ordersTotals->total_amount,
@@ -195,9 +197,9 @@ class CashierSessionService
         ];
         info('Shift Data: ');
         info(json_encode($shiftData));
-        info('End Shift Data');
 
-        // $session->update($shiftData);
+
+        $session->update($shiftData);
 
         return $session->fresh();
     }

@@ -123,6 +123,8 @@ import { formatMoney } from "@/Utils/FormatMoney";
 import { router } from "@inertiajs/vue3";
 import { route } from "ziggy-js";
 import axios from "axios";
+import { thermalPrinter } from "@/Services/ThermalPrinterService";
+import { useToast } from "primevue";
 
 interface CurrencyOption {
     id: string | number;
@@ -147,6 +149,7 @@ const props = defineProps<{
 
 const page = usePage();
 const isSubmitting = ref(false);
+const toast = useToast();
 
 const defaultCurrency = computed(() => (page.props as any)?.default_currency);
 const baseCurrencySymbol = computed(
@@ -365,21 +368,59 @@ const handleConfirmCloseSession = async () => {
             shiftNo: props.openSession?.id,
         });
 
-        alert("request sent");
-        console.log("Close shift response:", response);
-        // if (response.data.success) {
-        //     // Redirect to home
-        //     router.visit(route("home"));
-        // } else {
-        //     throw new Error(response.data.message || "Failed to close shift");
-        // }
+        if (response.data?.success && response.data?.session) {
+            const sessionData = response.data.session;
+
+            // Prepare session data for printing
+            const printData = {
+                id: sessionData.id,
+                shift_start: sessionData.started_time,
+                shift_end: sessionData.closing_time || new Date().toISOString(),
+                branch: (page.props as any)?.auth?.user?.branch || {},
+                cashier: (page.props as any)?.auth?.user?.name || "Cashier",
+                beginning_cash: sessionData.beginning_cash || 0,
+                total_sales: sessionData.total_sales || 0,
+                cash_denomination_total: sessionData.closing_cash || 0,
+                cash_denomination_details:
+                    sessionData.cash_denomination || null,
+                meta_data: sessionData.meta_data || {},
+            };
+
+            // Try to print X Reading
+            try {
+                await thermalPrinter.printSessionSummary(printData);
+                toast.add({
+                    severity: "success",
+                    summary: "Shift Closed",
+                    detail: "X Reading printed successfully. Logging out...",
+                    life: 2000,
+                });
+            } catch (printError) {
+                console.error("Failed to print X Reading:", printError);
+                toast.add({
+                    severity: "warn",
+                    summary: "Shift Closed",
+                    detail: "Shift closed but printing failed. Logging out...",
+                    life: 2000,
+                });
+            }
+
+            // Logout the user after closing shift
+            setTimeout(() => {
+                router.post(route("logout"));
+            }, 2000);
+        }
     } catch (error: any) {
         console.error("Failed to close shift:", error);
-        alert(
-            error.response?.data?.message ||
+        toast.add({
+            severity: "error",
+            summary: "Error",
+            detail:
+                error.response?.data?.message ||
                 error.message ||
-                "Failed to close shift. Please try again."
-        );
+                "Failed to close shift. Please try again.",
+            life: 5000,
+        });
         isSubmitting.value = false;
     }
 };
