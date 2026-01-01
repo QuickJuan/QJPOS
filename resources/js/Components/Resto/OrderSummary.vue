@@ -114,10 +114,7 @@
         <!-- Session Summary Modal -->
         <SessionSummaryModal
             :show-session-summary-modal="showSessionSummaryModal"
-            :open-session="page.props.current_cashier_session"
             :session-summary="sessionSummaryData"
-            :current-user="page.props.auth.user"
-            :general-settings="props.generalSettings"
             @close-modal="handleConfirmSessionSummary"
         />
 
@@ -370,7 +367,6 @@ const handleDelete = (orderItem: any) => {
 };
 
 const removeOrder = (orderItem: any) => {
-    alert("removing order item id: " + orderItem.id);
     router.delete(route("resto.cart.delete", { cartItemId: orderItem.id }), {
         onSuccess: () => {
             toast.add({
@@ -547,6 +543,7 @@ const handleRequiredReason = (data: any) => {
                 cart_item_id: data.orderItem.id,
                 approver_id: data.approverId,
                 otp_code: data.otpCode,
+                reason: data.reason,
             })
             .then((response) => {
                 toast.add({

@@ -125,11 +125,8 @@
         <!-- Session Summary Modal -->
         <SessionSummaryModal
             :show-session-summary-modal="showSessionSummaryModal"
-            :open-session="page.props.current_cashier_session"
             :session-summary="sessionSummaryData"
-            :current-user="page.props.auth.user"
             @close-modal="handleCloseSummaryModal"
-            @confirm-close="handleCloseSummaryModal"
         />
     </div>
 </template>
@@ -137,9 +134,10 @@
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { route } from "ziggy-js";
-import { useConfirm } from "primevue";
-import { useToast } from "primevue";
-import { ConfirmPopup, Toast } from "primevue";
+import { useConfirm } from "primevue/useconfirm";
+import { useToast } from "primevue/usetoast";
+import Toast from "primevue/toast";
+import ConfirmPopup from "primevue/confirmpopup";
 import SessionSummaryModal from "@/Pages/Resto/Partials/SessionSummaryModal.vue";
 import PWAInstallBanner from "@/Components/PWAInstallBanner.vue";
 import CashierHeader from "@/Components/CashierHeader.vue";
@@ -150,6 +148,7 @@ import {
     TableCellsIcon,
     DocumentTextIcon,
     ClipboardDocumentListIcon,
+    BanknotesIcon,
 } from "@heroicons/vue/24/outline";
 
 const page = usePage();

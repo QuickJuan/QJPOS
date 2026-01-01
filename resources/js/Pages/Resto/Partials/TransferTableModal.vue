@@ -121,7 +121,7 @@
                 label="Transfer"
                 severity="success"
                 :disabled="!selectedTarget"
-                @click="$emit('confirmTransfer')"
+                @click="handleConfirmTransfer"
             />
         </template>
     </Dialog>
@@ -144,6 +144,11 @@ const emit = defineEmits<{
     confirmTransfer: [];
 }>();
 
+const handleConfirmTransfer = () => {
+    console.log("handleConfirmTransfer called in modal", props.selectedTarget);
+    emit("confirmTransfer");
+};
+
 const getTableStatusClasses = (status: string) => {
     const baseClasses = "hover:border-gray-300";
     switch (status) {
@@ -160,4 +165,3 @@ const getTableStatusClasses = (status: string) => {
     }
 };
 </script>
-

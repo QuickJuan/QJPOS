@@ -110,11 +110,8 @@
         <!-- Session Summary Modal -->
         <SessionSummaryModal
             :show-session-summary-modal="showSessionSummaryModal"
-            :open-session="props.openSession"
             :session-summary="sessionSummaryData"
-            :current-user="page.props.auth.user"
-            @close-modal="showSessionSummaryModal = false"
-            @confirm-close="confirmCloseSessionSummaryModal"
+            @close-modal="confirmCloseSessionSummaryModal"
         />
     </CashieringLayout>
 </template>

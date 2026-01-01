@@ -3,9 +3,9 @@ namespace App\Http\Controllers;
 
 use Exception;
 use App\Models\User;
-use App\Models\Branch;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Models\Branch;
 use App\Models\Product;
 use App\Models\TableRoom;
 use Illuminate\Http\Request;
@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\RedirectResponse;
 use App\Http\Resources\ProductResource;
 use App\Services\CashierSessionService;
+use App\Http\Requests\CloseShiftRequest;
 use App\Http\Resources\XReadingResource;
 use App\Services\ProductCategoryService;
 use App\Http\Requests\CashierSessionRequest;
@@ -192,26 +193,51 @@ class CashierSessionController extends Controller
         ]);
     }
 
-    public function showCloseShift(): Response
+    public function showCloseShift(): Response|RedirectResponse
     {
         $openSession = $this->cashierSessionService->model
-            ->openSession()
-            ->with('cashier')
+            ->where('cashier_id', Auth::id())
+            ->whereNull('closing_time')
+            ->with(['cashier', 'branch'])
             ->first();
 
+
+
         if (!$openSession) {
-            return redirect()->route('resto.index')->with('error', 'No open session found');
+            return redirect()->route('resto.index')->with('error', 'No open session found. Please start a cashier session first.');
         }
+
+        // Get distinct payment method IDs used in this session's orders
+        $usedPaymentMethodIds = \DB::table('payments')
+            ->join('orders', 'payments.order_id', '=', 'orders.id')
+            ->where('orders.cashier_session_id', $openSession->id)
+            ->distinct()
+            ->pluck('payments.payment_method_id')
+            ->toArray();
+
+        // Get cash payment method IDs (for filtering currencies)
+        $usedCashPaymentMethodIds = \DB::table('payments')
+            ->join('orders', 'payments.order_id', '=', 'orders.id')
+            ->join('payment_methods', 'payments.payment_method_id', '=', 'payment_methods.id')
+            ->where('orders.cashier_session_id', $openSession->id)
+            ->where('payment_methods.payment_type', 'cash')
+            ->distinct()
+            ->pluck('payments.payment_method_id')
+            ->toArray();
 
         return Inertia::render('Resto/CloseShift', [
             'openSession' => $openSession,
+            'usedPaymentMethodIds' => $usedPaymentMethodIds,
+            'usedCashPaymentMethodIds' => $usedCashPaymentMethodIds,
         ]);
     }
 
-    public function closeShift(CashierSessionRequest $request)
+    public function closeShift(CloseShiftRequest $request)
     {
+
         try {
-            // Close the shift and get the session
+
+            // Close the shift and get the session  `
             $session = $this->cashierSessionService->closeShift($request);
             // Return back with session to show modal first
             // The frontend will handle logout after user closes the modal
@@ -223,6 +249,7 @@ class CashierSessionController extends Controller
             ]);
 
         } catch (Exception $e) {
+            info('dit na nag eerrror: ' . $e->getMessage());
                return response()->json([
                 'message' => 'There was an error while closing the shift: ' . $e->getMessage(),
                 'success' => false,
@@ -230,33 +257,19 @@ class CashierSessionController extends Controller
         }
     }
 
-    public function getSessionSummary(): JsonResponse
+
+    public function getSessionSummaryById(int $shiftNo): JsonResponse
     {
-        $session = $this->cashierSessionService->model->openSession()->with('cashier')->first();
-
-        if (! $session) {
-            // If no open session, get the latest session (just closed)
-            $session = $this->cashierSessionService->model->where('cashier_id', Auth::id())->latest()->first();
+        try {
+            $sessionSummary = $this->cashierSessionService->getSessionSummary($shiftNo);
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => 'Failed to get session summary: ' . $e->getMessage(),
+                'success' => false,
+            ], 500);
         }
 
-        if ($session) {
-            $sessionSummary = $this->cashierSessionService->getSessionSummary($session);
-            return response()->json($sessionSummary);
-        }
-
-        return response()->json(null);
-    }
-
-    public function getSessionSummaryById(int $sessionId): JsonResponse
-    {
-        $session = $this->cashierSessionService->model->with('cashier')->find($sessionId);
-
-        if ($session) {
-            $sessionSummary = $this->cashierSessionService->getSessionSummary($session);
-            return response()->json($sessionSummary);
-        }
-
-        return response()->json(null);
+        return response()->json($sessionSummary);
     }
 
     public function tables(): Response

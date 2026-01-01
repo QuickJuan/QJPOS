@@ -225,7 +225,22 @@ interface SessionSummaryData {
     cashier: string;
     beginning_cash: number;
     total_sales: number;
-    cash_denomination_total: number;
+    cash_denomination_total: Array<{
+        symbol: string;
+        currency_code: string;
+        currency_name: string;
+        denominations: Array<{
+            count: number;
+            total: number;
+            denomination_id: number;
+            denomination_label: string;
+            denomination_value: number;
+        }>;
+        exchange_rate: number;
+        amount_in_base: number;
+        payment_method_id: number;
+        amount_in_currency: number;
+    }> | number;
     cash_denomination_details: StructuredCashDenominationDetails | Record<string, number> | null;
     meta_data: {
         less_tax: number;
@@ -270,6 +285,29 @@ interface SessionSummaryData {
         gift_check_sales?: number;
         gift_check_amount?: number;
         expected_gift_check_in_base?: number;
+        cash_in?: number;
+        cash_out?: number;
+        cash_comparison?: Array<{
+            payment_method_id: number;
+            payment_method_name: string;
+            currency_code: string;
+            currency_name: string;
+            symbol: string;
+            expected_amount_in_currency: number;
+            expected_amount_in_base: number;
+            actual_amount_in_currency: number;
+            actual_amount_in_base: number;
+            variance_in_currency: number;
+            variance_in_base: number;
+        }>;
+        other_payments_comparison?: Array<{
+            payment_method_id: number;
+            payment_method_name: string;
+            payment_type: string;
+            expected_amount_in_base: number;
+            actual_amount_in_base: number;
+            variance_in_base: number;
+        }>;
     };
 }
 
@@ -2018,6 +2056,23 @@ class ThermalPrinterService {
                 sessionData.meta_data
             );
 
+            // Cash movement summary
+            if (sessionData.meta_data.cash_in || sessionData.meta_data.cash_out) {
+                commands.push(...this.ESC_POS.BOLD_ON);
+                commands.push(...this.stringToBytes('CASH MOVEMENT'));
+                commands.push(...this.ESC_POS.BOLD_OFF);
+                commands.push(...this.ESC_POS.LINE_FEED);
+                commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+                commands.push(...this.stringToBytes(this.formatTotalLine('Cash In:', sessionData.meta_data.cash_in || 0)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+                commands.push(...this.stringToBytes(this.formatTotalLine('Cash Out:', (sessionData.meta_data.cash_out || 0) * -1)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+                const netMovement = (sessionData.meta_data.cash_in || 0) - (sessionData.meta_data.cash_out || 0);
+                commands.push(...this.stringToBytes(this.formatTotalLine('Net Movement:', netMovement)));
+                commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+            }
+
             // Cash denomination summary
             commands.push(...this.ESC_POS.BOLD_ON);
             commands.push(...this.stringToBytes('CASH DENOMINATION'));
@@ -2047,8 +2102,7 @@ class ThermalPrinterService {
 
             commands.push(...this.stringToBytes(this.formatTotalLine('Beginning Cash:', sessionData.beginning_cash)));
             commands.push(...this.ESC_POS.LINE_FEED);
-            commands.push(...this.stringToBytes(this.formatTotalLine('Cash Denomination:', sessionData.cash_denomination_total)));
-            commands.push(...this.ESC_POS.LINE_FEED);
+
 
             // if (structuredBreakdown) {
             //     commands.push(...this.stringToBytes(this.formatTotalLine('Actual Cash (Converted):', actualCash)));
@@ -2071,81 +2125,107 @@ class ThermalPrinterService {
             // commands.push(...this.stringToBytes(this.formatTotalLine(varianceLabel, Math.abs(varianceValue))));
             // commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
-            // Cash denomination details
-            if (denominationDetails) {
+            // Cash denomination details - parse if string
+            let cashDenominationArray: any[] = [];
+            if (sessionData.cash_denomination_total) {
+                if (typeof sessionData.cash_denomination_total === 'string') {
+                    try {
+                        cashDenominationArray = JSON.parse(sessionData.cash_denomination_total);
+                    } catch (e) {
+                        console.error('Failed to parse cash_denomination_total:', e);
+                    }
+                } else if (Array.isArray(sessionData.cash_denomination_total)) {
+                    cashDenominationArray = sessionData.cash_denomination_total;
+                }
+            }
+
+            if (cashDenominationArray.length > 0) {
                 commands.push(...this.ESC_POS.LINE_FEED);
                 commands.push(...this.stringToBytes('CLOSING CASH BREAKDOWN'));
                 commands.push(...this.ESC_POS.LINE_FEED);
                 commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
                 commands.push(...this.ESC_POS.LINE_FEED);
 
-                if (structuredBreakdown) {
-                    structuredBreakdown.currencies.forEach((currency) => {
-                        const currencyLabel = `${currency.currency_name || currency.currency_code || 'Currency'}`;
+                cashDenominationArray.forEach((currency: any) => {
+                    const currencyLabel = `${currency.currency_name || currency.currency_code || 'Currency'} (${currency.currency_code})`;
+                    commands.push(...this.ESC_POS.BOLD_ON);
+                    commands.push(...this.stringToBytes(currencyLabel));
+                    commands.push(...this.ESC_POS.BOLD_OFF);
+                    commands.push(...this.ESC_POS.LINE_FEED);
+
+                    // If denominations exist and have items, print them
+                    if (currency.denominations && Array.isArray(currency.denominations) && currency.denominations.length > 0) {
+                        currency.denominations.forEach((denom: any) => {
+                            const label = `  ${denom.denomination_label} x ${denom.count}:`;
+                            commands.push(...this.stringToBytes(this.formatInfoLine(label, denom.total.toFixed(2))));
+                            commands.push(...this.ESC_POS.LINE_FEED);
+                        });
+                        // Print total for this currency
+                        commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
+                        commands.push(...this.ESC_POS.LINE_FEED);
                         commands.push(...this.ESC_POS.BOLD_ON);
-                        commands.push(...this.stringToBytes(currencyLabel));
+                        commands.push(...this.stringToBytes(this.formatTotalLine('Total:', currency.amount_in_currency || 0)));
                         commands.push(...this.ESC_POS.BOLD_OFF);
                         commands.push(...this.ESC_POS.LINE_FEED);
-
-                        const actualCurrency = this.coerceToNumber(currency.amount_in_currency ?? currency.total_amount) ?? 0;
-                        // const actualBase = this.coerceToNumber(
-                        //     currency.amount_in_base ?? currency.total_in_base ?? (actualCurrency * (currency.exchange_rate || 1))
-                        // ) ?? 0;
-                        const expectedCurrency = this.coerceToNumber(currency.expected_in_currency);
-                        const expectedBase = this.coerceToNumber(currency.expected_in_base);
-                        const varianceCurrency = this.coerceToNumber(currency.variance_in_currency)
-                            ?? (expectedCurrency !== null ? actualCurrency - expectedCurrency : null);
-                        const varianceBase = this.coerceToNumber(currency.variance_in_base)
-                            ?? (expectedBase !== null ? actualBase - expectedBase : null);
-
-                        this.printCurrencyComparison(
-                            commands,
-                            '  Actual',
-                            actualCurrency,
-
-                        );
-
-                        if (expectedCurrency !== null || expectedBase !== null) {
-                            this.printCurrencyComparison(
-                                commands,
-                                '  Expected',
-                                expectedCurrency,
-
-                            );
-                        }
-
-                        if (varianceCurrency !== null || varianceBase !== null) {
-                            this.printCurrencyComparison(
-                                commands,
-                                '  Variance',
-                                varianceCurrency,
-                                varianceBase
-                            );
-                        }
-
-                        if (currency.denominations?.length) {
-                            currency.denominations.forEach((denom) => {
-                                const total = denom.total ?? denom.value * denom.count;
-                                const label = `${denom.label ?? denom.value} x ${denom.count}:`;
-                                commands.push(...this.stringToBytes(this.formatInfoLine(label, total.toFixed(2))));
-                                commands.push(...this.ESC_POS.LINE_FEED);
-                            });
-                        }
-
+                    } else {
+                        // No denominations, just show amount
+                        commands.push(...this.stringToBytes(this.formatTotalLine('  Amount:', currency.amount_in_currency || 0)));
                         commands.push(...this.ESC_POS.LINE_FEED);
-                    });
-                } else {
-                    const legacyDenominations = ['1000', '500', '200', '100', '50', '20', '10', '5', '1', '0.5', '0.25'];
-                    legacyDenominations.forEach(denom => {
-                        const count = (denominationDetails as Record<string, number>)[denom];
-                        if (count && count > 0) {
-                            const total = parseFloat(denom) * count;
-                            commands.push(...this.stringToBytes(this.formatInfoLine(`${denom} x ${count}:`, total.toFixed(2))));
+                        if (currency.exchange_rate && currency.exchange_rate > 1) {
+                            commands.push(...this.stringToBytes(this.formatInfoLine('  Exchange Rate:', currency.exchange_rate.toString())));
                             commands.push(...this.ESC_POS.LINE_FEED);
                         }
-                    });
+                    }
+
                     commands.push(...this.ESC_POS.LINE_FEED);
-                }
+                });
+            }
+
+            // Cash comparison
+            if (sessionData.meta_data.cash_comparison && sessionData.meta_data.cash_comparison.length > 0) {
+                commands.push(...this.ESC_POS.LINE_FEED);
+                commands.push(...this.ESC_POS.BOLD_ON);
+                commands.push(...this.stringToBytes('CASH COMPARISON'));
+                commands.push(...this.ESC_POS.BOLD_OFF);
+                commands.push(...this.ESC_POS.LINE_FEED);
+                commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+
+                sessionData.meta_data.cash_comparison.forEach(comparison => {
+                    commands.push(...this.stringToBytes(`${comparison.payment_method_name} (${comparison.currency_code})`));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                    commands.push(...this.stringToBytes(this.formatTotalLine('  Expected:', comparison.expected_amount_in_currency)));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                    commands.push(...this.stringToBytes(this.formatTotalLine('  Actual:', comparison.actual_amount_in_currency)));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                    const varianceLabel = comparison.variance_in_currency >= 0 ? '  Overage:' : '  Shortage:';
+                    const varianceValue = comparison.variance_in_currency >= 0 ? comparison.variance_in_currency : -Math.abs(comparison.variance_in_currency);
+                    commands.push(...this.stringToBytes(this.formatTotalLine(varianceLabel, varianceValue)));
+                    commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+                });
+            }
+
+            // Other payments comparison
+            if (sessionData.meta_data.other_payments_comparison && sessionData.meta_data.other_payments_comparison.length > 0) {
+                commands.push(...this.ESC_POS.BOLD_ON);
+                commands.push(...this.stringToBytes('OTHER PAYMENTS COMPARISON'));
+                commands.push(...this.ESC_POS.BOLD_OFF);
+                commands.push(...this.ESC_POS.LINE_FEED);
+                commands.push(...this.stringToBytes('-'.repeat(separatorWidth)));
+                commands.push(...this.ESC_POS.LINE_FEED);
+
+                sessionData.meta_data.other_payments_comparison.forEach(comparison => {
+                    commands.push(...this.stringToBytes(`${comparison.payment_method_name} (${comparison.payment_type})`));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                    commands.push(...this.stringToBytes(this.formatTotalLine('  Expected:', comparison.expected_amount_in_base)));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                    commands.push(...this.stringToBytes(this.formatTotalLine('  Actual:', comparison.actual_amount_in_base)));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                    const varianceLabel = comparison.variance_in_base >= 0 ? '  Overage:' : '  Shortage:';
+                    const varianceValue = comparison.variance_in_base >= 0 ? comparison.variance_in_base : -Math.abs(comparison.variance_in_base);
+                    commands.push(...this.stringToBytes(this.formatTotalLine(varianceLabel, varianceValue)));
+                    commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
+                });
             }
 
             // Footer separator

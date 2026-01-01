@@ -181,9 +181,7 @@ if (!isCentralDomain()) {
                             Route::get('/product/{product}/options', 'productOptions')->name('product.options');
                             Route::post('/session/start', 'startSession')->name('session.start');
                             Route::post('/session/close', 'closeShift')->name('session.close');
-                            Route::get('/api/session-summary', 'getSessionSummary')->name('api.session-summary');
-                            Route::get('/api/session-summary/{sessionId}', 'getSessionSummaryById')->name('api.session-summary-by-id');
-
+                            Route::get('/session-summary/{shiftNo}', 'getSessionSummaryById')->name('api.session-summary-by-id');
                             Route::put('/update-bill-no/{branchId}', 'updateBillNo')->name('update-bill-no');
                         });
 
@@ -318,6 +316,13 @@ if (!isCentralDomain()) {
                     Route::get('/branches/{branchId}/tables', 'getTablesByBranch')->name('branch-tables');
                     Route::get('/tables/{tableId}/with-cart', 'getTableWithCart')->name('table-with-cart');
                 });
+
+            // ROUTES FOR REPORTS
+            // Route::as('reports.')
+            //     ->prefix('/reports')
+            //     ->group(function () {
+            //         Route::get('/hourly-sales', [\App\Http\Controllers\HourlySalesReportController::class, 'index'])->name('hourly-sales');
+            //     });
         });
 
     // // Web Receipt Route (for browser viewing)

@@ -31,31 +31,51 @@ class PaymentMethodResource extends Resource
                     ->required()
                     ->options(PaymentType::options())
                     ->label('Payment Type')
-                    ->live()
-                    ->afterStateUpdated(function (Forms\Set $set, $state) {
-                        // If not cash, set currency to default
-                        if ($state !== 'cash') {
-                            $defaultCurrency = \App\Models\Currency::where('is_default', true)->first();
-                            if ($defaultCurrency) {
-                                $set('currency_id', $defaultCurrency->id);
-                            }
-                        }
-                    }),
-
-                Forms\Components\Select::make('currency_id')
-                    ->label('Currency')
-                    ->relationship('currency', 'name')
-                    ->searchable()
-                    ->preload()
-                    ->visible(fn (Forms\Get $get) => $get('payment_type') === 'cash')
-                    ->required(fn (Forms\Get $get) => $get('payment_type') === 'cash')
-                    ->helperText('Select currency for cash payments'),
+                    ->live(),
 
                 Forms\Components\TextInput::make('name')
                     ->required()
                     ->maxLength(255)
-                    ->placeholder('G-Cash, PayMaya, Visa, etc.')
+                    ->placeholder('Cash PHP, G-Cash, PayMaya, Visa, Points, etc.')
                     ->label('Payment Method Name'),
+
+                Forms\Components\Section::make('Currency Details')
+                    ->visible(fn (Forms\Get $get) => $get('payment_type') === 'cash')
+                    ->schema([
+                        Forms\Components\TextInput::make('currency_code')
+                            ->label('Currency Code')
+                            ->placeholder('PHP, USD, EUR')
+                            ->maxLength(10)
+                            ->requiredIf('payment_type', 'cash'),
+
+                        Forms\Components\TextInput::make('currency_name')
+                            ->label('Currency Name')
+                            ->placeholder('Peso, US Dollar, Euro')
+                            ->maxLength(100)
+                            ->requiredIf('payment_type', 'cash'),
+
+                        Forms\Components\TextInput::make('symbol')
+                            ->label('Currency Symbol')
+                            ->placeholder('₱, $, €')
+                            ->maxLength(10)
+                            ->requiredIf('payment_type', 'cash'),
+
+                        Forms\Components\TextInput::make('exchange_rate')
+                            ->label('Exchange Rate')
+                            ->numeric()
+                            ->default(1.0000)
+                            ->step(0.0001)
+                            ->minValue(0.0001)
+                            ->required()
+                            ->helperText('Exchange rate to base currency (1 unit of this currency = X units of base currency)'),
+
+                        Forms\Components\Toggle::make('is_default_cash')
+                            ->label('Set as Default Cash')
+                            ->visible(fn (Forms\Get $get) => $get('payment_type') === 'cash')
+                            ->helperText('Only one cash payment method can be default. Enabling this will automatically disable others.')
+                            ->columnSpanFull(),
+                    ])
+                    ->columns(2),
 
                 Forms\Components\TextInput::make('sort_order')
                     ->numeric()
@@ -82,6 +102,7 @@ class PaymentMethodResource extends Resource
                         \App\Enums\PaymentType::E_WALLET => 'warning',
                         \App\Enums\PaymentType::CREDIT => 'danger',
                         \App\Enums\PaymentType::GIFT_CHECK => 'gray',
+                        \App\Enums\PaymentType::POINTS => 'primary',
                     })
                     ->sortable()
                     ->label('Type'),
@@ -90,11 +111,10 @@ class PaymentMethodResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->label('Name'),
-
                 Tables\Columns\TextColumn::make('sort_order')
                     ->numeric()
                     ->sortable()
-                    ->label('Sort Order'),
+                    ->label('Sort'),
 
                 Tables\Columns\IconColumn::make('is_active')
                     ->boolean()
@@ -103,6 +123,7 @@ class PaymentMethodResource extends Resource
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('payment_type')
@@ -112,6 +133,7 @@ class PaymentMethodResource extends Resource
                     ->label('Active'),
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])
@@ -120,13 +142,13 @@ class PaymentMethodResource extends Resource
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ])
-            ->defaultSort('sort_order');
+            ->defaultSort('sort_order', 'asc');
     }
 
     public static function getRelations(): array
     {
         return [
-            //
+            RelationManagers\DenominationsRelationManager::class,
         ];
     }
 
@@ -135,6 +157,7 @@ class PaymentMethodResource extends Resource
         return [
             'index' => Pages\ListPaymentMethods::route('/'),
             'create' => Pages\CreatePaymentMethod::route('/create'),
+            'view' => Pages\ViewPaymentMethod::route('/{record}'),
             'edit' => Pages\EditPaymentMethod::route('/{record}/edit'),
         ];
     }

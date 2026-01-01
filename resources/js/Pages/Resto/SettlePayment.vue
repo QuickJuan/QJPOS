@@ -242,49 +242,6 @@
                             </template>
                         </div>
 
-                        <div v-if="isCashMethod" class="space-y-2">
-                            <label
-                                class="block text-sm font-medium text-neutral-700"
-                            >
-                                Currency
-                            </label>
-                            <SelectField
-                                v-if="hasMultipleCurrencies"
-                                id="currency_id"
-                                v-model="selectedCurrencyId"
-                                :options="currencies"
-                                optionLabel="name"
-                                optionValue="id"
-                                placeholder="Select currency"
-                                :disabled="currencies.length === 0"
-                            />
-                            <div
-                                v-else
-                                class="px-3 py-2 rounded-lg border border-neutral-200 bg-neutral-50"
-                            >
-                                <p
-                                    class="text-sm font-semibold text-neutral-900"
-                                >
-                                    {{
-                                        selectedCurrency?.name ||
-                                        paymentCurrencyCode
-                                    }}
-                                </p>
-                                <p class="text-xs text-neutral-500">
-                                    {{ paymentCurrencyCode }}
-                                </p>
-                            </div>
-                            <p class="text-xs text-neutral-500">
-                                1 {{ paymentCurrencyCode }} =
-                                {{
-                                    formatMoney(
-                                        exchangeRate,
-                                        defaultCurrencyCode
-                                    )
-                                }}
-                            </p>
-                        </div>
-
                         <div class="space-y-2">
                             <div
                                 class="flex items-center justify-between text-sm"
@@ -665,19 +622,30 @@ const getPaymentTypeLabel = (type?: string | null) => {
         .join(" ");
 };
 
-const selectedCurrencyId = ref<number | null>(
-    defaultCurrency.value?.id ?? null
-);
+// Currency is now determined by the selected payment method
 const selectedCurrency = computed(() => {
-    if (!selectedCurrencyId.value) {
+    const method = availablePaymentMethods.value.find(
+        (pm: any) => pm.id === selectedPaymentMethodId.value
+    );
+
+    if (!method) {
         return defaultCurrency.value;
     }
 
-    return (
-        currencies.value.find(
-            (currency: any) => currency.id === selectedCurrencyId.value
-        ) ?? defaultCurrency.value
-    );
+    // For cash payment methods, use their embedded currency info
+    if (method.payment_type === "cash" && method.currency_code) {
+        return {
+            id: method.id,
+            code: method.currency_code,
+            name: method.currency_name,
+            symbol: method.symbol,
+            exchange_rate: method.exchange_rate ?? 1,
+            is_default: method.is_default_cash,
+        };
+    }
+
+    // For non-cash methods, use default currency
+    return defaultCurrency.value;
 });
 
 const paymentCurrencyCode = computed(
@@ -697,6 +665,7 @@ const customerSearchQuery = ref("");
 const customerResults = ref<any[]>([]);
 const customerSearchLoading = ref(false);
 const customerSearchError = ref<string | null>(null);
+const selectedCustomerId = ref<number | null>(null);
 let customerSearchTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const resetPaymentDetails = () => {
@@ -795,24 +764,9 @@ watch(
         }
 
         resetPaymentDetails();
-
-        if (method.payment_type !== "cash" && method.currency_id) {
-            selectedCurrencyId.value = method.currency_id;
-        } else if (!selectedCurrencyId.value) {
-            selectedCurrencyId.value = defaultCurrency.value?.id ?? null;
-        }
-
         syncAmountForNonCashMethods();
     }
 );
-
-watch(currencies, (list) => {
-    if (
-        !list.find((currency: any) => currency.id === selectedCurrencyId.value)
-    ) {
-        selectedCurrencyId.value = defaultCurrency.value?.id ?? null;
-    }
-});
 
 watch(
     [isCashMethod, exchangeRate, totalDue],
@@ -827,6 +781,7 @@ const resetCustomerSearch = () => {
         clearTimeout(customerSearchTimeout);
         customerSearchTimeout = null;
     }
+    selectedCustomerId.value = null;
     customerSearchQuery.value = "";
     customerResults.value = [];
     customerSearchLoading.value = false;
@@ -890,6 +845,7 @@ const selectCustomer = (customer: any) => {
         return;
     }
 
+    selectedCustomerId.value = customer.id || null;
     paymentDetails.creditCustomerName = customer.customer_name || "";
     paymentDetails.creditCustomerContact =
         customer.contact_no || customer.email || "";
@@ -997,7 +953,7 @@ const canSettle = computed(() => {
         return false;
     }
 
-    if (isCashMethod.value && !selectedCurrencyId.value) {
+    if (isCashMethod.value && !selectedCurrency.value) {
         return false;
     }
 
@@ -1198,16 +1154,6 @@ const handleSettlePayment = async () => {
         return;
     }
 
-    if (isCashMethod.value && !selectedCurrencyId.value) {
-        toast.add({
-            severity: "error",
-            summary: "Currency Required",
-            detail: "Please select a currency for this payment.",
-            life: 3000,
-        });
-        return;
-    }
-
     if (amountTenderedNumber.value <= 0) {
         toast.add({
             severity: "error",
@@ -1244,10 +1190,10 @@ const handleSettlePayment = async () => {
         isSubmitting.value = true;
         const paymentDetailsPayload = buildPaymentDetailsPayload();
         const referenceNumber = resolveReferenceNumber();
-        const response = await settlePayment({
+
+        const payload: any = {
             cart_id: props.cart.id,
             payment_method_id: selectedPaymentMethodId.value,
-            currency_id: selectedCurrencyId.value,
             amount_in_payment_currency: Number(
                 amountTenderedNumber.value.toFixed(2)
             ),
@@ -1258,7 +1204,14 @@ const handleSettlePayment = async () => {
                 Object.keys(paymentDetailsPayload).length > 0
                     ? paymentDetailsPayload
                     : undefined,
-        });
+        };
+
+        // Add customer_id for credit payments
+        if (isCreditMethod.value && selectedCustomerId.value) {
+            payload.customer_id = selectedCustomerId.value;
+        }
+
+        const response = await settlePayment(payload);
 
         if (response.success) {
             toast.add({

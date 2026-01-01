@@ -3,10 +3,10 @@
 if (!function_exists('isCentralDomain')) {
     function isCentralDomain(): bool
     {
-        $currentHost = $_SERVER['HTTP_HOST'] ?? null;
+        $currentHost = $_SERVER['HTTP_HOST'] ?? '';
 
         // Strip port number if present (e.g., 'localhost:8000' becomes 'localhost')
-        $currentHost = explode(':', $currentHost)[0] ?? $currentHost;
+        $currentHost = $currentHost ? explode(':', $currentHost)[0] : '';
 
         $centralDomains = config('tenancy.central_domains', []);
 

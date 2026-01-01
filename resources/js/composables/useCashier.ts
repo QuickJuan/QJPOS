@@ -53,6 +53,7 @@ export interface SettlePaymentPayload {
     reference_number?: string;
     notes?: string;
     payment_details?: Record<string, any>;
+    customer_id?: number;
 }
 
 export interface ClosingCashBreakdownPayload {
@@ -287,6 +288,7 @@ export const useCashier = () => {
                 reference_number: paymentData.reference_number,
                 notes: paymentData.notes,
                 payment_details: paymentData.payment_details,
+                customer_id: paymentData.customer_id,
             }
         );
 

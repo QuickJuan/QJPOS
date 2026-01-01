@@ -232,10 +232,18 @@ class CartController extends Controller
     public function deleteCartItemWithApproval(Request $request): JsonResponse
     {
         try {
+            // Log the incoming request data to see what's being sent
+            Log::info('Delete cart item with approval - Request data', [
+                'all_data' => $request->all(),
+                'has_reason' => $request->has('reason'),
+                'reason_value' => $request->input('reason'),
+            ]);
+
             $validated = $request->validate([
                 'cart_item_id' => 'required|integer|exists:cart_items,id',
                 'approver_id' => 'required|integer|exists:users,id',
                 'otp_code' => 'required|string|digits:6',
+                'reason' => 'nullable|string|max:500',
             ]);
 
             $cartItem = CartItem::findOrFail($validated['cart_item_id']);
@@ -265,8 +273,17 @@ class CartController extends Controller
                 ], 422);
             }
 
-            // Delete the cart item
-            $this->cartService->deleteCartItem($validated['cart_item_id']);
+            // Add reason validation if provided
+            $reason = $validated['reason'] ?? 'Item deleted by ' . $approver->name;
+
+            Log::info('About to delete cart item', [
+                'cart_item_id' => $validated['cart_item_id'],
+                'reason_from_validated' => $validated['reason'] ?? null,
+                'final_reason' => $reason,
+            ]);
+
+            // Delete the cart item with approver info (will save to void_items if placed order)
+            $this->cartService->deleteCartItem($validated['cart_item_id'], $approver, $reason);
 
             // Log the approval action
             Log::info('Cart item deleted with OTP approval', [
@@ -466,6 +483,8 @@ class CartController extends Controller
             if (! $request->filled('target_table_id')) {
                 return redirect()->back()->with('error', 'Target table ID is required.');
             }
+
+
 
             $this->cartService->transferOrder($tableId, $request->input('target_table_id'));
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CartItem;
+use App\Models\OrderItem;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -13,8 +14,8 @@ class PendingOrdersController extends Controller
         // Get branch ID from authenticated user
         $branchId = $request->user()->branch_id;
 
-        // Get all pending orders filtered by the user's branch ID
-        $pendingOrders = CartItem::with([
+        // Get all pending cart items filtered by the user's branch ID
+        $pendingCartItems = CartItem::with([
                 'product',
                 'product.category',
                 'cart.tableRoom',
@@ -30,12 +31,46 @@ class PendingOrdersController extends Controller
             ->whereNull('parent_id')
             ->orderBy('batch_number')
             ->orderBy('placed_order_time')
-            ->get()
+            ->get();
+
+        // Get all pending order items filtered by the user's branch ID
+        $pendingOrderItems = OrderItem::with([
+                'product',
+                'product.category',
+                'order.tableRoom',
+                'children.product',
+            ])
+            ->whereHas('order', function ($query) use ($branchId) {
+                $query->where('branch_id', $branchId);
+            })
+            ->where('is_served', false)
+            ->where('is_void', false)
+            ->whereNull('parent_id')
+            ->orderBy('batch_number')
+            ->orderBy('placed_order_time')
+            ->get();
+
+
+
+        // Merge both collections and group by batch_number
+        $allPendingItems = $pendingCartItems->merge($pendingOrderItems)
+            ->sortBy([
+                ['batch_number', 'asc'],
+                ['placed_order_time', 'asc']
+            ])
             ->groupBy('batch_number');
 
         // Group orders without calculating minutes (will be done on frontend)
-        $ordersWithTiming = $pendingOrders->map(function ($items, $batchNumber) {
+        $ordersWithTiming = $allPendingItems->map(function ($items, $batchNumber) {
             $firstItem = $items->first();
+
+            // Get table name from either cart or order relationship
+            $tableName = 'N/A';
+            if ($firstItem->cart && $firstItem->cart->tableRoom) {
+                $tableName = $firstItem->cart->tableRoom->name;
+            } elseif ($firstItem->order && $firstItem->order->tableRoom) {
+                $tableName = $firstItem->order->tableRoom->name;
+            }
 
             // Convert placed_order_time to ISO8601 string, handling both Carbon and string types
             $placedOrderTime = $firstItem->placed_order_time;
@@ -47,7 +82,7 @@ class PendingOrdersController extends Controller
 
             return [
                 'batch_number' => $batchNumber,
-                'table_name' => $firstItem->cart->tableRoom->name ?? 'N/A',
+                'table_name' => $tableName,
                 'placed_order_time' => $placedOrderTime,
                 'items' => $items->map(function ($item) {
                     // Get child items (product options) recursively
@@ -66,8 +101,12 @@ class PendingOrdersController extends Controller
                         }
                     }
 
+                    // Determine item type based on model class
+                    $itemType = $item instanceof CartItem ? 'cart_item' : 'order_item';
+
                     return [
                         'id' => $item->id,
+                        'item_type' => $itemType,
                         'product_name' => $item->product->name ?? 'Unknown',
                         'quantity' => $item->quantity,
                         'description' => $item->description,
@@ -88,16 +127,23 @@ class PendingOrdersController extends Controller
 
     public function toggleServed(Request $request, $itemId)
     {
-        $cartItem = CartItem::findOrFail($itemId);
+        $itemType = $request->input('item_type', 'cart_item');
+
+        // Find the item based on type
+        if ($itemType === 'order_item') {
+            $item = OrderItem::findOrFail($itemId);
+        } else {
+            $item = CartItem::findOrFail($itemId);
+        }
 
         if ($request->input('is_served')) {
-            $cartItem->update([
+            $item->update([
                 'is_served' => true,
                 'served_time' => now(),
                 'served_by' => auth()->user()->id,
             ]);
         } else {
-            $cartItem->update([
+            $item->update([
                 'is_served' => false,
                 'served_time' => null,
                 'served_by' => null,

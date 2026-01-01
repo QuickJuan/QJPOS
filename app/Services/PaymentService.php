@@ -6,7 +6,7 @@ use App\Enums\TableRoomLocation\LocationType;
 use App\Enums\TableRoomStatusType;
 use App\Models\Cart;
 use App\Models\CartItem;
-use App\Models\Currency;
+use App\Models\CustomerPayable;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
@@ -36,8 +36,9 @@ class PaymentService
 
                 // Save cart and cart items to order (will throw exception if fails)
                 [$order, $changeAmount] = $this->saveCartToOrder($cart, $payload, $paymentContext);
+                // Void items are already saved to void_items table when they were voided
                 $this->saveCartItemsToOrderItems($cart->cartItems, $order);
-                $this->saveVoidCartItemsToOrderItems($cart, $order);
+
 
                 $this->inventoryStockService->deductOrderInventory($order);
 
@@ -68,7 +69,6 @@ class PaymentService
                     'cashierSession.branch',
                     'customer',
                     'payments.paymentMethod',
-                    'payments.currency',
                 ]);
             });
         } catch (\Exception $e) {
@@ -113,15 +113,13 @@ class PaymentService
             'method' => $paymentContext['method']->name,
             'payment_type' => $paymentType,
             'currency' => [
-                'id' => $paymentContext['currency']->id,
-                'code' => $paymentContext['currency']->code,
-                'symbol' => $paymentContext['currency']->symbol,
-                'exchange_rate' => $paymentContext['currency']->exchange_rate,
-                'is_default' => $paymentContext['currency']->is_default,
+                'code' => $paymentContext['currency_code'],
+                'symbol' => $paymentContext['currency_symbol'],
+                'exchange_rate' => $paymentContext['exchange_rate'],
             ],
             'amount_in_payment_currency' => $paymentContext['amount_in_payment_currency'],
             'amount_in_default_currency' => $baseAmountPaid,
-            'exchange_rate' => $paymentContext['currency']->exchange_rate,
+            'exchange_rate' => $paymentContext['exchange_rate'],
             'change' => $changeAmount,
             'details' => $paymentContext['payment_details'] ?? [],
         ];
@@ -135,14 +133,18 @@ class PaymentService
 
         $invoiceNumber = $this->branchService->getNextInvoiceNumber($branchId);
 
+        // Get customer_id from payload (for credit payments) or from cart
+        $customerId = $payload['customer_id'] ?? $cart->customer_id;
+
         // Create the order
         $order = Order::create([
             'invoice_no'         => $invoiceNumber,
             'cashier_id'         => $cashier->id,
             'cashier_session_id' => $cashier->cashierSession?->id ?? $cart->cashier_session_id,
             'bill_no'            => $cart->bill_no,
+            'branch_id'          => $branchId,
             'table_room_id'      => $cart->table_room_id,
-            'customer_id'        => $cart->customer_id,
+            'customer_id'        => $customerId,
             'discount_id'        => $cart->discount_id,
             'coupon_id'          => $cart->coupon_id,
             'coupon_code'        => $cart->coupon_code,
@@ -170,18 +172,8 @@ class PaymentService
         $this->persistCartItemsAsOrderItems($cartItems, $order);
     }
 
-    private function saveVoidCartItemsToOrderItems($cart, $order)
-    {
-        $voidCartItems = CartItem::where('cart_id', $cart->id)
-            ->where('is_void', true)
-            ->get();
-
-        if ($voidCartItems->isEmpty()) {
-            return;
-        }
-
-        $this->persistCartItemsAsOrderItems($voidCartItems, $order, true);
-    }
+    // Void items are now saved immediately when voided in CartService::voidCartItem()
+    // No longer needed here during settlement
 
     private function persistCartItemsAsOrderItems($cartItems, $order, bool $forceVoid = false): void
     {
@@ -234,15 +226,37 @@ class PaymentService
             'meta_data'            => $cartItem->meta_data ?? [],
             'served_by'            => $cartItem->served_by,
             'serving_number'       => $cartItem->serving_number,
+            'placed_order_time'    => $cartItem->placed_order_time ?? now(),
+            'served_time'          => $cartItem->served_time,
+            'batch_number'          => $cartItem->batch_number ?? null,
         ];
     }
 
     private function preparePaymentContext(array $payload): array
     {
-        $paymentMethod = PaymentMethod::with('currency')->findOrFail($payload['payment_method_id']);
+        $paymentMethod = PaymentMethod::findOrFail($payload['payment_method_id']);
 
-        $currencyId = $payload['currency_id'] ?? $paymentMethod->currency_id;
-        $currency = Currency::findOrFail($currencyId);
+        // Check if credit payment requires customer_id
+        $paymentType = $paymentMethod->payment_type;
+        if ($paymentType instanceof PaymentType) {
+            $paymentType = $paymentType->value;
+        }
+
+        if (strtolower($paymentType) === 'credit' && empty($payload['customer_id'])) {
+            throw new \InvalidArgumentException('Customer ID is required for credit payments.');
+        }
+
+        // Use payment method's embedded currency for cash, default currency (rate 1) for others
+        $exchangeRate = 1.0;
+        $currencyCode = 'PHP';
+        $currencySymbol = '₱';
+
+        if ($paymentMethod->isCash() && $paymentMethod->currency_code) {
+            $exchangeRate = (float) ($paymentMethod->exchange_rate ?? 1.0);
+            $currencyCode = $paymentMethod->currency_code;
+            $currencySymbol = $paymentMethod->symbol ?? '₱';
+        }
+
         $paymentDetails = $payload['payment_details'] ?? [];
         if (! is_array($paymentDetails)) {
             $paymentDetails = [];
@@ -254,11 +268,13 @@ class PaymentService
             throw new \InvalidArgumentException('Amount tendered must be greater than zero.');
         }
 
-        $baseAmountPaid = (float) ($payload['computed_amount_paid'] ?? round($amountInPaymentCurrency * (float) $currency->exchange_rate, 2));
+        $baseAmountPaid = (float) ($payload['computed_amount_paid'] ?? round($amountInPaymentCurrency * $exchangeRate, 2));
 
         return [
             'method' => $paymentMethod,
-            'currency' => $currency,
+            'currency_code' => $currencyCode,
+            'currency_symbol' => $currencySymbol,
+            'exchange_rate' => $exchangeRate,
             'amount_in_payment_currency' => $amountInPaymentCurrency,
             'base_amount_paid' => $baseAmountPaid,
             'reference_number' => $payload['reference_number'] ?? null,
@@ -269,18 +285,54 @@ class PaymentService
 
     private function recordPayment(Order $order, array $paymentContext): Payment
     {
-        return Payment::create([
+        $payment = Payment::create([
             'order_id' => $order->id,
             'payment_method_id' => $paymentContext['method']->id,
-            'currency_id' => $paymentContext['currency']->id,
             'amount' => $paymentContext['base_amount_paid'],
             'amount_in_payment_currency' => $paymentContext['amount_in_payment_currency'],
-            'exchange_rate' => $paymentContext['currency']->exchange_rate,
+            'exchange_rate' => $paymentContext['exchange_rate'],
             'change_amount' => $paymentContext['change_amount'] ?? 0,
             'reference_number' => $paymentContext['reference_number'],
             'notes' => $paymentContext['notes'],
             'payment_details' => $paymentContext['payment_details'] ?? [],
         ]);
+
+        // If payment type is credit, create a customer payable record
+        $paymentType = $paymentContext['method']->payment_type;
+        if ($paymentType instanceof PaymentType) {
+            $paymentType = $paymentType->value;
+        }
+
+        if (strtolower($paymentType) === 'credit') {
+            // Customer ID is already validated in preparePaymentContext
+            if (!$order->customer_id) {
+                throw new \Exception('Customer ID is missing for credit payment.');
+            }
+
+            info('Creating customer payable for order ID: ' . $order->id . ', Customer ID: ' . $order->customer_id);
+            CustomerPayable::create([
+                'order_id' => $order->id,
+                'payment_id' => $payment->id,
+                'customer_id' => $order->customer_id,
+                'payment_method_id' => $paymentContext['method']->id,
+                'currency_id' => $paymentContext['method']->currency_id ?? null,
+                'amount_due' => $paymentContext['base_amount_paid'],
+                'amount_paid' => 0,
+                'balance' => $paymentContext['base_amount_paid'],
+                'status' => 'open',
+                'due_date' => now()->addDays(30), // Default 30 days credit term
+                'notes' => $paymentContext['notes'],
+                'meta' => [
+                    'currency_code' => $paymentContext['currency_code'],
+                    'currency_symbol' => $paymentContext['currency_symbol'],
+                    'exchange_rate' => $paymentContext['exchange_rate'],
+                    'amount_in_payment_currency' => $paymentContext['amount_in_payment_currency'],
+                    'payment_details' => $paymentContext['payment_details'] ?? [],
+                ],
+            ]);
+        }
+
+        return $payment;
     }
 
 }

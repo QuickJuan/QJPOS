@@ -9,6 +9,7 @@ enum PaymentType: string
     case CARD = 'card';
     case E_WALLET = 'e-wallet';
     case GIFT_CHECK = 'gift-check';
+    case POINTS = 'points';
 
     public function label(): string
     {
@@ -18,6 +19,7 @@ enum PaymentType: string
             self::CARD => 'Card',
             self::E_WALLET => 'E-Wallet',
             self::GIFT_CHECK => 'Gift Check',
+            self::POINTS => 'Points',
         };
     }
 

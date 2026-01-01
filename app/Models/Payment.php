@@ -10,7 +10,6 @@ class Payment extends Model
     protected $fillable = [
         'order_id',
         'payment_method_id',
-        'currency_id',
         'amount',
         'amount_in_payment_currency',
         'exchange_rate',
@@ -42,14 +41,6 @@ class Payment extends Model
     public function paymentMethod(): BelongsTo
     {
         return $this->belongsTo(PaymentMethod::class);
-    }
-
-    /**
-     * Get the currency used for this payment (mainly for cash)
-     */
-    public function currency(): BelongsTo
-    {
-        return $this->belongsTo(Currency::class);
     }
 
     /**
