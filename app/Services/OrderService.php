@@ -106,14 +106,9 @@ class OrderService
      */
     public function getVoidOrderItemsPerShift(int $shiftId)
     {
-        //use DB query to get count and sum of amount of void order items for a specific shift
-        $voidItems = \DB::table('order_items')
-            ->join('orders', 'order_items.order_id', '=', 'orders.id')
-            ->where('orders.cashier_session_id', $shiftId)
-            ->where('is_void', '=', true)
-            ->selectRaw('product_id, description, SUM(quantity) as void_quantity, SUM(amount) as void_amount')
-            ->groupBy('product_id', 'description')
-            ->orderBy('void_quantity', 'desc')
+        // Use view for optimized query
+        $voidItems = \DB::table('void_items_per_shift_view')
+            ->where('cashier_session_id', $shiftId)
             ->get();
         return $voidItems;
     }
@@ -126,13 +121,19 @@ class OrderService
      */
     public function getRefundOrdersPerShift(int $shiftId)
     {
-        //use DB query to get count and sum of total_due of refunded orders for a specific shift
-        $refundedOrders = \DB::table('orders')
+        // Use view for optimized query
+        $refundedOrders = \DB::table('refunded_orders_per_shift_view')
             ->where('cashier_session_id', $shiftId)
-            ->where('status', '=', 'refunded')
-            ->selectRaw('COUNT(*) as total_refunded_orders,
-                SUM(total_due) as total_refunded_amount')
             ->first();
+
+        // Return default values if no refunds found
+        if (!$refundedOrders) {
+            return (object) [
+                'total_refunded_orders' => 0,
+                'total_refunded_amount' => 0
+            ];
+        }
+
         return $refundedOrders;
     }
 
@@ -164,15 +165,18 @@ class OrderService
      */
     public function getRefundAFromOtherShiftOrders(int $cashierId)
     {
-        //use DB query to get count and sum of total_due of refunded orders for a specific shift
-        $refundAfterShiftOrders = \DB::table('orders')
-            ->where('refunded_cashier_id', $cashierId)
-            ->where('status', '=', 'refund')
-            ->where('refunded_cashier_id', '!=', 'cashier_id')
-            ->where('refunded_cashier_id', '!=', null)
-            ->selectRaw('COUNT(*) as total_refunded_orders,
-                SUM(total_due) as total_refunded_amount')
+        // Use view for optimized query
+        $refundAfterShiftOrders = \DB::table('refunds_from_other_shifts_view')
+            ->where('cashier_id', $cashierId)
             ->first();
+
+        // Return default values if no refunds found
+        if (!$refundAfterShiftOrders) {
+            return (object) [
+                'total_refunded_orders' => 0,
+                'total_refunded_amount' => 0
+            ];
+        }
 
         return $refundAfterShiftOrders;
     }
@@ -183,15 +187,9 @@ class OrderService
      */
     public function getDiscountBreakdownPerShift(int $shiftId)
     {
-        //use DB query to get sum of discount amount per discount type for a specific shift
-        $discounts = \DB::table('order_items')
-            ->join('orders', 'order_items.order_id', '=', 'orders.id')
-            ->join('discounts', 'order_items.discount_id', '=', 'discounts.id')
-            ->where('orders.cashier_session_id', $shiftId)
-            ->where('order_items.discount_amount', '!=', null)
-            ->selectRaw('discounts.discount_name, SUM(order_items.discount_amount) as total_discount')
-            ->groupBy('discounts.discount_name', 'discounts.sort_order')
-            ->orderBy('discounts.sort_order', 'asc')
+        // Use view for optimized query
+        $discounts = \DB::table('discount_breakdown_per_shift_view')
+            ->where('cashier_session_id', $shiftId)
             ->get();
         return $discounts;
     }
@@ -203,31 +201,33 @@ class OrderService
     public function getSummarySalesPerShift(int $shiftId)
     {
         info('getting summary sales per shift for shift ID: ' . $shiftId);
-        // Single query combining orders and items
-        $stats = \DB::table('orders')
-            ->leftJoin('order_items', 'orders.id', '=', 'order_items.order_id')
-            ->where('orders.cashier_session_id', $shiftId)
-            ->where('orders.status', '=', 'settled')
-            ->selectRaw("
-                COUNT(DISTINCT orders.id) as total_orders,
-                SUM(orders.total_amount) as total_amount,
-                SUM(orders.total_due) as total_due,
-                SUM(orders.item_discount) as item_discount,
-                SUM(orders.service_charge) as service_charge,
-                SUM(orders.less_tax) as less_tax,
-                SUM(orders.vatable_sales) as vatable_sales,
-                SUM(orders.vat_amount) as vat_amount,
-                SUM(orders.vat_exempt_sales) as vat_exempt_sales,
-                SUM(orders.zero_rated_sales) as zero_rated_sales,
-                SUM(orders.non_vat) as non_vat_sales,
-                MIN(orders.invoice_no) as min_invoice_no,
-                MAX(orders.invoice_no) as max_invoice_no,
-                MIN(orders.bill_no) as min_bill_no,
-                MAX(orders.bill_no) as max_bill_no,
-                COUNT(DISTINCT CASE WHEN order_items.is_void = false THEN order_items.product_id END) as total_sku,
-                SUM(CASE WHEN order_items.is_void = false THEN order_items.quantity ELSE 0 END) as total_quantity
-            ")
+        // Use view for optimized query
+        $stats = \DB::table('orders_summary_per_shift_view')
+            ->where('cashier_session_id', $shiftId)
             ->first();
+
+        // Return default values if no data found
+        if (!$stats) {
+            return (object) [
+                'total_orders' => 0,
+                'total_amount' => 0,
+                'total_due' => 0,
+                'item_discount' => 0,
+                'service_charge' => 0,
+                'less_tax' => 0,
+                'vatable_sales' => 0,
+                'vat_amount' => 0,
+                'vat_exempt_sales' => 0,
+                'zero_rated_sales' => 0,
+                'non_vat_sales' => 0,
+                'min_invoice_no' => 0,
+                'max_invoice_no' => 0,
+                'min_bill_no' => 0,
+                'max_bill_no' => 0,
+                'total_sku' => 0,
+                'total_quantity' => 0
+            ];
+        }
 
         return $stats;
     }

@@ -6,6 +6,7 @@ use App\Enums\TableRoomLocation\LocationType;
 use App\Enums\TableRoomStatusType;
 use App\Models\Cart;
 use App\Models\CartItem;
+use App\Models\CustomerPayable;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Payment;
@@ -132,6 +133,9 @@ class PaymentService
 
         $invoiceNumber = $this->branchService->getNextInvoiceNumber($branchId);
 
+        // Get customer_id from payload (for credit payments) or from cart
+        $customerId = $payload['customer_id'] ?? $cart->customer_id;
+
         // Create the order
         $order = Order::create([
             'invoice_no'         => $invoiceNumber,
@@ -140,7 +144,7 @@ class PaymentService
             'bill_no'            => $cart->bill_no,
             'branch_id'          => $branchId,
             'table_room_id'      => $cart->table_room_id,
-            'customer_id'        => $cart->customer_id,
+            'customer_id'        => $customerId,
             'discount_id'        => $cart->discount_id,
             'coupon_id'          => $cart->coupon_id,
             'coupon_code'        => $cart->coupon_code,
@@ -232,6 +236,16 @@ class PaymentService
     {
         $paymentMethod = PaymentMethod::findOrFail($payload['payment_method_id']);
 
+        // Check if credit payment requires customer_id
+        $paymentType = $paymentMethod->payment_type;
+        if ($paymentType instanceof PaymentType) {
+            $paymentType = $paymentType->value;
+        }
+
+        if (strtolower($paymentType) === 'credit' && empty($payload['customer_id'])) {
+            throw new \InvalidArgumentException('Customer ID is required for credit payments.');
+        }
+
         // Use payment method's embedded currency for cash, default currency (rate 1) for others
         $exchangeRate = 1.0;
         $currencyCode = 'PHP';
@@ -271,7 +285,7 @@ class PaymentService
 
     private function recordPayment(Order $order, array $paymentContext): Payment
     {
-        return Payment::create([
+        $payment = Payment::create([
             'order_id' => $order->id,
             'payment_method_id' => $paymentContext['method']->id,
             'amount' => $paymentContext['base_amount_paid'],
@@ -282,6 +296,43 @@ class PaymentService
             'notes' => $paymentContext['notes'],
             'payment_details' => $paymentContext['payment_details'] ?? [],
         ]);
+
+        // If payment type is credit, create a customer payable record
+        $paymentType = $paymentContext['method']->payment_type;
+        if ($paymentType instanceof PaymentType) {
+            $paymentType = $paymentType->value;
+        }
+
+        if (strtolower($paymentType) === 'credit') {
+            // Customer ID is already validated in preparePaymentContext
+            if (!$order->customer_id) {
+                throw new \Exception('Customer ID is missing for credit payment.');
+            }
+
+            info('Creating customer payable for order ID: ' . $order->id . ', Customer ID: ' . $order->customer_id);
+            CustomerPayable::create([
+                'order_id' => $order->id,
+                'payment_id' => $payment->id,
+                'customer_id' => $order->customer_id,
+                'payment_method_id' => $paymentContext['method']->id,
+                'currency_id' => $paymentContext['method']->currency_id ?? null,
+                'amount_due' => $paymentContext['base_amount_paid'],
+                'amount_paid' => 0,
+                'balance' => $paymentContext['base_amount_paid'],
+                'status' => 'open',
+                'due_date' => now()->addDays(30), // Default 30 days credit term
+                'notes' => $paymentContext['notes'],
+                'meta' => [
+                    'currency_code' => $paymentContext['currency_code'],
+                    'currency_symbol' => $paymentContext['currency_symbol'],
+                    'exchange_rate' => $paymentContext['exchange_rate'],
+                    'amount_in_payment_currency' => $paymentContext['amount_in_payment_currency'],
+                    'payment_details' => $paymentContext['payment_details'] ?? [],
+                ],
+            ]);
+        }
+
+        return $payment;
     }
 
 }

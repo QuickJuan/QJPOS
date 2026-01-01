@@ -317,28 +317,6 @@ const currencySummaries = computed(() => {
     });
 });
 
-const totalCashInBase = computed(() => {
-    return currencySummaries.value.reduce(
-        (sum, entry) => sum + entry.amountInBase,
-        0
-    );
-});
-
-const totalOtherPayments = computed(() => {
-    return Object.values(otherPaymentAmounts.value).reduce(
-        (sum, amount) => sum + amount,
-        0
-    );
-});
-
-const expectedCash = computed(() => {
-    if (!props.openSession) return 0;
-    return (
-        (props.openSession.beginning_cash || 0) +
-        (props.openSession.total_sales || 0)
-    );
-});
-
 const buildClosingBreakdown = () => {
     const filteredCurrencies = currencySummaries.value.filter(
         (entry) => entry.amountInCurrency > 0
@@ -357,7 +335,7 @@ const buildClosingBreakdown = () => {
     // Structure matching CashierSessionRequest validation rules
     return {
         currencies: filteredCurrencies.map((entry) => ({
-            currency_id: entry.currencyId,
+            payment_method_id: entry.currencyId,
             amount_in_currency: entry.amountInCurrency,
             amount_in_base: entry.amountInBase,
             // Additional metadata for backend processing
@@ -376,40 +354,17 @@ const buildClosingBreakdown = () => {
 };
 
 const handleConfirmCloseSession = async () => {
-    // Check if no cash denominations were entered
-    if (totalCashInBase.value === 0 && totalOtherPayments.value === 0) {
-        const confirmed = confirm(
-            "You haven't entered any cash denominations or other payment amounts. Are you sure you want to close the shift without recording any cash on hand?"
-        );
-        if (!confirmed) {
-            return;
-        }
-    } else if (
-        totalCashInBase.value === 0 &&
-        availableCurrencies.value.length > 0
-    ) {
-        const confirmed = confirm(
-            "You haven't entered any cash denominations. Are you sure you want to close the shift without recording cash on hand?"
-        );
-        if (!confirmed) {
-            return;
-        }
-    }
-
     const closingBreakdown = buildClosingBreakdown();
 
     isSubmitting.value = true;
 
     console.log("closing breakdown", closingBreakdown);
-    console.log("total cash in base", totalCashInBase.value);
-    console.log("total other payments", totalOtherPayments.value);
-
     try {
         const response = await axios.post(route("resto.session.close"), {
-            cash_denomination_details: closingBreakdown,
-            cash_denomination: totalCashInBase.value + totalOtherPayments.value,
+            cashDenomination: closingBreakdown,
+            shiftNo: props.openSession?.id,
         });
-        return;
+
         alert("request sent");
         console.log("Close shift response:", response);
         // if (response.data.success) {

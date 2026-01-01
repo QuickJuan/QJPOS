@@ -181,9 +181,7 @@ if (!isCentralDomain()) {
                             Route::get('/product/{product}/options', 'productOptions')->name('product.options');
                             Route::post('/session/start', 'startSession')->name('session.start');
                             Route::post('/session/close', 'closeShift')->name('session.close');
-                            Route::get('/api/session-summary', 'getSessionSummary')->name('api.session-summary');
-                            Route::get('/api/session-summary/{sessionId}', 'getSessionSummaryById')->name('api.session-summary-by-id');
-
+                            Route::get('/session-summary/{shiftNo}', 'getSessionSummaryById')->name('api.session-summary-by-id');
                             Route::put('/update-bill-no/{branchId}', 'updateBillNo')->name('update-bill-no');
                         });
 

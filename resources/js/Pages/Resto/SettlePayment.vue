@@ -665,6 +665,7 @@ const customerSearchQuery = ref("");
 const customerResults = ref<any[]>([]);
 const customerSearchLoading = ref(false);
 const customerSearchError = ref<string | null>(null);
+const selectedCustomerId = ref<number | null>(null);
 let customerSearchTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const resetPaymentDetails = () => {
@@ -780,6 +781,7 @@ const resetCustomerSearch = () => {
         clearTimeout(customerSearchTimeout);
         customerSearchTimeout = null;
     }
+    selectedCustomerId.value = null;
     customerSearchQuery.value = "";
     customerResults.value = [];
     customerSearchLoading.value = false;
@@ -843,6 +845,7 @@ const selectCustomer = (customer: any) => {
         return;
     }
 
+    selectedCustomerId.value = customer.id || null;
     paymentDetails.creditCustomerName = customer.customer_name || "";
     paymentDetails.creditCustomerContact =
         customer.contact_no || customer.email || "";
@@ -1187,7 +1190,8 @@ const handleSettlePayment = async () => {
         isSubmitting.value = true;
         const paymentDetailsPayload = buildPaymentDetailsPayload();
         const referenceNumber = resolveReferenceNumber();
-        const response = await settlePayment({
+
+        const payload: any = {
             cart_id: props.cart.id,
             payment_method_id: selectedPaymentMethodId.value,
             amount_in_payment_currency: Number(
@@ -1200,7 +1204,14 @@ const handleSettlePayment = async () => {
                 Object.keys(paymentDetailsPayload).length > 0
                     ? paymentDetailsPayload
                     : undefined,
-        });
+        };
+
+        // Add customer_id for credit payments
+        if (isCreditMethod.value && selectedCustomerId.value) {
+            payload.customer_id = selectedCustomerId.value;
+        }
+
+        const response = await settlePayment(payload);
 
         if (response.success) {
             toast.add({

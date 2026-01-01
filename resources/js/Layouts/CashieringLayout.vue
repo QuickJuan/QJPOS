@@ -134,9 +134,10 @@
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { route } from "ziggy-js";
-import { useConfirm } from "primevue";
-import { useToast } from "primevue";
-import { ConfirmPopup, Toast } from "primevue";
+import { useConfirm } from "primevue/useconfirm";
+import { useToast } from "primevue/usetoast";
+import Toast from "primevue/toast";
+import ConfirmPopup from "primevue/confirmpopup";
 import SessionSummaryModal from "@/Pages/Resto/Partials/SessionSummaryModal.vue";
 import PWAInstallBanner from "@/Components/PWAInstallBanner.vue";
 import CashierHeader from "@/Components/CashierHeader.vue";

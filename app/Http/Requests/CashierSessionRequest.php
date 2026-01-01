@@ -50,7 +50,6 @@ class CashierSessionRequest extends FormRequest
             'cash_denomination_details.currencies.*.amount_in_currency' => ['required', 'numeric', 'min:0'],
             'cash_denomination_details.currencies.*.amount_in_base' => ['required', 'numeric', 'min:0'],
             'cash_denomination_details.gift_check_total' => ['nullable', 'numeric', 'min:0'],
-            'cash_denomination'         => 'nullable|numeric|min:0',
             // 'table_id'                  => 'sometimes|nullable|exists:table_rooms,id',
         ];
     }

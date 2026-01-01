@@ -3,9 +3,9 @@ namespace App\Http\Controllers;
 
 use Exception;
 use App\Models\User;
-use App\Models\Branch;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Models\Branch;
 use App\Models\Product;
 use App\Models\TableRoom;
 use Illuminate\Http\Request;
@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\RedirectResponse;
 use App\Http\Resources\ProductResource;
 use App\Services\CashierSessionService;
+use App\Http\Requests\CloseShiftRequest;
 use App\Http\Resources\XReadingResource;
 use App\Services\ProductCategoryService;
 use App\Http\Requests\CashierSessionRequest;
@@ -231,7 +232,7 @@ class CashierSessionController extends Controller
         ]);
     }
 
-    public function closeShift(Request $request)
+    public function closeShift(CloseShiftRequest $request)
     {
 
         try {
@@ -256,33 +257,19 @@ class CashierSessionController extends Controller
         }
     }
 
-    public function getSessionSummary(): JsonResponse
+
+    public function getSessionSummaryById(int $shiftNo): JsonResponse
     {
-        $session = $this->cashierSessionService->model->openSession()->with('cashier')->first();
-
-        if (! $session) {
-            // If no open session, get the latest session (just closed)
-            $session = $this->cashierSessionService->model->where('cashier_id', Auth::id())->latest()->first();
+        try {
+            $sessionSummary = $this->cashierSessionService->getSessionSummary($shiftNo);
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => 'Failed to get session summary: ' . $e->getMessage(),
+                'success' => false,
+            ], 500);
         }
 
-        if ($session) {
-            $sessionSummary = $this->cashierSessionService->getSessionSummary($session);
-            return response()->json($sessionSummary);
-        }
-
-        return response()->json(null);
-    }
-
-    public function getSessionSummaryById(int $sessionId): JsonResponse
-    {
-        $session = $this->cashierSessionService->model->with('cashier')->find($sessionId);
-
-        if ($session) {
-            $sessionSummary = $this->cashierSessionService->getSessionSummary($session);
-            return response()->json($sessionSummary);
-        }
-
-        return response()->json(null);
+        return response()->json($sessionSummary);
     }
 
     public function tables(): Response
