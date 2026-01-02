@@ -199,6 +199,7 @@ if (!isCentralDomain()) {
                             Route::get('/cart/{cart}/settle-payment', 'showSettlePayment')->name('cart.settle-payment');
                             Route::post('/cart/create-order', 'create')->name('cart.create-order');
                             Route::post('/cart/add', 'addToCart')->name('cart.add');
+                            Route::post('/cart/search-barcode', 'searchBarcode')->name('cart.search-barcode');
                             Route::put('/cart/{cartId}', 'updateCart')->name('cart.update');
                             Route::post('/cart/merge', 'mergeCart')->name('cart.merge');
                             Route::post('/cart/place-order', 'placeOrder')->name('cart.place-order');

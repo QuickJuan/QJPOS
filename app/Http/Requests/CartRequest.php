@@ -25,7 +25,7 @@ class CartRequest extends FormRequest
             'product_id'           => 'required|exists:products,id',
             'product_packaging_id' => 'nullable|exists:product_packagings,id',
             'selected_options'     => 'nullable|array',
-            'quantity'             => 'nullable|integer|min:1',
+            'quantity'             => 'nullable|numeric|min:0.01',
             'total_price'          => 'required|numeric|min:0',
             'table_id'             => 'nullable|exists:table_rooms,id',
             'order_type'           => 'nullable|string|in:dine-in,takeout,delivery',

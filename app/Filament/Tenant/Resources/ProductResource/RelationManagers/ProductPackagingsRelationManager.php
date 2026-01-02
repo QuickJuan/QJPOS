@@ -35,6 +35,12 @@ class ProductPackagingsRelationManager extends RelationManager
                     ->label('Name')
                     ->required(),
 
+                TextInput::make('barcode')
+                    ->label('Barcode')
+                    ->maxLength(150)
+                    ->unique(ignoreRecord: true)
+                    ->helperText('Barcode for quick product lookup'),
+
                 TextInput::make('unit_measure')
                     ->required()
                     ->maxLength(50),
@@ -66,6 +72,10 @@ class ProductPackagingsRelationManager extends RelationManager
                 TextColumn::make('name')
                     ->sortable()
                     ->searchable(),
+
+                TextColumn::make('barcode')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('unit_measure'),
 

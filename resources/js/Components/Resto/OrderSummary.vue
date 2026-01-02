@@ -22,6 +22,54 @@
                 @toggle-item-for-discount="toggleItemForDiscount"
             />
 
+            <!-- Barcode Scanner Section -->
+            <div class="px-4 py-3 bg-white border-t border-gray-200">
+                <label class="block text-xs font-semibold text-gray-700 mb-2">
+                    Scan Product
+                </label>
+                <div class="flex gap-2 items-center">
+                    <label
+                        class="text-xs font-medium text-gray-600 whitespace-nowrap"
+                    >
+                        Qty:
+                    </label>
+                    <input
+                        v-model.number="barcodeQuantity"
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        class="w-16 px-2 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                    />
+                    <input
+                        ref="barcodeInputRef"
+                        v-model="barcodeInput"
+                        type="text"
+                        placeholder="Scan barcode or type qty*"
+                        class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                        @keydown="handleBarcodeKeydown"
+                        @keyup.enter="handleBarcodeSearch"
+                    />
+                    <button
+                        @click="handleBarcodeSearch"
+                        class="px-3 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors flex-shrink-0"
+                    >
+                        <svg
+                            class="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
+                            />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
             <!-- Order Totals -->
             <OrderTotals
                 :order-subtotal="orderSubtotal"
@@ -256,6 +304,11 @@ const selectedItemModifiers = ref<any[]>([]);
 const sessionSummaryData = ref(null);
 const occupiedTables = ref<any[]>([]);
 const selectedTransferTarget = ref<any>(null);
+
+// Barcode scanner state
+const barcodeInput = ref("");
+const barcodeQuantity = ref(1);
+const barcodeInputRef = ref<HTMLInputElement | null>(null);
 
 // Discount state
 const appliedDiscount = ref<{
@@ -835,6 +888,116 @@ const confirmTransferOrderItems = () => {
 
 const handleRedirectToTables = () => {
     router.visit(route("resto.tables"));
+};
+
+// Barcode search handler
+const handleBarcodeSearch = async () => {
+    if (!barcodeInput.value.trim()) {
+        toast.add({
+            severity: "warn",
+            summary: "Invalid Input",
+            detail: "Please enter a barcode to search",
+            life: 3000,
+        });
+        return;
+    }
+
+    if (!props.tableId) {
+        toast.add({
+            severity: "warn",
+            summary: "No Table Selected",
+            detail: "Please select a table first before scanning products",
+            life: 3000,
+        });
+        barcodeInput.value = "";
+        return;
+    }
+
+    try {
+        // Call the search barcode API
+        const response = await axios.post(route("resto.cart.search-barcode"), {
+            barcode: barcodeInput.value.trim(),
+            quantity: barcodeQuantity.value,
+            table_id: props.tableId,
+            order_type: "dine-in",
+        });
+
+        if (response.data.success) {
+            toast.add({
+                severity: "success",
+                summary: "Product Added",
+                detail: `${response.data.data.name} added to cart`,
+                life: 3000,
+            });
+
+            // Refresh the page to show updated cart
+            router.reload({ only: ["cart", "cartItems"] });
+
+            // Clear inputs
+            barcodeInput.value = "";
+            barcodeQuantity.value = 1;
+
+            // Focus back to barcode input
+            if (barcodeInputRef.value) {
+                setTimeout(() => barcodeInputRef.value?.focus(), 100);
+            }
+        }
+    } catch (error: any) {
+        const errorMessage =
+            error.response?.data?.message ||
+            "Product not found or failed to add to cart";
+
+        toast.add({
+            severity: "error",
+            summary: "Search Failed",
+            detail: errorMessage,
+            life: 4000,
+        });
+
+        // Clear input on error
+        barcodeInput.value = "";
+
+        // Focus back to barcode input
+        if (barcodeInputRef.value) {
+            setTimeout(() => barcodeInputRef.value?.focus(), 100);
+        }
+    }
+};
+
+// Handle keyboard input for barcode field
+const handleBarcodeKeydown = (event: KeyboardEvent) => {
+    // Check if asterisk (*) is pressed
+    if (event.key === "*") {
+        event.preventDefault();
+
+        const currentValue = barcodeInput.value.trim();
+
+        // Check if the current value is a number (including decimals)
+        const numValue = parseFloat(currentValue);
+
+        if (!isNaN(numValue) && numValue > 0) {
+            // Move the number to quantity field (round to 2 decimal places)
+            barcodeQuantity.value = Math.round(numValue * 100) / 100;
+            // Clear the barcode input
+            barcodeInput.value = "";
+
+            // Show feedback toast
+            toast.add({
+                severity: "info",
+                summary: "Quantity Set",
+                detail: `Quantity set to ${barcodeQuantity.value}`,
+                life: 1500,
+            });
+        } else {
+            // If not a valid number, just clear the barcode field
+            barcodeInput.value = "";
+        }
+
+        // Keep focus on barcode input
+        if (barcodeInputRef.value) {
+            setTimeout(() => barcodeInputRef.value?.focus(), 50);
+        }
+    }
 };
 
 // Update cashier state in localStorage

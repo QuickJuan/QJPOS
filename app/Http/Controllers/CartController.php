@@ -549,4 +549,66 @@ class CartController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Search for product by barcode and optionally add to cart
+     */
+    public function searchBarcode(Request $request): JsonResponse
+    {
+        try {
+            $barcode = $request->input('barcode');
+
+            if (empty($barcode)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Barcode is required.',
+                ], 400);
+            }
+
+            $result = $this->cartService->searchByBarcode($barcode);
+
+            if (!$result) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Product not found with barcode: ' . $barcode,
+                ], 404);
+            }
+
+            // If table_id and quantity are provided, add to cart automatically
+            if ($request->filled('table_id') && $request->filled('quantity')) {
+                $addToCartRequest = new Request([
+                    'product_id' => $result['product_id'],
+                    'product_packaging_id' => $result['product_packaging_id'],
+                    'quantity' => $request->input('quantity'),
+                    'table_id' => $request->input('table_id'),
+                    'order_type' => $request->input('order_type', 'dine_in'),
+                    'withParent' => false,
+                ]);
+                $addToCartRequest->setUserResolver($request->getUserResolver());
+
+                $cartItem = $this->cartService->addToCart($addToCartRequest);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Product added to cart successfully.',
+                    'data' => $result,
+                    'cart_item' => $cartItem,
+                ], 200);
+            }
+
+            // Just return the search result
+            return response()->json([
+                'success' => true,
+                'data' => $result,
+            ], 200);
+
+        } catch (Exception $e) {
+            Log::error('Barcode search error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to search barcode.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
 }
