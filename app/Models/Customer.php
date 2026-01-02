@@ -21,6 +21,9 @@ class Customer extends Model implements HasMedia
         'last_visit',
         'email_subscribe',
         'sms_subscribe',
+        'earned_points',
+        'redeemed_points',
+        'balance',
     ];
 
     protected $casts = [
@@ -29,6 +32,9 @@ class Customer extends Model implements HasMedia
         'email_subscribe' => 'boolean',
         'sms_subscribe' => 'boolean',
         'type' => CustomerType::class,
+        'earned_points' => 'float',
+        'redeemed_points' => 'float',
+        'balance' => 'float',
     ];
 
     public function orders(): HasMany
@@ -46,5 +52,21 @@ class Customer extends Model implements HasMedia
         $this->addMediaCollection('profile')
             ->singleFile()
             ->useFallbackUrl('/images/default-profile.png');
+    }
+
+    /**
+     * Check if customer has sufficient points balance
+     */
+    public function hasSufficientPoints(float $requiredPoints): bool
+    {
+        return $this->balance >= $requiredPoints;
+    }
+
+    /**
+     * Get formatted points balance
+     */
+    public function getFormattedBalanceAttribute(): string
+    {
+        return number_format($this->balance, 2);
     }
 }

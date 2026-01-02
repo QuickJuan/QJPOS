@@ -74,6 +74,36 @@ class CustomerResource extends Resource
                     ])
                     ->columns(2),
 
+                Forms\Components\Section::make('Loyalty Points')
+                    ->schema([
+                        Forms\Components\TextInput::make('earned_points')
+                            ->label('Earned Points')
+                            ->numeric()
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->default(0)
+                            ->suffix('pts'),
+
+                        Forms\Components\TextInput::make('redeemed_points')
+                            ->label('Redeemed Points')
+                            ->numeric()
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->default(0)
+                            ->suffix('pts'),
+
+                        Forms\Components\TextInput::make('balance')
+                            ->label('Available Balance')
+                            ->numeric()
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->default(0)
+                            ->suffix('pts')
+                            ->helperText('Points available for redemption'),
+                    ])
+                    ->columns(3)
+                    ->collapsible(),
+
                 Forms\Components\Section::make('Profile Picture')
                     ->schema([
                         Forms\Components\SpatieMediaLibraryFileUpload::make('profile')
@@ -116,6 +146,13 @@ class CustomerResource extends Resource
                     ->formatStateUsing(fn ($state): string => $state instanceof CustomerType ? $state->label() : CustomerType::from($state)->label())
                     ->sortable()
                     ->label('Type'),
+
+                Tables\Columns\TextColumn::make('balance')
+                    ->numeric(decimalPlaces: 2)
+                    ->sortable()
+                    ->label('Points Balance')
+                    ->suffix(' pts')
+                    ->color('primary'),
 
                 Tables\Columns\TextColumn::make('last_visit')
                     ->dateTime()

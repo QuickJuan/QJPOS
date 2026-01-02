@@ -43,7 +43,6 @@
                 <!-- Replace status, customer name, pax, and save section with TableCustomer component -->
                 <TableCustomer :value="localTable" @save="onSave" />
 
-
                 <!-- Remove Take Order from previous location -->
                 <div class="flex flex-wrap gap-2">
                     <button
@@ -90,6 +89,7 @@
                         :showOrderPanel="showOrderPanel"
                         :orders="[]"
                         :status="localTable.status"
+                        :runningAmountDue="runningAmountDue"
                         @toggle-order-panel="$emit('toggle-order-panel')"
                         @checkout="$emit('checkout')"
                         @print-bill="$emit('print-bill')"
@@ -248,6 +248,10 @@ const props = defineProps({
     showPrintReceipt: {
         type: Boolean,
         default: false,
+    },
+    runningAmountDue: {
+        type: Number,
+        default: 0,
     },
 });
 const emit = defineEmits([

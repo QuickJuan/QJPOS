@@ -27,6 +27,7 @@ class SettleBillRequest extends FormRequest
             'cart_id' => ['required', 'integer', 'exists:carts,id'],
             'payment_method_id' => ['required', 'integer', 'exists:payment_methods,id'],
             'customer_id' => ['nullable', 'integer'],
+            'points_used' => ['nullable', 'numeric', 'min:0'],
             'amount_in_payment_currency' => ['required', 'numeric', 'min:0'],
             'amount_paid' => ['nullable', 'numeric', 'min:0'],
             'total_amount' => ['required', 'numeric', 'min:0'],
@@ -159,13 +160,39 @@ class SettleBillRequest extends FormRequest
                         $referenceNumber = $giftCheckNumber;
                     }
                     break;
+                case PaymentType::POINTS->value:
+                    $customerId = $this->input('customer_id');
+                    $pointsUsed = $this->input('points_used') ?? $totalAmount;
+
+                    if (!$customerId) {
+                        $validator->errors()->add('customer_id', 'Customer ID is required for points payment.');
+                    } else {
+                        // Validate customer exists and has sufficient points
+                        $customer = \DB::table('customers')->where('id', $customerId)->first();
+                        if (!$customer) {
+                            $validator->errors()->add('customer_id', 'The selected customer does not exist.');
+                        } elseif ($customer->balance < $pointsUsed) {
+                            $validator->errors()->add('points_used', "Insufficient points. Customer has {$customer->balance} points but needs {$pointsUsed} points.");
+                        }
+                    }
+
+                    if ($pointsUsed <= 0) {
+                        $validator->errors()->add('points_used', 'Points to redeem must be greater than zero.');
+                    }
+
+                    if ($customerId && $pointsUsed > 0) {
+                        $paymentDetails['points_used'] = $pointsUsed;
+                        $paymentDetails['customer_id'] = $customerId;
+                    }
+                    break;
                 default:
                     // No extra validation for other payment types
                     break;
             }
 
             $requiresReferenceNumber = $paymentType !== PaymentType::CASH->value
-                && $paymentType !== PaymentType::CREDIT->value;
+                && $paymentType !== PaymentType::CREDIT->value
+                && $paymentType !== PaymentType::POINTS->value;
 
             $finalReferenceNumber = $sanitize($referenceNumber ?: ($paymentDetails['reference_number'] ?? ''));
 

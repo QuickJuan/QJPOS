@@ -240,6 +240,119 @@
                                     required
                                 />
                             </template>
+
+                            <template v-else-if="isPointsMethod">
+                                <div class="space-y-2">
+                                    <TextField
+                                        id="points_customer_search"
+                                        v-model="customerSearchQuery"
+                                        label="Find Customer"
+                                        placeholder="Search name, phone, or email"
+                                        type="search"
+                                        :disabled="isCustomerSearchDisabled"
+                                    />
+                                    <p class="text-xs text-neutral-500">
+                                        Start typing (min. 2 characters) to
+                                        search existing customers.
+                                    </p>
+                                    <div
+                                        v-if="customerSearchLoading"
+                                        class="text-xs text-neutral-500"
+                                    >
+                                        Searching customers...
+                                    </div>
+                                    <div
+                                        v-else-if="customerSearchError"
+                                        class="text-xs text-error-500"
+                                    >
+                                        {{ customerSearchError }}
+                                    </div>
+                                    <ul
+                                        v-if="
+                                            customerResults.length > 0 &&
+                                            !customerSearchLoading
+                                        "
+                                        class="border border-neutral-200 rounded-lg divide-y divide-gray-100 max-h-48 overflow-y-auto"
+                                    >
+                                        <li
+                                            v-for="customer in customerResults"
+                                            :key="customer.id"
+                                        >
+                                            <button
+                                                type="button"
+                                                class="w-full text-left px-3 py-2 hover:bg-primary-50"
+                                                @click="
+                                                    selectCustomer(customer)
+                                                "
+                                            >
+                                                <p
+                                                    class="text-sm font-semibold text-neutral-800"
+                                                >
+                                                    {{ customer.customer_name }}
+                                                </p>
+                                                <div
+                                                    class="flex justify-between items-center"
+                                                >
+                                                    <p
+                                                        class="text-xs text-neutral-500"
+                                                    >
+                                                        {{
+                                                            customer.contact_no ||
+                                                            customer.email ||
+                                                            "No contact info"
+                                                        }}
+                                                    </p>
+                                                    <p
+                                                        class="text-xs font-semibold text-primary-600"
+                                                    >
+                                                        {{
+                                                            customer.balance
+                                                        }}
+                                                        pts
+                                                    </p>
+                                                </div>
+                                            </button>
+                                        </li>
+                                    </ul>
+                                    <p
+                                        v-else-if="
+                                            customerSearchQuery.length >= 2 &&
+                                            !customerSearchLoading &&
+                                            !customerSearchError
+                                        "
+                                        class="text-xs text-neutral-500"
+                                    >
+                                        No customers found.
+                                    </p>
+                                </div>
+                                <div
+                                    v-if="selectedCustomerId"
+                                    class="p-3 bg-success-50 border border-success-200 rounded-lg"
+                                >
+                                    <p
+                                        class="text-sm font-semibold text-success-800"
+                                    >
+                                        Selected Customer
+                                    </p>
+                                    <p class="text-xs text-success-600">
+                                        {{ selectedCustomerName }}
+                                    </p>
+                                    <p class="text-xs text-success-600 mt-1">
+                                        Available Balance:
+                                        <span class="font-bold">{{
+                                            selectedCustomerBalance
+                                        }}</span>
+                                        points
+                                    </p>
+                                    <p class="text-xs text-success-600">
+                                        Points Required:
+                                        <span class="font-bold">{{
+                                            pointsRequired
+                                        }}</span>
+                                        points
+                                    </p>
+                                </div>
+                            </template>
                         </div>
 
                         <div class="space-y-2">
@@ -591,20 +704,25 @@ const paymentTypeLabels: Record<string, string> = {
     "e-wallet": "E-Wallet",
     credit: "Credit",
     "gift-check": "Gift Check",
+    points: "Points",
 };
 const isCashMethod = computed(() => paymentType.value === "cash");
 const isEWalletMethod = computed(() => paymentType.value === "e-wallet");
 const isCardMethod = computed(() => paymentType.value === "card");
 const isCreditMethod = computed(() => paymentType.value === "credit");
 const isGiftCheckMethod = computed(() => paymentType.value === "gift-check");
+const isPointsMethod = computed(() => paymentType.value === "points");
 const requiresAdditionalFields = computed(
     () =>
         isEWalletMethod.value ||
         isCardMethod.value ||
         isCreditMethod.value ||
-        isGiftCheckMethod.value
+        isGiftCheckMethod.value ||
+        isPointsMethod.value
 );
-const isCustomerSearchDisabled = computed(() => !isCreditMethod.value);
+const isCustomerSearchDisabled = computed(
+    () => !isCreditMethod.value && !isPointsMethod.value
+);
 const getPaymentTypeLabel = (type?: string | null) => {
     if (!type) {
         return "Payment";
@@ -794,8 +912,14 @@ watch(isCreditMethod, (isCredit) => {
     }
 });
 
+watch(isPointsMethod, (isPoints) => {
+    if (!isPoints) {
+        resetCustomerSearch();
+    }
+});
+
 const fetchCustomers = async (query: string) => {
-    if (!query || !isCreditMethod.value) {
+    if (!query || (!isCreditMethod.value && !isPointsMethod.value)) {
         return;
     }
 
@@ -819,7 +943,7 @@ const fetchCustomers = async (query: string) => {
 watch(
     () => customerSearchQuery.value,
     (query) => {
-        if (!isCreditMethod.value) {
+        if (!isCreditMethod.value && !isPointsMethod.value) {
             return;
         }
 
@@ -846,12 +970,56 @@ const selectCustomer = (customer: any) => {
     }
 
     selectedCustomerId.value = customer.id || null;
-    paymentDetails.creditCustomerName = customer.customer_name || "";
-    paymentDetails.creditCustomerContact =
-        customer.contact_no || customer.email || "";
+
+    if (isCreditMethod.value) {
+        paymentDetails.creditCustomerName = customer.customer_name || "";
+        paymentDetails.creditCustomerContact =
+            customer.contact_no || customer.email || "";
+    }
+
     customerSearchQuery.value = customer.customer_name || "";
-    customerResults.value = [];
+    // Keep a copy of the customer data for points balance checking
+    if (isPointsMethod.value) {
+        customerResults.value = [customer]; // Keep selected customer in results
+    } else {
+        customerResults.value = [];
+    }
 };
+
+const selectedCustomer = computed(() => {
+    if (!selectedCustomerId.value) {
+        return null;
+    }
+    // Try to find in current results first
+    const found = customerResults.value.find(
+        (c: any) => c.id === selectedCustomerId.value
+    );
+    if (found) {
+        return found;
+    }
+    // If not in results, return null (points balance won't be available)
+    return null;
+});
+
+const selectedCustomerName = computed(() => {
+    return selectedCustomer.value?.customer_name || "";
+});
+
+const selectedCustomerBalance = computed(() => {
+    return selectedCustomer.value?.balance || 0;
+});
+
+const pointsRequired = computed(() => {
+    // 1 point = 1 currency unit
+    return totalDue.value;
+});
+
+const hasSufficientPoints = computed(() => {
+    if (!isPointsMethod.value || !selectedCustomerId.value) {
+        return false;
+    }
+    return selectedCustomerBalance.value >= pointsRequired.value;
+});
 
 const cleanString = (value?: string | null) =>
     typeof value === "string"
@@ -879,6 +1047,10 @@ const additionalFieldsValid = computed(() => {
         );
     }
 
+    if (isPointsMethod.value) {
+        return selectedCustomerId.value !== null && hasSufficientPoints.value;
+    }
+
     if (isGiftCheckMethod.value) {
         return (
             cleanString(paymentDetails.giftCheckNumber).length > 0 &&
@@ -898,6 +1070,14 @@ const additionalFieldErrorMessage = computed(() => {
     }
     if (isCreditMethod.value) {
         return "Customer name and contact information are required for credit payments.";
+    }
+    if (isPointsMethod.value) {
+        if (!selectedCustomerId.value) {
+            return "Please select a customer for points payment.";
+        }
+        if (!hasSufficientPoints.value) {
+            return `Insufficient points. Customer has ${selectedCustomerBalance.value} points but needs ${pointsRequired.value} points.`;
+        }
     }
     if (isGiftCheckMethod.value) {
         return "Gift check number and amount are required for gift-check payments.";
@@ -1206,9 +1386,14 @@ const handleSettlePayment = async () => {
                     : undefined,
         };
 
-        // Add customer_id for credit payments
+        // Add customer_id for credit and points payments
         if (isCreditMethod.value && selectedCustomerId.value) {
             payload.customer_id = selectedCustomerId.value;
+        }
+
+        if (isPointsMethod.value && selectedCustomerId.value) {
+            payload.customer_id = selectedCustomerId.value;
+            payload.points_used = pointsRequired.value;
         }
 
         const response = await settlePayment(payload);

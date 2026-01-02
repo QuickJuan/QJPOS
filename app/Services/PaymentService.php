@@ -20,10 +20,12 @@ class PaymentService
 {
     public function __construct(
         protected BranchService $branchService,
-        protected InventoryStockService $inventoryStockService
+        protected InventoryStockService $inventoryStockService,
+        protected PointsService $pointsService
     ) {
         $this->branchService         = $branchService;
         $this->inventoryStockService = $inventoryStockService;
+        $this->pointsService         = $pointsService;
     }
 
     public function settleBill($payload): mixed
@@ -44,6 +46,9 @@ class PaymentService
 
                 $paymentContext['change_amount'] = $changeAmount;
                 $this->recordPayment($order, $paymentContext);
+
+                // Handle points redemption/earning
+                $this->handleCustomerPoints($order, $payload, $paymentContext);
 
                 // Update table status if applicable
                 if ($cart->table_room_id
@@ -333,6 +338,54 @@ class PaymentService
         }
 
         return $payment;
+    }
+
+    private function handleCustomerPoints($order, array $payload, array $paymentContext): void
+    {
+        $paymentType = $paymentContext['method']->payment_type;
+        if ($paymentType instanceof PaymentType) {
+            $paymentType = $paymentType->value;
+        }
+
+        // If payment type is points, redeem points from customer
+        if (strtolower($paymentType) === 'points') {
+            if (!$order->customer_id) {
+                throw new \Exception('Customer ID is required for points payment.');
+            }
+
+            $customer = \App\Models\Customer::findOrFail($order->customer_id);
+            $pointsRequired = $payload['points_used'] ?? $order->total_due;
+
+            // Redeem points (1 point = 1 currency unit)
+            $success = $this->pointsService->redeemPoints($customer, $pointsRequired);
+
+            if (!$success) {
+                throw new \Exception('Failed to redeem points. Insufficient balance or invalid amount.');
+            }
+
+            Log::info('Points redeemed', [
+                'customer_id' => $customer->id,
+                'order_id' => $order->id,
+                'points_redeemed' => $pointsRequired,
+            ]);
+        }
+        // For all non-points payments, earn points based on amount spent
+        elseif ($order->customer_id && strtolower($paymentType) !== 'credit') {
+            $customer = \App\Models\Customer::find($order->customer_id);
+
+            if ($customer) {
+                $pointsEarned = $this->pointsService->earnPoints($customer, $order->total_due);
+
+                if ($pointsEarned > 0) {
+                    Log::info('Points earned', [
+                        'customer_id' => $customer->id,
+                        'order_id' => $order->id,
+                        'points_earned' => $pointsEarned,
+                        'amount_spent' => $order->total_due,
+                    ]);
+                }
+            }
+        }
     }
 
 }

@@ -27,7 +27,7 @@
             </button>
         </div>
         <button
-            v-if="!orders || orders.length === 0"
+            v-if="(!orders || orders.length === 0) && runningAmountDue === 0"
             type="button"
             class="w-full px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700 focus:ring-2 focus:ring-red-500 mt-1"
             @click="$emit('cancel-table')"
@@ -60,6 +60,10 @@ const props = defineProps({
     status: {
         type: String,
         default: "",
+    },
+    runningAmountDue: {
+        type: Number,
+        default: 0,
     },
 });
 const emit = defineEmits([

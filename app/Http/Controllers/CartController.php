@@ -611,4 +611,32 @@ class CartController extends Controller
             ], 500);
         }
     }
+
+    public function updateCustomer(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'cart_id' => 'required|integer|exists:carts,id',
+                'customer_id' => 'nullable|integer|exists:customers,id',
+            ]);
+
+            $cart = Cart::findOrFail($request->input('cart_id'));
+            $cart->update([
+                'customer_id' => $request->input('customer_id'),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Customer updated successfully.',
+                'cart' => new CartResource($cart),
+            ], 200);
+        } catch (Exception $e) {
+            Log::error('Update customer error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update customer.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
 }
