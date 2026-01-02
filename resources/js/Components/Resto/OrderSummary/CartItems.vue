@@ -105,7 +105,12 @@
                                             <p
                                                 class="text-xs text-secondary-600"
                                             >
-                                                {{ item.quantity }} ×
+                                                {{
+                                                    formatQuantity(
+                                                        item.quantity
+                                                    )
+                                                }}
+                                                ×
                                                 <span
                                                     v-if="hasDiscount(item.id)"
                                                     class="line-through text-red-500"
@@ -185,7 +190,10 @@
                                         <span
                                             class="text-xs text-secondary-600"
                                         >
-                                            {{ option.quantity }} ×
+                                            {{
+                                                formatQuantity(option.quantity)
+                                            }}
+                                            ×
                                             {{ getChildName(option) }}
                                         </span>
                                     </div>
@@ -396,6 +404,17 @@ const getChildAmount = (option: any) => {
 
 const showItemModifiers = (item: any) => {
     emit("showItemModifiers", item);
+};
+
+// Format quantity to show decimals only when needed
+const formatQuantity = (qty: any) => {
+    const quantity = parseFloat(String(qty ?? 0));
+    // If it's a whole number, show without decimals
+    if (quantity % 1 === 0) {
+        return quantity.toString();
+    }
+    // Otherwise show up to 2 decimal places
+    return quantity.toFixed(2);
 };
 
 const getBasePrice = (item: any) => {

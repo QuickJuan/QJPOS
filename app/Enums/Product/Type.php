@@ -7,7 +7,8 @@ enum Type: string
 {
     use EnumsWithOptions;
 
-    case SIMPLE    = "simple";
-    case COMPOSITE = "composite";
-    case BUNDLE    = "bundle";
+    case SIMPLE       = "simple";
+    case WITH_VARIANT = "with_variant";
+    case COMPOSITE    = "composite";
+    case BUNDLE       = "bundle";
 }

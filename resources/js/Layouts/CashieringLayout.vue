@@ -33,30 +33,6 @@
                     </p>
                 </div>
 
-                <!-- Barcode Scanner -->
-                <div class="mb-6">
-                    <label
-                        class="block text-sm font-medium text-neutral-700 mb-2"
-                    >
-                        Scan Product
-                    </label>
-                    <div class="flex gap-2">
-                        <input
-                            v-model="barcodeInput"
-                            type="text"
-                            placeholder="Scan barcode..."
-                            class="flex-1 px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
-                            @keyup.enter="handleBarcodeSearch"
-                        />
-                        <button
-                            @click="handleBarcodeSearch"
-                            class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors"
-                        >
-                            <QrCodeIcon class="w-5 h-5" />
-                        </button>
-                    </div>
-                </div>
-
                 <!-- Action Buttons -->
                 <div class="space-y-3">
                     <button
@@ -144,7 +120,6 @@ import CashierHeader from "@/Components/CashierHeader.vue";
 import { useCashier } from "@/composables/useCashier";
 import { thermalPrinter } from "@/Services/ThermalPrinterService";
 import {
-    QrCodeIcon,
     TableCellsIcon,
     DocumentTextIcon,
     ClipboardDocumentListIcon,
@@ -164,7 +139,6 @@ const props = defineProps<{
 }>();
 
 // Reactive data
-const barcodeInput = ref("");
 const showSidebar = ref(false);
 
 const showSessionSummaryModal = ref(false);
@@ -191,29 +165,6 @@ const checkCurrentRoute = (currentRoute: any) => {
 // Methods
 const toggleSidebar = () => {
     showSidebar.value = !showSidebar.value;
-};
-
-const handleBarcodeSearch = () => {
-    if (barcodeInput.value.trim()) {
-        // Emit event to parent or handle barcode search
-        // For now, let's just log it
-        console.log("Barcode search:", barcodeInput.value);
-
-        // You can emit this to parent component if needed
-        // emit('barcodeScanned', barcodeInput.value);
-
-        // Clear input after search
-        barcodeInput.value = "";
-
-        toast.add({
-            severity: "info",
-            summary: "Barcode Search",
-            detail: `Searching for: ${barcodeInput.value}`,
-            life: 3000,
-        });
-
-        showSidebar.value = false;
-    }
 };
 
 const handleTablesClick = () => {

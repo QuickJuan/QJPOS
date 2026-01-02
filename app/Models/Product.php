@@ -14,6 +14,7 @@ class Product extends Model implements HasMedia
 
     protected $fillable = [
         'uuid',
+        'barcode',
         'name',
         'receipt_alias',
         'description',

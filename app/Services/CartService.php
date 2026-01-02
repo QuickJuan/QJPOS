@@ -188,7 +188,7 @@ class CartService
     /**
      * Calculate pricing data including amount and tax information
      */
-    private function calculatePricingData(float $price, int $quantity, Product $product): array
+    private function calculatePricingData(float $price, float $quantity, Product $product): array
     {
         $priceWithTax = $this->applyVatToPrice($price, $product);
         $amount       = $priceWithTax * $quantity;
@@ -242,7 +242,7 @@ class CartService
         Cart $cart,
         Product $product,
         Request $request,
-        int $quantity,
+        float $quantity,
         float $price,
         array $pricingData,
         string $orderType
@@ -278,7 +278,7 @@ class CartService
         CartItem $parentItem,
         array $selectedOptions,
         Product $parentProduct,
-        int $parentQuantity,
+        float $parentQuantity,
         string $orderType
     ): void {
         foreach ($selectedOptions as $selectedOption) {
@@ -304,13 +304,13 @@ class CartService
         CartItem $parentItem,
         array $childItemData,
         Product $parentProduct,
-        int $parentQuantity,
+        float $parentQuantity,
         string $orderType,
         array $selectedOption = []
     ): void {
         try {
             $childPrice = (float) ($childItemData['price'] ?? 0);
-            $childQuantityPerBundle = (int) ($childItemData['quantity'] ?? 0);
+            $childQuantityPerBundle = (float) ($childItemData['quantity'] ?? 0);
 
             if ($childQuantityPerBundle <= 0) {
                 return;
@@ -1283,5 +1283,57 @@ class CartService
         }
 
         return CartItem::whereIn('id', $request->cartItemIds)->update(['cart_id' => $cart->id]);
+    }
+
+    /**
+     * Search for product or product packaging by barcode
+     * Returns array with product/packaging info or null if not found
+     */
+    public function searchByBarcode(string $barcode): ?array
+    {
+        if (empty($barcode)) {
+            return null;
+        }
+
+        // First, search in products (excluding WITH_VARIANT type)
+        $product = Product::where('barcode', $barcode)
+            ->where('product_type', '!=', 'with_variant')
+            ->where('is_active', true)
+            ->first();
+
+        if ($product) {
+            return [
+                'type' => 'product',
+                'id' => $product->id,
+                'name' => $product->name,
+                'price' => $product->price,
+                'product_type' => $product->product_type,
+                'barcode' => $product->barcode,
+                'product_id' => $product->id,
+                'product_packaging_id' => null,
+            ];
+        }
+
+        // If not found in products, search in product_packagings
+        $packaging = ProductPackaging::where('barcode', $barcode)
+            ->with(['product' => function ($query) {
+                $query->where('is_active', true);
+            }])
+            ->first();
+
+        if ($packaging && $packaging->product) {
+            return [
+                'type' => 'packaging',
+                'id' => $packaging->id,
+                'name' => $packaging->product->name . ' (' . $packaging->name . ')',
+                'price' => $packaging->price,
+                'product_type' => $packaging->product->product_type,
+                'barcode' => $packaging->barcode,
+                'product_id' => $packaging->product_id,
+                'product_packaging_id' => $packaging->id,
+            ];
+        }
+
+        return null;
     }
 }
