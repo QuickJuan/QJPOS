@@ -7,6 +7,7 @@
             :table-info="tableInfo"
             :cart="cart"
             @select-table="$emit('selectTable')"
+            @customer-selected="handleCustomerSelected"
         />
 
         <!-- Cart Items Area -->
@@ -997,6 +998,46 @@ const handleBarcodeKeydown = (event: KeyboardEvent) => {
         if (barcodeInputRef.value) {
             setTimeout(() => barcodeInputRef.value?.focus(), 50);
         }
+    }
+};
+
+// Handle customer selection
+const handleCustomerSelected = async (customer: any | null) => {
+    if (!props.cart?.id) {
+        toast.add({
+            severity: "warn",
+            summary: "No Cart",
+            detail: "Please create a cart first before selecting a customer.",
+            life: 3000,
+        });
+        return;
+    }
+
+    try {
+        await axios.post(route("resto.cart.update-customer"), {
+            cart_id: props.cart.id,
+            customer_id: customer?.id || null,
+        });
+
+        toast.add({
+            severity: "success",
+            summary: customer ? "Customer Selected" : "Customer Cleared",
+            detail: customer
+                ? `${customer.customer_name} will earn points from this order`
+                : "This order will be for a walk-in customer",
+            life: 3000,
+        });
+
+        // Reload the page to get updated cart data
+        router.reload({ only: ["cart"] });
+    } catch (error) {
+        console.error("Failed to update customer:", error);
+        toast.add({
+            severity: "error",
+            summary: "Update Failed",
+            detail: "Failed to update customer. Please try again.",
+            life: 3000,
+        });
     }
 };
 
