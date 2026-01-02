@@ -165,7 +165,10 @@
                         v-if="
                             table &&
                             (table.status === 'occupied' ||
-                                table.status === 'reserved')
+                                table.status === 'reserved') &&
+                            (!cartSummary ||
+                                !cartSummary.runningTotal ||
+                                cartSummary.runningTotal === 0)
                         "
                         label="Vacant Table"
                         icon="pi pi-check-circle"
@@ -214,7 +217,10 @@
                         v-if="
                             !isTakeoutOccupied &&
                             table &&
-                            table.status !== 'available'
+                            table.status !== 'available' &&
+                            (!cartSummary ||
+                                !cartSummary.runningTotal ||
+                                cartSummary.runningTotal === 0)
                         "
                         label="Vacate Table"
                         icon="pi pi-door-open"

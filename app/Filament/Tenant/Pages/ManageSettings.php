@@ -113,6 +113,15 @@ class ManageSettings extends SettingsPage
                         ];
                     })
                     ->nullable(),
+
+                TextInput::make('points_earning_rate')
+                    ->label('Points Earning Rate')
+                    ->helperText('Amount customer needs to spend to earn 1 point (e.g., 100 means ₱100 = 1 point)')
+                    ->numeric()
+                    ->default(100)
+                    ->minValue(1)
+                    ->required()
+                    ->suffix('per point'),
             ]);
     }
 }
