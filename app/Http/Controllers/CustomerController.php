@@ -66,6 +66,7 @@ class CustomerController extends Controller
         $query = $request->input('query');
 
         $customers = Customer::query()
+            ->with('eWallet:customer_id,points_balance,balance')
             ->when($query, function ($q) use ($query) {
                 $q->where('customer_name', 'like', "%{$query}%")
                     ->orWhere('contact_no', 'like', "%{$query}%")

@@ -28,6 +28,8 @@ class Order extends Model
         'item_discount',
         'total_due',
         'amount_tendered',
+        'change_loaded_to_ewallet',
+        'is_change_loaded_to_ewallet',
         'vatable_sales',
         'vat_amount',
         'vat_exempt_sales',

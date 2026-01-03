@@ -6,6 +6,7 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\EWalletController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\TableRoomController;
@@ -244,6 +245,18 @@ if (!isCentralDomain()) {
                     Route::post('/locations', 'storeLocation')->name('store-location');
                     Route::put('/locations/{location}', 'updateLocation')->name('update-location');
                     Route::delete('/locations/{location}', 'destroyLocation')->name('destroy-location');
+                });
+
+            // E-Wallet Routes
+            Route::as('ewallet.')
+                ->prefix('/ewallet')
+                ->controller(EWalletController::class)
+                ->group(function () {
+                    Route::post('/load-change', 'loadChange')->name('load-change');
+                    Route::get('/balance/{customerId}', 'getBalance')->name('balance');
+                    Route::get('/transactions/{customerId}', 'getTransactions')->name('transactions');
+                    Route::get('/points-transactions/{customerId}', 'getPointsTransactions')->name('points-transactions');
+                    Route::post('/payment', 'makePayment')->name('payment');
                 });
 
             Route::as('table-rooms.')

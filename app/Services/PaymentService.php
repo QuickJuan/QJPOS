@@ -340,51 +340,204 @@ class PaymentService
         return $payment;
     }
 
-    private function handleCustomerPoints($order, array $payload, array $paymentContext): void
+    /**
+     * Handle customer points redemption and earning based on payment type
+     */
+    private function handleCustomerPoints(Order $order, array $payload, array $paymentContext): void
     {
-        $paymentType = $paymentContext['method']->payment_type;
-        if ($paymentType instanceof PaymentType) {
-            $paymentType = $paymentType->value;
+        $paymentType = $this->getPaymentType($paymentContext);
+
+        $this->logPointsProcessing($order, $paymentType);
+
+        if ($this->shouldRedeemPoints($paymentType)) {
+            $this->redeemCustomerPoints($order, $payload);
+            return;
         }
 
-        // If payment type is points, redeem points from customer
-        if (strtolower($paymentType) === 'points') {
-            if (!$order->customer_id) {
-                throw new \Exception('Customer ID is required for points payment.');
-            }
+        if ($this->shouldEarnPoints($order, $paymentType)) {
+            $this->earnCustomerPoints($order);
+        }
+    }
 
-            $customer = \App\Models\Customer::findOrFail($order->customer_id);
-            $pointsRequired = $payload['points_used'] ?? $order->total_due;
+    /**
+     * Extract payment type from payment context
+     */
+    private function getPaymentType(array $paymentContext): string
+    {
+        $paymentType = $paymentContext['method']->payment_type;
 
-            // Redeem points (1 point = 1 currency unit)
-            $success = $this->pointsService->redeemPoints($customer, $pointsRequired);
+        if ($paymentType instanceof PaymentType) {
+            return $paymentType->value;
+        }
 
-            if (!$success) {
-                throw new \Exception('Failed to redeem points. Insufficient balance or invalid amount.');
-            }
+        return $paymentType;
+    }
 
-            Log::info('Points redeemed', [
+    /**
+     * Log points processing initiation
+     */
+    private function logPointsProcessing(Order $order, string $paymentType): void
+    {
+        Log::info('handleCustomerPoints called', [
+            'order_id' => $order->id,
+            'customer_id' => $order->customer_id,
+            'payment_type' => $paymentType,
+            'total_due' => $order->total_due,
+        ]);
+    }
+
+    /**
+     * Determine if points should be redeemed for this payment
+     */
+    private function shouldRedeemPoints(string $paymentType): bool
+    {
+        return strtolower($paymentType) === 'points';
+    }
+
+    /**
+     * Determine if points should be earned for this order
+     */
+    private function shouldEarnPoints(Order $order, string $paymentType): bool
+    {
+        return $order->customer_id && strtolower($paymentType) !== 'credit';
+    }
+
+    /**
+     * Redeem points from customer's e-wallet
+     */
+    private function redeemCustomerPoints(Order $order, array $payload): void
+    {
+        if (!$order->customer_id) {
+            throw new \Exception('Customer ID is required for points payment.');
+        }
+
+        $customer = \App\Models\Customer::with('eWallet')->findOrFail($order->customer_id);
+
+        if (!$customer->eWallet) {
+            throw new \Exception('Customer does not have an e-wallet.');
+        }
+
+        $pointsRequired = $payload['points_used'] ?? $order->total_due;
+        $ewalletService = app(\App\Services\EWalletService::class);
+
+        try {
+            $ewalletService->redeemPoints($customer->eWallet, $pointsRequired, $order);
+
+            Log::info('Points redeemed via e-wallet', [
                 'customer_id' => $customer->id,
                 'order_id' => $order->id,
                 'points_redeemed' => $pointsRequired,
             ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to redeem points', [
+                'customer_id' => $customer->id,
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+            throw new \Exception('Failed to redeem points. ' . $e->getMessage());
         }
-        // For all non-points payments, earn points based on amount spent
-        elseif ($order->customer_id && strtolower($paymentType) !== 'credit') {
-            $customer = \App\Models\Customer::find($order->customer_id);
+    }
 
-            if ($customer) {
-                $pointsEarned = $this->pointsService->earnPoints($customer, $order->total_due);
+    /**
+     * Award points to customer for their purchase
+     */
+    private function earnCustomerPoints(Order $order): void
+    {
+        Log::info('Attempting to earn points', [
+            'order_id' => $order->id,
+            'customer_id' => $order->customer_id,
+        ]);
 
-                if ($pointsEarned > 0) {
-                    Log::info('Points earned', [
-                        'customer_id' => $customer->id,
-                        'order_id' => $order->id,
-                        'points_earned' => $pointsEarned,
-                        'amount_spent' => $order->total_due,
-                    ]);
-                }
-            }
+        $customer = \App\Models\Customer::with('eWallet')->find($order->customer_id);
+
+        if (!$customer) {
+            Log::warning('Customer not found', [
+                'order_id' => $order->id,
+                'customer_id' => $order->customer_id,
+            ]);
+            return;
+        }
+
+        $this->ensureCustomerHasEWallet($customer, $order);
+
+        $pointsEarned = $this->pointsService->calculatePointsFromAmount($order->total_due);
+
+        $this->logPointsCalculation($order, $customer, $pointsEarned);
+
+        if ($pointsEarned <= 0) {
+            Log::info('No points earned - amount too low', [
+                'order_id' => $order->id,
+                'customer_id' => $customer->id,
+                'points_earned' => $pointsEarned,
+            ]);
+            return;
+        }
+
+        $this->awardPointsToCustomer($customer, $pointsEarned, $order);
+    }
+
+    /**
+     * Ensure customer has an e-wallet, create if missing
+     */
+    private function ensureCustomerHasEWallet(\App\Models\Customer $customer, Order $order): void
+    {
+        if ($customer->eWallet) {
+            return;
+        }
+
+        Log::info('Creating e-wallet for existing customer', [
+            'customer_id' => $customer->id,
+            'order_id' => $order->id,
+        ]);
+
+        $customer->eWallet()->create([
+            'balance' => 0,
+            'earned_points' => 0,
+            'redeemed_points' => 0,
+            'points_balance' => 0,
+            'total_loaded' => 0,
+            'total_spent' => 0,
+            'is_active' => true,
+        ]);
+
+        $customer->load('eWallet');
+    }
+
+    /**
+     * Log points calculation details
+     */
+    private function logPointsCalculation(Order $order, \App\Models\Customer $customer, float $pointsEarned): void
+    {
+        Log::info('Points calculation', [
+            'order_id' => $order->id,
+            'customer_id' => $customer->id,
+            'total_due' => $order->total_due,
+            'points_earned' => $pointsEarned,
+        ]);
+    }
+
+    /**
+     * Award calculated points to customer via e-wallet service
+     */
+    private function awardPointsToCustomer(\App\Models\Customer $customer, float $points, Order $order): void
+    {
+        $ewalletService = app(\App\Services\EWalletService::class);
+
+        try {
+            $ewalletService->earnPoints($customer->eWallet, $points, $order);
+
+            Log::info('Points earned via e-wallet', [
+                'customer_id' => $customer->id,
+                'order_id' => $order->id,
+                'points_earned' => $points,
+                'amount_spent' => $order->total_due,
+            ]);
+        } catch (\Exception $e) {
+            Log::warning('Failed to award points', [
+                'customer_id' => $customer->id,
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 

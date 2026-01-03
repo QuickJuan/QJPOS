@@ -306,7 +306,9 @@
                                                         class="text-xs font-semibold text-primary-600"
                                                     >
                                                         {{
-                                                            customer.balance
+                                                            customer.e_wallet
+                                                                ?.points_balance ||
+                                                            0
                                                         }}
                                                         pts
                                                     </p>
