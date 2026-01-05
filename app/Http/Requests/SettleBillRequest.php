@@ -143,8 +143,6 @@ class SettleBillRequest extends FormRequest
                     break;
                 case PaymentType::CREDIT->value:
                     $customerId = $this->input('customer_id');
-                    $customerName = $sanitize($paymentDetails['customer_name'] ?? '');
-                    $customerContact = $sanitize($paymentDetails['customer_contact'] ?? '');
 
                     if (!$customerId) {
                         $validator->errors()->add('customer_id', 'Customer ID is required for credit payments.');
@@ -153,13 +151,6 @@ class SettleBillRequest extends FormRequest
                         if (!\DB::table('customers')->where('id', $customerId)->exists()) {
                             $validator->errors()->add('customer_id', 'The selected customer does not exist.');
                         }
-                    }
-
-                    if ($customerName === '' || $customerContact === '') {
-                        $validator->errors()->add('payment_details', 'Customer name and contact information are required for credit payments.');
-                    } else {
-                        $paymentDetails['customer_name'] = $customerName;
-                        $paymentDetails['customer_contact'] = $customerContact;
                     }
                     break;
                 case PaymentType::GIFT_CHECK->value:

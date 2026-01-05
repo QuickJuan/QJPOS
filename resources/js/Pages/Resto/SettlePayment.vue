@@ -254,93 +254,26 @@
                             </template>
 
                             <template v-else-if="isCreditMethod">
-                                <div class="space-y-2">
-                                    <TextField
-                                        id="credit_customer_search"
-                                        v-model="customerSearchQuery"
-                                        label="Find Customer"
-                                        placeholder="Search name, phone, or email"
-                                        type="search"
-                                        :disabled="isCustomerSearchDisabled"
-                                    />
-                                    <p class="text-xs text-neutral-500">
-                                        Start typing (min. 2 characters) to
-                                        search existing customers.
-                                    </p>
-                                    <div
-                                        v-if="customerSearchLoading"
-                                        class="text-xs text-neutral-500"
-                                    >
-                                        Searching customers...
-                                    </div>
-                                    <div
-                                        v-else-if="customerSearchError"
-                                        class="text-xs text-error-500"
-                                    >
-                                        {{ customerSearchError }}
-                                    </div>
-                                    <ul
-                                        v-if="
-                                            customerResults.length > 0 &&
-                                            !customerSearchLoading
-                                        "
-                                        class="border border-neutral-200 rounded-lg divide-y divide-gray-100 max-h-48 overflow-y-auto"
-                                    >
-                                        <li
-                                            v-for="customer in customerResults"
-                                            :key="customer.id"
-                                        >
-                                            <button
-                                                type="button"
-                                                class="w-full text-left px-3 py-2 hover:bg-primary-50"
-                                                @click="
-                                                    selectCustomer(customer)
-                                                "
-                                            >
-                                                <p
-                                                    class="text-sm font-semibold text-neutral-800"
-                                                >
-                                                    {{ customer.customer_name }}
-                                                </p>
-                                                <p
-                                                    class="text-xs text-neutral-500"
-                                                >
-                                                    {{
-                                                        customer.contact_no ||
-                                                        customer.email ||
-                                                        "No contact info"
-                                                    }}
-                                                </p>
-                                            </button>
-                                        </li>
-                                    </ul>
+                                <div
+                                    v-if="cartCustomer"
+                                    class="p-3 bg-warning-50 border border-warning-200 rounded-lg space-y-2"
+                                >
                                     <p
-                                        v-else-if="
-                                            customerSearchQuery.length >= 2 &&
-                                            !customerSearchLoading &&
-                                            !customerSearchError
-                                        "
-                                        class="text-xs text-neutral-500"
+                                        class="text-sm font-semibold text-warning-800"
                                     >
-                                        No customers found.
+                                        Customer to be Charged
+                                    </p>
+                                    <p class="text-sm text-warning-700">
+                                        {{ cartCustomer.customer_name }}
+                                    </p>
+                                    <p class="text-xs text-warning-600">
+                                        {{
+                                            cartCustomer.contact_no ||
+                                            cartCustomer.email ||
+                                            "No contact info"
+                                        }}
                                     </p>
                                 </div>
-                                <TextField
-                                    id="credit_customer_name"
-                                    v-model="paymentDetails.creditCustomerName"
-                                    label="Customer Name"
-                                    placeholder="Enter customer's full name"
-                                    required
-                                />
-                                <TextField
-                                    id="credit_customer_contact"
-                                    v-model="
-                                        paymentDetails.creditCustomerContact
-                                    "
-                                    label="Customer Contact"
-                                    placeholder="Phone or email"
-                                    required
-                                />
                             </template>
 
                             <template v-else-if="isGiftCheckMethod">
@@ -1354,12 +1287,40 @@ const resetCustomerSearch = () => {
 };
 
 watch(isCreditMethod, (isCredit) => {
+    if (isCredit) {
+        // Check if cart has a customer
+        if (!cartCustomer.value) {
+            toast.add({
+                severity: "error",
+                summary: "Customer Required",
+                detail: "Please select a customer in the cart before using credit payment.",
+                life: 4000,
+            });
+            // Reset payment method selection
+            selectedPaymentMethodId.value = null;
+            return;
+        }
+    }
     if (!isCredit) {
         resetCustomerSearch();
     }
 });
 
 watch(isPointsMethod, (isPoints) => {
+    if (isPoints) {
+        // Check if cart has a customer
+        if (!cartCustomer.value) {
+            toast.add({
+                severity: "error",
+                summary: "Customer Required",
+                detail: "Please select a customer in the cart before using points payment.",
+                life: 4000,
+            });
+            // Reset payment method selection
+            selectedPaymentMethodId.value = null;
+            return;
+        }
+    }
     if (!isPoints) {
         resetCustomerSearch();
         pointsToUse.value = "";
@@ -1675,10 +1636,7 @@ const additionalFieldsValid = computed(() => {
     }
 
     if (isCreditMethod.value) {
-        return (
-            cleanString(paymentDetails.creditCustomerName).length > 0 &&
-            cleanString(paymentDetails.creditCustomerContact).length > 0
-        );
+        return cartCustomer.value !== null;
     }
 
     if (isPointsMethod.value) {
@@ -1707,11 +1665,14 @@ const additionalFieldErrorMessage = computed(() => {
         return "Approval code and cardholder name are required for card payments.";
     }
     if (isCreditMethod.value) {
-        return "Customer name and contact information are required for credit payments.";
+        if (!cartCustomer.value) {
+            return "Please select a customer in the cart before using credit payment.";
+        }
+        return ""; // Customer is valid
     }
     if (isPointsMethod.value) {
-        if (!selectedCustomerId.value && !cartCustomer.value) {
-            return "Please select a customer for points payment.";
+        if (!cartCustomer.value) {
+            return "Please select a customer in the cart before using points payment.";
         }
         if (isMixedPaymentMode.value && pointsToUseNumber.value <= 0) {
             return "Please enter the amount of points to use.";
@@ -1736,13 +1697,6 @@ const buildPaymentDetailsPayload = () => {
     if (isCardMethod.value) {
         details.approval_code = cleanString(paymentDetails.cardApprovalCode);
         details.card_holder_name = cleanString(paymentDetails.cardHolderName);
-    }
-
-    if (isCreditMethod.value) {
-        details.customer_name = cleanString(paymentDetails.creditCustomerName);
-        details.customer_contact = cleanString(
-            paymentDetails.creditCustomerContact
-        );
     }
 
     if (isGiftCheckMethod.value) {
@@ -1920,7 +1874,7 @@ const addPaymentToMix = () => {
     const paymentDetailsPayload = buildPaymentDetailsPayload();
     const referenceNumber = resolveReferenceNumber();
 
-    // For points payment, use the effective customer ID (selected or cart)
+    // For points and credit payment, use the effective customer ID (selected or cart)
     const effectiveCustomerId =
         selectedCustomerId.value || cartCustomer.value?.id || null;
 
@@ -1936,7 +1890,10 @@ const addPaymentToMix = () => {
             Object.keys(paymentDetailsPayload).length > 0
                 ? paymentDetailsPayload
                 : undefined,
-        customer_id: effectiveCustomerId || undefined,
+        customer_id:
+            isCreditMethod.value || isPointsMethod.value
+                ? effectiveCustomerId || undefined
+                : undefined,
         points_used: isPointsMethod.value ? pointsRequired.value : undefined,
         // Additional fields for frontend display
         methodName: method.name,
@@ -1960,7 +1917,7 @@ const addPaymentToMix = () => {
         summary: "Payment Added",
         detail: `${method.name}: ${formatMoney(
             amountApplied,
-            defaultCurrencyCode
+            defaultCurrencyCode.value
         )}`,
         life: 2000,
     });
@@ -1992,7 +1949,7 @@ const appendDigit = (digit: string) => {
     let current =
         typeof amountTendered.value === "string"
             ? amountTendered.value
-            : amountTendered.value?.toString() || "";
+            : String(amountTendered.value || "");
 
     if (current === "0") {
         current = "";
@@ -2091,6 +2048,111 @@ const showChangeDialog = async (changeValue: number) => {
     router.visit(route("table-rooms.index"));
 };
 
+/**
+ * Print receipt slips for non-default payment methods
+ */
+const printReceiptSlips = async (orderData: any, paymentData: any) => {
+    try {
+        // Check if thermal printer is connected
+        if (!thermalPrinter.isConnected()) {
+            console.log(
+                "Thermal printer not connected, skipping receipt slips"
+            );
+            return;
+        }
+
+        // Normalize payment data to array
+        const payments = Array.isArray(paymentData)
+            ? paymentData
+            : [paymentData];
+
+        // Get default payment method using is_default_cash flag
+        const defaultPaymentMethod = availablePaymentMethods.value.find(
+            (method: any) =>
+                method.payment_type === "cash" && method.is_default_cash
+        );
+
+        console.log("Default payment method:", defaultPaymentMethod);
+        console.log("All payments:", payments);
+
+        // Filter payments that are NOT the default payment method
+        const nonDefaultPayments = payments.filter((payment: any) => {
+            // Only skip if this payment matches the default payment method
+            if (defaultPaymentMethod) {
+                // Check by method name (case-insensitive)
+                const paymentMethodName = (payment.method || "").toLowerCase();
+                const defaultMethodName = (
+                    defaultPaymentMethod.name || ""
+                ).toLowerCase();
+
+                if (paymentMethodName === defaultMethodName) {
+                    console.log("Excluding default payment:", payment.method);
+                    return false;
+                }
+
+                // Also check if payment type is cash and matches default
+                if (
+                    payment.payment_type_value === "cash" &&
+                    defaultPaymentMethod.payment_type === "cash"
+                ) {
+                    // If it's a cash payment, check if it's using the default currency
+                    if (paymentMethodName === defaultMethodName) {
+                        console.log(
+                            "Excluding default cash payment:",
+                            payment.method
+                        );
+                        return false;
+                    }
+                }
+            }
+            console.log("Including payment:", payment.method);
+            return true;
+        });
+
+        console.log("Non-default payments:", nonDefaultPayments);
+
+        // Check if this is a mixed payment (multiple payments)
+        const isMixedPayment = payments.length > 1;
+
+        // Create single slip data with all non-default payments
+        const slipData = {
+            storeName: page.props.company_info?.company_name,
+            branch: orderData.branch,
+            invoiceNumber: orderData.invoice_no,
+            dateTime: moment(orderData.order_date)
+                .tz("Asia/Manila")
+                .format("MM/DD/YYYY hh:mm A"),
+            payments: nonDefaultPayments.map((payment: any) => ({
+                paymentMethod:
+                    payment.method || payment.payment_type || "Payment",
+                amountPaid: payment.amount_paid || payment.amount_applied || 0,
+                referenceNumber: payment.reference_number || undefined,
+                customerName: payment.customer_name || undefined,
+                customerContact: payment.customer_contact || undefined,
+                paymentType: payment.payment_type_value || undefined,
+                approvalCode: payment.approval_code || undefined,
+                cardHolderName: payment.card_holder_name || undefined,
+                giftCheckNumber: payment.gift_check_number || undefined,
+                giftCheckAmount: payment.gift_check_amount || undefined,
+            })),
+            isMixedPayment: isMixedPayment,
+        };
+
+        try {
+            await thermalPrinter.printReceiptSlip(slipData);
+            console.log(
+                `Receipt slip printed for ${nonDefaultPayments.length} payment(s)`
+            );
+        } catch (slipError) {
+            console.error(`Failed to print receipt slip:`, slipError);
+            // Don't show error to user, just log it
+        }
+    } catch (error) {
+        console.error("Error in printReceiptSlips:", error);
+        // Don't throw - we don't want to interrupt the main flow
+    }
+};
+
 const processReceipt = async (data: any) => {
     if (!data) {
         await showChangeDialog(changeAmount.value);
@@ -2106,6 +2168,8 @@ const processReceipt = async (data: any) => {
     const thermalReceiptData = {
         storeName: page.props.company_info?.company_name,
         branch: data.branch,
+        storeAddress: data.branch?.address || "",
+        storePhone: data.branch?.phone || "",
         orderNumber: data.invoice_no,
         cashier: data.cashier?.name,
         dateTime: moment(data.order_date)
@@ -2124,6 +2188,9 @@ const processReceipt = async (data: any) => {
 
     try {
         await thermalPrinter.printReceipt(thermalReceiptData, false);
+
+        // Print receipt slips for non-default payment methods
+        await printReceiptSlips(data, paymentData);
     } catch (error) {
         console.error("Failed to print receipt:", error);
         showReceiptModal.value = true;
@@ -2177,7 +2244,7 @@ const handleSettlePayment = async () => {
                 summary: "Incomplete Payment",
                 detail: `Remaining balance: ${formatMoney(
                     remainingBalance.value,
-                    defaultCurrencyCode
+                    defaultCurrencyCode.value
                 )}`,
                 life: 3000,
             });
@@ -2294,8 +2361,12 @@ const handleSettlePayment = async () => {
         };
 
         // Add customer_id for credit and points payments
-        if (isCreditMethod.value && selectedCustomerId.value) {
-            payload.customer_id = selectedCustomerId.value;
+        if (isCreditMethod.value) {
+            const effectiveCustomerId =
+                selectedCustomerId.value || cartCustomer.value?.id;
+            if (effectiveCustomerId) {
+                payload.customer_id = effectiveCustomerId;
+            }
         }
 
         if (isPointsMethod.value) {

@@ -310,6 +310,19 @@ class PaymentService
 
     private function recordPayment(Order $order, array $paymentContext): Payment
     {
+        // Get payment type
+        $paymentType = $paymentContext['method']->payment_type;
+        if ($paymentType instanceof PaymentType) {
+            $paymentType = $paymentType->value;
+        }
+
+        // Prepare payment details - add customer info for credit and points payments
+        $paymentDetails = $paymentContext['payment_details'] ?? [];
+        if ((strtolower($paymentType) === 'credit' || strtolower($paymentType) === 'points') && $order->customer) {
+            $paymentDetails['customer_name'] = $order->customer->customer_name;
+            $paymentDetails['customer_contact'] = $order->customer->contact_no ?? $order->customer->email ?? '';
+        }
+
         $payment = Payment::create([
             'order_id' => $order->id,
             'payment_method_id' => $paymentContext['method']->id,
@@ -319,14 +332,10 @@ class PaymentService
             'change_amount' => $paymentContext['change_amount'] ?? 0,
             'reference_number' => $paymentContext['reference_number'],
             'notes' => $paymentContext['notes'],
-            'payment_details' => $paymentContext['payment_details'] ?? [],
+            'payment_details' => $paymentDetails,
         ]);
 
         // If payment type is credit, create a customer payable record
-        $paymentType = $paymentContext['method']->payment_type;
-        if ($paymentType instanceof PaymentType) {
-            $paymentType = $paymentType->value;
-        }
 
         if (strtolower($paymentType) === 'credit') {
             // Customer ID is already validated in preparePaymentContext
