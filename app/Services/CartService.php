@@ -10,15 +10,17 @@ use App\Models\Product;
 use App\Models\CartItem;
 use App\Models\Discount;
 use App\Models\TableRoom;
+use App\Models\VoidItem;
 use App\Events\OrderPlaced;
 use Illuminate\Http\Request;
 use App\Models\CashierSession;
 use App\Models\ProductPackaging;
 use App\Enums\TableRoomStatusType;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Http\Resources\CartResource;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
+use App\Enums\TableRoomLocation\LocationType;
 use App\Http\Resources\PreparationItemCollectionResource;
 
 class CartService
@@ -186,7 +188,7 @@ class CartService
     /**
      * Calculate pricing data including amount and tax information
      */
-    private function calculatePricingData(float $price, int $quantity, Product $product): array
+    private function calculatePricingData(float $price, float $quantity, Product $product): array
     {
         $priceWithTax = $this->applyVatToPrice($price, $product);
         $amount       = $priceWithTax * $quantity;
@@ -240,7 +242,7 @@ class CartService
         Cart $cart,
         Product $product,
         Request $request,
-        int $quantity,
+        float $quantity,
         float $price,
         array $pricingData,
         string $orderType
@@ -265,6 +267,7 @@ class CartService
             'tax_type'             => $product->vat_type,
             'tax_percentage'       => $product->vat_rate,
             'tax_included'         => $product->vat_inclusive,
+
         ]);
     }
 
@@ -275,7 +278,7 @@ class CartService
         CartItem $parentItem,
         array $selectedOptions,
         Product $parentProduct,
-        int $parentQuantity,
+        float $parentQuantity,
         string $orderType
     ): void {
         foreach ($selectedOptions as $selectedOption) {
@@ -301,13 +304,13 @@ class CartService
         CartItem $parentItem,
         array $childItemData,
         Product $parentProduct,
-        int $parentQuantity,
+        float $parentQuantity,
         string $orderType,
         array $selectedOption = []
     ): void {
         try {
             $childPrice = (float) ($childItemData['price'] ?? 0);
-            $childQuantityPerBundle = (int) ($childItemData['quantity'] ?? 0);
+            $childQuantityPerBundle = (float) ($childItemData['quantity'] ?? 0);
 
             if ($childQuantityPerBundle <= 0) {
                 return;
@@ -346,6 +349,8 @@ class CartService
                 'vat_amount'           => $pricingData['vat_amount'],
                 'non_vat_sales'        => $pricingData['non_vat_sales'],
                 'less_tax'             => $pricingData['less_tax'],
+                'served_time'          => $parentItem->served_time,
+                'placed_order_time'     => $parentItem->placed_order_time,
                 'meta_data'            => [
                     'option_id'   => $selectedOption['id'] ?? null,
                     'option_name' => $selectedOption['option_name'] ?? null,
@@ -602,32 +607,7 @@ class CartService
         ]);
     }
 
-    public function voidCartItem(string $reason, int $cartItemId, User $user): mixed
-    {
 
-        try {
-            $cartItem = CartItem::find($cartItemId);
-            if (! $cartItem) {
-                throw new Exception('Cart item not found.');
-            }
-
-            $updated = $cartItem->update([
-                'is_void' => true,
-                'reason'  => $reason,
-            ]);
-
-            Log::info('Cart item voided via OTP verification.', [
-                'cart_item_id' => $cartItemId,
-                'voided_by'    => $user->id,
-                'voided_name'  => $user->name,
-            ]);
-
-            return $updated;
-        } catch (Exception $e) {
-            throw new Exception('Error voiding cart item.');
-        }
-
-    }
 
     public function applyDiscountToCartItem(Request $request): mixed
     {
@@ -820,14 +800,119 @@ class CartService
         ]);
     }
 
-    public function deleteCartItem(int $cartItemId): mixed
+    public function voidCartItem(string $reason, int $cartItemId, User $user): mixed
     {
+        try {
+            $cartItem = CartItem::with(['cart.cashierSession'])->find($cartItemId);
+            if (! $cartItem) {
+                throw new Exception('Cart item not found.');
+            }
 
-        $cartItem = CartItem::findOrFail($cartItemId);
-        if (! $cartItem) {
-            throw new Exception('Cart item is empty.');
+            DB::beginTransaction();
+
+            // Save to void_items table immediately
+            VoidItem::create([
+                'parent_id'               => $cartItem->parent_id,
+                'product_id'              => $cartItem->product_id,
+                'product_type'            => $cartItem->product->product_type ?? null,
+                'description'             => $cartItem->product->name ?? null,
+                'product_packaging_id'    => $cartItem->product_packaging_id,
+                'quantity'                => $cartItem->quantity,
+                'price'                   => $cartItem->price,
+                'amount'                  => $cartItem->amount,
+                'order_type'              => $cartItem->order_type,
+                'sub_total'               => $cartItem->sub_total,
+                'void_reason'             => $reason,
+                'is_served'               => $cartItem->is_served ?? false,
+                'served_by'               => $cartItem->served_by,
+                'voided_by'               => $user->id,
+                'cashier_id'              => $cartItem->cart?->cashier_id,
+                'cashier_session_id'      => $cartItem->cart?->cashierSession?->id,
+                'serving_number'          => $cartItem->serving_number,
+                'placed_order_time'       => $cartItem->placed_order_time,
+                'voided_at'               => now(),
+                'batch_number'            => $cartItem->batch_number,
+            ]);
+
+            // Mark cart item as void
+            $updated = $cartItem->update([
+                'is_void' => true,
+                'reason'  => $reason,
+            ]);
+
+            DB::commit();
+
+            Log::info('Cart item voided and saved to void_items table.', [
+                'cart_item_id' => $cartItemId,
+                'voided_by'    => $user->id,
+                'voided_name'  => $user->name,
+            ]);
+
+            return $updated;
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error('Error voiding cart item: ' . $e->getMessage());
+            throw new Exception('Error voiding cart item.');
         }
-        return $cartItem->delete();
+    }
+
+    public function deleteCartItem(int $cartItemId, ?User $approver = null, ?string $reason = null): mixed
+    {
+        try {
+            $cartItem = CartItem::with(['cart.cashierSession'])->findOrFail($cartItemId);
+            if (! $cartItem) {
+                throw new Exception('Cart item is empty.');
+            }
+
+            DB::beginTransaction();
+
+            // If item was placed and has an approver, save to void_items table
+            if ($cartItem->placed_order && $approver) {
+                Log::info('Attempting to save void item', [
+                    'cart_item_id' => $cartItemId,
+                    'reason_received' => $reason,
+                    'reason_is_null' => is_null($reason),
+                    'reason_is_empty' => empty($reason),
+                ]);
+
+                VoidItem::create([
+                    'parent_id'               => $cartItem->parent_id,
+                    'cashier_id'              => $cartItem->cart?->cashier_id,
+                    'cashier_session_id'      => $cartItem->cart?->cashierSession?->id,
+                    'product_id'              => $cartItem->product_id,
+                    'product_type'            => $cartItem->product->product_type ?? null,
+                    'description'             => $cartItem->product->name ?? null,
+                    'product_packaging_id'    => $cartItem->product_packaging_id,
+                    'quantity'                => $cartItem->quantity,
+                    'price'                   => $cartItem->price,
+                    'amount'                  => $cartItem->amount,
+                    'order_type'              => $cartItem->order_type,
+                    'sub_total'               => $cartItem->sub_total,
+                    'void_reason'             => $reason ?: 'Deleted with approval',
+                    'is_served'               => $cartItem->is_served ?? false,
+                    'served_by'               => $cartItem->served_by,
+                    'voided_by'               => $approver->id,
+                    'cashier_id'              => $cartItem->cart?->cashier_id,
+                    'cashier_session_id'      => $cartItem->cart?->cashierSession?->id,
+                    'serving_number'          => $cartItem->serving_number,
+                    'placed_order_time'       => $cartItem->placed_order_time,
+                    'served_time'            => $cartItem->served_time,
+                    'voided_at'               => now(),
+                    'batch_number'            => $cartItem->batch_number,
+                ]);
+
+
+            }
+
+            $result = $cartItem->delete();
+
+            DB::commit();
+
+            return $result;
+        } catch (Exception $e) {
+            DB::rollBack();
+            throw new Exception('Error deleting cart item.');
+        }
     }
 
     public function placeOrder($payload): mixed
@@ -1041,21 +1126,9 @@ class CartService
 
     public function transferOrder(int $sourceTableId, int $targetTableId): mixed
     {
-        $cashierSession = $this->cashierSession->openSession()->first();
 
-        if (! $cashierSession) {
-            throw new Exception('No active cashier session found.');
-        }
-
-        // Find the order for the source table
-        $cart = Cart::where('table_room_id', $sourceTableId)
-            ->where('cashier_id', Auth::id())
-            ->where('cashier_session_id', $cashierSession->id)
-            ->first();
-
-        if (! $cart) {
-            throw new Exception('No active cart found for the source table.');
-        }
+        /// check the table room location type of the source table if dine  it should not look for cart
+        $sourceTable = TableRoom::findOrFail($sourceTableId);
 
         // Verify target table exists and is available
         $targetTable = TableRoom::findOrFail($targetTableId);
@@ -1064,13 +1137,25 @@ class CartService
             throw new Exception('Target table must be available to transfer the cart.');
         }
 
-        // Update the cart's table_room_id
-        $cart->update([
-            'table_room_id' => $targetTableId,
-        ]);
+        if ($sourceTable->tableRoomLocation->location_type === LocationType::DINE_IN->value) {
+             // Find the order for the source table
+            $cart = Cart::where('table_room_id', $sourceTableId)
+                ->latest();
+
+
+            if (! $cart) {
+                throw new Exception('No active cart found for the source table.');
+            }
+
+            // Update the cart's table_room_id
+            $cart->update([
+                    'table_room_id' => $targetTableId,
+            ]);
+        }
+
 
         // Update source table to available
-        $sourceTable = TableRoom::findOrFail($sourceTableId);
+        // $sourceTable = TableRoom::findOrFail($sourceTableId);
         $sourceTable->update([
             'status'        => TableRoomStatusType::AVAILABLE->value,
             'time_in'       => null,
@@ -1198,5 +1283,57 @@ class CartService
         }
 
         return CartItem::whereIn('id', $request->cartItemIds)->update(['cart_id' => $cart->id]);
+    }
+
+    /**
+     * Search for product or product packaging by barcode
+     * Returns array with product/packaging info or null if not found
+     */
+    public function searchByBarcode(string $barcode): ?array
+    {
+        if (empty($barcode)) {
+            return null;
+        }
+
+        // First, search in products (excluding WITH_VARIANT type)
+        $product = Product::where('barcode', $barcode)
+            ->where('product_type', '!=', 'with_variant')
+            ->where('is_active', true)
+            ->first();
+
+        if ($product) {
+            return [
+                'type' => 'product',
+                'id' => $product->id,
+                'name' => $product->name,
+                'price' => $product->price,
+                'product_type' => $product->product_type,
+                'barcode' => $product->barcode,
+                'product_id' => $product->id,
+                'product_packaging_id' => null,
+            ];
+        }
+
+        // If not found in products, search in product_packagings
+        $packaging = ProductPackaging::where('barcode', $barcode)
+            ->with(['product' => function ($query) {
+                $query->where('is_active', true);
+            }])
+            ->first();
+
+        if ($packaging && $packaging->product) {
+            return [
+                'type' => 'packaging',
+                'id' => $packaging->id,
+                'name' => $packaging->product->name . ' (' . $packaging->name . ')',
+                'price' => $packaging->price,
+                'product_type' => $packaging->product->product_type,
+                'barcode' => $packaging->barcode,
+                'product_id' => $packaging->product_id,
+                'product_packaging_id' => $packaging->id,
+            ];
+        }
+
+        return null;
     }
 }

@@ -1,6 +1,7 @@
 <?php
 namespace App\Filament\Tenant\Resources;
 
+use App\Enums\Product\Type as ProductType;
 use App\Enums\VatType;
 use App\Filament\Imports\ProductImporter;
 use App\Filament\Tenant\Resources\ProductResource\Pages;
@@ -71,15 +72,15 @@ class ProductResource extends Resource
                     ->label('Product Type')
                     ->required()
                     ->options([
-                        'simple'       => 'Simple',
-                        'with_variant' => 'With Variant',
-                        'composite'    => 'Composite',
-                        'bundle'       => 'Bundle',
+                        ProductType::SIMPLE->value => 'Simple',
+                        ProductType::WITH_VARIANT->value => 'With Variant',
+                        ProductType::COMPOSITE->value => 'Composite',
+                        ProductType::BUNDLE->value => 'Bundle',
                     ])
-                    ->default('simple')
+                    ->default(ProductType::SIMPLE->value)
                     ->live()
                     ->afterStateUpdated(function ($state, callable $set) {
-                        if ($state !== 'simple') {
+                        if ($state !== ProductType::SIMPLE->value) {
                             $set('track_inventory', false);
                         }
                     })
@@ -134,7 +135,14 @@ class ProductResource extends Resource
                     ->default(0)
                     ->numeric()
                     ->label('Price')
-                    ->hidden(fn(Get $get) => $get('product_type') === 'with_variant'),
+                    ->hidden(fn(Get $get) => $get('product_type') === ProductType::WITH_VARIANT->value),
+
+                TextInput::make('barcode')
+                    ->label('Barcode')
+                    ->maxLength(150)
+                    ->unique(ignoreRecord: true)
+                    ->hidden(fn(Get $get) => $get('product_type') === ProductType::WITH_VARIANT->value)
+                    ->helperText('Barcode for quick product lookup. Not available for products with variants.'),
 
                 Toggle::make('track_inventory')
                     ->label('Track Inventory')
@@ -176,7 +184,7 @@ class ProductResource extends Resource
 
                         $set('has_inventory_links', true);
                     })
-                    ->disabled(fn (Get $get) => $get('product_type') !== 'simple'),
+                    ->disabled(fn (Get $get) => $get('product_type') !== ProductType::SIMPLE->value),
 
                 Hidden::make('has_inventory_links')
                     ->default(fn (?Product $record) => $record?->inventoryRecipes()->exists())
@@ -212,12 +220,12 @@ class ProductResource extends Resource
 
                 TextInput::make('unit_measure')
                     ->label('Unit of Measure')
-                    ->hidden(fn(Get $get) => $get('product_type') === 'with_variant'),
+                    ->hidden(fn(Get $get) => $get('product_type') === ProductType::WITH_VARIANT->value),
 
                 Repeater::make('inventoryRecipes')
                     ->label('Recipe Ingredients')
                     ->relationship('inventoryRecipes')
-                    ->hidden(fn(Get $get) => $get('product_type') !== 'composite')
+                    ->hidden(fn(Get $get) => $get('product_type') !== ProductType::COMPOSITE->value)
                     ->schema([
                         Select::make('inventory_id')
                             ->label('Inventory Item')
@@ -401,7 +409,7 @@ class ProductResource extends Resource
                 Repeater::make('options')
                     ->label('Product Options')
                     ->relationship('options')
-                    ->hidden(fn(Get $get) => $get('product_type') !== 'bundle')
+                    ->hidden(fn(Get $get) => $get('product_type') !== ProductType::BUNDLE->value)
                     ->helperText('Options are only available for bundle products.')
                     ->schema([
                         TextInput::make('option_name')
@@ -565,6 +573,11 @@ class ProductResource extends Resource
                     ->label('Product Name')
                     ->searchable()
                     ->sortable(),
+
+                TextColumn::make('barcode')
+                    ->label('Barcode')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('receipt_alias')
                     ->label('Receipt Name')

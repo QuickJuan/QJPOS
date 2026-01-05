@@ -6,6 +6,7 @@ use Inertia\Inertia;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\EWalletController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\TableRoomController;
@@ -181,9 +182,7 @@ if (!isCentralDomain()) {
                             Route::get('/product/{product}/options', 'productOptions')->name('product.options');
                             Route::post('/session/start', 'startSession')->name('session.start');
                             Route::post('/session/close', 'closeShift')->name('session.close');
-                            Route::get('/api/session-summary', 'getSessionSummary')->name('api.session-summary');
-                            Route::get('/api/session-summary/{sessionId}', 'getSessionSummaryById')->name('api.session-summary-by-id');
-
+                            Route::get('/session-summary/{shiftNo}', 'getSessionSummaryById')->name('api.session-summary-by-id');
                             Route::put('/update-bill-no/{branchId}', 'updateBillNo')->name('update-bill-no');
                         });
 
@@ -201,6 +200,8 @@ if (!isCentralDomain()) {
                             Route::get('/cart/{cart}/settle-payment', 'showSettlePayment')->name('cart.settle-payment');
                             Route::post('/cart/create-order', 'create')->name('cart.create-order');
                             Route::post('/cart/add', 'addToCart')->name('cart.add');
+                            Route::post('/cart/search-barcode', 'searchBarcode')->name('cart.search-barcode');
+                            Route::post('/cart/update-customer', 'updateCustomer')->name('cart.update-customer');
                             Route::put('/cart/{cartId}', 'updateCart')->name('cart.update');
                             Route::post('/cart/merge', 'mergeCart')->name('cart.merge');
                             Route::post('/cart/place-order', 'placeOrder')->name('cart.place-order');
@@ -244,6 +245,18 @@ if (!isCentralDomain()) {
                     Route::post('/locations', 'storeLocation')->name('store-location');
                     Route::put('/locations/{location}', 'updateLocation')->name('update-location');
                     Route::delete('/locations/{location}', 'destroyLocation')->name('destroy-location');
+                });
+
+            // E-Wallet Routes
+            Route::as('ewallet.')
+                ->prefix('/ewallet')
+                ->controller(EWalletController::class)
+                ->group(function () {
+                    Route::post('/load-change', 'loadChange')->name('load-change');
+                    Route::get('/balance/{customerId}', 'getBalance')->name('balance');
+                    Route::get('/transactions/{customerId}', 'getTransactions')->name('transactions');
+                    Route::get('/points-transactions/{customerId}', 'getPointsTransactions')->name('points-transactions');
+                    Route::post('/payment', 'makePayment')->name('payment');
                 });
 
             Route::as('table-rooms.')
@@ -318,6 +331,13 @@ if (!isCentralDomain()) {
                     Route::get('/branches/{branchId}/tables', 'getTablesByBranch')->name('branch-tables');
                     Route::get('/tables/{tableId}/with-cart', 'getTableWithCart')->name('table-with-cart');
                 });
+
+            // ROUTES FOR REPORTS
+            // Route::as('reports.')
+            //     ->prefix('/reports')
+            //     ->group(function () {
+            //         Route::get('/hourly-sales', [\App\Http\Controllers\HourlySalesReportController::class, 'index'])->name('hourly-sales');
+            //     });
         });
 
     // // Web Receipt Route (for browser viewing)

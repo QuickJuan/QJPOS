@@ -45,14 +45,17 @@ export interface CashierState {
 
 export interface SettlePaymentPayload {
     cart_id: number;
-    payment_method_id: number;
-    currency_id: number | null;
-    amount_in_payment_currency: number;
+    payment_method_id?: number;
+    currency_id?: number | null;
+    amount_in_payment_currency?: number;
     total_amount: number;
     amount_paid?: number;
     reference_number?: string;
     notes?: string;
     payment_details?: Record<string, any>;
+    customer_id?: number;
+    is_mixed_payment?: boolean;
+    payments?: Array<any>;
 }
 
 export interface ClosingCashBreakdownPayload {
@@ -275,9 +278,20 @@ export const useCashier = () => {
 
     // Settle payment for a cart
     const settlePayment = async (paymentData: SettlePaymentPayload) => {
-        const response = await httpPost(
-            route("resto.cart.settle-bill"),
-            {
+        // Build payload based on payment type
+        let payload: any;
+
+        if (paymentData.is_mixed_payment) {
+            // Mixed payment mode - send payments array
+            payload = {
+                cart_id: paymentData.cart_id,
+                is_mixed_payment: true,
+                payments: paymentData.payments,
+                total_amount: paymentData.total_amount,
+            };
+        } else {
+            // Single payment mode - send individual fields
+            payload = {
                 cart_id: paymentData.cart_id,
                 payment_method_id: paymentData.payment_method_id,
                 currency_id: paymentData.currency_id,
@@ -287,7 +301,13 @@ export const useCashier = () => {
                 reference_number: paymentData.reference_number,
                 notes: paymentData.notes,
                 payment_details: paymentData.payment_details,
-            }
+                customer_id: paymentData.customer_id,
+            };
+        }
+
+        const response = await httpPost(
+            route("resto.cart.settle-bill"),
+            payload
         );
 
         // Remove the settled cart from open carts if successful

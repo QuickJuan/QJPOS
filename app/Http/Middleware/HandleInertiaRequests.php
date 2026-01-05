@@ -185,7 +185,7 @@ class HandleInertiaRequests extends Middleware
             $cart->refresh();
 
             // Load only essential relationships to avoid N+1 and timeout issues
-            $cart->load(['tableRoom']);
+            $cart->load(['tableRoom', 'customer']);
 
             // Load cart items with their products separately to avoid deep nesting
             if ($cart->relationLoaded('cartItems') || $cart->cartItems) {
@@ -383,7 +383,7 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * Load active currencies for the tenant
+     * Load active currencies for the tenant (from cash payment methods)
      */
     private function loadTenantCurrencies(): array
     {
@@ -396,27 +396,30 @@ class HandleInertiaRequests extends Middleware
             // Cache currencies for 30 minutes
             $cacheKey = 'tenant_currencies_' . tenant('id');
             return cache()->remember($cacheKey, now()->addMinutes(30), function () {
-                $currencies = Currency::active()
-                    ->with(['activeDenominations' => function ($query) {
-                        $query->select('id', 'currency_id', 'value', 'label', 'sort_order', 'is_active');
+                $paymentMethods = PaymentMethod::active()
+                    ->where('payment_type', 'cash')
+                    ->with(['denominations' => function ($query) {
+                        $query->where('is_active', true)
+                            ->select('id', 'payment_method_id', 'value', 'label', 'sort_order', 'is_active')
+                            ->orderBy('sort_order')
+                            ->orderByDesc('value');
                     }])
-                    ->orderByDesc('is_default')
+                    ->orderByDesc('is_default_cash')
                     ->orderBy('name')
-                    ->get(['id', 'code', 'name', 'symbol', 'exchange_rate', 'is_default']);
+                    ->get(['id', 'currency_code', 'currency_name', 'symbol', 'exchange_rate', 'is_default_cash']);
 
 
-                return $currencies->map(function (Currency $currency) {
-                    $currencySymbol = $currency->symbol ?? 'PHP ';
+                return $paymentMethods->map(function (PaymentMethod $paymentMethod) {
+                    $currencySymbol = $paymentMethod->symbol ?? '₱';
 
                     return [
-                        'id' => $currency->id,
-                        'code' => $currency->code,
-                        'name' => $currency->name,
+                        'id' => $paymentMethod->id,
+                        'code' => $paymentMethod->currency_code,
+                        'name' => $paymentMethod->currency_name,
                         'symbol' => $currencySymbol,
-                        'exchange_rate' => $currency->exchange_rate ?? 1,
-                        'is_default' => (bool) $currency->is_default,
-                        'denominations' => $currency->activeDenominations
-                            ->filter(fn($denom) => $denom->is_active)
+                        'exchange_rate' => $paymentMethod->exchange_rate ?? 1,
+                        'is_default' => (bool) $paymentMethod->is_default_cash,
+                        'denominations' => $paymentMethod->denominations
                             ->map(fn($denom) => [
                                 'id' => $denom->id,
                                 'value' => (float) $denom->value,
@@ -442,9 +445,22 @@ class HandleInertiaRequests extends Middleware
         }
 
         try {
-            return Currency::default()
-                ->select('id', 'code', 'name', 'symbol', 'exchange_rate', 'is_default')
-                ->first()?->toArray();
+            $defaultCash = PaymentMethod::defaultCash()
+                ->select('id', 'currency_code', 'currency_name', 'symbol', 'exchange_rate', 'is_default_cash')
+                ->first();
+
+            if (!$defaultCash) {
+                return null;
+            }
+
+            return [
+                'id' => $defaultCash->id,
+                'code' => $defaultCash->currency_code,
+                'name' => $defaultCash->currency_name,
+                'symbol' => $defaultCash->symbol,
+                'exchange_rate' => $defaultCash->exchange_rate,
+                'is_default' => true,
+            ];
         } catch (\Exception $e) {
             \Log::error('Failed to load default currency in HandleInertiaRequests: ' . $e->getMessage());
             return null;
@@ -452,7 +468,7 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * Load active payment methods with their currencies
+     * Load active payment methods
      */
     private function loadTenantPaymentMethods(): array
     {
@@ -466,8 +482,7 @@ class HandleInertiaRequests extends Middleware
             return cache()->remember($cacheKey, now()->addMinutes(30), function () {
                 return PaymentMethod::active()
                     ->ordered()
-                    ->with('currency:id,code,name,symbol,exchange_rate,is_default')
-                    ->get(['id', 'name', 'payment_type', 'currency_id', 'is_active', 'sort_order'])
+                    ->get(['id', 'name', 'payment_type', 'currency_code', 'currency_name', 'symbol', 'exchange_rate', 'is_active', 'sort_order'])
                     ->toArray();
             });
         } catch (\Exception $e) {

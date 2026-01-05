@@ -80,6 +80,13 @@
                                                 @click="handleThermalPrint"
                                             />
                                             <Button
+                                                label="Print Receipt Slip"
+                                                icon="pi pi-receipt"
+                                                outlined
+                                                :class="subtleActionButtonClass"
+                                                @click="handlePrintReceiptSlips"
+                                            />
+                                            <Button
                                                 label="Send to Email"
                                                 icon="pi pi-envelope"
                                                 outlined
@@ -140,6 +147,20 @@
                                                 >
                                                     <i class="pi pi-print"></i>
                                                     Print
+                                                </button>
+                                                <button
+                                                    class="w-full text-left px-4 py-3 hover:bg-primary-50 flex items-center gap-3 text-sm border-t border-neutral-100 transition-colors duration-150"
+                                                    @click="
+                                                        () => {
+                                                            handlePrintReceiptSlips();
+                                                            toggleActionMenu();
+                                                        }
+                                                    "
+                                                >
+                                                    <i
+                                                        class="pi pi-receipt"
+                                                    ></i>
+                                                    Print Receipt Slip
                                                 </button>
                                                 <button
                                                     class="w-full text-left px-4 py-3 hover:bg-neutral-50 flex items-center gap-3 text-sm border-t border-neutral-100 transition-colors duration-150"
@@ -649,6 +670,155 @@ const selectOrder = (order: any) => {
 
 const handleRefundDialogClosed = () => {
     refundOrder.value = null;
+};
+
+// Print receipt slips for non-default payment methods
+const handlePrintReceiptSlips = async () => {
+    if (!activeOrder.value) return;
+
+    try {
+        // Check if thermal printer is connected
+        if (!thermalPrinter.isConnected()) {
+            toast.add({
+                severity: "warn",
+                summary: "Printer Not Connected",
+                detail: "Please connect thermal printer first.",
+                life: 3000,
+            });
+            return;
+        }
+
+        // Normalize payment data to array
+        const paymentData = activeOrder.value.payment;
+        const payments = Array.isArray(paymentData)
+            ? paymentData
+            : [paymentData];
+
+        // Get default payment method using is_default_cash flag
+        const availablePaymentMethods = page.props.payment_methods || [];
+        const defaultPaymentMethod = availablePaymentMethods.find(
+            (method: any) =>
+                method.payment_type === "cash" && method.is_default_cash
+        );
+
+        console.log("Default payment method:", defaultPaymentMethod);
+        console.log("All payments:", payments);
+
+        // Filter payments that are NOT the default payment method
+        const nonDefaultPayments = payments.filter((payment: any) => {
+            // Only skip if this payment matches the default payment method
+            if (defaultPaymentMethod) {
+                // Check by method name (case-insensitive)
+                const paymentMethodName = (payment.method || "").toLowerCase();
+                const defaultMethodName = (
+                    defaultPaymentMethod.name || ""
+                ).toLowerCase();
+
+                if (paymentMethodName === defaultMethodName) {
+                    console.log("Excluding default payment:", payment.method);
+                    return false;
+                }
+
+                // Also check if payment type is cash and matches default
+                if (
+                    payment.payment_type_value === "cash" &&
+                    defaultPaymentMethod.payment_type === "cash"
+                ) {
+                    // If it's a cash payment, check if it's using the default currency
+                    if (paymentMethodName === defaultMethodName) {
+                        console.log(
+                            "Excluding default cash payment:",
+                            payment.method
+                        );
+                        return false;
+                    }
+                }
+            }
+            console.log("Including payment:", payment.method);
+            return true;
+        });
+
+        console.log("Non-default payments:", nonDefaultPayments);
+
+        if (nonDefaultPayments.length === 0) {
+            toast.add({
+                severity: "info",
+                summary: "No Receipt Slips",
+                detail: "This order only has default payment method. No receipt slips to print.",
+                life: 3000,
+            });
+            return;
+        }
+
+        // Print a receipt slip for each non-default payment
+        let successCount = 0;
+        let failCount = 0;
+
+        // Check if this is a mixed payment (multiple payments)
+        const isMixedPayment = payments.length > 1;
+
+        // Create single slip data with all non-default payments
+        const slipData = {
+            storeName: page.props.company_info?.company_name || "",
+            branch: activeOrder.value.branch,
+            invoiceNumber: String(activeOrder.value.invoice_no),
+            dateTime: receiptDate.value,
+            payments: nonDefaultPayments.map((payment: any) => ({
+                paymentMethod:
+                    payment.method || payment.payment_type || "Payment",
+                amountPaid: payment.amount_paid || payment.amount_applied || 0,
+                referenceNumber: payment.reference_number || undefined,
+                customerName: payment.customer_name || undefined,
+                customerContact: payment.customer_contact || undefined,
+                paymentType: payment.payment_type_value || undefined,
+                approvalCode: payment.approval_code || undefined,
+                cardHolderName: payment.card_holder_name || undefined,
+                giftCheckNumber: payment.gift_check_number || undefined,
+                giftCheckAmount: payment.gift_check_amount || undefined,
+            })),
+            isMixedPayment: isMixedPayment,
+        };
+
+        try {
+            await thermalPrinter.printReceiptSlip(slipData);
+            successCount = nonDefaultPayments.length;
+            console.log(
+                `Receipt slip printed for ${nonDefaultPayments.length} payment(s)`
+            );
+        } catch (slipError) {
+            failCount = nonDefaultPayments.length;
+            console.error(`Failed to print receipt slip:`, slipError);
+        }
+
+        // Show summary toast
+        if (successCount > 0) {
+            toast.add({
+                severity: "success",
+                summary: "Receipt Slips Printed",
+                detail: `Successfully printed ${successCount} receipt slip${
+                    successCount > 1 ? "s" : ""
+                }.${failCount > 0 ? ` ${failCount} failed.` : ""}`,
+                life: 3000,
+            });
+        } else if (failCount > 0) {
+            toast.add({
+                severity: "error",
+                summary: "Print Failed",
+                detail: `Failed to print ${failCount} receipt slip${
+                    failCount > 1 ? "s" : ""
+                }.`,
+                life: 3000,
+            });
+        }
+    } catch (error) {
+        console.error("Error in handlePrintReceiptSlips:", error);
+        toast.add({
+            severity: "error",
+            summary: "Error",
+            detail: "Failed to print receipt slips.",
+            life: 3000,
+        });
+    }
 };
 
 // Thermal print handling

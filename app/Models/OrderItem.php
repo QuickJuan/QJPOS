@@ -39,6 +39,7 @@ class OrderItem extends Model
         'serving_number',
         'placed_order_time',
         'served_time',
+        'batch_number',
     ];
 
     protected $casts = [

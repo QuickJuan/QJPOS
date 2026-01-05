@@ -320,13 +320,16 @@ const toggleSidebar = () => {
 
 // Handle show receipt modal
 const handleSelectTable = () => {
-    // Navigate to tables page with current cart context
-    router.visit(route("table-rooms.index"), {
-        data: {
-            from_cashier: true,
-            current_cart_id: sharedCart.value?.id,
-        },
-    });
+    // Navigate to tables page with current cart context as query params
+    const params: any = {
+        from_cashier: true,
+    };
+
+    if (sharedCart.value?.id) {
+        params.current_cart_id = sharedCart.value.id;
+    }
+
+    router.visit(route("table-rooms.index", params));
 };
 
 const handleShowReceipt = (data: any) => {

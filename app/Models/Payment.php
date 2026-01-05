@@ -10,8 +10,10 @@ class Payment extends Model
     protected $fillable = [
         'order_id',
         'payment_method_id',
+        'sequence',
         'currency_id',
         'amount',
+        'amount_applied',
         'amount_in_payment_currency',
         'exchange_rate',
         'change_amount',
@@ -21,7 +23,9 @@ class Payment extends Model
     ];
 
     protected $casts = [
+        'sequence' => 'integer',
         'amount' => 'decimal:2',
+        'amount_applied' => 'decimal:2',
         'amount_in_payment_currency' => 'decimal:2',
         'exchange_rate' => 'decimal:4',
         'change_amount' => 'decimal:2',
@@ -45,7 +49,7 @@ class Payment extends Model
     }
 
     /**
-     * Get the currency used for this payment (mainly for cash)
+     * Get the currency used for this payment
      */
     public function currency(): BelongsTo
     {

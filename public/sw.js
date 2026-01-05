@@ -1,4 +1,4 @@
-const CACHE_NAME = 'quickjuan-pos-v1';
+const CACHE_NAME = 'quickjuan-pos-v4';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to cache on install
@@ -55,6 +55,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Skip Inertia partial reloads (has X-Inertia-Partial-Data header)
+  if (request.headers.get('X-Inertia') || request.headers.get('X-Inertia-Partial-Data')) {
+    return;
+  }
+
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {
@@ -71,8 +76,13 @@ self.addEventListener('fetch', (event) => {
           // Clone the response
           const responseToCache = response.clone();
 
-          // Cache successful responses (except API calls for now)
-          if (!request.url.includes('/api/')) {
+          // Cache successful responses (except API calls, Inertia requests, Filament admin, resto pages, and table-rooms)
+          if (
+            !request.url.includes('/api/') &&
+            !request.url.includes('/admin/') &&
+            !request.url.includes('/resto/') &&
+            !request.url.includes('/table-rooms')
+          ) {
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(request, responseToCache);
             });

@@ -129,7 +129,8 @@
                                         @click="
                                             toggleServed(
                                                 item.id,
-                                                !item.is_served
+                                                !item.is_served,
+                                                item.item_type
                                             )
                                         "
                                         :class="[
@@ -247,7 +248,7 @@ onMounted(() => {
         currentTime.value = moment();
     }, 1000);
 
-    // Poll for new orders every 5 seconds
+    // Poll for new orders every 10 seconds
     pollingInterval = setInterval(() => {
         router.get(
             route("resto.pending-orders.index"),
@@ -256,9 +257,21 @@ onMounted(() => {
                 preserveState: true,
                 replace: true,
                 only: ["pendingOrders"],
+                onSuccess: () => {
+                    console.log(
+                        "✅ Pending orders refreshed:",
+                        new Date().toLocaleTimeString()
+                    );
+                },
+                onError: (errors) => {
+                    console.error(
+                        "❌ Failed to refresh pending orders:",
+                        errors
+                    );
+                },
             }
         );
-    }, 5000);
+    }, 10000);
 });
 
 onUnmounted(() => {
@@ -286,12 +299,19 @@ const pendingOrdersWithMinutes = computed(() => {
     }));
 });
 
-const toggleServed = (itemId: number, isServed: boolean) => {
+const toggleServed = (
+    itemId: number,
+    isServed: boolean,
+    itemType: string = "cart_item"
+) => {
     router.put(
         route("resto.pending-orders.toggle-served", {
             itemId,
         }),
-        { is_served: isServed },
+        {
+            is_served: isServed,
+            item_type: itemType,
+        },
         {
             preserveScroll: true,
         }

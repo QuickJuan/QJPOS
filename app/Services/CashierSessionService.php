@@ -10,6 +10,7 @@ use App\Models\CashierSession;
 use App\Models\Currency;
 use App\Models\Discount;
 use App\Models\Payment;
+use App\Models\PaymentSummaryBySession;
 use App\Models\TableRoom;
 use Carbon\Carbon;
 use Exception;
@@ -18,8 +19,11 @@ use Illuminate\Support\Facades\Auth;
 
 class CashierSessionService
 {
-    public function __construct(public CashierSession $model, private OrderService $orderService)
-    {
+    public function __construct(
+        public CashierSession $model,
+        private OrderService $orderService,
+        private CashMovementService $cashMovementService
+    ) {
         $this->model = $model;
     }
 
@@ -62,58 +66,105 @@ class CashierSessionService
 
     public function closeShift(Request $request)
     {
-        $session = null;
+        // $session = $request->user()->cashierSessions()->whereNull('closing_time')->latest()->first();
+        $session = CashierSession::find($request->input('shiftNo'));
 
-        $shiftId = $request->input('shift_no');
-        if ($shiftId) {
-            $session = $this->model->find($shiftId);
+        //check if session is close
+        if ($session && $session->closing_time !== null) {
+            throw new Exception('This session is already closed.');
         }
 
-        if (! $session) {
-            throw new Exception('No open session found');
-        }
 
-        $rawBreakdown = $request->input('cash_denomination_details', []);
-        $normalizedBreakdown = $this->normalizeCashDenominationDetails($rawBreakdown);
-
-        $expectedCash = $this->calculateExpectedCashByCurrency($session);
-        $normalizedBreakdown = $this->mergeExpectedCashIntoBreakdown(
-            $normalizedBreakdown,
-            $expectedCash
-        );
-
-        $cashDenominationTotal = (float) (
-            $normalizedBreakdown['totals']['cash_in_base']
-            ?? $normalizedBreakdown['grand_total_in_base']
-            ?? 0
-        );
-        $closingCash = ($session->beginning_cash ?? 0) + $cashDenominationTotal;
-        $varianceInBase = (float) (
-            $normalizedBreakdown['totals']['variance_in_base']
-            ?? ($cashDenominationTotal - ($expectedCash['totals']['expected_cash_in_base'] ?? 0))
-        );
-
-        $ordersTotals = $this->orderService->getTotalOrdersPerShift($session->id);
-        $productCounts = $this->orderService->getOrderItemsCount($session->id);
+        $cashDenominationDetails = $request->input('cashDenomination', []);
+        $ordersTotals = $this->orderService->getSummarySalesPerShift($session->id);
+        $discounts = $this->orderService->getDiscountBreakdownPerShift($session->id);
         $voidOrderItems = $this->orderService->getVoidOrderItemsPerShift($session->id);
         $refundOrders = $this->orderService->getRefundOrdersPerShift($session->id);
         $refundfromOtherShifts = $this->orderService->getRefundAFromOtherShiftOrders($session->cashier_id);
-        $discounts = $this->orderService->getDiscountBreakdownPerShift($session->id);
 
+        // Get payment summary from view grouped by payment method and currency
+        $paymentSummary = PaymentSummaryBySession::where('cashier_session_id', $session->id)->get();
+
+
+        $closingCash = 0;
+
+        $cashDenominations = $request->cashDenomination['currencies'];
+        $cashDenominationPayload = $request->cashDenomination['currencies'];
+
+
+        foreach ($cashDenominations as $currencyData) {
+            $closingCash += (float) $currencyData['amount_in_base'];
+        }
+
+        // get the default cash from the payment summary
+        $defaultCashSummary = $paymentSummary->firstWhere('is_default_cash', true);
+        $cashPayments = $paymentSummary->where('payment_type', 'cash')->values();
+
+        // Get cash movements (cash in/out) from the cash movement service
+        $cashMovements = $this->cashMovementService->getCashMovementsPerShift($session->id);
+
+        info('Cash Movements: ');
+        info(json_encode($cashMovements));
+
+        // get the cash in from the cash movements
+        $cashIn = $cashMovements->total_cash_in;
+        $cashOut = $cashMovements->total_cash_out;
+
+        // Compare cash payments to denominations and calculate variances
+        $cashComparisonResult = $this->compareCashPaymentsToDenominations(
+            $cashPayments,
+            $cashDenominations,
+            $defaultCashSummary,
+            $cashMovements
+        );
+
+        $cashComparison = $cashComparisonResult['comparisons'];
+        $cashDenominations = $cashComparisonResult['updated_denominations'];
+        $totalCashVarianceInBase = $cashComparisonResult['total_variance'];
+
+        info('Cash Comparison: ');
+        info(json_encode($cashComparison));
+
+        // Compare other payment methods (non-cash)
+        $otherPaymentDenomination = $request->cashDenomination['other_payments'] ?? [];
+
+        $otherPayments = $paymentSummary->where('payment_type', '!=', 'cash')->values();
+        $otherPaymentsComparison = [];
+        $totalOtherVariance = 0;
+
+        foreach ($otherPayments as $payment) {
+            $paymentMethodId = $payment->payment_method_id;
+
+            // Find matching denomination data by payment_method_id
+            $denominationData = collect($otherPaymentDenomination)->firstWhere('payment_method_id', $paymentMethodId);
+
+            $expectedAmountInBase = (float) $payment->total_amount;
+            $actualAmountInBase = $denominationData ? (float) ($denominationData['amount'] ?? 0) : 0;
+            $variance = $actualAmountInBase - $expectedAmountInBase;
+            $totalOtherVariance += $variance;
+
+            $otherPaymentsComparison[] = [
+                'payment_method_id' => $payment->payment_method_id,
+                'payment_method_name' => $payment->payment_method_name,
+                'payment_type' => $payment->payment_type,
+                'expected_amount_in_base' => $expectedAmountInBase,
+                'actual_amount_in_base' => $actualAmountInBase,
+                'variance_in_base' => $variance,
+            ];
+        }
+
+        info('Other Payments Comparison: ');
+        info(json_encode($otherPaymentsComparison));
 
         /**
          * break down discount base form discount types from order items
          * use DB query to get sum of discount amount per discount type for a specific shift
          */
-
-
-
-
-        $session->update([
+        $shiftData = [
             'closing_time'              => now(),
             'closing_cash'              => $closingCash,
-            'cash_denomination'         => $cashDenominationTotal,
-            'cash_denomination_details' => $normalizedBreakdown,
+            'cash_denomination'         => $cashDenominationPayload,
+            'total_sales'               => (float) $ordersTotals->total_due,
             'meta_data'                 => [
                 'total_orders'   => (float) $ordersTotals->total_orders,
                 'gross_sales'  => (float) $ordersTotals->total_amount,
@@ -131,149 +182,29 @@ class CashierSessionService
                 'max_invoice_no' => (int) $ordersTotals->max_invoice_no,
                 'min_bill_no'    => (int) $ordersTotals->min_bill_no,
                 'max_bill_no'    => (int) $ordersTotals->max_bill_no,
-                'total_sku'      => (int) $productCounts->total_sku,
-                'total_quantity' => (float) $productCounts->total_quantity,
+                'total_sku'      => (int) $ordersTotals->total_sku,
+                'total_quantity' => (float) $ordersTotals->total_quantity,
                 'void_order_items' => $voidOrderItems,
                 'refund_count'    => (int) $refundOrders->total_refunded_orders,
                 'refund_amount'    => (float) $refundOrders->total_refunded_amount,
                 'refund_from_other_shifts_amount' => (float) $refundfromOtherShifts->total_refunded_amount,
                 'refund_from_other_shifts_count' => (int) $refundfromOtherShifts->total_refunded_orders,
-                'expected_cash_in_base' => $expectedCash['totals']['expected_cash_in_base'] ?? null,
-                'change_paid_in_base' => $expectedCash['totals']['change_paid_in_base'] ?? null,
-                'variance' => $varianceInBase,
+                'cash_in'       => $cashIn,
+                'cash_out'      => $cashOut,
+                'cash_comparison' => $cashComparison,
+                'other_payments_comparison' => $otherPaymentsComparison,
             ],
-        ]);
+        ];
+        info('Shift Data: ');
+        info(json_encode($shiftData));
+
+
+        $session->update($shiftData);
 
         return $session->fresh();
     }
 
-    /**
-     * Ensure cash denomination details follow the structured multi-currency schema.
-     */
-    private function normalizeCashDenominationDetails($details): array
-    {
-        if (! is_array($details)) {
-            return $this->convertLegacyDenominations([]);
-        }
 
-        if (! isset($details['currencies']) || ! is_array($details['currencies'])) {
-            return $this->convertLegacyDenominations($details);
-        }
-
-        $currencies = [];
-        foreach ($details['currencies'] as $currency) {
-            if (! is_array($currency)) {
-                continue;
-            }
-
-            $denominations = [];
-            foreach ($currency['denominations'] ?? [] as $entry) {
-                if (! isset($entry['value'], $entry['count'])) {
-                    continue;
-                }
-
-                $value = (float) $entry['value'];
-                $count = (int) $entry['count'];
-
-                if ($count <= 0) {
-                    continue;
-                }
-
-                $denominations[] = [
-                    'id' => $entry['id'] ?? null,
-                    'label' => $entry['label'] ?? number_format($value, 2),
-                    'value' => $value,
-                    'count' => $count,
-                    'total' => $entry['total'] ?? $value * $count,
-                ];
-            }
-
-            $exchangeRate = (float) ($currency['exchange_rate'] ?? 1);
-            $amountInCurrency = (float) ($currency['amount_in_currency'] ?? $currency['total_amount'] ?? array_sum(array_column($denominations, 'total')));
-            $amountInBase = (float) ($currency['amount_in_base'] ?? $currency['total_in_base'] ?? $amountInCurrency * $exchangeRate);
-
-            $currencies[] = [
-                'currency_id' => $currency['currency_id'] ?? null,
-                'currency_code' => $currency['currency_code'] ?? '',
-                'currency_name' => $currency['currency_name'] ?? '',
-                'symbol' => $currency['symbol'] ?? null,
-                'exchange_rate' => $exchangeRate,
-                'denominations' => array_values($denominations),
-                'amount_in_currency' => $amountInCurrency,
-                'amount_in_base' => $amountInBase,
-            ];
-        }
-
-        $cashTotal = array_reduce($currencies, fn($carry, $currency) => $carry + (float) ($currency['amount_in_base'] ?? 0), 0.0);
-        $giftCheck = (float) ($details['gift_check_total'] ?? data_get($details, 'totals.gift_check_in_base', 0));
-        $grandTotal = $cashTotal + $giftCheck;
-
-        return [
-            'base_currency_id' => $details['base_currency_id'] ?? null,
-            'base_currency_code' => $details['base_currency_code'] ?? null,
-            'base_currency_symbol' => $details['base_currency_symbol'] ?? null,
-            'gift_check_total' => $giftCheck,
-            'totals' => [
-                'cash_in_base' => $cashTotal,
-                'gift_check_in_base' => $giftCheck,
-                'combined_in_base' => $grandTotal,
-                'variance_in_base' => data_get($details, 'totals.variance_in_base'),
-            ],
-            'currencies' => $currencies,
-            'grand_total_in_base' => $grandTotal,
-        ];
-    }
-
-    /**
-     * Support legacy payloads that only contained denomination => count mappings.
-     */
-    private function convertLegacyDenominations(array $legacy): array
-    {
-        $denominations = [];
-
-        foreach ($legacy as $denomination => $count) {
-            $count = (int) $count;
-            $value = (float) $denomination;
-
-            if ($count <= 0 || $value <= 0) {
-                continue;
-            }
-
-            $denominations[] = [
-                'id' => null,
-                'label' => number_format($value, 2),
-                'value' => $value,
-                'count' => $count,
-                'total' => $value * $count,
-            ];
-        }
-
-        $total = array_sum(array_column($denominations, 'total'));
-
-        return [
-            'base_currency_id' => null,
-            'base_currency_code' => null,
-            'base_currency_symbol' => null,
-            'gift_check_total' => 0,
-            'totals' => [
-                'cash_in_base' => $total,
-                'gift_check_in_base' => 0,
-                'combined_in_base' => $total,
-                'variance_in_base' => null,
-            ],
-            'currencies' => [[
-                'currency_id' => null,
-                'currency_code' => 'CASH',
-                'currency_name' => 'Cash',
-                'symbol' => null,
-                'exchange_rate' => 1,
-                'denominations' => $denominations,
-                'amount_in_currency' => $total,
-                'amount_in_base' => $total,
-            ]],
-            'grand_total_in_base' => $total,
-        ];
-    }
 
     public function createOrder(Request $request)
     {
@@ -443,98 +374,99 @@ class CashierSessionService
 
     public function getSessionSummary(?CashierSession $session = null): array
     {
-        // Get all orders for this session with relationships where the status
-        $settledOrders = $session->orders()->with(['orderItems', 'tableRoom'])->where('status', Status::SETTLED->value)->get();
-        $refundOrders  = $session->orders()->with(['orderItems', 'tableRoom'])->where('status', Status::REFUND->value)->get();
-
-        $seniorDiscount = Discount::where('discount_type', DiscountType::SENIOR->value)->first() ?? null;
-        $pwdDiscount    = Discount::where('discount_type', DiscountType::PWD->value)->first() ?? null;
-
-        $itemsSettled         = 0;
-        $guestsServed         = 0;
-        $totalQuantity        = 0;
-        $regularDiscountTotal = 0;
-        $seniorDiscountTotal  = 0;
-        $pwdDiscountTotal     = 0;
-        $transactionsCount    = $settledOrders->count();
-        $cancelledAmount      = $refundOrders->sum('total_due');
-        $grossSales           = $settledOrders->sum('total_amount');
-        $netSales             = $settledOrders->sum('total_due');
-        $serviceCharge        = $settledOrders->sum('service_charge');
-        $nonVatableSales      = $settledOrders->sum('non_vat');
-        $vatableSales         = $settledOrders->sum('vatable_sales');
-        $vatAmount            = $settledOrders->sum('vat_amount');
-        $vatExemptSales       = $settledOrders->sum('vat_exempt_sales');
-        $totalLessTax         = $settledOrders->sum('less_tax');
-
-        foreach ($settledOrders as $order) {
-            // Calculate order total from orderItems
-            $totalQuantity += $order->orderItems->sum('quantity');
-
-            $seniorDiscountTotal += $seniorDiscount ? $order->orderItems
-                ->where('discount_id', $seniorDiscount->id)
-                ->sum('discount_amount') : 0;
-
-            $pwdDiscountTotal += $pwdDiscount ? $order->orderItems
-                ->where('discount_id', $pwdDiscount->id)
-                ->sum('discount_amount') : 0;
-
-            $regularDiscountTotal += $seniorDiscount || $pwdDiscount
-                ? $order->orderItems
-                ->where('discount_id', '!=', $seniorDiscount?->id)
-                ->where('discount_id', '!=', $pwdDiscount?->id)
-                ->sum('discount_amount')
-                : 0;
-
-            $itemsSettled += $order->orderItems->count();
-
-            // Count guests - each order has a table with number_of_pax
-            if ($order->tableRoom) {
-                $guestsServed += $order->tableRoom->number_of_pax ?? 0;
-            }
+        if (!$session) {
+            return [];
         }
 
-        $cashBreakdown = $session->cash_denomination_details ?? [];
-        $expectedCashInBase = data_get($cashBreakdown, 'totals.expected_cash_in_base');
-        $varianceInBase = data_get($cashBreakdown, 'totals.variance_in_base');
+        // Get order totals using the same method as closeShift
+        $ordersTotals = $this->orderService->getTotalOrdersPerShift($session->id);
+        $productCounts = $this->orderService->getOrderItemsCount($session->id);
+        $voidOrderItems = $this->orderService->getVoidOrderItemsPerShift($session->id);
+        $refundOrders = $this->orderService->getRefundOrdersPerShift($session->id);
+        $discounts = $this->orderService->getDiscountBreakdownPerShift($session->id);
 
-        $sessionSummary = [
-            'gross_sales'               => $grossSales,
-            'net_sales'                 => $netSales,
-            'items_settled'             => $itemsSettled,
-            'guests_served'             => $guestsServed,
-            'transactions_count'        => $transactionsCount,
-            'sku_count'                 => $itemsSettled,
-            'total_quantity'            => $totalQuantity,
-            'cancelled_amount'          => $cancelledAmount,
-            'regular_discount'          => $regularDiscountTotal,
-            'senior_discount'           => $seniorDiscountTotal,
-            'pwd_discount'              => $pwdDiscountTotal,
-            'non_vat_sales'             => $nonVatableSales,
-            'vat_sales'                 => $vatableSales,
-            'vat_amount'                => $vatAmount,
-            'vat_exempt_sales'          => $vatExemptSales,
-            'less_tax'                  => $totalLessTax,
-            'service_charge'            => $serviceCharge,
-            'session_number'            => str_pad($session->id, 4, '0', STR_PAD_LEFT),
-            'beginning_cash'            => $session->beginning_cash ?? 0,
-            'closing_cash'              => $session->closing_cash ?? 0,
-            'cash_denomination'         => $session->cash_denomination,
-            'variance'                  => $varianceInBase ?? ($session->cash_denomination - ($netSales + $serviceCharge)),
-            'expected_cash'             => $expectedCashInBase ?? null,
-            'cash_denomination_details' => $cashBreakdown,
-            'or_number_start'           => $settledOrders->first()->invoice_no ?? null,
-            'or_number_end'             => $settledOrders->last()->invoice_no ?? null,
-            'bill_number_start'         => $settledOrders->first()->bill_no ?? null,
-            'bill_number_end'           => $settledOrders->last()->bill_no ?? null,
+        // Get default currency
+        $defaultCurrency = Currency::where('is_default', true)->first();
+        $defaultCurrencyId = $defaultCurrency?->id;
+
+        // Get payment breakdown by payment method AND currency
+        $paymentsByTypeAndCurrency = Payment::query()
+            ->selectRaw('payment_methods.payment_type, payments.currency_id, SUM(payments.amount) as total_amount')
+            ->join('payment_methods', 'payments.payment_method_id', '=', 'payment_methods.id')
+            ->join('orders', 'payments.order_id', '=', 'orders.id')
+            ->where('orders.cashier_session_id', $session->id)
+            ->where('orders.status', Status::SETTLED->value)
+            ->groupBy('payment_methods.payment_type', 'payments.currency_id')
+            ->get();
+
+        // Calculate total change given (always in default currency)
+        $totalChange = Payment::query()
+            ->join('orders', 'payments.order_id', '=', 'orders.id')
+            ->where('orders.cashier_session_id', $session->id)
+            ->where('orders.status', Status::SETTLED->value)
+            ->sum('change_amount');
+
+        // Build payment breakdown, deducting change from default currency cash only
+        $paymentBreakdown = [];
+        foreach ($paymentsByTypeAndCurrency as $payment) {
+            $paymentType = strtolower($payment->payment_type);
+            $amount = (float) $payment->total_amount;
+
+            // If this is cash in default currency, subtract change
+            if ($paymentType === 'cash' && $payment->currency_id == $defaultCurrencyId) {
+                $amount = max(0, $amount - (float) $totalChange);
+            }
+
+            $paymentBreakdown[$paymentType] = ($paymentBreakdown[$paymentType] ?? 0) + $amount;
+        }
+
+        // Organize by standard payment method types
+        $organizedPaymentBreakdown = [
+            'cash' => $paymentBreakdown['cash'] ?? 0,
+            'card' => $paymentBreakdown['card'] ?? 0,
+            'credit' => $paymentBreakdown['credit'] ?? 0,
+            'e-wallet' => $paymentBreakdown['e-wallet'] ?? 0,
+            'gift-check' => $paymentBreakdown['gift-check'] ?? 0,
         ];
 
-        // Save the formatted data to the meta_data column for future use.
-        $session->update([
-            'meta_data' => $sessionSummary,
-        ]);
+        // Use meta_data if already closed, otherwise calculate fresh
+        if ($session->closing_time && $session->meta_data) {
+            return array_merge($session->meta_data, [
+                'total_sales' => (float) ($session->meta_data['net_sales'] ?? 0),
+                'beginning_cash' => (float) ($session->beginning_cash ?? 0),
+                'payment_breakdown' => $organizedPaymentBreakdown,
+            ]);
+        }
 
-        return $sessionSummary;
+        $data =  [
+            'total_orders' => (float) ($ordersTotals->total_orders ?? 0),
+            'gross_sales' => (float) ($ordersTotals->total_amount ?? 0),
+            'item_discount' => (float) ($ordersTotals->item_discount ?? 0),
+            'discounts' => $discounts ?? [],
+            'service_charge' => (float) ($ordersTotals->service_charge ?? 0),
+            'less_tax' => (float) ($ordersTotals->less_tax ?? 0),
+            'net_sales' => (float) ($ordersTotals->total_due ?? 0),
+            'total_sales' => (float) ($ordersTotals->total_due ?? 0),
+            'vatable_sales' => (float) ($ordersTotals->vatable_sales ?? 0),
+            'vat_amount' => (float) ($ordersTotals->vat_amount ?? 0),
+            'vat_exempt_sales' => (float) ($ordersTotals->vat_exempt_sales ?? 0),
+            'zero_rated_sales' => (float) ($ordersTotals->zero_rated_sales ?? 0),
+            'non_vat_sales' => (float) ($ordersTotals->non_vat_sales ?? 0),
+            'min_invoice_no' => (int) ($ordersTotals->min_invoice_no ?? 0),
+            'max_invoice_no' => (int) ($ordersTotals->max_invoice_no ?? 0),
+            'min_bill_no' => (int) ($ordersTotals->min_bill_no ?? 0),
+            'max_bill_no' => (int) ($ordersTotals->max_bill_no ?? 0),
+            'total_sku' => (int) ($productCounts->total_sku ?? 0),
+            'total_quantity' => (float) ($productCounts->total_quantity ?? 0),
+            'void_order_items' => $voidOrderItems ?? [],
+            'refund_count' => (int) ($refundOrders->total_refunded_orders ?? 0),
+            'refund_amount' => (float) ($refundOrders->total_refunded_amount ?? 0),
+            'beginning_cash' => (float) ($session->beginning_cash ?? 0),
+            'payment_breakdown' => $organizedPaymentBreakdown,
+            'session_number' => str_pad($session->id, 4, '0', STR_PAD_LEFT),
+        ];
+        info(json_encode($data));
+        return $data;
     }
 
     /**
@@ -726,6 +658,124 @@ class CashierSessionService
             'exchange_rate' => (float) ($currencyData['exchange_rate'] ?? 1),
             'expected_in_currency' => 0.0,
             'expected_in_base' => 0.0,
+        ];
+    }
+
+    /**
+     * Compare cash payments to denominations and calculate variances
+     */
+    private function compareCashPaymentsToDenominations(
+        $cashPayments,
+        array $cashDenominations,
+        $defaultCashSummary,
+        $cashMovements
+    ): array {
+        $comparisons = [];
+        $totalVariance = 0;
+
+        foreach ($cashPayments as $cashPayment) {
+            $denominationIndex = $this->findDenominationIndex($cashDenominations, $cashPayment->payment_method_id);
+            $denominationData = $denominationIndex !== false ? $cashDenominations[$denominationIndex] : null;
+
+            // Calculate expected amounts (adjust for cash movements if default currency)
+            $expectedAmounts = $this->calculateExpectedCashAmounts(
+                $cashPayment,
+                $defaultCashSummary,
+                $cashMovements
+            );
+
+            // Get actual amounts from denomination input
+            $actualAmounts = $this->extractActualAmounts($denominationData);
+
+            // Calculate variances
+            $variances = [
+                'currency' => $actualAmounts['currency'] - $expectedAmounts['currency'],
+                'base' => $actualAmounts['base'] - $expectedAmounts['base'],
+            ];
+            $totalVariance += $variances['base'];
+
+            // Build comparison record
+            $comparisons[] = [
+                'payment_method_id' => $cashPayment->payment_method_id,
+                'payment_method_name' => $cashPayment->payment_method_name,
+                'currency_code' => $cashPayment->currency_code,
+                'currency_name' => $cashPayment->currency_name,
+                'symbol' => $cashPayment->symbol,
+                'expected_amount_in_currency' => $expectedAmounts['currency'],
+                'expected_amount_in_base' => $expectedAmounts['base'],
+                'actual_amount_in_currency' => $actualAmounts['currency'],
+                'actual_amount_in_base' => $actualAmounts['base'],
+                'variance_in_currency' => $variances['currency'],
+                'variance_in_base' => $variances['base'],
+            ];
+
+            // Update denomination data with expected amounts and variances
+            if ($denominationIndex !== false) {
+                $cashDenominations[$denominationIndex] = array_merge(
+                    $cashDenominations[$denominationIndex],
+                    [
+                        'expected_amount_in_currency' => $expectedAmounts['currency'],
+                        'expected_amount_in_base' => $expectedAmounts['base'],
+                        'variance_in_currency' => $variances['currency'],
+                        'variance_in_base' => $variances['base'],
+                    ]
+                );
+            }
+        }
+
+        return [
+            'comparisons' => $comparisons,
+            'updated_denominations' => $cashDenominations,
+            'total_variance' => $totalVariance,
+        ];
+    }
+
+    /**
+     * Find denomination index by payment method ID
+     */
+    private function findDenominationIndex(array $denominations, int $paymentMethodId)
+    {
+        return collect($denominations)->search(function($denom) use ($paymentMethodId) {
+            return $denom['payment_method_id'] == $paymentMethodId;
+        });
+    }
+
+    /**
+     * Calculate expected cash amounts, adjusting for cash movements if default currency
+     */
+    private function calculateExpectedCashAmounts(
+        $cashPayment,
+        $defaultCashSummary,
+        $cashMovements
+    ): array {
+        $expectedInCurrency = (float) $cashPayment->total_amount_in_payment_currency;
+        $expectedInBase = (float) $cashPayment->total_amount;
+
+        // Adjust for cash in/out if this is the default cash payment method
+        $isDefaultCash = $defaultCashSummary
+            && $cashPayment->payment_method_id === $defaultCashSummary->payment_method_id;
+
+        if ($isDefaultCash) {
+            $cashIn = $cashMovements->total_cash_in;
+            $cashOut = $cashMovements->total_cash_out;
+            $expectedInCurrency += $cashIn - $cashOut;
+            $expectedInBase += $cashIn - $cashOut;
+        }
+
+        return [
+            'currency' => $expectedInCurrency,
+            'base' => $expectedInBase,
+        ];
+    }
+
+    /**
+     * Extract actual amounts from denomination data
+     */
+    private function extractActualAmounts(?array $denominationData): array
+    {
+        return [
+            'currency' => $denominationData ? (float) ($denominationData['amount_in_currency'] ?? 0) : 0,
+            'base' => $denominationData ? (float) ($denominationData['amount_in_base'] ?? 0) : 0,
         ];
     }
 }

@@ -3,104 +3,89 @@
         <div
             class="min-h-screen bg-gradient-to-br from-neutral-50 to-neutral-100 px-4 py-8"
         >
-            <div class="mx-auto max-w-4xl">
+            <div class="mx-auto max-w-7xl">
                 <!-- Header -->
-                <div class="mb-8">
-                    <h1 class="text-4xl font-bold text-neutral-900">
+                <div class="mb-6">
+                    <h1 class="text-3xl font-bold text-neutral-900">
                         End of Shift
                     </h1>
-                    <p class="text-lg text-neutral-600">
-                        Complete your cash count and close the shift
+                    <p class="text-base text-neutral-600">
+                        Complete your cash count and close the shift.
                     </p>
                 </div>
 
-                <!-- Currency Denominations Section -->
-                <div class="mb-8 rounded-2xl bg-white p-6 shadow-lg">
-                    <h2 class="mb-6 text-xl font-bold text-neutral-900">
-                        Cash Count
-                    </h2>
-                    <CurrencyDenominationInput
-                        :currencies="availableCurrencies"
-                        :default-currency="defaultCurrency"
-                        :base-currency-symbol="baseCurrencySymbol"
-                        :denomination-counts="denominationCounts"
-                        :currency-values="currencyValues"
-                        @denomination-input="handleDenominationInput"
-                        @currency-input="handleCurrencyInput"
-                    />
-                </div>
-
-                <!-- Gift Check Section -->
-                <div class="mb-8 rounded-2xl bg-white p-6 shadow-lg">
-                    <h2 class="mb-4 text-xl font-bold text-neutral-900">
-                        Gift Checks
-                    </h2>
-                    <label
-                        for="gift-check-input"
-                        class="block text-sm font-semibold text-neutral-700 mb-2"
+                <!-- Main Content Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-10 gap-6 mb-6">
+                    <!-- Currency Denominations Section - 70% -->
+                    <div
+                        :class="
+                            otherPaymentMethods.length > 0
+                                ? 'lg:col-span-7'
+                                : 'lg:col-span-10'
+                        "
                     >
-                        Total Gift Checks ({{ baseCurrencySymbol.trim() }})
-                    </label>
-                    <input
-                        id="gift-check-input"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        aria-label="Total gift checks in base currency"
-                        aria-describedby="gift-check-help"
-                        :value="giftCheckAmount"
-                        @input="handleGiftCheckInput($event.target.value)"
-                        class="w-full rounded border border-neutral-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                        placeholder="0"
-                    />
-                    <p
-                        id="gift-check-help"
-                        class="mt-2 text-xs text-neutral-600"
+                        <div class="rounded-2xl bg-white p-6 shadow-lg h-full">
+                            <h2 class="mb-4 text-xl font-bold text-neutral-900">
+                                Cash Count
+                            </h2>
+                            <CurrencyDenominationInput
+                                :currencies="availableCurrencies"
+                                :default-currency="defaultCurrency"
+                                :base-currency-symbol="baseCurrencySymbol"
+                                :denomination-counts="denominationCounts"
+                                :currency-values="currencyValues"
+                                @denomination-input="handleDenominationInput"
+                                @currency-input="handleCurrencyInput"
+                            />
+                        </div>
+                    </div>
+
+                    <!-- Other Payment Methods - 30% -->
+                    <div
+                        v-if="otherPaymentMethods.length > 0"
+                        class="lg:col-span-3"
                     >
-                        Only include physical gift checks on hand. Credit and
-                        card payments are tracked automatically.
-                    </p>
-                </div>
-
-                <!-- Summary & Variance -->
-                <div class="mb-8 rounded-2xl bg-white p-6 shadow-lg">
-                    <h2 class="mb-6 text-xl font-bold text-neutral-900">
-                        Closing Summary
-                    </h2>
-                    <div class="space-y-4">
-                        <div
-                            class="flex items-center justify-between rounded-lg bg-neutral-50 p-4"
-                        >
-                            <p class="font-semibold text-neutral-900">
-                                Physical Cash Counted
-                            </p>
-                            <p class="text-2xl font-bold text-neutral-900">
-                                {{ baseCurrencySymbol
-                                }}{{ formatNumber(totalCashInBase) }}
-                            </p>
-                        </div>
-
-                        <div
-                            class="flex items-center justify-between rounded-lg bg-neutral-50 p-4"
-                        >
-                            <p class="font-semibold text-neutral-900">
-                                Gift Checks
-                            </p>
-                            <p class="text-2xl font-bold text-neutral-900">
-                                {{ baseCurrencySymbol
-                                }}{{ formatNumber(giftCheckAmountNumber) }}
-                            </p>
-                        </div>
-
-                        <div
-                            class="flex items-center justify-between rounded-lg border-2 border-primary-200 bg-primary-50 p-4"
-                        >
-                            <p class="font-bold text-primary-900">
-                                Total Closing Amount
-                            </p>
-                            <p class="text-3xl font-bold text-primary-900">
-                                {{ baseCurrencySymbol
-                                }}{{ formatNumber(totalClosingAmount) }}
+                        <div class="rounded-2xl bg-white p-6 shadow-lg h-full">
+                            <h2 class="mb-4 text-xl font-bold text-neutral-900">
+                                Other Payment Methods
+                            </h2>
+                            <div
+                                class="space-y-4 max-h-[calc(100vh-280px)] overflow-y-auto"
+                            >
+                                <div
+                                    v-for="method in otherPaymentMethods"
+                                    :key="method.id"
+                                    class="space-y-2"
+                                >
+                                    <label
+                                        :for="`payment-method-${method.id}`"
+                                        class="block text-sm font-semibold text-neutral-700"
+                                    >
+                                        {{ method.name }}
+                                    </label>
+                                    <input
+                                        :id="`payment-method-${method.id}`"
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        :aria-label="`Amount for ${method.name}`"
+                                        :value="
+                                            otherPaymentAmounts[method.id] || 0
+                                        "
+                                        @input="
+                                            handleOtherPaymentInput(
+                                                method.id,
+                                                $event.target.value
+                                            )
+                                        "
+                                        class="w-full rounded border border-neutral-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                            </div>
+                            <p class="mt-4 text-xs text-neutral-600">
+                                Enter the total amount for each payment method
+                                on hand.
                             </p>
                         </div>
                     </div>
@@ -116,7 +101,7 @@
                     </Link>
                     <button
                         @click="handleConfirmCloseSession"
-                        :disabled="totalClosingAmount <= 0 || isSubmitting"
+                        :disabled="isSubmitting"
                         class="flex-1 rounded-lg bg-gradient-to-r from-success-600 to-success-700 px-6 py-3 font-bold text-white transition-all hover:from-success-700 hover:to-success-800 disabled:opacity-50 disabled:cursor-not-allowed active:from-success-800 active:to-success-900"
                     >
                         <span v-if="!isSubmitting">Submit & Close Shift</span>
@@ -136,6 +121,10 @@ import CurrencyDenominationInput from "@/Components/Resto/CurrencyDenominationIn
 import CashieringSession from "@/Types/CashieringSession";
 import { formatMoney } from "@/Utils/FormatMoney";
 import { router } from "@inertiajs/vue3";
+import { route } from "ziggy-js";
+import axios from "axios";
+import { thermalPrinter } from "@/Services/ThermalPrinterService";
+import { useToast } from "primevue";
 
 interface CurrencyOption {
     id: string | number;
@@ -154,10 +143,13 @@ interface CurrencyOption {
 
 const props = defineProps<{
     openSession: CashieringSession | null;
+    usedPaymentMethodIds: (string | number)[];
+    usedCashPaymentMethodIds: (string | number)[];
 }>();
 
 const page = usePage();
 const isSubmitting = ref(false);
+const toast = useToast();
 
 const defaultCurrency = computed(() => (page.props as any)?.default_currency);
 const baseCurrencySymbol = computed(
@@ -167,7 +159,14 @@ const baseCurrencySymbol = computed(
 const availableCurrencies = computed<CurrencyOption[]>(() => {
     const currencies = ((page.props as any)?.currencies ||
         []) as CurrencyOption[];
-    return currencies.map((currency) => ({
+    const usedCashIds = props.usedCashPaymentMethodIds || [];
+
+    // Filter to only show currencies that were used in this session
+    const filteredCurrencies = currencies.filter((currency) =>
+        usedCashIds.includes(currency.id)
+    );
+
+    return filteredCurrencies.map((currency) => ({
         ...currency,
         exchange_rate: currency.exchange_rate ?? 1,
     }));
@@ -180,7 +179,19 @@ const buildCurrencyKey = (identifier: string | number | undefined) => {
 // Denomination tracking: key format "currencyId-denominationId"
 const denominationCounts = ref<Record<string, number>>({});
 const currencyValues = ref<Record<string, number>>({});
-const giftCheckAmount = ref<string | number>(0);
+const otherPaymentAmounts = ref<Record<string | number, number>>({});
+
+// Get non-cash payment methods for the right sidebar
+const otherPaymentMethods = computed(() => {
+    const allPaymentMethods = ((page.props as any)?.payment_methods ||
+        []) as any[];
+    const usedIds = props.usedPaymentMethodIds || [];
+
+    return allPaymentMethods.filter(
+        (method) =>
+            method.payment_type !== "cash" && usedIds.includes(method.id)
+    );
+});
 
 const initializeValues = () => {
     const nextDenoms: Record<string, number> = {};
@@ -250,9 +261,15 @@ const handleCurrencyInput = (
     };
 };
 
-const handleGiftCheckInput = (rawValue: string | number) => {
+const handleOtherPaymentInput = (
+    paymentMethodId: string | number,
+    rawValue: string | number
+) => {
     const value = Math.max(0, parseFloat(String(rawValue)) || 0);
-    giftCheckAmount.value = value;
+    otherPaymentAmounts.value = {
+        ...otherPaymentAmounts.value,
+        [paymentMethodId]: value,
+    };
 };
 
 const getDenominationCount = (
@@ -303,89 +320,109 @@ const currencySummaries = computed(() => {
     });
 });
 
-const totalCashInBase = computed(() => {
-    return currencySummaries.value.reduce(
-        (sum, entry) => sum + entry.amountInBase,
-        0
-    );
-});
-
-const giftCheckAmountNumber = computed(() => {
-    return Number(giftCheckAmount.value) || 0;
-});
-
-const totalClosingAmount = computed(() => {
-    return totalCashInBase.value + giftCheckAmountNumber.value;
-});
-
-const expectedCash = computed(() => {
-    if (!props.openSession) return 0;
-    return (
-        (props.openSession.beginning_cash || 0) +
-        (props.openSession.total_sales || 0)
-    );
-});
-
-const cashVariance = computed(() => {
-    return totalClosingAmount.value - expectedCash.value;
-});
-
 const buildClosingBreakdown = () => {
     const filteredCurrencies = currencySummaries.value.filter(
         (entry) => entry.amountInCurrency > 0
     );
 
+    // Build other payment methods breakdown
+    const otherPayments = otherPaymentMethods.value
+        .filter((method) => (otherPaymentAmounts.value[method.id] || 0) > 0)
+        .map((method) => ({
+            payment_method_id: method.id,
+            payment_method_name: method.name,
+            payment_type: method.payment_type,
+            amount: otherPaymentAmounts.value[method.id] || 0,
+        }));
+
+    // Structure matching CashierSessionRequest validation rules
     return {
-        base_currency_id: defaultCurrency.value?.id ?? null,
-        base_currency_code: defaultCurrency.value?.code ?? "CASH",
-        base_currency_symbol: baseCurrencySymbol.value,
-        gift_check_total: giftCheckAmountNumber.value,
-        // Cash movement (only for default currency)
-        cash_movement: {
-            opening_balance: props.openSession?.beginning_cash || 0,
-            sales_revenue: props.openSession?.total_sales || 0,
-            expected_total: expectedCash.value,
-        },
-        totals: {
-            cash_in_base: totalCashInBase.value,
-            gift_check_in_base: giftCheckAmountNumber.value,
-            combined_in_base: totalClosingAmount.value,
-            variance_in_base: cashVariance.value,
-        },
         currencies: filteredCurrencies.map((entry) => ({
-            currency_id: entry.currencyId,
+            payment_method_id: entry.currencyId,
+            amount_in_currency: entry.amountInCurrency,
+            amount_in_base: entry.amountInBase,
+            // Additional metadata for backend processing
             currency_code: entry.currencyCode,
             currency_name: entry.currencyName,
             symbol: entry.symbol,
-            exchange_rate: entry.exchangeRate,
-            amount_in_currency: entry.amountInCurrency,
-            amount_in_base: entry.amountInBase,
+            exchange_rate: parseFloat(Number(entry.exchangeRate).toFixed(4)),
             denominations: entry.denominations,
         })),
+        other_payments: otherPayments,
+        // Extra metadata for backend
+        base_currency_id: defaultCurrency.value?.id ?? null,
+        base_currency_code: defaultCurrency.value?.code ?? "CASH",
+        base_currency_symbol: baseCurrencySymbol.value,
     };
 };
 
-const handleConfirmCloseSession = () => {
+const handleConfirmCloseSession = async () => {
     const closingBreakdown = buildClosingBreakdown();
 
     isSubmitting.value = true;
 
-    router.post(
-        route("resto.session.close"),
-        {
-            currencyBreakdown: closingBreakdown,
-            totalCashCounted: totalClosingAmount.value,
-            cashDifference: cashVariance.value,
-        },
-        {
-            onSuccess: () => {
-                isSubmitting.value = false;
-            },
-            onError: () => {
-                isSubmitting.value = false;
-            },
+    console.log("closing breakdown", closingBreakdown);
+    try {
+        const response = await axios.post(route("resto.session.close"), {
+            cashDenomination: closingBreakdown,
+            shiftNo: props.openSession?.id,
+        });
+
+        if (response.data?.success && response.data?.session) {
+            const sessionData = response.data.session;
+
+            // Prepare session data for printing
+            const printData = {
+                id: sessionData.id,
+                shift_start: sessionData.started_time,
+                shift_end: sessionData.closing_time || new Date().toISOString(),
+                branch: (page.props as any)?.auth?.user?.branch || {},
+                cashier: (page.props as any)?.auth?.user?.name || "Cashier",
+                beginning_cash: sessionData.beginning_cash || 0,
+                total_sales: sessionData.total_sales || 0,
+                cash_denomination_total: sessionData.closing_cash || 0,
+                cash_denomination_details:
+                    sessionData.cash_denomination || null,
+                meta_data: sessionData.meta_data || {},
+            };
+
+            // Try to print X Reading
+            try {
+                await thermalPrinter.printSessionSummary(printData);
+                toast.add({
+                    severity: "success",
+                    summary: "Shift Closed",
+                    detail: "X Reading printed successfully. Logging out...",
+                    life: 2000,
+                });
+            } catch (printError) {
+                console.error("Failed to print X Reading:", printError);
+                toast.add({
+                    severity: "warn",
+                    summary: "Shift Closed",
+                    detail: "Shift closed but printing failed. Logging out...",
+                    life: 2000,
+                });
+            }
+
+            // Logout the user after closing shift
+            setTimeout(() => {
+                router.post(route("logout"));
+            }, 2000);
         }
-    );
+    } catch (error: any) {
+        console.error("Failed to close shift:", error);
+        toast.add({
+            severity: "error",
+            summary: "Error",
+            detail:
+                error.response?.data?.message ||
+                error.message ||
+                "Failed to close shift. Please try again.",
+            life: 5000,
+        });
+        isSubmitting.value = false;
+    }
 };
 
 function formatNumber(value: number) {

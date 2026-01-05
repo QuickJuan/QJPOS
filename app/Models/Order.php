@@ -28,6 +28,9 @@ class Order extends Model
         'item_discount',
         'total_due',
         'amount_tendered',
+        'is_mixed_payment',
+        'change_loaded_to_ewallet',
+        'is_change_loaded_to_ewallet',
         'vatable_sales',
         'vat_amount',
         'vat_exempt_sales',
@@ -36,6 +39,8 @@ class Order extends Model
         'notes',
         'meta_data',
         'status',
+        'refunded_at',
+        'refunded_cashier_id',
     ];
 
     protected $casts = [
@@ -167,4 +172,6 @@ class Order extends Model
     {
         return $this->belongsTo(Branch::class);
     }
+
+
 }
