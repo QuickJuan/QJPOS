@@ -496,23 +496,196 @@
         @endif
 
         <!-- Payment Info -->
-        @if($order->payment)
+        @php
+            // Use $paymentData if provided (from controller), otherwise fall back to $order->payment
+            $paymentInfo = $paymentData ?? $order->payment;
+        @endphp
+        @if($paymentInfo)
+            @php
+                // Determine if this is a mixed payment (array of payments) or single payment
+                $isMixedPayment = is_array($paymentInfo) && isset($paymentInfo[0]);
+                $payments = $isMixedPayment ? $paymentInfo : [$paymentInfo];
+                $baseCurrency = $paymentInfo['base_currency'] ?? ($isMixedPayment && isset($payments[0]['base_currency']) ? $payments[0]['base_currency'] : ['code' => 'PHP', 'symbol' => '₱']);
+            @endphp
+
             <div class="payment-info">
-                <div class="payment-row">
-                    <span>Amount Paid:</span>
-                    <span>₱{{ number_format($order->payment['amount_paid'] ?? 0, 2) }}</span>
-                </div>
-                @if($order->payment['change'] ?? 0 >= 0)
-                    <div class="payment-row">
-                        <span>Change:</span>
-                        <span>₱{{ number_format($order->payment['change'] ?? 0, 2) }}</span>
+                @if($isMixedPayment && count($payments) > 1)
+                    <div style="text-align: center; font-weight: bold; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #333;">PAYMENT</div>
+                    @php
+                        $totalPaid = 0;
+                        $totalChange = 0;
+                    @endphp
+                    @foreach($payments as $index => $payment)
+                        <div style="margin-bottom: 12px; padding-bottom: 8px; @if($index < count($payments) - 1) border-bottom: 1px dashed #666; @endif">
+                            <div style="font-weight: 600; font-size: 11px; margin-bottom: 4px;">Payment {{ $index + 1 }}</div>
+
+                            @if($payment['method'] ?? false)
+                                <div class="payment-row">
+                                    <span>Payment Method:</span>
+                                    <span>{{ $payment['method'] }}</span>
+                                </div>
+                            @endif
+
+                            @php
+                                // Use amount_in_payment_currency if available, otherwise use amount_applied/amount_paid
+                                $hasPaymentCurrency = ($payment['amount_in_payment_currency'] ?? 0) > 0;
+                                $exchangeRate = $payment['currency']['exchange_rate'] ?? 1;
+
+                                if ($hasPaymentCurrency) {
+                                    $displayAmount = $payment['amount_in_payment_currency'];
+                                    $displaySymbol = $payment['currency']['symbol'] ?? '';
+                                    $displayCurrency = $payment['currency']['code'] ?? '';
+                                } else {
+                                    $displayAmount = $payment['amount_applied'] ?? $payment['amount_paid'] ?? 0;
+                                    $displaySymbol = $baseCurrency['symbol'] ?? '₱';
+                                    $displayCurrency = '';
+                                }
+                            @endphp
+
+                            <div class="payment-row">
+                                <span>Amount:</span>
+                                <span>{{ $displaySymbol }}{{ number_format($displayAmount, 2) }}</span>
+                            </div>
+
+                            @if($hasPaymentCurrency && $exchangeRate > 1)
+                                <div class="payment-row" style="font-size: 10px; color: #666;">
+                                    <span>Exchange Rate:</span>
+                                    <span>1 {{ $payment['currency']['code'] }} = {{ $baseCurrency['symbol'] ?? '₱' }}{{ number_format($exchangeRate, 2) }}</span>
+                                </div>
+                                <div class="payment-row" style="font-size: 10px; color: #666;">
+                                    <span>Value in {{ $baseCurrency['code'] }}:</span>
+                                    <span>{{ $baseCurrency['symbol'] ?? '₱' }}{{ number_format($payment['amount_applied'] ?? $payment['amount_paid'] ?? 0, 2) }}</span>
+                                </div>
+                            @endif
+
+                            @php
+                                $totalPaid += $payment['amount_applied'] ?? $payment['amount_paid'] ?? 0;
+                            @endphp
+
+                            @if(($payment['change_amount'] ?? $payment['change'] ?? 0) > 0)
+                                <div class="payment-row">
+                                    <span>Change:</span>
+                                    <span>{{ $baseCurrency['symbol'] ?? '₱' }}{{ number_format($payment['change_amount'] ?? $payment['change'] ?? 0, 2) }}</span>
+                                </div>
+                                @php
+                                    $totalChange += $payment['change_amount'] ?? $payment['change'] ?? 0;
+                                @endphp
+                            @endif
+
+                            @if(isset($payment['customer_name']))
+                                <div class="payment-row" style="font-size: 10px;">
+                                    <span>Customer:</span>
+                                    <span>{{ $payment['customer_name'] }}</span>
+                                </div>
+                            @endif
+
+                            @if(isset($payment['reference_number']))
+                                <div class="payment-row" style="font-size: 10px;">
+                                    <span>Reference No.:</span>
+                                    <span>{{ $payment['reference_number'] }}</span>
+                                </div>
+                            @endif
+
+                            @if(isset($payment['approval_code']))
+                                <div class="payment-row" style="font-size: 10px;">
+                                    <span>Approval Code:</span>
+                                    <span>{{ $payment['approval_code'] }}</span>
+                                </div>
+                            @endif
+
+                            @if(isset($payment['card_holder_name']))
+                                <div class="payment-row" style="font-size: 10px;">
+                                    <span>Cardholder:</span>
+                                    <span>{{ $payment['card_holder_name'] }}</span>
+                                </div>
+                            @endif
+                        </div>
+                    @endforeach
+
+                    <div class="payment-row" style="font-weight: bold; padding-top: 8px; border-top: 1px solid #333;">
+                        <span>Total Paid:</span>
+                        <span>{{ $baseCurrency['symbol'] ?? '₱' }}{{ number_format($totalPaid, 2) }}</span>
                     </div>
-                @endif
-                @if($order->payment['method'] ?? false)
+                    @if($totalChange > 0)
+                        <div class="payment-row" style="font-weight: bold;">
+                            <span>Total Change:</span>
+                            <span>{{ $baseCurrency['symbol'] ?? '₱' }}{{ number_format($totalChange, 2) }}</span>
+                        </div>
+                    @endif
+                @else
+                    @php
+                        $payment = $payments[0];
+                        $hasPaymentCurrency = ($payment['amount_in_payment_currency'] ?? 0) > 0;
+                        $exchangeRate = $payment['currency']['exchange_rate'] ?? 1;
+
+                        // Use amount_in_payment_currency if available, otherwise use amount_paid
+                        if ($hasPaymentCurrency) {
+                            $displayAmount = $payment['amount_in_payment_currency'];
+                            $displaySymbol = $payment['currency']['symbol'] ?? '';
+                            $displayCurrency = $payment['currency']['code'] ?? '';
+                        } else {
+                            $displayAmount = $payment['amount_paid'] ?? 0;
+                            $displaySymbol = $baseCurrency['symbol'] ?? '₱';
+                            $displayCurrency = '';
+                        }
+                    @endphp
+
                     <div class="payment-row">
-                        <span>Payment Method:</span>
-                        <span>{{ $order->payment['method'] }}</span>
+                        <span>Amount Paid:</span>
+                        <span>{{ $displaySymbol }}{{ number_format($displayAmount, 2) }}</span>
                     </div>
+
+                    @if($hasPaymentCurrency && $exchangeRate > 1)
+                        <div class="payment-row" style="font-size: 10px; color: #666;">
+                            <span>Exchange Rate:</span>
+                            <span>1 {{ $payment['currency']['code'] }} = {{ $baseCurrency['symbol'] ?? '₱' }}{{ number_format($exchangeRate, 2) }}</span>
+                        </div>
+                        <div class="payment-row" style="font-size: 10px; color: #666;">
+                            <span>Value in {{ $baseCurrency['code'] }}:</span>
+                            <span>{{ $baseCurrency['symbol'] ?? '₱' }}{{ number_format($payment['amount_paid'] ?? 0, 2) }}</span>
+                        </div>
+                    @endif
+
+                    @if(($payment['change'] ?? 0) >= 0)
+                        <div class="payment-row">
+                            <span>Change:</span>
+                            <span>{{ $baseCurrency['symbol'] ?? '₱' }}{{ number_format($payment['change'] ?? 0, 2) }}</span>
+                        </div>
+                    @endif
+                    @if($payment['method'] ?? false)
+                        <div class="payment-row">
+                            <span>Payment Method:</span>
+                            <span>{{ $payment['method'] }}</span>
+                        </div>
+                    @endif
+
+                    @if(isset($payment['customer_name']))
+                        <div class="payment-row" style="font-size: 10px;">
+                            <span>Customer:</span>
+                            <span>{{ $payment['customer_name'] }}</span>
+                        </div>
+                    @endif
+
+                    @if(isset($payment['reference_number']))
+                        <div class="payment-row" style="font-size: 10px;">
+                            <span>Reference No.:</span>
+                            <span>{{ $payment['reference_number'] }}</span>
+                        </div>
+                    @endif
+
+                    @if(isset($payment['approval_code']))
+                        <div class="payment-row" style="font-size: 10px;">
+                            <span>Approval Code:</span>
+                            <span>{{ $payment['approval_code'] }}</span>
+                        </div>
+                    @endif
+
+                    @if(isset($payment['card_holder_name']))
+                        <div class="payment-row" style="font-size: 10px;">
+                            <span>Cardholder:</span>
+                            <span>{{ $payment['card_holder_name'] }}</span>
+                        </div>
+                    @endif
                 @endif
             </div>
         @endif

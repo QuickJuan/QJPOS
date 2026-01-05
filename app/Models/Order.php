@@ -28,6 +28,7 @@ class Order extends Model
         'item_discount',
         'total_due',
         'amount_tendered',
+        'is_mixed_payment',
         'change_loaded_to_ewallet',
         'is_change_loaded_to_ewallet',
         'vatable_sales',

@@ -800,13 +800,9 @@ class ThermalPrinterService {
                 commands.push(...this.ESC_POS.ALIGN_LEFT);
                 commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
-                const paymentTypeValue = (
-                    receiptData.payment.payment_type_value ||
-                    receiptData.payment.payment_type ||
-                    ''
-                )
-                    .toString()
-                    .toLowerCase();
+                // Check if this is a mixed payment (array of payments)
+                const isMixedPayment = Array.isArray(receiptData.payment);
+                const payments = isMixedPayment ? receiptData.payment : [receiptData.payment];
 
                 const addInfoLine = (label: string, value: string | number) => {
                     commands.push(
@@ -817,87 +813,138 @@ class ThermalPrinterService {
                     commands.push(...this.ESC_POS.LINE_FEED);
                 };
 
-                if (receiptData.payment.method) {
-                    commands.push(...this.stringToBytes(
-                        this.formatInfoLine('Payment Method:', receiptData.payment.method)
-                    ));
+                let totalPaid = 0;
+                let totalChange = 0;
+
+                payments.forEach((payment: any, index: number) => {
+                    // Add payment number for mixed payments
+                    if (isMixedPayment) {
+                        commands.push(...this.ESC_POS.BOLD_ON);
+                        commands.push(...this.stringToBytes(`Payment ${index + 1}:`));
+                        commands.push(...this.ESC_POS.BOLD_OFF);
+                        commands.push(...this.ESC_POS.LINE_FEED);
+                    }
+
+                    const paymentTypeValue = (
+                        payment.payment_type_value ||
+                        payment.payment_type ||
+                        ''
+                    )
+                        .toString()
+                        .toLowerCase();
+
+                    if (payment.method || payment.payment_method?.name) {
+                        commands.push(...this.stringToBytes(
+                            this.formatInfoLine('Payment Method:', payment.method || payment.payment_method?.name)
+                        ));
+                        commands.push(...this.ESC_POS.LINE_FEED);
+                    }
+
+                    if (paymentTypeValue === 'credit' && payment.customer_name) {
+                        addInfoLine('Customer:', payment.customer_name);
+                    }
+
+                    if (paymentTypeValue === 'e-wallet' && payment.reference_number) {
+                        addInfoLine('Reference No.:', payment.reference_number);
+                    }
+
+                    if (paymentTypeValue === 'gift-check') {
+                        const giftReference = payment.reference_number || payment.gift_check_number;
+                        if (giftReference) {
+                            addInfoLine('Reference No.:', giftReference);
+                        }
+                    }
+
+                    if (paymentTypeValue === 'card') {
+                        if (payment.approval_code) {
+                            addInfoLine('Approval Code:', payment.approval_code);
+                        }
+
+                        if (payment.card_holder_name) {
+                            addInfoLine('Cardholder:', payment.card_holder_name);
+                        }
+                    }
+
+                    const paymentAmount = parseFloat(payment.amount || payment.amount_paid || 0);
+                    const appliedAmount = parseFloat(payment.amount_applied || paymentAmount);
+                    totalPaid += appliedAmount;
+
+                    commands.push(...this.stringToBytes(this.formatTotalLine('Amount:', paymentAmount)));
                     commands.push(...this.ESC_POS.LINE_FEED);
-                }
 
-                if (paymentTypeValue === 'credit' && receiptData.payment.customer_name) {
-                    addInfoLine('Customer:', receiptData.payment.customer_name);
-                }
-
-                if (paymentTypeValue === 'e-wallet' && receiptData.payment.reference_number) {
-                    addInfoLine('Reference No.:', receiptData.payment.reference_number);
-                }
-
-                if (paymentTypeValue === 'gift-check') {
-                    const giftReference = receiptData.payment.reference_number || receiptData.payment.gift_check_number;
-                    if (giftReference) {
-                        addInfoLine('Reference No.:', giftReference);
-                    }
-                }
-
-                if (paymentTypeValue === 'card') {
-                    if (receiptData.payment.approval_code) {
-                        addInfoLine('Approval Code:', receiptData.payment.approval_code);
+                    if (isMixedPayment && appliedAmount !== paymentAmount) {
+                        commands.push(...this.stringToBytes(this.formatTotalLine('Applied:', appliedAmount)));
+                        commands.push(...this.ESC_POS.LINE_FEED);
                     }
 
-                    if (receiptData.payment.card_holder_name) {
-                        addInfoLine('Cardholder:', receiptData.payment.card_holder_name);
-                    }
-                }
-
-                const paymentAmount = parseFloat(receiptData.payment.amount_paid)
-                commands.push(...this.stringToBytes(this.formatTotalLine('Amount Paid:', paymentAmount)));
-                commands.push(...this.ESC_POS.LINE_FEED);
-
-                const paymentCurrency = receiptData.payment.currency;
-                const paidInCurrencyAmount = this.normalizeNumber(
-                    receiptData.payment.amount_in_payment_currency ?? receiptData.payment.amount_paid,
-                    0
-                );
-
-                if (
-                    paymentCurrency &&
-                    paymentCurrency.is_default === false &&
-                    paidInCurrencyAmount > 0
-                ) {
-                    const label = paymentCurrency.code
-                        ? `Paid in ${paymentCurrency.code}:`
-                        : 'Paid in Foreign Currency:';
-                    commands.push(
-                        ...this.stringToBytes(
-                            this.formatTotalLine(label, paidInCurrencyAmount)
-                        )
-                    );
-                    commands.push(...this.ESC_POS.LINE_FEED);
-
-                    const baseCurrencyCode =
-                        receiptData.payment.base_currency?.code || 'PHP';
-                    const exchangeRateValue = this.normalizeNumber(
-                        paymentCurrency.exchange_rate,
+                    const paymentCurrency = payment.currency;
+                    const paidInCurrencyAmount = this.normalizeNumber(
+                        payment.amount_in_payment_currency ?? payment.amount_paid,
                         0
                     );
 
-                    if (exchangeRateValue > 0) {
-                        const formattedRate = this.formatNumberWithComma(
-                            exchangeRateValue.toFixed(4)
+                    if (
+                        paymentCurrency &&
+                        paymentCurrency.is_default === false &&
+                        paidInCurrencyAmount > 0
+                    ) {
+                        const label = paymentCurrency.code
+                            ? `Paid in ${paymentCurrency.code}:`
+                            : 'Paid in Foreign Currency:';
+                        commands.push(
+                            ...this.stringToBytes(
+                                this.formatTotalLine(label, paidInCurrencyAmount)
+                            )
                         );
-                        const exchangeLine = paymentCurrency.code
-                            ? `Exchange Rate: 1 ${paymentCurrency.code} = ${formattedRate} ${baseCurrencyCode}`
-                            : `Exchange Rate: ${formattedRate} ${baseCurrencyCode}`;
-                        commands.push(...this.stringToBytes(exchangeLine));
+                        commands.push(...this.ESC_POS.LINE_FEED);
+
+                        const baseCurrencyCode =
+                            payment.base_currency?.code || 'PHP';
+                        const exchangeRateValue = this.normalizeNumber(
+                            paymentCurrency.exchange_rate,
+                            0
+                        );
+
+                        if (exchangeRateValue > 0) {
+                            const formattedRate = this.formatNumberWithComma(
+                                exchangeRateValue.toFixed(4)
+                            );
+                            const exchangeLine = paymentCurrency.code
+                                ? `Exchange Rate: 1 ${paymentCurrency.code} = ${formattedRate} ${baseCurrencyCode}`
+                                : `Exchange Rate: ${formattedRate} ${baseCurrencyCode}`;
+                            commands.push(...this.stringToBytes(exchangeLine));
+                            commands.push(...this.ESC_POS.LINE_FEED);
+                        }
+                    }
+
+                    const changeAmount = parseFloat(String(payment.change_amount || payment.change || 0));
+                    if (changeAmount > 0) {
+                        totalChange += changeAmount;
+                        if (isMixedPayment) {
+                            commands.push(...this.stringToBytes(this.formatTotalLine('Change:', changeAmount)));
+                            commands.push(...this.ESC_POS.LINE_FEED);
+                        }
+                    }
+
+                    // Add separator for mixed payments
+                    if (isMixedPayment && index < payments.length - 1) {
+                        commands.push(...this.stringToBytes('-'.repeat(42)));
                         commands.push(...this.ESC_POS.LINE_FEED);
                     }
+                });
+
+                // Show totals for mixed payments
+                if (isMixedPayment) {
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                    commands.push(...this.ESC_POS.BOLD_ON);
+                    commands.push(...this.stringToBytes(this.formatTotalLine('Total Paid:', totalPaid)));
+                    commands.push(...this.ESC_POS.LINE_FEED);
                 }
 
-                if (receiptData.payment.change && parseFloat(String(receiptData.payment.change)) > 0) {
-                    const change = paymentAmount - total
+                if (totalChange > 0) {
                     commands.push(...this.ESC_POS.BOLD_ON);
                     const changeSize = this.currentConfig?.font_sizes?.totals || 'medium';
-                    this.addTextWithSize(commands, this.formatTotalLine('Change:', change), changeSize);
+                    this.addTextWithSize(commands, this.formatTotalLine(isMixedPayment ? 'Total Change:' : 'Change:', totalChange), changeSize);
                     commands.push(...this.ESC_POS.BOLD_OFF);
                     commands.push(...this.ESC_POS.LINE_FEED);
                 }

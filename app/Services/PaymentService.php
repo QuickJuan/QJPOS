@@ -32,6 +32,11 @@ class PaymentService
     {
         try {
             return DB::transaction(function () use ($payload) {
+                // Check if this is a mixed payment
+                if (!empty($payload['is_mixed_payment']) && !empty($payload['payments'])) {
+                    return $this->settleMixedPaymentBill($payload);
+                }
+
                 $paymentContext = $this->preparePaymentContext($payload);
 
                 $cart = Cart::with(['cartItems', 'tableRoom.tableRoomLocation', 'cashierSession'])->findOrFail($payload['cart_id']);
@@ -83,7 +88,7 @@ class PaymentService
         }
     }
 
-    private function saveCartToOrder($cart, $payload, array $paymentContext)
+    private function saveCartToOrder($cart, $payload, array $paymentContext, bool $isMixedPayment = false)
     {
         // Get cart items for processing
         $serviceCharge = $cart->tableRoom->calculateServiceCharge($cart);
@@ -110,24 +115,32 @@ class PaymentService
 
         $metaData['change']     = $changeAmount;
         $metaData['settled_at'] = now();
-        $paymentType = $paymentContext['method']->payment_type instanceof PaymentType
-            ? $paymentContext['method']->payment_type->value
-            : $paymentContext['method']->payment_type;
 
-        $metaData['payment_info'] = [
-            'method' => $paymentContext['method']->name,
-            'payment_type' => $paymentType,
-            'currency' => [
-                'code' => $paymentContext['currency_code'],
-                'symbol' => $paymentContext['currency_symbol'],
+        if ($isMixedPayment) {
+            $metaData['payment_info'] = [
+                'mixed_payment' => true,
+                'payment_count' => count($payload['payments'] ?? []),
+            ];
+        } else {
+            $paymentType = $paymentContext['method']->payment_type instanceof PaymentType
+                ? $paymentContext['method']->payment_type->value
+                : $paymentContext['method']->payment_type;
+
+            $metaData['payment_info'] = [
+                'method' => $paymentContext['method']->name,
+                'payment_type' => $paymentType,
+                'currency' => [
+                    'code' => $paymentContext['currency_code'],
+                    'symbol' => $paymentContext['currency_symbol'],
+                    'exchange_rate' => $paymentContext['exchange_rate'],
+                ],
+                'amount_in_payment_currency' => $paymentContext['amount_in_payment_currency'],
+                'amount_in_default_currency' => $baseAmountPaid,
                 'exchange_rate' => $paymentContext['exchange_rate'],
-            ],
-            'amount_in_payment_currency' => $paymentContext['amount_in_payment_currency'],
-            'amount_in_default_currency' => $baseAmountPaid,
-            'exchange_rate' => $paymentContext['exchange_rate'],
-            'change' => $changeAmount,
-            'details' => $paymentContext['payment_details'] ?? [],
-        ];
+                'change' => $changeAmount,
+                'details' => $paymentContext['payment_details'] ?? [],
+            ];
+        }
 
         // Get branch_id from cart's cashier session, or fallback to current user's branch
         $branchId = $cart->cashierSession?->branch_id ?? $cashier->branch_id ?? $cart->branch_id;
@@ -539,6 +552,134 @@ class PaymentService
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Settle bill with mixed payments (multiple payment methods)
+     */
+    private function settleMixedPaymentBill(array $payload): mixed
+    {
+        $cart = Cart::with(['cartItems', 'tableRoom.tableRoomLocation', 'cashierSession'])->findOrFail($payload['cart_id']);
+
+        // Calculate totals
+        $serviceCharge = $cart->tableRoom->calculateServiceCharge($cart);
+        $cartItems = $cart->cartItems;
+        $totalAmount = $cartItems->sum('amount');
+        $lessTax = $cartItems->sum('less_tax') ?? 0;
+        $itemDiscount = $cartItems->sum('discount_amount') ?? 0;
+        $totalDue = $totalAmount - ($itemDiscount + $lessTax + $cart->total_discount ?? 0);
+        $totalWithCharges = $totalDue + $serviceCharge;
+
+        // Validate payments array
+        $payments = $payload['payments'] ?? [];
+        if (empty($payments)) {
+            throw new \InvalidArgumentException('Mixed payment requires at least one payment.');
+        }
+
+        // Validate total paid covers the bill
+        $totalPaid = 0;
+        $totalChange = 0;
+        $paymentContexts = [];
+
+        foreach ($payments as $index => $paymentData) {
+            $context = $this->preparePaymentContext($paymentData);
+
+            // Calculate amount applied (excluding change)
+            $amountApplied = min($context['base_amount_paid'], $totalWithCharges - $totalPaid);
+            $context['amount_applied'] = $amountApplied;
+
+            // Only cash payments can have change
+            $isCash = $this->isCashPayment($context['method']);
+            if ($isCash) {
+                $changeForThisPayment = max(0, $context['base_amount_paid'] - ($totalWithCharges - $totalPaid));
+                $context['change_amount'] = $changeForThisPayment;
+                $totalChange += $changeForThisPayment;
+            } else {
+                $context['change_amount'] = 0;
+                // Non-cash payments cannot exceed remaining balance
+                if ($context['base_amount_paid'] > ($totalWithCharges - $totalPaid)) {
+                    throw new \InvalidArgumentException(
+                        'Non-cash payment methods cannot have change. Amount must be exact or less than remaining balance.'
+                    );
+                }
+            }
+
+            $totalPaid += $amountApplied;
+            $paymentContexts[] = $context;
+        }
+
+        if ($totalPaid < $totalWithCharges) {
+            throw new \InvalidArgumentException('Total payments do not cover the bill.');
+        }
+
+        // Create order with mixed payment flag
+        [$order, $_] = $this->saveCartToOrder($cart, $payload, $paymentContexts[0], true);
+        $this->saveCartItemsToOrderItems($cart->cartItems, $order);
+        $this->inventoryStockService->deductOrderInventory($order);
+
+        // Record all payments
+        foreach ($paymentContexts as $context) {
+            $this->recordPayment($order, $context);
+        }
+
+        // Handle points only once for the entire order
+        // Use the first non-points payment for points earning logic
+        $pointsPaymentContext = null;
+        $hasPointsPayment = false;
+
+        foreach ($paymentContexts as $context) {
+            $paymentType = $this->getPaymentType($context);
+            if ($paymentType === 'points') {
+                $hasPointsPayment = true;
+                $pointsPaymentContext = $context;
+                break;
+            }
+        }
+
+        if ($hasPointsPayment) {
+            $this->handleCustomerPoints($order, $payload, $pointsPaymentContext);
+        } else {
+            // Earn points based on first payment method
+            $this->handleCustomerPoints($order, $payload, $paymentContexts[0]);
+        }
+
+        // Update table status if applicable
+        if ($cart->table_room_id
+            && $cart->tableRoom
+            && $cart->tableRoom->tableRoomLocation
+            && $cart->tableRoom->tableRoomLocation->location_type != LocationType::TAKEOUT->value) {
+
+            TableRoom::where('id', $cart->table_room_id)->update([
+                'status' => TableRoomStatusType::AVAILABLE->value,
+                'time_in' => null,
+                'customer_name' => null,
+                'number_of_pax' => null,
+            ]);
+        }
+
+        // Delete cart and its items
+        CartItem::where('cart_id', $cart->id)->delete();
+        $cart->delete();
+
+        return $order->load([
+            'orderItems',
+            'orderItems.product',
+            'cashierSession.branch',
+            'customer',
+            'payments.paymentMethod',
+        ]);
+    }
+
+    /**
+     * Check if payment method is cash
+     */
+    private function isCashPayment(PaymentMethod $method): bool
+    {
+        $paymentType = $method->payment_type;
+        if ($paymentType instanceof PaymentType) {
+            $paymentType = $paymentType->value;
+        }
+        return strtolower($paymentType) === 'cash';
     }
 
 }

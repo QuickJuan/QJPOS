@@ -23,6 +23,24 @@ class SettleBillRequest extends FormRequest
      */
     public function rules(): array
     {
+        $isMixedPayment = $this->boolean('is_mixed_payment', false);
+
+        if ($isMixedPayment) {
+            return [
+                'cart_id' => ['required', 'integer', 'exists:carts,id'],
+                'is_mixed_payment' => ['required', 'boolean'],
+                'total_amount' => ['required', 'numeric', 'min:0'],
+                'payments' => ['required', 'array', 'min:1'],
+                'payments.*.payment_method_id' => ['required', 'integer', 'exists:payment_methods,id'],
+                'payments.*.amount_in_payment_currency' => ['required', 'numeric', 'min:0'],
+                'payments.*.amount_paid' => ['nullable', 'numeric', 'min:0'],
+                'payments.*.customer_id' => ['nullable', 'integer'],
+                'payments.*.points_used' => ['nullable', 'numeric', 'min:0'],
+                'payments.*.reference_number' => ['nullable', 'string', 'max:255'],
+                'payments.*.payment_details' => ['nullable', 'array'],
+            ];
+        }
+
         return [
             'cart_id' => ['required', 'integer', 'exists:carts,id'],
             'payment_method_id' => ['required', 'integer', 'exists:payment_methods,id'],
@@ -39,6 +57,11 @@ class SettleBillRequest extends FormRequest
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
+            // Skip validation for mixed payments - will be validated in the service layer
+            if ($this->boolean('is_mixed_payment', false)) {
+                return;
+            }
+
             $paymentMethodId = $this->input('payment_method_id');
             $amountInPaymentCurrency = (float) $this->input('amount_in_payment_currency', 0);
             $totalAmount = (float) $this->input('total_amount', 0);

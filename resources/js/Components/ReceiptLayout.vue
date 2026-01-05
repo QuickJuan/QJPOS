@@ -216,58 +216,267 @@
                 <span>TOTAL:</span>
                 <span>{{ formatMoney(totalAmountDue) }}</span>
             </div>
-            <div class="flex justify-between" v-if="props.payment">
-                <span>Payment Received:</span>
-                <span>
-                    {{ formatMoney(amountPaidBase, baseCurrencyCode) }}
-                </span>
-            </div>
-            <div
-                class="flex justify-between"
-                v-if="
-                    props.payment?.currency &&
-                    !props.payment.currency?.is_default &&
-                    paymentCurrencyAmount !== null
-                "
-            >
-                <span> Paid in {{ props.payment.currency.code }}: </span>
-                <span>
-                    {{
-                        formatMoney(
-                            paymentCurrencyAmount,
-                            props.payment.currency.code
-                        )
-                    }}
-                </span>
-            </div>
-            <div
-                class="flex justify-between text-xs text-gray-600"
-                v-if="foreignExchangeRateDisplay"
-            >
-                <span>Exchange Rate:</span>
-                <span>{{ foreignExchangeRateDisplay }}</span>
-            </div>
-            <div class="flex justify-between" v-if="props.payment">
-                <span>Change:</span>
-                <span>
-                    {{ formatMoney(customerChange, baseCurrencyCode) }}
-                </span>
-            </div>
-            <div
-                v-if="paymentDetailRows.length"
-                class="mt-2 space-y-1 text-sm text-gray-700"
-            >
-                <div
-                    v-for="detail in paymentDetailRows"
-                    :key="`${detail.label}-${detail.value}`"
-                    class="flex justify-between gap-4"
-                >
-                    <span>{{ detail.label }}</span>
-                    <span class="font-semibold text-right ml-auto">
-                        {{ detail.value }}
+
+            <!-- Payment Section - handles both single and mixed payments -->
+            <template v-if="isMixedPayment">
+                <div class="mt-3 pt-3 border-t border-dashed">
+                    <div class="text-center font-bold text-sm mb-2">
+                        PAYMENT
+                    </div>
+
+                    <div
+                        v-for="(payment, index) in mixedPayments"
+                        :key="index"
+                        class="mb-3 pb-3"
+                        :class="{
+                            'border-b border-dashed':
+                                index < mixedPayments.length - 1,
+                        }"
+                    >
+                        <div class="font-semibold text-xs mb-1">
+                            Payment {{ index + 1 }}
+                        </div>
+
+                        <div
+                            class="flex justify-between text-sm"
+                            v-if="
+                                payment.method || payment.payment_method?.name
+                            "
+                        >
+                            <span>Payment Method:</span>
+                            <span>{{
+                                payment.method || payment.payment_method?.name
+                            }}</span>
+                        </div>
+
+                        <div class="flex justify-between">
+                            <span>Amount:</span>
+                            <span>{{
+                                formatMoney(
+                                    parseFloat(
+                                        payment.amount_in_payment_currency ||
+                                            payment.amount ||
+                                            payment.amount_paid ||
+                                            0
+                                    ),
+                                    payment.amount_in_payment_currency
+                                        ? payment.currency?.code ||
+                                              baseCurrencyCode
+                                        : baseCurrencyCode
+                                )
+                            }}</span>
+                        </div>
+
+                        <div
+                            class="flex justify-between text-xs text-gray-600"
+                            v-if="
+                                (payment.exchange_rate ||
+                                    payment.currency?.exchange_rate) &&
+                                parseFloat(
+                                    payment.exchange_rate ||
+                                        payment.currency?.exchange_rate ||
+                                        1
+                                ) > 1
+                            "
+                        >
+                            <span>Exchange Rate:</span>
+                            <span
+                                >1 {{ payment.currency?.code || "USD" }} =
+                                {{
+                                    formatMoney(
+                                        parseFloat(
+                                            payment.exchange_rate ||
+                                                payment.currency
+                                                    ?.exchange_rate ||
+                                                1
+                                        ),
+                                        baseCurrencyCode
+                                    )
+                                }}</span
+                            >
+                        </div>
+
+                        <div
+                            class="flex justify-between text-xs text-gray-600"
+                            v-if="
+                                parseFloat(
+                                    payment.amount_in_payment_currency || 0
+                                ) > 0 &&
+                                parseFloat(
+                                    payment.exchange_rate ||
+                                        payment.currency?.exchange_rate ||
+                                        1
+                                ) > 1
+                            "
+                        >
+                            <span>Value in {{ baseCurrencyCode }}:</span>
+                            <span>{{
+                                formatMoney(
+                                    parseFloat(
+                                        payment.amount ||
+                                            payment.amount_paid ||
+                                            0
+                                    ),
+                                    baseCurrencyCode
+                                )
+                            }}</span>
+                        </div>
+
+                        <div
+                            class="flex justify-between"
+                            v-if="
+                                parseFloat(
+                                    payment.change_amount || payment.change || 0
+                                ) > 0
+                            "
+                        >
+                            <span>Change:</span>
+                            <span>{{
+                                formatMoney(
+                                    parseFloat(
+                                        payment.change_amount ||
+                                            payment.change ||
+                                            0
+                                    ),
+                                    baseCurrencyCode
+                                )
+                            }}</span>
+                        </div>
+
+                        <!-- Payment-specific details -->
+                        <div class="mt-1 space-y-1 text-xs text-gray-700">
+                            <div
+                                class="flex justify-between"
+                                v-if="
+                                    getPaymentType(payment) === 'credit' &&
+                                    payment.customer_name
+                                "
+                            >
+                                <span>Customer:</span>
+                                <span>{{ payment.customer_name }}</span>
+                            </div>
+                            <div
+                                class="flex justify-between"
+                                v-if="
+                                    getPaymentType(payment) === 'e-wallet' &&
+                                    payment.reference_number
+                                "
+                            >
+                                <span>Reference No.:</span>
+                                <span>{{ payment.reference_number }}</span>
+                            </div>
+                            <div
+                                class="flex justify-between"
+                                v-if="
+                                    getPaymentType(payment) === 'gift-check' &&
+                                    (payment.reference_number ||
+                                        payment.gift_check_number)
+                                "
+                            >
+                                <span>Reference No.:</span>
+                                <span>{{
+                                    payment.reference_number ||
+                                    payment.gift_check_number
+                                }}</span>
+                            </div>
+                            <div
+                                class="flex justify-between"
+                                v-if="
+                                    getPaymentType(payment) === 'card' &&
+                                    payment.approval_code
+                                "
+                            >
+                                <span>Approval Code:</span>
+                                <span>{{ payment.approval_code }}</span>
+                            </div>
+                            <div
+                                class="flex justify-between"
+                                v-if="
+                                    getPaymentType(payment) === 'card' &&
+                                    payment.card_holder_name
+                                "
+                            >
+                                <span>Cardholder:</span>
+                                <span>{{ payment.card_holder_name }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        class="flex justify-between font-bold mt-2 pt-2 border-t border-dashed"
+                    >
+                        <span>Total Paid:</span>
+                        <span>{{
+                            formatMoney(totalMixedPayments, baseCurrencyCode)
+                        }}</span>
+                    </div>
+                    <div
+                        class="flex justify-between font-bold"
+                        v-if="totalMixedChange > 0"
+                    >
+                        <span>Total Change:</span>
+                        <span>{{
+                            formatMoney(totalMixedChange, baseCurrencyCode)
+                        }}</span>
+                    </div>
+                </div>
+            </template>
+
+            <!-- Single Payment (original display) -->
+            <template v-else-if="props.payment">
+                <div class="flex justify-between">
+                    <span>Payment Received:</span>
+                    <span>
+                        {{ formatMoney(amountPaidBase, baseCurrencyCode) }}
                     </span>
                 </div>
-            </div>
+                <div
+                    class="flex justify-between"
+                    v-if="
+                        props.payment?.currency &&
+                        !props.payment.currency?.is_default &&
+                        paymentCurrencyAmount !== null
+                    "
+                >
+                    <span> Paid in {{ props.payment.currency.code }}: </span>
+                    <span>
+                        {{
+                            formatMoney(
+                                paymentCurrencyAmount,
+                                props.payment.currency.code
+                            )
+                        }}
+                    </span>
+                </div>
+                <div
+                    class="flex justify-between text-xs text-gray-600"
+                    v-if="foreignExchangeRateDisplay"
+                >
+                    <span>Exchange Rate:</span>
+                    <span>{{ foreignExchangeRateDisplay }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span>Change:</span>
+                    <span>
+                        {{ formatMoney(customerChange, baseCurrencyCode) }}
+                    </span>
+                </div>
+                <div
+                    v-if="paymentDetailRows.length"
+                    class="mt-2 space-y-1 text-sm text-gray-700"
+                >
+                    <div
+                        v-for="detail in paymentDetailRows"
+                        :key="`${detail.label}-${detail.value}`"
+                        class="flex justify-between gap-4"
+                    >
+                        <span>{{ detail.label }}</span>
+                        <span class="font-semibold text-right ml-auto">
+                            {{ detail.value }}
+                        </span>
+                    </div>
+                </div>
+            </template>
         </div>
 
         <!-- Tax Info -->
@@ -585,8 +794,38 @@ const isGiftCheckPayment = computed(
 );
 const isCardPayment = computed(() => normalizedPaymentType.value === "card");
 
+// Mixed payment support
+const isMixedPayment = computed(() => Array.isArray(props.payment));
+const mixedPayments = computed(() =>
+    isMixedPayment.value ? props.payment : []
+);
+
+const totalMixedPayments = computed(() => {
+    if (!isMixedPayment.value) return 0;
+    return mixedPayments.value.reduce((sum, payment) => {
+        const amount = parseFloat(
+            payment.amount_applied || payment.amount || payment.amount_paid || 0
+        );
+        return sum + amount;
+    }, 0);
+});
+
+const totalMixedChange = computed(() => {
+    if (!isMixedPayment.value) return 0;
+    return mixedPayments.value.reduce((sum, payment) => {
+        const change = parseFloat(payment.change_amount || payment.change || 0);
+        return sum + change;
+    }, 0);
+});
+
+const getPaymentType = (payment: any): string => {
+    const typeValue =
+        payment?.payment_type_value ?? payment?.payment_type ?? "";
+    return typeof typeValue === "string" ? typeValue.toLowerCase() : "";
+};
+
 const paymentDetailRows = computed<PaymentDetailRow[]>(() => {
-    if (!props.payment) {
+    if (!props.payment || isMixedPayment.value) {
         return [];
     }
 
