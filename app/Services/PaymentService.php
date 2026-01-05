@@ -264,6 +264,11 @@ class PaymentService
             throw new \InvalidArgumentException('Customer ID is required for credit payments.');
         }
 
+        // Check if points payment requires customer_id
+        if (strtolower($paymentType) === 'points' && empty($payload['customer_id'])) {
+            throw new \InvalidArgumentException('Customer ID is required for points payments.');
+        }
+
         // Use payment method's embedded currency for cash, default currency (rate 1) for others
         $exchangeRate = 1.0;
         $currencyCode = 'PHP';
@@ -298,6 +303,8 @@ class PaymentService
             'reference_number' => $payload['reference_number'] ?? null,
             'notes' => $payload['notes'] ?? null,
             'payment_details' => $paymentDetails,
+            'customer_id' => $payload['customer_id'] ?? null,
+            'points_used' => $payload['points_used'] ?? null,
         ];
     }
 
@@ -452,6 +459,48 @@ class PaymentService
     }
 
     /**
+     * Redeem points for a specific payment in mixed payment scenario
+     */
+    private function redeemCustomerPointsForPayment(Order $order, array $paymentContext): void
+    {
+        $customerId = $paymentContext['customer_id'] ?? null;
+        $pointsToRedeem = $paymentContext['points_used'] ?? 0;
+
+        if (!$customerId) {
+            throw new \Exception('Customer ID is required for points payment.');
+        }
+
+        if ($pointsToRedeem <= 0) {
+            throw new \Exception('Points to redeem must be greater than zero.');
+        }
+
+        $customer = \App\Models\Customer::with('eWallet')->findOrFail($customerId);
+
+        if (!$customer->eWallet) {
+            throw new \Exception('Customer does not have an e-wallet.');
+        }
+
+        $ewalletService = app(\App\Services\EWalletService::class);
+
+        try {
+            $ewalletService->redeemPoints($customer->eWallet, $pointsToRedeem, $order);
+
+            Log::info('Points redeemed via e-wallet (mixed payment)', [
+                'customer_id' => $customer->id,
+                'order_id' => $order->id,
+                'points_redeemed' => $pointsToRedeem,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to redeem points (mixed payment)', [
+                'customer_id' => $customer->id,
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+            throw new \Exception('Failed to redeem points. ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Award points to customer for their purchase
      */
     private function earnCustomerPoints(Order $order): void
@@ -580,9 +629,16 @@ class PaymentService
         $totalPaid = 0;
         $totalChange = 0;
         $paymentContexts = [];
+        $pointsPaymentCustomerId = null;
 
         foreach ($payments as $index => $paymentData) {
             $context = $this->preparePaymentContext($paymentData);
+
+            // Track customer_id from points payment to set as order customer
+            $paymentType = $this->getPaymentType($context);
+            if ($paymentType === 'points' && isset($context['customer_id'])) {
+                $pointsPaymentCustomerId = $context['customer_id'];
+            }
 
             // Calculate amount applied (excluding change)
             $amountApplied = min($context['base_amount_paid'], $totalWithCharges - $totalPaid);
@@ -613,6 +669,11 @@ class PaymentService
         }
 
         // Create order with mixed payment flag
+        // If any payment has customer_id (points or credit), pass it in the payload for order creation
+        if ($pointsPaymentCustomerId) {
+            $payload['customer_id'] = $pointsPaymentCustomerId;
+        }
+
         [$order, $_] = $this->saveCartToOrder($cart, $payload, $paymentContexts[0], true);
         $this->saveCartItemsToOrderItems($cart->cartItems, $order);
         $this->inventoryStockService->deductOrderInventory($order);
@@ -622,25 +683,22 @@ class PaymentService
             $this->recordPayment($order, $context);
         }
 
-        // Handle points only once for the entire order
-        // Use the first non-points payment for points earning logic
-        $pointsPaymentContext = null;
+        // Handle points redemption and earning
+        // Points payment handling - redeem points from customer
         $hasPointsPayment = false;
-
         foreach ($paymentContexts as $context) {
             $paymentType = $this->getPaymentType($context);
-            if ($paymentType === 'points') {
+            if ($paymentType === 'points' && isset($context['customer_id']) && isset($context['points_used'])) {
                 $hasPointsPayment = true;
-                $pointsPaymentContext = $context;
-                break;
+                // Redeem points for this specific payment
+                $this->redeemCustomerPointsForPayment($order, $context);
             }
         }
 
-        if ($hasPointsPayment) {
-            $this->handleCustomerPoints($order, $payload, $pointsPaymentContext);
-        } else {
-            // Earn points based on first payment method
-            $this->handleCustomerPoints($order, $payload, $paymentContexts[0]);
+        // Earn points on non-points payments if customer is set
+        // Only earn points once for the entire order, not per payment
+        if ($order->customer_id && !$hasPointsPayment) {
+            $this->earnCustomerPoints($order);
         }
 
         // Update table status if applicable

@@ -415,7 +415,7 @@ class CartController extends Controller
             'cashier',
             'cashierSession',
             'branch',
-            'customer',
+            'customer.eWallet',
             'tableRoom.tableRoomLocation',
         ]);
 

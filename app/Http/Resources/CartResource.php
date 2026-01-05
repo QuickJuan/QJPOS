@@ -29,13 +29,22 @@ class CartResource extends JsonResource
             'table_number' => $this->tableRoom?->name,
 
             // Customer Information
-            'customer'     => [
-                'id'      => $this->customer_id,
-                'name'    => $this->customer?->name,
-                'phone'   => $this->customer?->phone,
-                'email'   => $this->customer?->email,
-                'address' => $this->customer?->address,
-            ],
+            'customer'     => $this->customer ? [
+                'id'            => $this->customer->id,
+                'customer_name' => $this->customer->customer_name,
+                'name'          => $this->customer->customer_name,
+                'phone'         => $this->customer->contact_no,
+                'contact_no'    => $this->customer->contact_no,
+                'email'         => $this->customer->email,
+                'address'       => $this->customer->address,
+                'e_wallet'      => $this->customer->eWallet ? [
+                    'id'               => $this->customer->eWallet->id,
+                    'balance'          => (float) $this->customer->eWallet->balance,
+                    'points_balance'   => (float) $this->customer->eWallet->points_balance,
+                    'earned_points'    => (float) $this->customer->eWallet->earned_points,
+                    'redeemed_points'  => (float) $this->customer->eWallet->redeemed_points,
+                ] : null,
+            ] : null,
 
             // Cashier Information
             'cashier'      => [

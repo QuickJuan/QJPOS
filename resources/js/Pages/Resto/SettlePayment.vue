@@ -364,18 +364,49 @@
 
                             <template v-else-if="isPointsMethod">
                                 <div class="space-y-2">
-                                    <TextField
-                                        id="points_customer_search"
-                                        v-model="customerSearchQuery"
-                                        label="Find Customer"
-                                        placeholder="Search name, phone, or email"
-                                        type="search"
-                                        :disabled="isCustomerSearchDisabled"
-                                    />
-                                    <p class="text-xs text-neutral-500">
-                                        Start typing (min. 2 characters) to
-                                        search existing customers.
-                                    </p>
+                                    <!-- Show customer info if cart already has one -->
+                                    <div
+                                        v-if="cartCustomer"
+                                        class="p-3 bg-info-50 border border-info-200 rounded-lg"
+                                    >
+                                        <p
+                                            class="text-sm font-semibold text-info-800 mb-1"
+                                        >
+                                            Cart Customer
+                                        </p>
+                                        <p class="text-xs text-info-600">
+                                            {{ cartCustomer.customer_name }}
+                                        </p>
+                                        <p class="text-xs text-info-600 mt-1">
+                                            Available Points:
+                                            <span class="font-bold">{{
+                                                cartCustomer.e_wallet
+                                                    ?.points_balance || 0
+                                            }}</span>
+                                            pts
+                                        </p>
+                                        <p class="text-xs text-info-500 mt-2">
+                                            Only this customer's points can be
+                                            used for payment.
+                                        </p>
+                                    </div>
+                                    <!-- Search field only if no cart customer -->
+                                    <div v-if="!cartCustomer">
+                                        <TextField
+                                            id="points_customer_search"
+                                            v-model="customerSearchQuery"
+                                            label="Find Customer"
+                                            placeholder="Search name, phone, or email"
+                                            type="search"
+                                            :disabled="isCustomerSearchDisabled"
+                                        />
+                                        <p class="text-xs text-neutral-500">
+                                            Start typing (min. 2 characters) to
+                                            search existing customers. Selected
+                                            customer will be assigned to this
+                                            cart.
+                                        </p>
+                                    </div>
                                     <div
                                         v-if="customerSearchLoading"
                                         class="text-xs text-neutral-500"
@@ -449,25 +480,62 @@
                                     </p>
                                 </div>
                                 <div
-                                    v-if="selectedCustomerId"
-                                    class="p-3 bg-success-50 border border-success-200 rounded-lg"
+                                    v-if="selectedCustomerId || cartCustomer"
+                                    class="p-3 bg-success-50 border border-success-200 rounded-lg space-y-2"
                                 >
                                     <p
                                         class="text-sm font-semibold text-success-800"
                                     >
-                                        Selected Customer
+                                        {{
+                                            selectedCustomerId
+                                                ? "Selected Customer"
+                                                : "Cart Customer"
+                                        }}
                                     </p>
                                     <p class="text-xs text-success-600">
                                         {{ selectedCustomerName }}
                                     </p>
-                                    <p class="text-xs text-success-600 mt-1">
+                                    <p class="text-xs text-success-600">
                                         Available Balance:
                                         <span class="font-bold">{{
                                             selectedCustomerBalance
                                         }}</span>
                                         points
                                     </p>
-                                    <p class="text-xs text-success-600">
+                                    <!-- Points input in mixed payment mode -->
+                                    <div v-if="isMixedPaymentMode">
+                                        <TextField
+                                            id="points_to_use"
+                                            v-model="pointsToUse"
+                                            label="Points to Use"
+                                            type="number"
+                                            inputmode="decimal"
+                                            :placeholder="`Max: ${Math.min(
+                                                selectedCustomerBalance,
+                                                remainingBalance
+                                            )}`"
+                                            required
+                                        />
+                                        <p
+                                            class="text-xs text-success-600 mt-1"
+                                        >
+                                            Max Usable:
+                                            <span class="font-bold">{{
+                                                Math.min(
+                                                    selectedCustomerBalance,
+                                                    remainingBalance
+                                                )
+                                            }}</span>
+                                            pts (₱{{
+                                                Math.min(
+                                                    selectedCustomerBalance,
+                                                    remainingBalance
+                                                ).toFixed(2)
+                                            }})
+                                        </p>
+                                    </div>
+                                    <!-- Single payment mode shows required points -->
+                                    <p v-else class="text-xs text-success-600">
                                         Points Required:
                                         <span class="font-bold">{{
                                             pointsRequired
@@ -478,7 +546,7 @@
                             </template>
                         </div>
 
-                        <div class="space-y-2">
+                        <div v-if="showConversionSummary" class="space-y-2">
                             <div
                                 class="flex items-center justify-between text-sm"
                             >
@@ -516,8 +584,8 @@
                 <section
                     class="bg-white border border-neutral-200 rounded-2xl shadow-sm p-5 space-y-5"
                 >
-                    <!-- Amount Input Field (Always visible) -->
-                    <div>
+                    <!-- Amount Input Field (Only for Mixed Payment mode, Hidden for Points payment) -->
+                    <div v-if="isMixedPaymentMode && !isPointsMethod">
                         <label
                             class="block text-sm font-medium text-neutral-700 mb-3"
                         >
@@ -729,9 +797,9 @@
                         </div>
                     </div>
 
-                    <!-- Keypad and Quick Cash (shown when NOT in mixed mode) -->
+                    <!-- Keypad and Quick Cash (shown when NOT in mixed mode and NOT points) -->
                     <template v-else>
-                        <div>
+                        <div v-if="!isPointsMethod">
                             <label
                                 class="block text-sm font-medium text-neutral-700 mb-3"
                             >
@@ -1150,7 +1218,11 @@ const customerResults = ref<any[]>([]);
 const customerSearchLoading = ref(false);
 const customerSearchError = ref<string | null>(null);
 const selectedCustomerId = ref<number | null>(null);
+const pointsToUse = ref("");
 let customerSearchTimeout: ReturnType<typeof setTimeout> | null = null;
+
+// Cart customer handling
+const cartCustomer = computed(() => props.cart?.customer || null);
 
 const resetPaymentDetails = () => {
     paymentDetails.referenceNumber = "";
@@ -1290,8 +1362,163 @@ watch(isCreditMethod, (isCredit) => {
 watch(isPointsMethod, (isPoints) => {
     if (!isPoints) {
         resetCustomerSearch();
+        pointsToUse.value = "";
     }
+    // Cart customer is automatically used via computed property
+    // No need to manually select
 });
+
+const showChangeCustomerModal = async () => {
+    const result = await Swal.fire({
+        title: "Change Cart Customer",
+        html: `
+            <p class="text-sm text-gray-600 mb-4">
+                Changing the cart customer will allow you to use a different customer's points.<br><br>
+                Current customer: <strong>${
+                    cartCustomer.value?.customer_name || "None"
+                }</strong>
+            </p>
+            <input
+                id="swal-customer-search"
+                type="text"
+                class="swal2-input"
+                placeholder="Search customer name, phone, or email"
+                style="width: 90%;"
+            >
+            <div id="swal-customer-results" class="mt-2 max-h-48 overflow-y-auto"></div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: "Remove Customer",
+        cancelButtonText: "Cancel",
+        showLoaderOnConfirm: true,
+        didOpen: () => {
+            const searchInput = document.getElementById(
+                "swal-customer-search"
+            ) as HTMLInputElement;
+            const resultsDiv = document.getElementById("swal-customer-results");
+            let searchTimeout: any = null;
+
+            searchInput?.addEventListener("input", async (e) => {
+                const query = (e.target as HTMLInputElement).value.trim();
+
+                if (searchTimeout) clearTimeout(searchTimeout);
+
+                if (query.length < 2) {
+                    if (resultsDiv) resultsDiv.innerHTML = "";
+                    return;
+                }
+
+                searchTimeout = setTimeout(async () => {
+                    try {
+                        const { data } = await axios.get(
+                            route("customers.search"),
+                            {
+                                params: { query },
+                            }
+                        );
+
+                        if (resultsDiv) {
+                            if (data.length === 0) {
+                                resultsDiv.innerHTML =
+                                    '<p class="text-sm text-gray-500">No customers found</p>';
+                            } else {
+                                resultsDiv.innerHTML = data
+                                    .map(
+                                        (customer: any) => `
+                                    <button
+                                        type="button"
+                                        class="swal-customer-btn w-full text-left p-2 hover:bg-gray-100 border-b"
+                                        data-customer-id="${customer.id}"
+                                        data-customer-name="${
+                                            customer.customer_name
+                                        }"
+                                    >
+                                        <div class="font-semibold text-sm">${
+                                            customer.customer_name
+                                        }</div>
+                                        <div class="text-xs text-gray-500">${
+                                            customer.contact_no ||
+                                            customer.email ||
+                                            "No contact"
+                                        } - ${
+                                            customer.e_wallet?.points_balance ||
+                                            0
+                                        } pts</div>
+                                    </button>
+                                `
+                                    )
+                                    .join("");
+
+                                // Add click handlers to customer buttons
+                                resultsDiv
+                                    .querySelectorAll(".swal-customer-btn")
+                                    .forEach((btn) => {
+                                        btn.addEventListener(
+                                            "click",
+                                            async () => {
+                                                const customerId =
+                                                    btn.getAttribute(
+                                                        "data-customer-id"
+                                                    );
+                                                const customerName =
+                                                    btn.getAttribute(
+                                                        "data-customer-name"
+                                                    );
+
+                                                await updateCartCustomer(
+                                                    Number(customerId)
+                                                );
+                                                Swal.close();
+                                            }
+                                        );
+                                    });
+                            }
+                        }
+                    } catch (error) {
+                        if (resultsDiv) {
+                            resultsDiv.innerHTML =
+                                '<p class="text-sm text-red-500">Error searching customers</p>';
+                        }
+                    }
+                }, 300);
+            });
+        },
+        preConfirm: () => {
+            return updateCartCustomer(null);
+        },
+    });
+};
+
+const updateCartCustomer = async (customerId: number | null) => {
+    try {
+        const response = await axios.post(route("cart.update-customer"), {
+            cart_id: props.cart.id,
+            customer_id: customerId,
+        });
+
+        if (response.data.success) {
+            toast.add({
+                severity: "success",
+                summary: "Success",
+                detail: customerId
+                    ? "Cart customer updated successfully"
+                    : "Cart customer removed successfully",
+                life: 3000,
+            });
+
+            // Reload the page to refresh cart data
+            router.reload({ only: ["cart"] });
+        }
+    } catch (error) {
+        console.error("Error updating cart customer:", error);
+        toast.add({
+            severity: "error",
+            summary: "Error",
+            detail: "Failed to update cart customer",
+            life: 3000,
+        });
+    }
+};
 
 const fetchCustomers = async (query: string) => {
     if (!query || (!isCreditMethod.value && !isPointsMethod.value)) {
@@ -1322,6 +1549,11 @@ watch(
             return;
         }
 
+        // For points payment, don't search if cart already has customer
+        if (isPointsMethod.value && cartCustomer.value) {
+            return;
+        }
+
         if (customerSearchTimeout) {
             clearTimeout(customerSearchTimeout);
             customerSearchTimeout = null;
@@ -1339,8 +1571,14 @@ watch(
     }
 );
 
-const selectCustomer = (customer: any) => {
+const selectCustomer = async (customer: any) => {
     if (!customer) {
+        return;
+    }
+
+    // For points payment without cart customer, set this customer as cart customer
+    if (isPointsMethod.value && !cartCustomer.value) {
+        await updateCartCustomer(customer.id);
         return;
     }
 
@@ -1362,17 +1600,22 @@ const selectCustomer = (customer: any) => {
 };
 
 const selectedCustomer = computed(() => {
-    if (!selectedCustomerId.value) {
-        return null;
+    // For points payment, always use cart customer (if exists)
+    // Only allow selecting different customer if no cart customer exists
+    if (isPointsMethod.value && cartCustomer.value) {
+        return cartCustomer.value;
     }
-    // Try to find in current results first
-    const found = customerResults.value.find(
-        (c: any) => c.id === selectedCustomerId.value
-    );
-    if (found) {
-        return found;
+
+    if (selectedCustomerId.value) {
+        // Try to find in current results first
+        const found = customerResults.value.find(
+            (c: any) => c.id === selectedCustomerId.value
+        );
+        if (found) {
+            return found;
+        }
     }
-    // If not in results, return null (points balance won't be available)
+
     return null;
 });
 
@@ -1381,16 +1624,32 @@ const selectedCustomerName = computed(() => {
 });
 
 const selectedCustomerBalance = computed(() => {
-    return selectedCustomer.value?.balance || 0;
+    return selectedCustomer.value?.e_wallet?.points_balance || 0;
+});
+
+const pointsToUseNumber = computed(() => {
+    const value = parseFloat(pointsToUse.value || "0");
+    return Number.isFinite(value) ? value : 0;
 });
 
 const pointsRequired = computed(() => {
+    // In mixed payment mode, use the input field value
+    if (isMixedPaymentMode.value) {
+        return pointsToUseNumber.value;
+    }
+    // In single payment mode, points must cover entire remaining balance
     // 1 point = 1 currency unit
-    return totalDue.value;
+    return remainingBalance.value || totalDue.value;
 });
 
 const hasSufficientPoints = computed(() => {
-    if (!isPointsMethod.value || !selectedCustomerId.value) {
+    if (
+        !isPointsMethod.value ||
+        (!selectedCustomerId.value && !cartCustomer.value)
+    ) {
+        return false;
+    }
+    if (pointsRequired.value <= 0) {
         return false;
     }
     return selectedCustomerBalance.value >= pointsRequired.value;
@@ -1423,7 +1682,11 @@ const additionalFieldsValid = computed(() => {
     }
 
     if (isPointsMethod.value) {
-        return selectedCustomerId.value !== null && hasSufficientPoints.value;
+        return (
+            (selectedCustomerId.value !== null ||
+                cartCustomer.value !== null) &&
+            hasSufficientPoints.value
+        );
     }
 
     if (isGiftCheckMethod.value) {
@@ -1447,8 +1710,11 @@ const additionalFieldErrorMessage = computed(() => {
         return "Customer name and contact information are required for credit payments.";
     }
     if (isPointsMethod.value) {
-        if (!selectedCustomerId.value) {
+        if (!selectedCustomerId.value && !cartCustomer.value) {
             return "Please select a customer for points payment.";
+        }
+        if (isMixedPaymentMode.value && pointsToUseNumber.value <= 0) {
+            return "Please enter the amount of points to use.";
         }
         if (!hasSufficientPoints.value) {
             return `Insufficient points. Customer has ${selectedCustomerBalance.value} points but needs ${pointsRequired.value} points.`;
@@ -1573,8 +1839,15 @@ const canAddPayment = computed(() => {
         return false;
     }
 
-    if (amountTenderedNumber.value <= 0) {
-        return false;
+    // For points payment, check pointsToUseNumber instead of amountTenderedNumber
+    if (isPointsMethod.value) {
+        if (pointsToUseNumber.value <= 0) {
+            return false;
+        }
+    } else {
+        if (amountTenderedNumber.value <= 0) {
+            return false;
+        }
     }
 
     if (!additionalFieldsValid.value) {
@@ -1582,7 +1855,11 @@ const canAddPayment = computed(() => {
     }
 
     // Validate non-cash payments can't exceed remaining balance
-    if (!isCashMethod.value && amountPaidBase.value > remainingBalance.value) {
+    if (
+        !isCashMethod.value &&
+        !isPointsMethod.value &&
+        amountPaidBase.value > remainingBalance.value
+    ) {
         return false;
     }
 
@@ -1608,7 +1885,19 @@ const addPaymentToMix = () => {
     let amountApplied = amountPaidBase.value;
     let changeAmount = 0;
 
-    if (isCashMethod.value) {
+    // For points payment, use pointsRequired as the amount
+    if (isPointsMethod.value) {
+        amountApplied = pointsRequired.value;
+        if (amountApplied > remainingBalance.value) {
+            toast.add({
+                severity: "error",
+                summary: "Invalid Amount",
+                detail: "Points payment cannot exceed remaining balance.",
+                life: 3000,
+            });
+            return;
+        }
+    } else if (isCashMethod.value) {
         // Cash can exceed remaining balance and give change
         amountApplied = Math.min(amountPaidBase.value, remainingBalance.value);
         if (amountPaidBase.value > remainingBalance.value) {
@@ -1631,11 +1920,15 @@ const addPaymentToMix = () => {
     const paymentDetailsPayload = buildPaymentDetailsPayload();
     const referenceNumber = resolveReferenceNumber();
 
+    // For points payment, use the effective customer ID (selected or cart)
+    const effectiveCustomerId =
+        selectedCustomerId.value || cartCustomer.value?.id || null;
+
     const payment = {
         payment_method_id: selectedPaymentMethodId.value,
-        amount_in_payment_currency: Number(
-            amountTenderedNumber.value.toFixed(2)
-        ),
+        amount_in_payment_currency: isPointsMethod.value
+            ? pointsRequired.value
+            : Number(amountTenderedNumber.value.toFixed(2)),
         amount_paid: amountPaidBase.value,
         computed_amount_paid: amountPaidBase.value,
         reference_number: referenceNumber ?? undefined,
@@ -1643,7 +1936,7 @@ const addPaymentToMix = () => {
             Object.keys(paymentDetailsPayload).length > 0
                 ? paymentDetailsPayload
                 : undefined,
-        customer_id: selectedCustomerId.value || undefined,
+        customer_id: effectiveCustomerId || undefined,
         points_used: isPointsMethod.value ? pointsRequired.value : undefined,
         // Additional fields for frontend display
         methodName: method.name,
@@ -1660,6 +1953,7 @@ const addPaymentToMix = () => {
     resetPaymentDetails();
     selectedCustomerId.value = null;
     customerSearchQuery.value = "";
+    pointsToUse.value = "";
 
     toast.add({
         severity: "success",
@@ -2004,9 +2298,13 @@ const handleSettlePayment = async () => {
             payload.customer_id = selectedCustomerId.value;
         }
 
-        if (isPointsMethod.value && selectedCustomerId.value) {
-            payload.customer_id = selectedCustomerId.value;
-            payload.points_used = pointsRequired.value;
+        if (isPointsMethod.value) {
+            const effectiveCustomerId =
+                selectedCustomerId.value || cartCustomer.value?.id;
+            if (effectiveCustomerId) {
+                payload.customer_id = effectiveCustomerId;
+                payload.points_used = pointsRequired.value;
+            }
         }
 
         const response = await settlePayment(payload);
