@@ -153,18 +153,29 @@ class OrderController extends Controller
     {
         try {
             // Load relationships needed for the receipt
-            $order->load(['orderItems', 'branch', 'cashier']);
+            $order->load([
+                'orderItems',
+                'branch',
+                'cashier',
+                'payments.paymentMethod',
+                'payments.currency'
+            ]);
 
             // Get general settings for company name
             $generalSettings = app(GeneralSettingsService::class)->getCompanySettings();
 
             info($generalSettings);
 
+            // Transform order data using ReceiptOrdersResource to get properly formatted payment data
+            $orderResource = new ReceiptOrdersResource($order);
+            $orderData = $orderResource->toArray(request());
+
             // Render the receipt blade template as HTML
             $html = view('receipt.receipt', [
                 'order' => $order,
                 'companyName' => $generalSettings->company_name ?? '',
                 'branch' => $order->branch,
+                'paymentData' => $orderData['payment'], // Pass formatted payment data
             ])->render();
 
             // Return as downloadable HTML file

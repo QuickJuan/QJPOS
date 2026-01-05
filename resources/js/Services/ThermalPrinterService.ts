@@ -800,13 +800,9 @@ class ThermalPrinterService {
                 commands.push(...this.ESC_POS.ALIGN_LEFT);
                 commands.push(...this.ESC_POS.LINE_FEED, ...this.ESC_POS.LINE_FEED);
 
-                const paymentTypeValue = (
-                    receiptData.payment.payment_type_value ||
-                    receiptData.payment.payment_type ||
-                    ''
-                )
-                    .toString()
-                    .toLowerCase();
+                // Check if this is a mixed payment (array of payments)
+                const isMixedPayment = Array.isArray(receiptData.payment);
+                const payments = isMixedPayment ? receiptData.payment : [receiptData.payment];
 
                 const addInfoLine = (label: string, value: string | number) => {
                     commands.push(
@@ -817,87 +813,138 @@ class ThermalPrinterService {
                     commands.push(...this.ESC_POS.LINE_FEED);
                 };
 
-                if (receiptData.payment.method) {
-                    commands.push(...this.stringToBytes(
-                        this.formatInfoLine('Payment Method:', receiptData.payment.method)
-                    ));
+                let totalPaid = 0;
+                let totalChange = 0;
+
+                payments.forEach((payment: any, index: number) => {
+                    // Add payment number for mixed payments
+                    if (isMixedPayment) {
+                        commands.push(...this.ESC_POS.BOLD_ON);
+                        commands.push(...this.stringToBytes(`Payment ${index + 1}:`));
+                        commands.push(...this.ESC_POS.BOLD_OFF);
+                        commands.push(...this.ESC_POS.LINE_FEED);
+                    }
+
+                    const paymentTypeValue = (
+                        payment.payment_type_value ||
+                        payment.payment_type ||
+                        ''
+                    )
+                        .toString()
+                        .toLowerCase();
+
+                    if (payment.method || payment.payment_method?.name) {
+                        commands.push(...this.stringToBytes(
+                            this.formatInfoLine('Payment Method:', payment.method || payment.payment_method?.name)
+                        ));
+                        commands.push(...this.ESC_POS.LINE_FEED);
+                    }
+
+                    if (paymentTypeValue === 'credit' && payment.customer_name) {
+                        addInfoLine('Customer:', payment.customer_name);
+                    }
+
+                    if (paymentTypeValue === 'e-wallet' && payment.reference_number) {
+                        addInfoLine('Reference No.:', payment.reference_number);
+                    }
+
+                    if (paymentTypeValue === 'gift-check') {
+                        const giftReference = payment.reference_number || payment.gift_check_number;
+                        if (giftReference) {
+                            addInfoLine('Reference No.:', giftReference);
+                        }
+                    }
+
+                    if (paymentTypeValue === 'card') {
+                        if (payment.approval_code) {
+                            addInfoLine('Approval Code:', payment.approval_code);
+                        }
+
+                        if (payment.card_holder_name) {
+                            addInfoLine('Cardholder:', payment.card_holder_name);
+                        }
+                    }
+
+                    const paymentAmount = parseFloat(payment.amount || payment.amount_paid || 0);
+                    const appliedAmount = parseFloat(payment.amount_applied || paymentAmount);
+                    totalPaid += appliedAmount;
+
+                    commands.push(...this.stringToBytes(this.formatTotalLine('Amount:', paymentAmount)));
                     commands.push(...this.ESC_POS.LINE_FEED);
-                }
 
-                if (paymentTypeValue === 'credit' && receiptData.payment.customer_name) {
-                    addInfoLine('Customer:', receiptData.payment.customer_name);
-                }
-
-                if (paymentTypeValue === 'e-wallet' && receiptData.payment.reference_number) {
-                    addInfoLine('Reference No.:', receiptData.payment.reference_number);
-                }
-
-                if (paymentTypeValue === 'gift-check') {
-                    const giftReference = receiptData.payment.reference_number || receiptData.payment.gift_check_number;
-                    if (giftReference) {
-                        addInfoLine('Reference No.:', giftReference);
-                    }
-                }
-
-                if (paymentTypeValue === 'card') {
-                    if (receiptData.payment.approval_code) {
-                        addInfoLine('Approval Code:', receiptData.payment.approval_code);
+                    if (isMixedPayment && appliedAmount !== paymentAmount) {
+                        commands.push(...this.stringToBytes(this.formatTotalLine('Applied:', appliedAmount)));
+                        commands.push(...this.ESC_POS.LINE_FEED);
                     }
 
-                    if (receiptData.payment.card_holder_name) {
-                        addInfoLine('Cardholder:', receiptData.payment.card_holder_name);
-                    }
-                }
-
-                const paymentAmount = parseFloat(receiptData.payment.amount_paid)
-                commands.push(...this.stringToBytes(this.formatTotalLine('Amount Paid:', paymentAmount)));
-                commands.push(...this.ESC_POS.LINE_FEED);
-
-                const paymentCurrency = receiptData.payment.currency;
-                const paidInCurrencyAmount = this.normalizeNumber(
-                    receiptData.payment.amount_in_payment_currency ?? receiptData.payment.amount_paid,
-                    0
-                );
-
-                if (
-                    paymentCurrency &&
-                    paymentCurrency.is_default === false &&
-                    paidInCurrencyAmount > 0
-                ) {
-                    const label = paymentCurrency.code
-                        ? `Paid in ${paymentCurrency.code}:`
-                        : 'Paid in Foreign Currency:';
-                    commands.push(
-                        ...this.stringToBytes(
-                            this.formatTotalLine(label, paidInCurrencyAmount)
-                        )
-                    );
-                    commands.push(...this.ESC_POS.LINE_FEED);
-
-                    const baseCurrencyCode =
-                        receiptData.payment.base_currency?.code || 'PHP';
-                    const exchangeRateValue = this.normalizeNumber(
-                        paymentCurrency.exchange_rate,
+                    const paymentCurrency = payment.currency;
+                    const paidInCurrencyAmount = this.normalizeNumber(
+                        payment.amount_in_payment_currency ?? payment.amount_paid,
                         0
                     );
 
-                    if (exchangeRateValue > 0) {
-                        const formattedRate = this.formatNumberWithComma(
-                            exchangeRateValue.toFixed(4)
+                    if (
+                        paymentCurrency &&
+                        paymentCurrency.is_default === false &&
+                        paidInCurrencyAmount > 0
+                    ) {
+                        const label = paymentCurrency.code
+                            ? `Paid in ${paymentCurrency.code}:`
+                            : 'Paid in Foreign Currency:';
+                        commands.push(
+                            ...this.stringToBytes(
+                                this.formatTotalLine(label, paidInCurrencyAmount)
+                            )
                         );
-                        const exchangeLine = paymentCurrency.code
-                            ? `Exchange Rate: 1 ${paymentCurrency.code} = ${formattedRate} ${baseCurrencyCode}`
-                            : `Exchange Rate: ${formattedRate} ${baseCurrencyCode}`;
-                        commands.push(...this.stringToBytes(exchangeLine));
+                        commands.push(...this.ESC_POS.LINE_FEED);
+
+                        const baseCurrencyCode =
+                            payment.base_currency?.code || 'PHP';
+                        const exchangeRateValue = this.normalizeNumber(
+                            paymentCurrency.exchange_rate,
+                            0
+                        );
+
+                        if (exchangeRateValue > 0) {
+                            const formattedRate = this.formatNumberWithComma(
+                                exchangeRateValue.toFixed(4)
+                            );
+                            const exchangeLine = paymentCurrency.code
+                                ? `Exchange Rate: 1 ${paymentCurrency.code} = ${formattedRate} ${baseCurrencyCode}`
+                                : `Exchange Rate: ${formattedRate} ${baseCurrencyCode}`;
+                            commands.push(...this.stringToBytes(exchangeLine));
+                            commands.push(...this.ESC_POS.LINE_FEED);
+                        }
+                    }
+
+                    const changeAmount = parseFloat(String(payment.change_amount || payment.change || 0));
+                    if (changeAmount > 0) {
+                        totalChange += changeAmount;
+                        if (isMixedPayment) {
+                            commands.push(...this.stringToBytes(this.formatTotalLine('Change:', changeAmount)));
+                            commands.push(...this.ESC_POS.LINE_FEED);
+                        }
+                    }
+
+                    // Add separator for mixed payments
+                    if (isMixedPayment && index < payments.length - 1) {
+                        commands.push(...this.stringToBytes('-'.repeat(42)));
                         commands.push(...this.ESC_POS.LINE_FEED);
                     }
+                });
+
+                // Show totals for mixed payments
+                if (isMixedPayment) {
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                    commands.push(...this.ESC_POS.BOLD_ON);
+                    commands.push(...this.stringToBytes(this.formatTotalLine('Total Paid:', totalPaid)));
+                    commands.push(...this.ESC_POS.LINE_FEED);
                 }
 
-                if (receiptData.payment.change && parseFloat(String(receiptData.payment.change)) > 0) {
-                    const change = paymentAmount - total
+                if (totalChange > 0) {
                     commands.push(...this.ESC_POS.BOLD_ON);
                     const changeSize = this.currentConfig?.font_sizes?.totals || 'medium';
-                    this.addTextWithSize(commands, this.formatTotalLine('Change:', change), changeSize);
+                    this.addTextWithSize(commands, this.formatTotalLine(isMixedPayment ? 'Total Change:' : 'Change:', totalChange), changeSize);
                     commands.push(...this.ESC_POS.BOLD_OFF);
                     commands.push(...this.ESC_POS.LINE_FEED);
                 }
@@ -1006,6 +1053,235 @@ class ThermalPrinterService {
             console.log(`✅ Receipt printed successfully${isReprint ? ' (RE-PRINT)' : ''}`);
         } catch (error) {
             console.error('❌ Failed to print receipt:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Print receipt slip for non-default payments
+     */
+    public async printReceiptSlip(slipData: {
+        storeName: string;
+        branch: any;
+        invoiceNumber: string;
+        dateTime: string;
+        payments: Array<{
+            paymentMethod: string;
+            amountPaid: number;
+            referenceNumber?: string;
+            customerName?: string;
+            customerContact?: string;
+            paymentType?: string;
+            approvalCode?: string;
+            cardHolderName?: string;
+            giftCheckNumber?: string;
+            giftCheckAmount?: number;
+        }>;
+        isMixedPayment?: boolean;
+    }): Promise<void> {
+        if (!this.isConnected()) {
+            throw new Error('Printer not connected. Please connect first.');
+        }
+
+        try {
+            const commands: number[] = [];
+
+            // Initialize printer
+            commands.push(...this.ESC_POS.INIT);
+            commands.push(...this.ESC_POS.SET_UTF8);
+
+            const separatorWidth = this.currentConfig?.character_width || 47;
+            const separatorLine = '-'.repeat(separatorWidth);
+
+            // Header - Business Info (Centered)
+            commands.push(...this.ESC_POS.ALIGN_CENTER);
+            commands.push(...this.ESC_POS.BOLD_ON);
+
+            // Company name (medium size)
+            this.addTextWithSize(commands, slipData.storeName, 'medium');
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            commands.push(...this.ESC_POS.BOLD_OFF);
+
+            // Branch name
+            if (slipData.branch?.name) {
+                commands.push(...this.stringToBytes(slipData.branch.name));
+                commands.push(...this.ESC_POS.LINE_FEED);
+            }
+
+            // Branch address and phone
+            if (slipData.branch?.address) {
+                commands.push(...this.stringToBytes(slipData.branch.address));
+                commands.push(...this.ESC_POS.LINE_FEED);
+            }
+            if (slipData.branch?.phone) {
+                commands.push(...this.stringToBytes(slipData.branch.phone));
+                commands.push(...this.ESC_POS.LINE_FEED);
+            }
+
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            // Receipt Slip Title
+            commands.push(...this.ESC_POS.BOLD_ON);
+            this.addTextWithSize(commands, '*** RECEIPT SLIP ***', 'medium');
+            commands.push(...this.ESC_POS.BOLD_OFF);
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            // Separator
+            commands.push(...this.stringToBytes(separatorLine));
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            // Receipt details (Left aligned)
+            commands.push(...this.ESC_POS.ALIGN_LEFT);
+
+            // Invoice number
+            commands.push(...this.stringToBytes(this.formatInfoLine('Invoice #:', slipData.invoiceNumber)));
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            // Date and time
+            commands.push(...this.stringToBytes(this.formatInfoLine('Date Time:', slipData.dateTime)));
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            // Mixed payment indicator (if applicable)
+            if (slipData.isMixedPayment) {
+                commands.push(...this.stringToBytes(this.formatInfoLine('Payment Type:', 'Mixed Payment')));
+                commands.push(...this.ESC_POS.LINE_FEED);
+            }
+
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            // Separator
+            commands.push(...this.stringToBytes(separatorLine));
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            // Payment details (Centered and bold)
+            commands.push(...this.ESC_POS.ALIGN_CENTER);
+            commands.push(...this.ESC_POS.BOLD_ON);
+            commands.push(...this.stringToBytes('PAYMENT DETAILS'));
+            commands.push(...this.ESC_POS.BOLD_OFF);
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            // Loop through all payments
+            slipData.payments.forEach((payment, index) => {
+                // Payment number for mixed payments
+                if (slipData.isMixedPayment && slipData.payments.length > 1) {
+                    commands.push(...this.ESC_POS.ALIGN_LEFT);
+                    commands.push(...this.ESC_POS.BOLD_ON);
+                    commands.push(...this.stringToBytes(`Payment ${index + 1}`));
+                    commands.push(...this.ESC_POS.BOLD_OFF);
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                }
+
+                // Payment method on same line (Left aligned)
+                commands.push(...this.ESC_POS.ALIGN_LEFT);
+                commands.push(...this.ESC_POS.BOLD_ON);
+                commands.push(...this.stringToBytes(`Payment Method: ${payment.paymentMethod}`));
+                commands.push(...this.ESC_POS.BOLD_OFF);
+                commands.push(...this.ESC_POS.LINE_FEED);
+
+                // Reference number below payment method (if provided)
+                if (payment.referenceNumber) {
+                    commands.push(...this.ESC_POS.ALIGN_CENTER);
+                    commands.push(...this.stringToBytes(`Ref: ${payment.referenceNumber}`));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                }
+
+                // Card payment details
+                if (payment.paymentType === 'card') {
+                    if (payment.approvalCode) {
+                        commands.push(...this.ESC_POS.ALIGN_CENTER);
+                        commands.push(...this.stringToBytes(`Approval: ${payment.approvalCode}`));
+                        commands.push(...this.ESC_POS.LINE_FEED);
+                    }
+                    if (payment.cardHolderName) {
+                        commands.push(...this.ESC_POS.ALIGN_CENTER);
+                        commands.push(...this.stringToBytes(`Cardholder: ${payment.cardHolderName}`));
+                        commands.push(...this.ESC_POS.LINE_FEED);
+                    }
+                }
+
+                // Gift check details
+                if (payment.paymentType === 'gift-check' || payment.paymentType === 'gift_check') {
+                    if (payment.giftCheckNumber) {
+                        commands.push(...this.ESC_POS.ALIGN_CENTER);
+                        commands.push(...this.stringToBytes(`GC No: ${payment.giftCheckNumber}`));
+                        commands.push(...this.ESC_POS.LINE_FEED);
+                    }
+                    if (payment.giftCheckAmount) {
+                        commands.push(...this.ESC_POS.ALIGN_CENTER);
+                        commands.push(...this.stringToBytes(`GC Amount: ${this.formatNumberWithComma(payment.giftCheckAmount.toFixed(2))}`));
+                        commands.push(...this.ESC_POS.LINE_FEED);
+                    }
+                }
+
+                // Customer info for credit and points payments
+                if ((payment.paymentType === 'credit' || payment.paymentType === 'points') && payment.customerName) {
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                    commands.push(...this.ESC_POS.ALIGN_LEFT);
+                    commands.push(...this.ESC_POS.BOLD_ON);
+                    commands.push(...this.stringToBytes('Customer:'));
+                    commands.push(...this.ESC_POS.BOLD_OFF);
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                    commands.push(...this.stringToBytes(`  ${payment.customerName}`));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                    if (payment.customerContact) {
+                        commands.push(...this.stringToBytes(`  ${payment.customerContact}`));
+                        commands.push(...this.ESC_POS.LINE_FEED);
+                    }
+                }
+
+                commands.push(...this.ESC_POS.LINE_FEED);
+
+                // Amount on same line (Left aligned)
+                commands.push(...this.ESC_POS.ALIGN_LEFT);
+                commands.push(...this.ESC_POS.BOLD_ON);
+                const amountText = this.formatNumberWithComma(payment.amountPaid.toFixed(2));
+                commands.push(...this.stringToBytes(`Amount: ${amountText}`));
+                commands.push(...this.ESC_POS.BOLD_OFF);
+                commands.push(...this.ESC_POS.LINE_FEED);
+                commands.push(...this.ESC_POS.LINE_FEED);
+
+                // Add separator between payments (except for last one)
+                if (index < slipData.payments.length - 1) {
+                    commands.push(...this.stringToBytes(separatorLine));
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                    commands.push(...this.ESC_POS.LINE_FEED);
+                }
+            });
+
+            // Separator
+            commands.push(...this.stringToBytes(separatorLine));
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            // Footer message
+            commands.push(...this.ESC_POS.ALIGN_CENTER);
+            commands.push(...this.stringToBytes('Thank you for your payment!'));
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.stringToBytes('Please keep this slip for your reference.'));
+            commands.push(...this.ESC_POS.LINE_FEED);
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            // Spacing before cut
+            const cutSpacing = this.currentConfig?.cut_spacing || 5;
+            for (let i = 0; i < cutSpacing; i++) {
+                commands.push(...this.ESC_POS.LINE_FEED);
+            }
+
+            // Cut paper if auto_cut is enabled
+            if (this.currentConfig?.auto_cut !== false) {
+                commands.push(...this.ESC_POS.FULL_CUT);
+            }
+
+            // Send to printer
+            const data = new Uint8Array(commands);
+            await this.sendToPrinter(data);
+
+            console.log(`✅ Receipt slip printed successfully for ${slipData.payments.length} payment(s)`);
+        } catch (error) {
+            console.error('❌ Failed to print receipt slip:', error);
             throw error;
         }
     }

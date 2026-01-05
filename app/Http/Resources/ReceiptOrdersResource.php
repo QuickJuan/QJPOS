@@ -17,10 +17,10 @@ class ReceiptOrdersResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $primaryPayment = $this->whenLoaded('payments') ? $this->payments->first() : null;
         $defaultCurrency = $this->getDefaultCurrencyMeta();
 
-        $paymentData = $this->formatPaymentData($primaryPayment, $defaultCurrency);
+        // Handle multiple payments or single payment
+        $paymentData = $this->formatAllPayments($defaultCurrency);
 
         return [
             // Order Information
@@ -89,47 +89,87 @@ class ReceiptOrdersResource extends JsonResource
         ];
     }
 
-    private function formatPaymentData($primaryPayment, array $defaultCurrency): ?array
+    private function formatAllPayments(array $defaultCurrency)
     {
-        if ($primaryPayment) {
-            $paymentType = $primaryPayment->paymentMethod?->payment_type;
-            $paymentTypeLabel = $paymentType instanceof PaymentType
-                ? $paymentType->label()
-                : $paymentType;
-            $paymentDetails = (array) ($primaryPayment->payment_details ?? []);
-            $paymentTypeValue = $paymentType instanceof PaymentType
-                ? $paymentType->value
-                : (is_string($paymentType) ? strtolower($paymentType) : null);
-            $giftCheckAmount = $paymentDetails['gift_check_amount'] ?? null;
-            $giftCheckAmountValue = is_numeric($giftCheckAmount) ? (float) $giftCheckAmount : null;
-
-            return [
-                'method' => $primaryPayment->paymentMethod?->name,
-                'payment_type' => $paymentTypeLabel,
-                'payment_type_value' => $paymentTypeValue,
-                'amount_paid' => (float) $primaryPayment->amount,
-                'amount_in_payment_currency' => (float) ($primaryPayment->amount_in_payment_currency ?? $primaryPayment->amount),
-                'currency' => $primaryPayment->currency ? [
-                    'code' => $primaryPayment->currency->code,
-                    'symbol' => $primaryPayment->currency->symbol,
-                    'exchange_rate' => $primaryPayment->currency->exchange_rate,
-                    'is_default' => (bool) $primaryPayment->currency->is_default,
-                ] : null,
-                'base_currency' => $defaultCurrency,
-                'change' => (float) $primaryPayment->change_amount,
-                'customer_name' => $paymentDetails['customer_name'] ?? null,
-                'customer_contact' => $paymentDetails['customer_contact'] ?? null,
-                'reference_number' => $paymentDetails['reference_number']
-                    ?? $paymentDetails['gift_check_number']
-                    ?? null,
-                'approval_code' => $paymentDetails['approval_code'] ?? null,
-                'card_holder_name' => $paymentDetails['card_holder_name'] ?? null,
-                'gift_check_number' => $paymentDetails['gift_check_number'] ?? null,
-                'gift_check_amount' => $giftCheckAmountValue,
-                'status' => $this->payment_status,
-            ];
+        // Check if payments relationship is loaded and has records
+        if ($this->whenLoaded('payments') && $this->payments->isNotEmpty()) {
+            // If multiple payments (mixed payment), return array of all payments
+            if ($this->payments->count() > 1 || $this->is_mixed_payment) {
+                return $this->payments->map(function ($payment) use ($defaultCurrency) {
+                    return $this->formatSinglePayment($payment, $defaultCurrency);
+                })->toArray();
+            }
+            // Single payment - return as single object (not array) for backward compatibility
+            return $this->formatSinglePayment($this->payments->first(), $defaultCurrency);
         }
 
+        // Fallback to meta_data payment info
+        return $this->formatMetaPayment($defaultCurrency);
+    }
+
+    private function formatSinglePayment($payment, array $defaultCurrency): array
+    {
+        $paymentType = $payment->paymentMethod?->payment_type;
+        $paymentTypeLabel = $paymentType instanceof PaymentType
+            ? $paymentType->label()
+            : $paymentType;
+        $paymentDetails = (array) ($payment->payment_details ?? []);
+        $paymentTypeValue = $paymentType instanceof PaymentType
+            ? $paymentType->value
+            : (is_string($paymentType) ? strtolower($paymentType) : null);
+        $giftCheckAmount = $paymentDetails['gift_check_amount'] ?? null;
+        $giftCheckAmountValue = is_numeric($giftCheckAmount) ? (float) $giftCheckAmount : null;
+
+        // Get exchange rate from payment record or currency relationship
+        $exchangeRate = (float) ($payment->exchange_rate ?? $payment->currency->exchange_rate ?? 1);
+        $currencyCode = $payment->currency?->code;
+        $currencySymbol = $payment->currency?->symbol;
+
+        // If there's no currency relationship but there's an exchange rate,
+        // infer currency info from payment method name or use generic info
+        if (!$payment->currency && $exchangeRate > 1 && (float) $payment->amount_in_payment_currency !== (float) $payment->amount) {
+            // Try to extract currency from payment method name
+            $methodName = $payment->paymentMethod?->name ?? '';
+            if (stripos($methodName, 'dollar') !== false || stripos($methodName, 'usd') !== false) {
+                $currencyCode = 'USD';
+                $currencySymbol = '$';
+            } elseif (stripos($methodName, 'euro') !== false || stripos($methodName, 'eur') !== false) {
+                $currencyCode = 'EUR';
+                $currencySymbol = '€';
+            }
+        }
+
+        return [
+            'method' => $payment->paymentMethod?->name,
+            'payment_type' => $paymentTypeLabel,
+            'payment_type_value' => $paymentTypeValue,
+            'amount_paid' => (float) $payment->amount,
+            'amount_applied' => (float) ($payment->amount_applied ?? $payment->amount),
+            'amount_in_payment_currency' => (float) ($payment->amount_in_payment_currency ?? $payment->amount),
+            'exchange_rate' => $exchangeRate,
+            'currency' => ($payment->currency || $currencyCode) ? [
+                'code' => $payment->currency?->code ?? $currencyCode,
+                'symbol' => $payment->currency?->symbol ?? $currencySymbol,
+                'exchange_rate' => $exchangeRate,
+                'is_default' => $payment->currency ? (bool) $payment->currency->is_default : false,
+            ] : null,
+            'base_currency' => $defaultCurrency,
+            'change' => (float) $payment->change_amount,
+            'customer_name' => $paymentDetails['customer_name'] ?? null,
+            'customer_contact' => $paymentDetails['customer_contact'] ?? null,
+            'reference_number' => $paymentDetails['reference_number']
+                ?? $paymentDetails['gift_check_number']
+                ?? null,
+            'approval_code' => $paymentDetails['approval_code'] ?? null,
+            'card_holder_name' => $paymentDetails['card_holder_name'] ?? null,
+            'gift_check_number' => $paymentDetails['gift_check_number'] ?? null,
+            'gift_check_amount' => $giftCheckAmountValue,
+            'status' => $this->payment_status,
+        ];
+    }
+
+    private function formatMetaPayment(array $defaultCurrency): ?array
+    {
         $metaPayment = $this->payment_info;
 
         if (! $metaPayment) {
@@ -165,6 +205,15 @@ class ReceiptOrdersResource extends JsonResource
             'gift_check_amount' => $metaGiftAmountValue,
             'status' => $this->payment_status,
         ];
+    }
+
+    private function formatPaymentData($primaryPayment, array $defaultCurrency): ?array
+    {
+        if ($primaryPayment) {
+            return $this->formatSinglePayment($primaryPayment, $defaultCurrency);
+        }
+
+        return $this->formatMetaPayment($defaultCurrency);
     }
 
     private function getDefaultCurrencyMeta(): array

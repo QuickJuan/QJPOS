@@ -103,7 +103,7 @@
                     </div>
                     <div class="text-right">
                         <p class="text-xs font-semibold text-primary-600">
-                            {{ customer.balance || 0 }} pts
+                            {{ customer.e_wallet?.points_balance || 0 }} pts
                         </p>
                     </div>
                 </button>
@@ -166,7 +166,7 @@ const currentShift = ref(props.cart?.id);
 
 // Customer selection state
 const showCustomerModal = ref(false);
-const selectedCustomer = ref<any | null>(null);
+const selectedCustomer = ref<any | null>(props.cart?.customer || null);
 const customerSearchQuery = ref("");
 const customerResults = ref<any[]>([]);
 const customerSearchError = ref<string | null>(null);
@@ -174,9 +174,23 @@ const isCustomerSearchLoading = ref(false);
 let customerSearchTimeout: ReturnType<typeof setTimeout> | null = null;
 const MIN_CUSTOMER_SEARCH_LENGTH = 2;
 
+// Watch for cart changes to update selected customer
+watch(
+    () => props.cart?.customer,
+    (newCustomer) => {
+        if (newCustomer) {
+            selectedCustomer.value = newCustomer;
+        }
+    },
+    { immediate: true }
+);
+
 const displayCustomerName = computed(() => {
     if (selectedCustomer.value) {
         return selectedCustomer.value.customer_name;
+    }
+    if (props.cart?.customer) {
+        return props.cart.customer.customer_name;
     }
     return props.tableInfo?.customer_name || "Walk-in Customer";
 });

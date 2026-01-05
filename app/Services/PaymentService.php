@@ -32,6 +32,11 @@ class PaymentService
     {
         try {
             return DB::transaction(function () use ($payload) {
+                // Check if this is a mixed payment
+                if (!empty($payload['is_mixed_payment']) && !empty($payload['payments'])) {
+                    return $this->settleMixedPaymentBill($payload);
+                }
+
                 $paymentContext = $this->preparePaymentContext($payload);
 
                 $cart = Cart::with(['cartItems', 'tableRoom.tableRoomLocation', 'cashierSession'])->findOrFail($payload['cart_id']);
@@ -83,7 +88,7 @@ class PaymentService
         }
     }
 
-    private function saveCartToOrder($cart, $payload, array $paymentContext)
+    private function saveCartToOrder($cart, $payload, array $paymentContext, bool $isMixedPayment = false)
     {
         // Get cart items for processing
         $serviceCharge = $cart->tableRoom->calculateServiceCharge($cart);
@@ -110,24 +115,32 @@ class PaymentService
 
         $metaData['change']     = $changeAmount;
         $metaData['settled_at'] = now();
-        $paymentType = $paymentContext['method']->payment_type instanceof PaymentType
-            ? $paymentContext['method']->payment_type->value
-            : $paymentContext['method']->payment_type;
 
-        $metaData['payment_info'] = [
-            'method' => $paymentContext['method']->name,
-            'payment_type' => $paymentType,
-            'currency' => [
-                'code' => $paymentContext['currency_code'],
-                'symbol' => $paymentContext['currency_symbol'],
+        if ($isMixedPayment) {
+            $metaData['payment_info'] = [
+                'mixed_payment' => true,
+                'payment_count' => count($payload['payments'] ?? []),
+            ];
+        } else {
+            $paymentType = $paymentContext['method']->payment_type instanceof PaymentType
+                ? $paymentContext['method']->payment_type->value
+                : $paymentContext['method']->payment_type;
+
+            $metaData['payment_info'] = [
+                'method' => $paymentContext['method']->name,
+                'payment_type' => $paymentType,
+                'currency' => [
+                    'code' => $paymentContext['currency_code'],
+                    'symbol' => $paymentContext['currency_symbol'],
+                    'exchange_rate' => $paymentContext['exchange_rate'],
+                ],
+                'amount_in_payment_currency' => $paymentContext['amount_in_payment_currency'],
+                'amount_in_default_currency' => $baseAmountPaid,
                 'exchange_rate' => $paymentContext['exchange_rate'],
-            ],
-            'amount_in_payment_currency' => $paymentContext['amount_in_payment_currency'],
-            'amount_in_default_currency' => $baseAmountPaid,
-            'exchange_rate' => $paymentContext['exchange_rate'],
-            'change' => $changeAmount,
-            'details' => $paymentContext['payment_details'] ?? [],
-        ];
+                'change' => $changeAmount,
+                'details' => $paymentContext['payment_details'] ?? [],
+            ];
+        }
 
         // Get branch_id from cart's cashier session, or fallback to current user's branch
         $branchId = $cart->cashierSession?->branch_id ?? $cashier->branch_id ?? $cart->branch_id;
@@ -251,6 +264,11 @@ class PaymentService
             throw new \InvalidArgumentException('Customer ID is required for credit payments.');
         }
 
+        // Check if points payment requires customer_id
+        if (strtolower($paymentType) === 'points' && empty($payload['customer_id'])) {
+            throw new \InvalidArgumentException('Customer ID is required for points payments.');
+        }
+
         // Use payment method's embedded currency for cash, default currency (rate 1) for others
         $exchangeRate = 1.0;
         $currencyCode = 'PHP';
@@ -285,11 +303,26 @@ class PaymentService
             'reference_number' => $payload['reference_number'] ?? null,
             'notes' => $payload['notes'] ?? null,
             'payment_details' => $paymentDetails,
+            'customer_id' => $payload['customer_id'] ?? null,
+            'points_used' => $payload['points_used'] ?? null,
         ];
     }
 
     private function recordPayment(Order $order, array $paymentContext): Payment
     {
+        // Get payment type
+        $paymentType = $paymentContext['method']->payment_type;
+        if ($paymentType instanceof PaymentType) {
+            $paymentType = $paymentType->value;
+        }
+
+        // Prepare payment details - add customer info for credit and points payments
+        $paymentDetails = $paymentContext['payment_details'] ?? [];
+        if ((strtolower($paymentType) === 'credit' || strtolower($paymentType) === 'points') && $order->customer) {
+            $paymentDetails['customer_name'] = $order->customer->customer_name;
+            $paymentDetails['customer_contact'] = $order->customer->contact_no ?? $order->customer->email ?? '';
+        }
+
         $payment = Payment::create([
             'order_id' => $order->id,
             'payment_method_id' => $paymentContext['method']->id,
@@ -299,14 +332,10 @@ class PaymentService
             'change_amount' => $paymentContext['change_amount'] ?? 0,
             'reference_number' => $paymentContext['reference_number'],
             'notes' => $paymentContext['notes'],
-            'payment_details' => $paymentContext['payment_details'] ?? [],
+            'payment_details' => $paymentDetails,
         ]);
 
         // If payment type is credit, create a customer payable record
-        $paymentType = $paymentContext['method']->payment_type;
-        if ($paymentType instanceof PaymentType) {
-            $paymentType = $paymentType->value;
-        }
 
         if (strtolower($paymentType) === 'credit') {
             // Customer ID is already validated in preparePaymentContext
@@ -340,52 +369,384 @@ class PaymentService
         return $payment;
     }
 
-    private function handleCustomerPoints($order, array $payload, array $paymentContext): void
+    /**
+     * Handle customer points redemption and earning based on payment type
+     */
+    private function handleCustomerPoints(Order $order, array $payload, array $paymentContext): void
     {
-        $paymentType = $paymentContext['method']->payment_type;
-        if ($paymentType instanceof PaymentType) {
-            $paymentType = $paymentType->value;
+        $paymentType = $this->getPaymentType($paymentContext);
+
+        $this->logPointsProcessing($order, $paymentType);
+
+        if ($this->shouldRedeemPoints($paymentType)) {
+            $this->redeemCustomerPoints($order, $payload);
+            return;
         }
 
-        // If payment type is points, redeem points from customer
-        if (strtolower($paymentType) === 'points') {
-            if (!$order->customer_id) {
-                throw new \Exception('Customer ID is required for points payment.');
-            }
+        if ($this->shouldEarnPoints($order, $paymentType)) {
+            $this->earnCustomerPoints($order);
+        }
+    }
 
-            $customer = \App\Models\Customer::findOrFail($order->customer_id);
-            $pointsRequired = $payload['points_used'] ?? $order->total_due;
+    /**
+     * Extract payment type from payment context
+     */
+    private function getPaymentType(array $paymentContext): string
+    {
+        $paymentType = $paymentContext['method']->payment_type;
 
-            // Redeem points (1 point = 1 currency unit)
-            $success = $this->pointsService->redeemPoints($customer, $pointsRequired);
+        if ($paymentType instanceof PaymentType) {
+            return $paymentType->value;
+        }
 
-            if (!$success) {
-                throw new \Exception('Failed to redeem points. Insufficient balance or invalid amount.');
-            }
+        return $paymentType;
+    }
 
-            Log::info('Points redeemed', [
+    /**
+     * Log points processing initiation
+     */
+    private function logPointsProcessing(Order $order, string $paymentType): void
+    {
+        Log::info('handleCustomerPoints called', [
+            'order_id' => $order->id,
+            'customer_id' => $order->customer_id,
+            'payment_type' => $paymentType,
+            'total_due' => $order->total_due,
+        ]);
+    }
+
+    /**
+     * Determine if points should be redeemed for this payment
+     */
+    private function shouldRedeemPoints(string $paymentType): bool
+    {
+        return strtolower($paymentType) === 'points';
+    }
+
+    /**
+     * Determine if points should be earned for this order
+     */
+    private function shouldEarnPoints(Order $order, string $paymentType): bool
+    {
+        return $order->customer_id && strtolower($paymentType) !== 'credit';
+    }
+
+    /**
+     * Redeem points from customer's e-wallet
+     */
+    private function redeemCustomerPoints(Order $order, array $payload): void
+    {
+        if (!$order->customer_id) {
+            throw new \Exception('Customer ID is required for points payment.');
+        }
+
+        $customer = \App\Models\Customer::with('eWallet')->findOrFail($order->customer_id);
+
+        if (!$customer->eWallet) {
+            throw new \Exception('Customer does not have an e-wallet.');
+        }
+
+        $pointsRequired = $payload['points_used'] ?? $order->total_due;
+        $ewalletService = app(\App\Services\EWalletService::class);
+
+        try {
+            $ewalletService->redeemPoints($customer->eWallet, $pointsRequired, $order);
+
+            Log::info('Points redeemed via e-wallet', [
                 'customer_id' => $customer->id,
                 'order_id' => $order->id,
                 'points_redeemed' => $pointsRequired,
             ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to redeem points', [
+                'customer_id' => $customer->id,
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+            throw new \Exception('Failed to redeem points. ' . $e->getMessage());
         }
-        // For all non-points payments, earn points based on amount spent
-        elseif ($order->customer_id && strtolower($paymentType) !== 'credit') {
-            $customer = \App\Models\Customer::find($order->customer_id);
+    }
 
-            if ($customer) {
-                $pointsEarned = $this->pointsService->earnPoints($customer, $order->total_due);
+    /**
+     * Redeem points for a specific payment in mixed payment scenario
+     */
+    private function redeemCustomerPointsForPayment(Order $order, array $paymentContext): void
+    {
+        $customerId = $paymentContext['customer_id'] ?? null;
+        $pointsToRedeem = $paymentContext['points_used'] ?? 0;
 
-                if ($pointsEarned > 0) {
-                    Log::info('Points earned', [
-                        'customer_id' => $customer->id,
-                        'order_id' => $order->id,
-                        'points_earned' => $pointsEarned,
-                        'amount_spent' => $order->total_due,
-                    ]);
+        if (!$customerId) {
+            throw new \Exception('Customer ID is required for points payment.');
+        }
+
+        if ($pointsToRedeem <= 0) {
+            throw new \Exception('Points to redeem must be greater than zero.');
+        }
+
+        $customer = \App\Models\Customer::with('eWallet')->findOrFail($customerId);
+
+        if (!$customer->eWallet) {
+            throw new \Exception('Customer does not have an e-wallet.');
+        }
+
+        $ewalletService = app(\App\Services\EWalletService::class);
+
+        try {
+            $ewalletService->redeemPoints($customer->eWallet, $pointsToRedeem, $order);
+
+            Log::info('Points redeemed via e-wallet (mixed payment)', [
+                'customer_id' => $customer->id,
+                'order_id' => $order->id,
+                'points_redeemed' => $pointsToRedeem,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to redeem points (mixed payment)', [
+                'customer_id' => $customer->id,
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+            throw new \Exception('Failed to redeem points. ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Award points to customer for their purchase
+     */
+    private function earnCustomerPoints(Order $order): void
+    {
+        Log::info('Attempting to earn points', [
+            'order_id' => $order->id,
+            'customer_id' => $order->customer_id,
+        ]);
+
+        $customer = \App\Models\Customer::with('eWallet')->find($order->customer_id);
+
+        if (!$customer) {
+            Log::warning('Customer not found', [
+                'order_id' => $order->id,
+                'customer_id' => $order->customer_id,
+            ]);
+            return;
+        }
+
+        $this->ensureCustomerHasEWallet($customer, $order);
+
+        $pointsEarned = $this->pointsService->calculatePointsFromAmount($order->total_due);
+
+        $this->logPointsCalculation($order, $customer, $pointsEarned);
+
+        if ($pointsEarned <= 0) {
+            Log::info('No points earned - amount too low', [
+                'order_id' => $order->id,
+                'customer_id' => $customer->id,
+                'points_earned' => $pointsEarned,
+            ]);
+            return;
+        }
+
+        $this->awardPointsToCustomer($customer, $pointsEarned, $order);
+    }
+
+    /**
+     * Ensure customer has an e-wallet, create if missing
+     */
+    private function ensureCustomerHasEWallet(\App\Models\Customer $customer, Order $order): void
+    {
+        if ($customer->eWallet) {
+            return;
+        }
+
+        Log::info('Creating e-wallet for existing customer', [
+            'customer_id' => $customer->id,
+            'order_id' => $order->id,
+        ]);
+
+        $customer->eWallet()->create([
+            'balance' => 0,
+            'earned_points' => 0,
+            'redeemed_points' => 0,
+            'points_balance' => 0,
+            'total_loaded' => 0,
+            'total_spent' => 0,
+            'is_active' => true,
+        ]);
+
+        $customer->load('eWallet');
+    }
+
+    /**
+     * Log points calculation details
+     */
+    private function logPointsCalculation(Order $order, \App\Models\Customer $customer, float $pointsEarned): void
+    {
+        Log::info('Points calculation', [
+            'order_id' => $order->id,
+            'customer_id' => $customer->id,
+            'total_due' => $order->total_due,
+            'points_earned' => $pointsEarned,
+        ]);
+    }
+
+    /**
+     * Award calculated points to customer via e-wallet service
+     */
+    private function awardPointsToCustomer(\App\Models\Customer $customer, float $points, Order $order): void
+    {
+        $ewalletService = app(\App\Services\EWalletService::class);
+
+        try {
+            $ewalletService->earnPoints($customer->eWallet, $points, $order);
+
+            Log::info('Points earned via e-wallet', [
+                'customer_id' => $customer->id,
+                'order_id' => $order->id,
+                'points_earned' => $points,
+                'amount_spent' => $order->total_due,
+            ]);
+        } catch (\Exception $e) {
+            Log::warning('Failed to award points', [
+                'customer_id' => $customer->id,
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Settle bill with mixed payments (multiple payment methods)
+     */
+    private function settleMixedPaymentBill(array $payload): mixed
+    {
+        $cart = Cart::with(['cartItems', 'tableRoom.tableRoomLocation', 'cashierSession'])->findOrFail($payload['cart_id']);
+
+        // Calculate totals
+        $serviceCharge = $cart->tableRoom->calculateServiceCharge($cart);
+        $cartItems = $cart->cartItems;
+        $totalAmount = $cartItems->sum('amount');
+        $lessTax = $cartItems->sum('less_tax') ?? 0;
+        $itemDiscount = $cartItems->sum('discount_amount') ?? 0;
+        $totalDue = $totalAmount - ($itemDiscount + $lessTax + $cart->total_discount ?? 0);
+        $totalWithCharges = $totalDue + $serviceCharge;
+
+        // Validate payments array
+        $payments = $payload['payments'] ?? [];
+        if (empty($payments)) {
+            throw new \InvalidArgumentException('Mixed payment requires at least one payment.');
+        }
+
+        // Validate total paid covers the bill
+        $totalPaid = 0;
+        $totalChange = 0;
+        $paymentContexts = [];
+        $pointsPaymentCustomerId = null;
+
+        foreach ($payments as $index => $paymentData) {
+            $context = $this->preparePaymentContext($paymentData);
+
+            // Track customer_id from points payment to set as order customer
+            $paymentType = $this->getPaymentType($context);
+            if ($paymentType === 'points' && isset($context['customer_id'])) {
+                $pointsPaymentCustomerId = $context['customer_id'];
+            }
+
+            // Calculate amount applied (excluding change)
+            $amountApplied = min($context['base_amount_paid'], $totalWithCharges - $totalPaid);
+            $context['amount_applied'] = $amountApplied;
+
+            // Only cash payments can have change
+            $isCash = $this->isCashPayment($context['method']);
+            if ($isCash) {
+                $changeForThisPayment = max(0, $context['base_amount_paid'] - ($totalWithCharges - $totalPaid));
+                $context['change_amount'] = $changeForThisPayment;
+                $totalChange += $changeForThisPayment;
+            } else {
+                $context['change_amount'] = 0;
+                // Non-cash payments cannot exceed remaining balance
+                if ($context['base_amount_paid'] > ($totalWithCharges - $totalPaid)) {
+                    throw new \InvalidArgumentException(
+                        'Non-cash payment methods cannot have change. Amount must be exact or less than remaining balance.'
+                    );
                 }
             }
+
+            $totalPaid += $amountApplied;
+            $paymentContexts[] = $context;
         }
+
+        if ($totalPaid < $totalWithCharges) {
+            throw new \InvalidArgumentException('Total payments do not cover the bill.');
+        }
+
+        // Create order with mixed payment flag
+        // If any payment has customer_id (points or credit), pass it in the payload for order creation
+        if ($pointsPaymentCustomerId) {
+            $payload['customer_id'] = $pointsPaymentCustomerId;
+        }
+
+        [$order, $_] = $this->saveCartToOrder($cart, $payload, $paymentContexts[0], true);
+        $this->saveCartItemsToOrderItems($cart->cartItems, $order);
+        $this->inventoryStockService->deductOrderInventory($order);
+
+        // Record all payments
+        foreach ($paymentContexts as $context) {
+            $this->recordPayment($order, $context);
+        }
+
+        // Handle points redemption and earning
+        // Points payment handling - redeem points from customer
+        $hasPointsPayment = false;
+        foreach ($paymentContexts as $context) {
+            $paymentType = $this->getPaymentType($context);
+            if ($paymentType === 'points' && isset($context['customer_id']) && isset($context['points_used'])) {
+                $hasPointsPayment = true;
+                // Redeem points for this specific payment
+                $this->redeemCustomerPointsForPayment($order, $context);
+            }
+        }
+
+        // Earn points on non-points payments if customer is set
+        // Only earn points once for the entire order, not per payment
+        if ($order->customer_id && !$hasPointsPayment) {
+            $this->earnCustomerPoints($order);
+        }
+
+        // Update table status if applicable
+        if ($cart->table_room_id
+            && $cart->tableRoom
+            && $cart->tableRoom->tableRoomLocation
+            && $cart->tableRoom->tableRoomLocation->location_type != LocationType::TAKEOUT->value) {
+
+            TableRoom::where('id', $cart->table_room_id)->update([
+                'status' => TableRoomStatusType::AVAILABLE->value,
+                'time_in' => null,
+                'customer_name' => null,
+                'number_of_pax' => null,
+            ]);
+        }
+
+        // Delete cart and its items
+        CartItem::where('cart_id', $cart->id)->delete();
+        $cart->delete();
+
+        return $order->load([
+            'orderItems',
+            'orderItems.product',
+            'cashierSession.branch',
+            'customer',
+            'payments.paymentMethod',
+        ]);
+    }
+
+    /**
+     * Check if payment method is cash
+     */
+    private function isCashPayment(PaymentMethod $method): bool
+    {
+        $paymentType = $method->payment_type;
+        if ($paymentType instanceof PaymentType) {
+            $paymentType = $paymentType->value;
+        }
+        return strtolower($paymentType) === 'cash';
     }
 
 }

@@ -13,6 +13,7 @@ class Customer extends Model implements HasMedia
     use InteractsWithMedia;
 
     protected $fillable = [
+        'uuid',
         'customer_name',
         'birth_date',
         'contact_no',
@@ -37,6 +38,30 @@ class Customer extends Model implements HasMedia
         'balance' => 'float',
     ];
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($customer) {
+            if (empty($customer->uuid)) {
+                $customer->uuid = (string) \Illuminate\Support\Str::uuid();
+            }
+        });
+
+        // Create e-wallet when customer is created
+        static::created(function ($customer) {
+            $customer->eWallet()->create([
+                'balance' => 0,
+                'total_loaded' => 0,
+                'total_spent' => 0,
+                'earned_points' => $customer->earned_points ?? 0,
+                'redeemed_points' => $customer->redeemed_points ?? 0,
+                'points_balance' => $customer->balance ?? 0,
+                'is_active' => true,
+            ]);
+        });
+    }
+
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);
@@ -45,6 +70,11 @@ class Customer extends Model implements HasMedia
     public function carts(): HasMany
     {
         return $this->hasMany(Cart::class);
+    }
+
+    public function eWallet(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(CustomerEWallet::class);
     }
 
     public function registerMediaCollections(): void

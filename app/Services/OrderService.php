@@ -9,7 +9,14 @@ class OrderService
 {
     public function getOrders(array $filters = [], int $perPage = 5): LengthAwarePaginator
     {
-        $query = Order::with(['cashier', 'tableRoom', 'cashierSession', 'orderItems.product']);
+        $query = Order::with([
+            'cashier',
+            'tableRoom',
+            'cashierSession',
+            'orderItems.product',
+            'payments.paymentMethod',
+            'payments.currency'
+        ]);
 
         // Search filter
         if (!empty($filters['search'])) {

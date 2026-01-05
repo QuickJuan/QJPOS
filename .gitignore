@@ -26,6 +26,9 @@ yarn-error.log
 /.zed
 .DS_Store
 
+# Documentation folder
+/documentation
+
 # DDEV local environment
 .ddev/.downloads
 .ddev/.importdb
