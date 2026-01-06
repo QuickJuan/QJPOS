@@ -18,7 +18,6 @@ class ProductPackaging extends Model implements HasMedia
         'price',
         'name',
         'unit_measure',
-        'qty',
         'featured_image',
     ];
 
@@ -41,6 +40,11 @@ class ProductPackaging extends Model implements HasMedia
     public function productOptions(): HasMany
     {
         return $this->hasMany(ProductOption::class);
+    }
+
+    public function inventoryRecipes(): HasMany
+    {
+        return $this->hasMany(ProductPackagingInventory::class, 'product_packaging_id');
     }
 
 }

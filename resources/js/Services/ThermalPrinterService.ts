@@ -1068,6 +1068,7 @@ class ThermalPrinterService {
         payments: Array<{
             paymentMethod: string;
             amountPaid: number;
+            currency?: any;
             referenceNumber?: string;
             customerName?: string;
             customerContact?: string;
@@ -1238,7 +1239,10 @@ class ThermalPrinterService {
                 commands.push(...this.ESC_POS.ALIGN_LEFT);
                 commands.push(...this.ESC_POS.BOLD_ON);
                 const amountText = this.formatNumberWithComma(payment.amountPaid.toFixed(2));
-                commands.push(...this.stringToBytes(`Amount: ${amountText}`));
+                const currencySymbol = payment.currency?.symbol || '₱';
+                const currencyCode = payment.currency?.code || '';
+                const amountLabel = payment.currency ? `Amount (${currencyCode}): ${currencySymbol}${amountText}` : `Amount: ${amountText}`;
+                commands.push(...this.stringToBytes(amountLabel));
                 commands.push(...this.ESC_POS.BOLD_OFF);
                 commands.push(...this.ESC_POS.LINE_FEED);
                 commands.push(...this.ESC_POS.LINE_FEED);

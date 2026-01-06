@@ -1,7 +1,7 @@
 <template>
-    <div class="border h-full">
+    <div class="border flex flex-col flex-grow overflow-hidden">
         <div
-            class="flex items-center justify-between px-5 py-4 border-b border-gray-100"
+            class="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0"
         >
             <div>
                 <p class="text-lg font-semibold text-gray-900">
@@ -14,9 +14,7 @@
                 {{ props.orders?.total }}
             </span>
         </div>
-        <div
-            class="divide-y divide-gray-100 max-h-[60vh] md:max-h-[75vh] lg:max-h-[80vh] overflow-y-auto"
-        >
+        <div class="divide-y divide-gray-100 flex-1 overflow-y-auto">
             <button
                 v-for="(order, index) in props.orders.data"
                 :key="order.id"
@@ -76,7 +74,7 @@
         </div>
         <div
             v-if="hasOrders && showPagination"
-            class="px-5 py-4 border-t border-gray-100 flex flex-col space-y-4 xl:flex-row items-center justify-between text-sm text-gray-500"
+            class="px-5 py-4 border-t border-gray-100 flex flex-col space-y-4 xl:flex-row items-center justify-between text-sm text-gray-500 flex-shrink-0"
         >
             <span>Showing {{ orders?.from }} - {{ orders?.to }}</span>
             <div class="flex gap-2 items-center">

@@ -165,6 +165,8 @@ class ReceiptOrdersResource extends JsonResource
             'gift_check_number' => $paymentDetails['gift_check_number'] ?? null,
             'gift_check_amount' => $giftCheckAmountValue,
             'status' => $this->payment_status,
+            'is_default_cash' => (bool) ($payment->paymentMethod?->is_default_cash ?? false),
+            'payment_method_id' => $payment->payment_method_id,
         ];
     }
 

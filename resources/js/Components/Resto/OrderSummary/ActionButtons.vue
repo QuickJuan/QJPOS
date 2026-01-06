@@ -409,21 +409,26 @@ const handleServerConfirm = async (payload: ServerConfirmationPayload) => {
                     response.servedBy,
                     response.servingNumber ?? null
                 );
-
-                // Redirect back to tables after printing
-                let locationId =
-                    response.data?.tableRoom?.table_room_location_id;
-                if (locationId) {
-                    router.visit(
-                        route("table-rooms.index", { locationId: locationId })
-                    );
-                } else {
-                    router.visit(route("table-rooms.index"));
-                }
             } catch (printError) {
                 console.error("Failed to print order:", printError);
-                // Don't block the redirect if print fails
+                // Show error but continue to redirect
+                toast.add({
+                    severity: "warn",
+                    summary: "Print Failed",
+                    detail: "Order placed successfully but failed to print. You can re-print from the order list.",
+                    life: 4000,
+                });
             }
+        }
+
+        // Always redirect back to tables after placing order (regardless of print success)
+        let locationId = response.data?.tableRoom?.table_room_location_id;
+        if (locationId) {
+            router.visit(
+                route("table-rooms.index", { locationId: locationId })
+            );
+        } else {
+            router.visit(route("table-rooms.index"));
         }
 
         //redirect to table-rooms index with locationId after delay to show toast

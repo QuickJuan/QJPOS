@@ -78,17 +78,6 @@
                                             }}
                                         </span>
                                         <span
-                                            v-if="item.product_packaging"
-                                            class="text-xs px-2 py-0.5 rounded-full font-medium ml-2 flex-shrink-0 bg-green-100 text-green-800"
-                                        >
-                                            {{ item.product_packaging.name }}
-                                            ({{
-                                                item.product_packaging.qty +
-                                                item.product_packaging
-                                                    ?.unit_measure
-                                            }})
-                                        </span>
-                                        <span
                                             v-if="
                                                 item.product?.unit_measure &&
                                                 !item.product.multiple_packaging
