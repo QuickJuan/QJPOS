@@ -344,6 +344,10 @@ class ThermalPrinterService {
     };
 
     private currentConfig: PrinterConfig | null = null;
+    private reconnectAttempts: number = 0;
+    private maxReconnectAttempts: number = 3;
+    private reconnectDelay: number = 2000; // 2 seconds
+    private isReconnecting: boolean = false;
     private readonly DEFAULT_SERVICE_UUID = '000018f0-0000-1000-8000-00805f9b34fb';
     private readonly DEFAULT_CHARACTERISTIC_UUID = '00002af1-0000-1000-8000-00805f9b34fb';
 
@@ -478,6 +482,15 @@ class ThermalPrinterService {
             const characteristicUuid = printerConfig?.characteristic_uuid || this.DEFAULT_CHARACTERISTIC_UUID;
             this.bluetooth.characteristic = await this.bluetooth.service.getCharacteristic(characteristicUuid);
 
+            // Set up disconnect event listener
+            if (this.bluetooth.device) {
+                this.bluetooth.device.addEventListener('gattserverdisconnected', this.handleDisconnect.bind(this));
+            }
+
+            // Reset reconnect attempts on successful connection
+            this.reconnectAttempts = 0;
+            this.isReconnecting = false;
+
             console.log('✅ Successfully connected to thermal printer');
             return true;
         } catch (error) {
@@ -487,9 +500,54 @@ class ThermalPrinterService {
     }
 
     /**
+     * Handle disconnect event
+     */
+    private async handleDisconnect(): Promise<void> {
+        console.log('⚠️ Printer disconnected');
+
+        // Don't auto-reconnect if we're already reconnecting or if manually disconnected
+        if (this.isReconnecting || !this.currentConfig) {
+            return;
+        }
+
+        // Attempt to reconnect
+        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+            this.isReconnecting = true;
+            this.reconnectAttempts++;
+
+            console.log(`🔄 Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
+
+            // Wait before reconnecting
+            await new Promise(resolve => setTimeout(resolve, this.reconnectDelay));
+
+            try {
+                const reconnected = await this.connectToPrinter(this.currentConfig, this.bluetooth.device || undefined);
+
+                if (reconnected) {
+                    console.log('✅ Successfully reconnected to printer');
+                } else {
+                    console.log('❌ Reconnection failed');
+                    this.isReconnecting = false;
+                }
+            } catch (error) {
+                console.error('❌ Reconnection error:', error);
+                this.isReconnecting = false;
+            }
+        } else {
+            console.log('❌ Max reconnection attempts reached');
+            this.isReconnecting = false;
+        }
+    }
+
+    /**
      * Disconnect from printer
      */
     public async disconnectFromPrinter(): Promise<void> {
+        // Remove event listener before disconnecting
+        if (this.bluetooth.device) {
+            this.bluetooth.device.removeEventListener('gattserverdisconnected', this.handleDisconnect.bind(this));
+        }
+
         if (this.bluetooth.device?.gatt?.connected) {
             this.bluetooth.device.gatt.disconnect();
         }
@@ -500,6 +558,10 @@ class ThermalPrinterService {
             service: null,
             characteristic: null,
         };
+
+        this.currentConfig = null;
+        this.reconnectAttempts = 0;
+        this.isReconnecting = false;
 
         console.log('🔌 Disconnected from thermal printer');
     }
@@ -533,6 +595,13 @@ class ThermalPrinterService {
             }
         } catch (error) {
             console.error('❌ Failed to send data to printer:', error);
+
+            // If sending failed due to disconnection, trigger reconnection
+            if (!this.isConnected()) {
+                console.log('🔄 Detected disconnection during send, triggering reconnection...');
+                await this.handleDisconnect();
+            }
+
             throw error;
         }
     }

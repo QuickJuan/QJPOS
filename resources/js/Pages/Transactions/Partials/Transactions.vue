@@ -76,7 +76,7 @@
             v-if="hasOrders && showPagination"
             class="px-5 py-4 border-t border-gray-100 flex flex-col space-y-4 xl:flex-row items-center justify-between text-sm text-gray-500 flex-shrink-0"
         >
-            <span>Showing {{ orders?.from }} - {{ orders?.to }}</span>
+            <span>Showing {{ orders?.meta.from }} - {{ orders?.meta.to }}</span>
             <div class="flex gap-2 items-center">
                 <button
                     @click="$emit('goToPage', prevPageUrl)"

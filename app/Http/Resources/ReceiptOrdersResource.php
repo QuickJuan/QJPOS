@@ -50,6 +50,7 @@ class ReceiptOrdersResource extends JsonResource
             'branch'       => [
                 'id'                  => $this->cashierSession->branch?->id,
                 'name'                => $this->cashierSession->branch?->name,
+                'company_name'        => $this->cashierSession->branch?->company?->company_name ?? $this->cashierSession->branch?->name,
                 'address'             => $this->cashierSession->branch?->address,
                 'phone'               => $this->cashierSession->branch?->phone,
                 'tin'                 => $this->cashierSession->branch?->tin,
@@ -64,7 +65,8 @@ class ReceiptOrdersResource extends JsonResource
                 'total_amount'    => $this->total_amount, // total_amount
                 'tax_amount'      => $this->vat_amount,
                 'discount_amount' => $this->item_discount,
-                'total_due'       => $this->total_due, // gross amount
+                'total_due'       => $this->total_due, // gross amount (subtotal + service charge)
+                'sub_total'       => $this->total_amount, // subtotal before service charge
                 'less_tax'        => $this->less_tax ?? 0,
                 'less_discount'   => $this->less_discount ?? 0,
                 'vatable_sales'   => $this->vatable_sales ?? 0,
