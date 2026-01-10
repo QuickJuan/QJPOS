@@ -2,7 +2,7 @@ import './bootstrap';
 import '../css/app.css';
 
 import { createApp, h } from 'vue';
-import { createInertiaApp } from '@inertiajs/vue3';
+import { createInertiaApp, router } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 import VueSweetalert2 from 'vue-sweetalert2';
@@ -37,6 +37,14 @@ createInertiaApp({
     progress: {
         color: '#4B5563',
     },
+});
+
+// Handle 419 CSRF token mismatch errors by reloading the page
+router.on('error', (event) => {
+    if (event.detail.response?.status === 419) {
+        console.log('⚠️ CSRF token mismatch (419) - reloading page to get fresh token...');
+        window.location.reload();
+    }
 });
 
 // Register Service Worker for PWA

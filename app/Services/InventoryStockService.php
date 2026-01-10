@@ -248,11 +248,12 @@ class InventoryStockService
 
         $updatedStock = (float) $stock->current_stock + (float) $adjustment;
 
-        if ($updatedStock < 0) {
-            throw ValidationException::withMessages([
-                'base_quantity' => 'Insufficient stock at the selected location.',
-            ]);
-        }
+        // Allow negative inventory - it will be offset when new inventory is encoded
+        // if ($updatedStock < 0) {
+        //     throw ValidationException::withMessages([
+        //         'base_quantity' => 'Insufficient stock at the selected location.',
+        //     ]);
+        // }
 
         $stock->current_stock = $updatedStock;
         $stock->save();

@@ -387,7 +387,18 @@ class CartService
         float $amount,
         bool $shouldRemoveTax = false
     ): array {
-        // If discount removes tax, move all sales to vat_exempt_sales
+        // If discount removes tax BUT we have PAX division, use the breakdown from discount calculation
+        // because PAX division splits between vat exempt (discounted pax) and vatable (regular pax)
+        if ($shouldRemoveTax && isset($discountData['vatableSales']) && $discountData['vatableSales'] > 0) {
+            return [
+                'vatable_sales'    => $discountData['vatableSales'] ?? 0,
+                'vat_exempt_sales' => $discountData['vatExempt'] ?? 0,
+                'vat_amount'       => $discountData['taxAmount'] ?? 0,
+                'non_vat_sales'    => 0,
+            ];
+        }
+
+        // If discount removes tax (non-PAX case), move all sales to vat_exempt_sales
         if ($shouldRemoveTax) {
             return [
                 'vatable_sales'    => 0,

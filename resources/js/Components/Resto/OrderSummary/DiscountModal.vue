@@ -390,6 +390,7 @@ const props = defineProps<{
     selectedItems: any[];
     taxRate: number;
     availableDiscounts: any[] | { data: any[] };
+    tablePax?: number;
 }>();
 
 const emit = defineEmits<{
@@ -478,7 +479,14 @@ const selectDiscount = (discount: any) => {
     selectedDiscountId.value = String(discount.id);
 
     // Reset PAX values when selecting a new discount
-    paxCount.value = discount.required_pax ? 1 : null;
+    // Use table's number_of_pax as default if available, otherwise default to 1
+    const defaultPax = discount.required_pax
+        ? props.tablePax && props.tablePax > 0
+            ? props.tablePax
+            : 1
+        : null;
+
+    paxCount.value = defaultPax;
     discountedPax.value = discount.required_pax ? 1 : null;
 
     recalculateDiscount();
