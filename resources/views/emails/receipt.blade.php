@@ -9,146 +9,161 @@
             color: #333;
             margin: 0;
             padding: 0;
+            background-color: #f5f5f5;
         }
         .container {
             max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
+            margin: 40px auto;
+            background-color: #fff;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
         }
-        .header {
-            background-color: #2c3e50;
+        .email-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: #fff;
-            padding: 30px 20px;
+            padding: 40px 20px;
             text-align: center;
-            border-radius: 4px 4px 0 0;
         }
-        .header h1 {
-            margin: 0;
+        .email-header h1 {
+            margin: 0 0 10px 0;
             font-size: 28px;
         }
+        .email-header p {
+            margin: 0;
+            opacity: 0.9;
+            font-size: 14px;
+        }
         .content {
-            background-color: #fff;
-            padding: 30px 20px;
-            border-radius: 0 0 4px 4px;
-            border: 1px solid #e0e0e0;
+            padding: 40px 30px;
+            text-align: center;
         }
-        .summary-box {
-            background-color: #f9f9f9;
+        .content h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 22px;
+        }
+        .content p {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 15px;
+            line-height: 1.8;
+        }
+        .receipt-info {
+            background: #f8f9fa;
+            border-radius: 8px;
             padding: 20px;
-            border-radius: 4px;
-            margin: 20px 0;
+            margin: 30px 0;
+            text-align: left;
         }
-        .summary-row {
+        .receipt-info-row {
             display: flex;
             justify-content: space-between;
             padding: 10px 0;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid #e9ecef;
         }
-        .summary-row:last-child {
+        .receipt-info-row:last-child {
             border-bottom: none;
         }
-        .summary-label {
+        .receipt-info-row strong {
+            color: #495057;
+        }
+        .receipt-info-row span {
+            color: #212529;
             font-weight: 600;
-            color: #2c3e50;
-        }
-        .summary-value {
-            text-align: right;
-        }
-        .total-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 15px 0;
-            border-top: 2px solid #2c3e50;
-            margin-top: 10px;
-            font-size: 18px;
-            font-weight: bold;
-        }
-        .download-button {
-            display: inline-block;
-            background-color: #2196F3;
-            color: #fff;
-            padding: 12px 30px;
-            text-decoration: none;
-            border-radius: 4px;
-            font-weight: 600;
-            margin: 20px 0;
-            text-align: center;
-        }
-        .download-button:hover {
-            background-color: #1976D2;
         }
         .button-container {
             text-align: center;
-            margin: 20px 0;
+            margin: 30px 0;
+        }
+        .download-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff !important;
+            padding: 15px 40px;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 16px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
         }
         .footer {
+            background: #f8f9fa;
+            padding: 30px;
             text-align: center;
-            padding: 20px;
-            color: #666;
-            font-size: 12px;
-            border-top: 1px solid #eee;
-            margin-top: 20px;
-        }
-        .note {
-            background-color: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 12px;
-            margin: 20px 0;
-            border-radius: 2px;
             font-size: 13px;
+            color: #6c757d;
+            border-top: 1px solid #e9ecef;
+        }
+        .footer p {
+            margin: 5px 0;
+        }
+        .icon {
+            font-size: 48px;
+            margin-bottom: 20px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>Receipt Confirmation</h1>
+        <div class="email-header">
+            <h1>📧 Receipt Ready!</h1>
+            <p>Your receipt is ready to view</p>
         </div>
 
         <div class="content">
-            <p>Dear Customer,</p>
-            <p>Thank you for your order! Your receipt details are below.</p>
+            <div class="icon">🧾</div>
+            <h2>Thank you for your purchase!</h2>
+            <p>
+                Your receipt has been generated and is ready for download.<br>
+                Click the button below to view or download your receipt.
+            </p>
 
-            <div class="summary-box">
-                <div class="summary-row">
-                    <span class="summary-label">Invoice #:</span>
-                    <span class="summary-value"><strong>{{ $order->invoice_no }}</strong></span>
-                </div>
-                <div class="summary-row">
-                    <span class="summary-label">Date:</span>
-                    <span class="summary-value">{{ $order->created_at ? $order->created_at->format('M d, Y H:i A') : 'N/A' }}</span>
-                </div>
-                <div class="summary-row">
-                    <span class="summary-label">Branch:</span>
-                    <span class="summary-value">{{ $order->branch?->name ?? 'Main Branch' }}</span>
-                </div>
-                <div class="summary-row">
-                    <span class="summary-label">Table:</span>
-                    <span class="summary-value">{{ $order->table_number ?? 'Walk-in' }}</span>
-                </div>
-                <div class="summary-row">
-                    <span class="summary-label">Cashier:</span>
-                    <span class="summary-value">{{ $order->cashier?->name ?? 'N/A' }}</span>
+            @if(isset($receiptUrl))
+                <div class="receipt-info">
+                    <div class="receipt-info-row">
+                        <strong>Invoice Number:</strong>
+                        <span>{{ $invoiceNo ?? 'N/A' }}</span>
+                    </div>
+                    <div class="receipt-info-row">
+                        <strong>Date:</strong>
+                        <span>{{ $orderDate ?? now()->format('m/d/Y h:i A') }}</span>
+                    </div>
+                    <div class="receipt-info-row">
+                        <strong>Total Amount:</strong>
+                        <span>₱{{ number_format($totalAmount ?? 0, 2) }}</span>
+                    </div>
+                    @if(isset($cashier))
+                        <div class="receipt-info-row">
+                            <strong>Served by:</strong>
+                            <span>{{ $cashier }}</span>
+                        </div>
+                    @endif
                 </div>
 
-                <div class="total-row">
-                    <span>Total Amount:</span>
-                    <span>₱{{ number_format($order->total_amount ?? 0, 2) }}</span>
+                <div class="button-container">
+                    <a href="{{ $receiptUrl }}" class="download-button" target="_blank">
+                        📄 View Receipt
+                    </a>
                 </div>
-            </div>
 
-            <div class="button-container">
-                <a href="{{ route('transactions.download-receipt', ['order' => $order->id]) }}" class="download-button">📥 Download Receipt</a>
-            </div>
+                <p style="font-size: 13px; color: #999;">
+                    The receipt will open in a new window. You can print it directly from your browser.
+                </p>
+            @else
+                <p style="color: #dc3545;">
+                    Unable to generate receipt. Please contact support.
+                </p>
+            @endif
+        </div>
 
-            <div class="note">
-                <strong>💡 Tip:</strong> Click the button above to download your detailed receipt with all itemized details.
-            </div>
-
-            <div class="footer">
-                <p>Thank you for choosing us! We appreciate your business.</p>
-                <p>If you have any questions, please contact us.</p>
-            </div>
+        <div class="footer">
+            <p><strong>{{ $storeName ?? 'QuickJuan POS' }}</strong></p>
+            <p>{{ $storeAddress ?? '' }}</p>
+            <p>{{ $storePhone ?? '' }}</p>
+            <p style="margin-top: 20px; font-size: 11px;">
+                This is an automated email. Please do not reply to this message.
+            </p>
         </div>
     </div>
 </body>

@@ -20,6 +20,7 @@ class EWalletController extends Controller
     {
         $validated = $request->validate([
             'customer_id' => 'required|exists:customers,id',
+            'customer_name' => 'required|string',
             'order_id' => 'required|exists:orders,id',
             'amount' => 'required|numeric|min:0.01',
         ]);
@@ -46,7 +47,29 @@ class EWalletController extends Controller
             $order->update([
                 'change_loaded_to_ewallet' => $validated['amount'],
                 'is_change_loaded_to_ewallet' => true,
+                'ewallet_load_amount' => $validated['amount'],
             ]);
+
+            // Update payment record to include e-wallet load info and adjust change_amount
+            $payment = $order->payments()->latest()->first();
+            if ($payment) {
+                $originalChangeAmount = $payment->change_amount;
+                $actualCashChange = $originalChangeAmount - $validated['amount'];
+
+                $paymentDetails = $payment->payment_details ?? [];
+                $paymentDetails['ewallet_load'] = [
+                    'customer_id' => $validated['customer_id'],
+                    'customer_name' => $validated['customer_name'],
+                    'amount' => $validated['amount'],
+                    'original_change' => $originalChangeAmount,
+                    'loaded_at' => now()->toIso8601String(),
+                ];
+
+                $payment->update([
+                    'change_amount' => $actualCashChange,
+                    'payment_details' => $paymentDetails,
+                ]);
+            }
 
             return response()->json([
                 'success' => true,

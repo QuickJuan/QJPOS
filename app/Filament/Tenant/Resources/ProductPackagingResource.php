@@ -2,6 +2,7 @@
 namespace App\Filament\Tenant\Resources;
 
 use App\Filament\Tenant\Resources\ProductPackagingResource\Pages;
+use App\Filament\Tenant\Resources\ProductPackagingResource\RelationManagers\InventoryRecipesRelationManager;
 use App\Models\ProductPackaging;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
@@ -50,11 +51,6 @@ class ProductPackagingResource extends Resource
                     ->label('Unit Measure')
                     ->required(),
 
-                TextInput::make('qty')
-                    ->label('Quantity')
-                    ->numeric()
-                    ->required(),
-
                 SpatieMediaLibraryFileUpload::make('featured_image')
                     ->collection('featured_image')
                     ->image()
@@ -90,11 +86,6 @@ class ProductPackagingResource extends Resource
                 TextColumn::make('price')
                     ->sortable()
                     ->searchable(),
-
-                TextColumn::make('qty')
-                    ->label('Quantity')
-                    ->sortable()
-                    ->searchable(),
             ])
             ->filters([
                 //
@@ -114,7 +105,7 @@ class ProductPackagingResource extends Resource
     public static function getRelations(): array
     {
         return [
-            // ProductOptionsRelationManager::class,
+            InventoryRecipesRelationManager::class,
         ];
     }
 

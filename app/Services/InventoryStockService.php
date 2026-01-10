@@ -103,6 +103,10 @@ class InventoryStockService
                 'orderItems.product.inventoryRecipes.inventory.packagings',
                 'orderItems.product.inventoryRecipes.inventory.defaultLocation',
                 'orderItems.product.inventoryRecipes.inventory.locationStocks',
+                'orderItems.productPackaging.inventoryRecipes.inventory.unitConversions',
+                'orderItems.productPackaging.inventoryRecipes.inventory.packagings',
+                'orderItems.productPackaging.inventoryRecipes.inventory.defaultLocation',
+                'orderItems.productPackaging.inventoryRecipes.inventory.locationStocks',
             ]);
 
             foreach ($order->orderItems as $orderItem) {
@@ -116,6 +120,21 @@ class InventoryStockService
                     continue;
                 }
 
+                // For variant products, check packaging inventory recipes
+                if ($product->product_type === 'with_variant' && $orderItem->productPackaging) {
+                    $packaging = $orderItem->productPackaging;
+
+                    if ($packaging->inventoryRecipes->isEmpty()) {
+                        continue;
+                    }
+
+                    foreach ($packaging->inventoryRecipes as $recipe) {
+                        $this->processInventoryDeduction($recipe, $orderItem, $order, $packaging->name);
+                    }
+                    continue;
+                }
+
+                // For regular products, check product inventory recipes
                 if (! $product->track_inventory) {
                     continue;
                 }
@@ -125,65 +144,7 @@ class InventoryStockService
                 }
 
                 foreach ($product->inventoryRecipes as $recipe) {
-                    $inventory = $recipe->inventory;
-
-                    if (! $inventory) {
-                        continue;
-                    }
-
-                    $locationId = $inventory->default_location;
-
-                    if (! $locationId) {
-                        $locationId = $inventory->locationStocks
-                            ->sortByDesc(fn ($stock) => (float) ($stock->current_stock ?? 0))
-                            ->first()?->location_id;
-                    }
-
-                    if (! $locationId) {
-                        Log::warning('Inventory deduction skipped due to missing default location.', [
-                            'inventory_id' => $inventory->id,
-                            'order_id'     => $order->id,
-                            'order_item_id'=> $orderItem->id,
-                        ]);
-                        continue;
-                    }
-
-                    $basePerUnit = $this->convertRecipeQuantityToBase($recipe);
-
-                    if ($basePerUnit <= 0) {
-                        continue;
-                    }
-
-                    $totalBase = $basePerUnit * (float) $orderItem->quantity;
-
-                    if ($totalBase <= 0) {
-                        continue;
-                    }
-
-                    try {
-                        $this->runAdjustment([
-                            'inventory_id'  => $inventory->id,
-                            'location_id'   => $locationId,
-                            'movement_type' => 'out',
-                            'quantity_mode' => 'base',
-                            'base_quantity' => $totalBase,
-                            'notes'         => sprintf(
-                                'Order #%s item %s',
-                                $order->invoice_no ?? $order->id,
-                                $orderItem->id
-                            ),
-                        ]);
-                    } catch (ValidationException $exception) {
-                        throw ValidationException::withMessages([
-                            'inventory' => sprintf(
-                                'Not enough %s in %s to fulfill %s (item #%s). Move stock to the default location then try again.',
-                                $inventory->name,
-                                $inventory->defaultLocation?->location ?? 'the default location',
-                                $product->name,
-                                $orderItem->id
-                            ),
-                        ]);
-                    }
+                    $this->processInventoryDeduction($recipe, $orderItem, $order, $product->name);
                 }
             }
         });
@@ -197,6 +158,10 @@ class InventoryStockService
                 'orderItems.product.inventoryRecipes.inventory.packagings',
                 'orderItems.product.inventoryRecipes.inventory.defaultLocation',
                 'orderItems.product.inventoryRecipes.inventory.locationStocks',
+                'orderItems.productPackaging.inventoryRecipes.inventory.unitConversions',
+                'orderItems.productPackaging.inventoryRecipes.inventory.packagings',
+                'orderItems.productPackaging.inventoryRecipes.inventory.defaultLocation',
+                'orderItems.productPackaging.inventoryRecipes.inventory.locationStocks',
             ]);
 
             foreach ($order->orderItems as $orderItem) {
@@ -210,6 +175,21 @@ class InventoryStockService
                     continue;
                 }
 
+                // For variant products, check packaging inventory recipes
+                if ($product->product_type === 'with_variant' && $orderItem->productPackaging) {
+                    $packaging = $orderItem->productPackaging;
+
+                    if ($packaging->inventoryRecipes->isEmpty()) {
+                        continue;
+                    }
+
+                    foreach ($packaging->inventoryRecipes as $recipe) {
+                        $this->processInventoryRestoration($recipe, $orderItem, $order, $packaging->name);
+                    }
+                    continue;
+                }
+
+                // For regular products, check product inventory recipes
                 if (! $product->track_inventory) {
                     continue;
                 }
@@ -219,70 +199,7 @@ class InventoryStockService
                 }
 
                 foreach ($product->inventoryRecipes as $recipe) {
-                    $inventory = $recipe->inventory;
-
-                    if (! $inventory) {
-                        continue;
-                    }
-
-                    $locationId = $inventory->default_location;
-
-                    if (! $locationId) {
-                        $locationId = $inventory->locationStocks
-                            ->sortByDesc(fn ($stock) => (float) ($stock->current_stock ?? 0))
-                            ->first()?->location_id;
-                    }
-
-                    if (! $locationId) {
-                        Log::warning('Inventory restoration skipped due to missing default location.', [
-                            'inventory_id' => $inventory->id,
-                            'order_id'     => $order->id,
-                            'order_item_id'=> $orderItem->id,
-                        ]);
-                        continue;
-                    }
-
-                    $basePerUnit = $this->convertRecipeQuantityToBase($recipe);
-
-                    if ($basePerUnit <= 0) {
-                        continue;
-                    }
-
-                    $totalBase = $basePerUnit * (float) $orderItem->quantity;
-
-                    if ($totalBase <= 0) {
-                        continue;
-                    }
-
-                    try {
-                        // Add inventory back (reverse the deduction)
-                        $this->runAdjustment([
-                            'inventory_id'  => $inventory->id,
-                            'location_id'   => $locationId,
-                            'movement_type' => 'in',
-                            'quantity_mode' => 'base',
-                            'base_quantity' => $totalBase,
-                            'notes'         => sprintf(
-                                'Refund: Order #%s item %s',
-                                $order->invoice_no ?? $order->id,
-                                $orderItem->id
-                            ),
-                        ]);
-                    } catch (ValidationException $exception) {
-                        Log::error('Inventory restoration failed', [
-                            'inventory_id' => $inventory->id,
-                            'order_id'     => $order->id,
-                            'order_item_id'=> $orderItem->id,
-                            'error'        => $exception->getMessage(),
-                        ]);
-                        throw ValidationException::withMessages([
-                            'inventory' => sprintf(
-                                'Failed to restore inventory for %s (item #%s). Please contact support.',
-                                $product->name,
-                                $orderItem->id
-                            ),
-                        ]);
-                    }
+                    $this->processInventoryRestoration($recipe, $orderItem, $order, $product->name);
                 }
             }
         });
@@ -353,6 +270,137 @@ class InventoryStockService
         ]);
     }
 
+    private function processInventoryDeduction($recipe, $orderItem, $order, $productName): void
+    {
+        $inventory = $recipe->inventory;
+
+        if (! $inventory) {
+            return;
+        }
+
+        $locationId = $inventory->default_location;
+
+        if (! $locationId) {
+            $locationId = $inventory->locationStocks
+                ->sortByDesc(fn ($stock) => (float) ($stock->current_stock ?? 0))
+                ->first()?->location_id;
+        }
+
+        if (! $locationId) {
+            Log::warning('Inventory deduction skipped due to missing default location.', [
+                'inventory_id' => $inventory->id,
+                'order_id'     => $order->id,
+                'order_item_id'=> $orderItem->id,
+            ]);
+            return;
+        }
+
+        $basePerUnit = $this->convertRecipeQuantityToBase($recipe);
+
+        if ($basePerUnit <= 0) {
+            return;
+        }
+
+        $totalBase = $basePerUnit * (float) $orderItem->quantity;
+
+        if ($totalBase <= 0) {
+            return;
+        }
+
+        try {
+            $this->runAdjustment([
+                'inventory_id'  => $inventory->id,
+                'location_id'   => $locationId,
+                'movement_type' => 'out',
+                'quantity_mode' => 'base',
+                'base_quantity' => $totalBase,
+                'notes'         => sprintf(
+                    'Order #%s item %s',
+                    $order->invoice_no ?? $order->id,
+                    $orderItem->id
+                ),
+            ]);
+        } catch (ValidationException $exception) {
+            throw ValidationException::withMessages([
+                'inventory' => sprintf(
+                    'Not enough %s in %s to fulfill %s (item #%s). Move stock to the default location then try again.',
+                    $inventory->name,
+                    $inventory->defaultLocation?->location ?? 'the default location',
+                    $productName,
+                    $orderItem->id
+                ),
+            ]);
+        }
+    }
+
+    private function processInventoryRestoration($recipe, $orderItem, $order, $productName): void
+    {
+        $inventory = $recipe->inventory;
+
+        if (! $inventory) {
+            return;
+        }
+
+        $locationId = $inventory->default_location;
+
+        if (! $locationId) {
+            $locationId = $inventory->locationStocks
+                ->sortByDesc(fn ($stock) => (float) ($stock->current_stock ?? 0))
+                ->first()?->location_id;
+        }
+
+        if (! $locationId) {
+            Log::warning('Inventory restoration skipped due to missing default location.', [
+                'inventory_id' => $inventory->id,
+                'order_id'     => $order->id,
+                'order_item_id'=> $orderItem->id,
+            ]);
+            return;
+        }
+
+        $basePerUnit = $this->convertRecipeQuantityToBase($recipe);
+
+        if ($basePerUnit <= 0) {
+            return;
+        }
+
+        $totalBase = $basePerUnit * (float) $orderItem->quantity;
+
+        if ($totalBase <= 0) {
+            return;
+        }
+
+        try {
+            // Add inventory back (reverse the deduction)
+            $this->runAdjustment([
+                'inventory_id'  => $inventory->id,
+                'location_id'   => $locationId,
+                'movement_type' => 'in',
+                'quantity_mode' => 'base',
+                'base_quantity' => $totalBase,
+                'notes'         => sprintf(
+                    'Refund: Order #%s item %s',
+                    $order->invoice_no ?? $order->id,
+                    $orderItem->id
+                ),
+            ]);
+        } catch (ValidationException $exception) {
+            Log::error('Inventory restoration failed', [
+                'inventory_id' => $inventory->id,
+                'order_id'     => $order->id,
+                'order_item_id'=> $orderItem->id,
+                'error'        => $exception->getMessage(),
+            ]);
+            throw ValidationException::withMessages([
+                'inventory' => sprintf(
+                    'Failed to restore inventory for %s (item #%s). Please contact support.',
+                    $productName,
+                    $orderItem->id
+                ),
+            ]);
+        }
+    }
+
     /**
      * @return array{0: float, 1: string, 2: int|null}
      */
@@ -389,7 +437,7 @@ class InventoryStockService
         return [$baseQuantity, 'base', null];
     }
 
-    private function convertRecipeQuantityToBase(ProductInventory $recipe): float
+    private function convertRecipeQuantityToBase($recipe): float
     {
         $quantity = (float) ($recipe->quantity ?? 0);
 
@@ -408,7 +456,7 @@ class InventoryStockService
         return $trimmed === '' ? '0' : $trimmed;
     }
 
-    private function convertUsingConversion(ProductInventory $recipe, float $quantity): float
+    private function convertUsingConversion($recipe, float $quantity): float
     {
         if (! $recipe->unit_reference_id) {
             return $quantity;
@@ -432,7 +480,7 @@ class InventoryStockService
         return $quantity / $factor;
     }
 
-    private function convertUsingPackaging(ProductInventory $recipe, float $quantity): float
+    private function convertUsingPackaging($recipe, float $quantity): float
     {
         if (! $recipe->unit_reference_id) {
             return $quantity;

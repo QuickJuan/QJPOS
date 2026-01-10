@@ -63,6 +63,7 @@ class CreateDefaultTenantUser
                 $directories = [
                     "$storagePath/app",
                     "$storagePath/app/public",
+                    "$storagePath/app/public/receipts",
                     "$storagePath/framework",
                     "$storagePath/framework/sessions",
                     "$storagePath/framework/testing",
