@@ -290,7 +290,17 @@ const handleLogout = () => {
     if (props.onLogout) {
         props.onLogout();
     } else {
-        router.post(route("logout"));
+        router.post(
+            route("logout"),
+            {},
+            {
+                preserveState: false,
+                preserveScroll: false,
+                onSuccess: () => {
+                    window.location.href = route("login");
+                },
+            }
+        );
     }
 };
 

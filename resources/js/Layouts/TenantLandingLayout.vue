@@ -227,7 +227,17 @@ const closeLandingUserMenu = () => {
 
 const handleLandingLogout = () => {
     closeLandingUserMenu();
-    router.post(route("logout"));
+    router.post(
+        route("logout"),
+        {},
+        {
+            preserveState: false,
+            preserveScroll: false,
+            onSuccess: () => {
+                window.location.href = route("login");
+            },
+        }
+    );
 };
 
 const handleLandingOutsideClick = (event: MouseEvent) => {
