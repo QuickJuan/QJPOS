@@ -624,9 +624,16 @@ class CartService
         $discount        = Discount::findOrFail($request->discount_id);
         $shouldRemoveTax = $discount->remove_tax ?? false;
 
+        // Get PAX parameters from request if discount requires it
+        $paxCount = $request->pax_count ?? null;
+        $discountedPax = $request->discounted_pax ?? null;
+
         $calculatedDiscountAmounts = $this->discountService->calculateDiscountAmount(
             $request->discount_id,
-            $request->cartItemIds
+            $request->cartItemIds,
+            null,
+            $paxCount,
+            $discountedPax
         );
 
         $results = [];
@@ -653,6 +660,8 @@ class CartService
                 'amount'           => $amount,
                 'discount_id'      => $discount->id,
                 'discount_amount'  => $calculatedDiscountAmount['discountAmount'],
+                'pax_count'        => $paxCount,
+                'discounted_pax'   => $discountedPax,
                 'vatable_sales'    => $taxData['vatable_sales'],
                 'vat_exempt_sales' => $taxData['vat_exempt_sales'],
                 'vat_amount'       => $taxData['vat_amount'],

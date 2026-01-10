@@ -22,6 +22,7 @@ class DiscountResource extends JsonResource
             'discount_type' => $this->discount_type,
             'remove_tax' => $this->remove_tax,
             'requires_customer_info' => $this->require_customer_info,
+            'required_pax' => $this->required_pax,
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];

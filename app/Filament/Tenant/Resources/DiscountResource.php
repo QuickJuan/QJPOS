@@ -49,6 +49,11 @@ class DiscountResource extends Resource
                 Toggle::make('require_customer_info')
                     ->default(false),
 
+                Toggle::make('required_pax')
+                    ->label('Requires PAX Division')
+                    ->helperText('Enable this if discount should be divided among multiple people')
+                    ->default(false),
+
                 TextInput::make('sort_order')
                     ->label('Sort Order')
                     ->numeric()

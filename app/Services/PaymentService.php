@@ -226,6 +226,8 @@ class PaymentService
             'quantity'             => $cartItem->quantity,
             'price'                => $cartItem->price,
             'discount_amount'      => $cartItem->discount_amount ?? 0,
+            'pax_count'            => $cartItem->pax_count,
+            'discounted_pax'       => $cartItem->discounted_pax,
             'vatable_sales'        => $cartItem->vatable_sales ?? 0,
             'vat_exempt_sales'     => $cartItem->vat_exempt_sales ?? 0,
             'vat_amount'           => $cartItem->vat_amount ?? 0,

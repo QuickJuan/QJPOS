@@ -18,6 +18,8 @@ class CartItem extends Model
         'quantity',
         'price',
         'discount_amount',
+        'pax_count',
+        'discounted_pax',
         'vatable_sales',
         'vat_exempt_sales',
         'vat_amount',
