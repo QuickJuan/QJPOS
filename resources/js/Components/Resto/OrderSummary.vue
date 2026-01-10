@@ -127,6 +127,7 @@
             :selected-items="selectedItemsForModal"
             :tax-rate="props.taxRate"
             :available-discounts="page.props.available_discounts"
+            :table-pax="props.currentTable?.number_of_pax"
             @apply="handleApplyDiscount"
         />
 
