@@ -19,6 +19,16 @@ import { route } from "ziggy-js";
 import { router } from "@inertiajs/vue3";
 
 const logout = () => {
-    router.post(route("logout"));
+    router.post(
+        route("logout"),
+        {},
+        {
+            preserveState: false,
+            preserveScroll: false,
+            onSuccess: () => {
+                window.location.href = route("login");
+            },
+        }
+    );
 };
 </script>

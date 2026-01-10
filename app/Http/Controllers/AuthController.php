@@ -127,7 +127,8 @@ class AuthController extends Controller
         // Regenerate the CSRF token
         $request->session()->regenerateToken();
 
-        return redirect()->route('login');
+        // Redirect to login with query parameter to force fresh page load
+        return redirect()->route('login', ['_fresh' => time()]);
     }
 
     /**

@@ -407,7 +407,17 @@ const handleConfirmCloseSession = async () => {
 
             // Logout the user after closing shift
             setTimeout(() => {
-                router.post(route("logout"));
+                router.post(
+                    route("logout"),
+                    {},
+                    {
+                        preserveState: false,
+                        preserveScroll: false,
+                        onSuccess: () => {
+                            window.location.href = route("login");
+                        },
+                    }
+                );
             }, 2000);
         }
     } catch (error: any) {

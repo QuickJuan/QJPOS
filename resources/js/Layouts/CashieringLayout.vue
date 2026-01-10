@@ -194,13 +194,33 @@ const handleCloseShift = () => {
 
 const handleLogout = () => {
     showSidebar.value = false;
-    router.post(route("logout"));
+    router.post(
+        route("logout"),
+        {},
+        {
+            preserveState: false,
+            preserveScroll: false,
+            onSuccess: () => {
+                window.location.href = route("login");
+            },
+        }
+    );
 };
 
 const handleCloseSummaryModal = () => {
     showSessionSummaryModal.value = false;
     // Logout after closing modal
-    router.post(route("logout"));
+    router.post(
+        route("logout"),
+        {},
+        {
+            preserveState: false,
+            preserveScroll: false,
+            onSuccess: () => {
+                window.location.href = route("login");
+            },
+        }
+    );
 };
 
 // Close sidebar when clicking outside

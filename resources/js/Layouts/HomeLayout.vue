@@ -206,13 +206,11 @@ const logout = () => {
         route("logout"),
         {},
         {
+            preserveState: false,
+            preserveScroll: false,
             onSuccess: () => {
-                toast.add({
-                    severity: "success",
-                    summary: "Logged out",
-                    detail: "You have been successfully logged out.",
-                    life: 3000,
-                });
+                // Force page reload to get fresh CSRF token
+                window.location.href = route("login");
             },
             onError: () => {
                 toast.add({
