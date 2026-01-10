@@ -10,6 +10,7 @@ interface Discount {
     discount_type?: string
     remove_tax: boolean
     requires_customer_info: boolean
+    required_pax: boolean
     created_at: string
     updated_at: string
 }

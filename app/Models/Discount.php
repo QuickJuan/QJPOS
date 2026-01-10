@@ -14,6 +14,7 @@ class Discount extends Model
         'remove_tax',
         'discount_type',
         'require_customer_info',
+        'required_pax',
         'sort_order',
     ];
 
@@ -21,6 +22,7 @@ class Discount extends Model
         'amount'                => 'decimal:2',
         'remove_tax'            => 'boolean',
         'require_customer_info' => 'boolean',
+        'required_pax'          => 'boolean',
     ];
 
     /**
@@ -40,6 +42,7 @@ class Discount extends Model
             'discount_type',
             'remove_tax',
             'require_customer_info',
+            'required_pax',
             'created_at',
             'updated_at',
         ]);

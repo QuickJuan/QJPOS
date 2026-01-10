@@ -18,8 +18,10 @@ class DiscountService
      * Calculate discount amount for given items
      * discountId: ID of the discount to apply
      * items: array of ids from cart items or order items
+     * paxCount: Number of people sharing the item
+     * discountedPax: Number of people entitled to discount
      */
-    public function calculateDiscountAmount(int $discountId, array $itemIds, ?float $quantity = null)
+    public function calculateDiscountAmount(int $discountId, array $itemIds, ?float $quantity = null, ?int $paxCount = null, ?int $discountedPax = null)
     {
         $discount = $this->discount->find($discountId);
 
@@ -56,6 +58,12 @@ class DiscountService
         foreach ($itemsData as $index => $data) {
             $amount           = $data['amount'];
             $allocatedAmount  = $allocations[$index] ?? null;
+
+            // Handle PAX division if required
+            if ($discount->required_pax && $paxCount && $discountedPax && $paxCount > 0) {
+                $results[] = $this->calculatePaxDividedDiscount($discount, $amount, $paxCount, $discountedPax, $allocatedAmount);
+                continue;
+            }
 
             if ($discount['remove_tax']) {
                 $results[] = $this->calculateDiscountWithTaxRemoval($discount, $amount, $allocatedAmount);
@@ -96,6 +104,84 @@ class DiscountService
             'lessTax'        => $lessTax,
             'discountAmount' => $discountAmount,
         ];
+    }
+
+    /**
+     * Calculate PAX-divided discount
+     * Divides the price by number of PAX and applies discount to specified number of PAX
+     *
+     * Example: Product = 100 (tax inclusive), PAX = 2, Discounted PAX = 1
+     * - Price per PAX = 100 / 2 = 50
+     * - 1 PAX gets discount applied (might remove tax and apply discount)
+     * - Other PAX: regular price (50)
+     */
+    private function calculatePaxDividedDiscount(Discount $discount, float $amount, int $paxCount, int $discountedPax, ?float $allocatedAmount = null): array
+    {
+        $taxRate = config('sales.tax_rate');
+
+        // Divide the total amount by pax count to get per-pax amount
+        $perPaxAmount = $amount / $paxCount;
+
+        // Calculate the portion that gets discount (discounted pax)
+        $discountedPortionAmount = $perPaxAmount * $discountedPax;
+
+        // Calculate the regular portion (non-discounted pax)
+        $regularPortionAmount = $perPaxAmount * ($paxCount - $discountedPax);
+
+        // Process the discounted portion
+        if ($discount->remove_tax) {
+            // Remove tax from discounted portion
+            $vatExemptDiscounted = $discountedPortionAmount / $taxRate;
+            $lessTaxDiscounted = $discountedPortionAmount - $vatExemptDiscounted;
+
+            // Calculate discount on tax-free amount
+            if ($discount->type == TypeEnum::PERCENTAGE->value) {
+                $discountAmount = $vatExemptDiscounted * ($discount->amount / 100);
+            } else {
+                // For fixed discount, divide by pax
+                $fixedPerPax = ($allocatedAmount ?? $discount->amount) / $paxCount;
+                $discountAmount = min($fixedPerPax * $discountedPax, $vatExemptDiscounted);
+            }
+
+            // Regular portion keeps tax
+            $regularVatableSales = $regularPortionAmount / $taxRate;
+            $regularTaxAmount = $regularPortionAmount - $regularVatableSales;
+
+            return [
+                'taxRate'        => $taxRate,
+                'vatExempt'      => $vatExemptDiscounted,  // Only discounted portion is vat exempt
+                'taxAmount'      => $regularTaxAmount,      // Tax from regular portion
+                'vatableSales'   => $regularVatableSales,   // Vatable sales from regular portion
+                'lessTax'        => $lessTaxDiscounted,     // Tax removed from discounted portion
+                'discountAmount' => $discountAmount,
+            ];
+        } else {
+            // No tax removal - standard discount calculation on discounted portion
+            $vatableSalesDiscounted = $discountedPortionAmount / $taxRate;
+            $taxAmountDiscounted = $discountedPortionAmount - $vatableSalesDiscounted;
+
+            // Calculate discount
+            if ($discount->type == TypeEnum::PERCENTAGE->value) {
+                $discountAmount = $discountedPortionAmount * ($discount->amount / 100);
+            } else {
+                // For fixed discount, divide by pax
+                $fixedPerPax = ($allocatedAmount ?? $discount->amount) / $paxCount;
+                $discountAmount = min($fixedPerPax * $discountedPax, $discountedPortionAmount);
+            }
+
+            // Regular portion calculation
+            $regularVatableSales = $regularPortionAmount / $taxRate;
+            $regularTaxAmount = $regularPortionAmount - $regularVatableSales;
+
+            return [
+                'taxRate'        => $taxRate,
+                'vatExempt'      => 0,
+                'taxAmount'      => $taxAmountDiscounted + $regularTaxAmount,
+                'vatableSales'   => $vatableSalesDiscounted + $regularVatableSales,
+                'lessTax'        => 0,
+                'discountAmount' => $discountAmount,
+            ];
+        }
     }
 
     /**
@@ -170,7 +256,7 @@ class DiscountService
 
     public function getAvailableDiscounts()
     {
-        $query = Discount::select('id', 'discount_name', 'type', 'amount', 'discount_type', 'remove_tax', 'require_customer_info', 'sort_order')
+        $query = Discount::select('id', 'discount_name', 'type', 'amount', 'discount_type', 'remove_tax', 'require_customer_info', 'required_pax', 'sort_order')
             ->orderBy('sort_order', 'asc');
         return $query->get()->toArray();
     }
