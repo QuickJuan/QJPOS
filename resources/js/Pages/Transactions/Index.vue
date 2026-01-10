@@ -1,6 +1,8 @@
 <template>
     <CashieringLayout :current-user="page.props.currentUser">
-        <div class="flex flex-col h-full overflow-hidden">
+        <div
+            class="flex flex-col h-full overflow-hidden max-w-7xl mx-auto w-full"
+        >
             <!-- Filters Section -->
             <div
                 class="flex-shrink-0 px-4 md:px-6 lg:px-8 py-4 bg-white border-b border-neutral-200"
@@ -18,12 +20,10 @@
                     @cashier_id="(value: string) => { filters.cashier_id = value }"
                 />
             </div>
-            <div class="flex flex-col flex-1 px-4 md:px-6 lg:px-8 py-4">
+            <div class="flex flex-col flex-1 px-4 md:px-6 lg:px-8 py-4 min-h-0">
                 <div class="flex flex-col md:flex-row gap-4 md:gap-6 h-full">
                     <!-- Sidebar -->
-                    <div
-                        class="w-full md:w-3/5 2xl:w-1/4 h-auto md:h-full flex flex-col min-h-[300px] md:min-h-0"
-                    >
+                    <div class="w-full md:w-3/5 flex flex-col min-h-0">
                         <Transactions
                             :orders="orders"
                             :activeOrder="activeOrder"
@@ -677,15 +677,48 @@ const handlePrintReceiptSlips = async () => {
     if (!activeOrder.value) return;
 
     try {
+        // Load printer config first
+        const printerConfig = await thermalPrinter.loadPrinterConfig("receipt");
+
+        if (!printerConfig) {
+            // No printer configured - go to config page
+            console.log("No printer configuration found, redirecting to setup");
+            router.get("/printer-config");
+            return;
+        }
+
         // Check if thermal printer is connected
         if (!thermalPrinter.isConnected()) {
-            toast.add({
-                severity: "warn",
-                summary: "Printer Not Connected",
-                detail: "Please connect thermal printer first.",
-                life: 3000,
-            });
-            return;
+            // Not connected - try to connect first
+            console.log("Printer not connected, attempting to connect...");
+            try {
+                const connected = await thermalPrinter.connectToPrinter(
+                    printerConfig
+                );
+
+                if (!connected) {
+                    // Connection failed - show modal for manual pairing
+                    console.log("❌ Connection failed, showing modal");
+                    showThermalPrinter.value = true;
+                    return;
+                }
+                console.log("✅ Connected successfully");
+            } catch (error) {
+                console.error("Connection failed:", error);
+
+                // If it's a user cancellation, don't show modal
+                if (
+                    error.message.includes("User cancelled") ||
+                    error.name === "NotFoundError"
+                ) {
+                    console.log("User cancelled connection");
+                    return;
+                }
+
+                // Other errors - show modal for manual pairing
+                showThermalPrinter.value = true;
+                return;
+            }
         }
 
         // Normalize payment data to array
@@ -700,9 +733,6 @@ const handlePrintReceiptSlips = async () => {
             (method: any) =>
                 method.payment_type === "cash" && method.is_default_cash
         );
-
-        console.log("Default payment method:", defaultPaymentMethod);
-        console.log("All payments:", payments);
 
         // Filter payments that are NOT the default payment method
         const nonDefaultPayments = payments.filter((payment: any) => {
@@ -766,7 +796,12 @@ const handlePrintReceiptSlips = async () => {
             payments: nonDefaultPayments.map((payment: any) => ({
                 paymentMethod:
                     payment.method || payment.payment_type || "Payment",
-                amountPaid: payment.amount_paid || payment.amount_applied || 0,
+                amountPaid:
+                    payment.amount_in_payment_currency ||
+                    payment.amount_paid ||
+                    payment.amount_applied ||
+                    0,
+                currency: payment.currency,
                 referenceNumber: payment.reference_number || undefined,
                 customerName: payment.customer_name || undefined,
                 customerContact: payment.customer_contact || undefined,

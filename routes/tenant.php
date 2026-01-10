@@ -104,6 +104,17 @@ if (!isCentralDomain()) {
 
     Route::get('/product/{slug}', [ProductController::class, 'show'])->name('product.show');
 
+    // Serve tenant storage files (receipts, etc.)
+    Route::get('/storage/{path}', function ($path) {
+        $filePath = storage_path('app/public/' . $path);
+
+        if (!file_exists($filePath)) {
+            abort(404);
+        }
+
+        return response()->file($filePath);
+    })->where('path', '.*')->name('tenant.storage');
+
     Route::get('/test-landing', function () {
         return Inertia::render('TestLanding', [
             'tenant' => tenant(),

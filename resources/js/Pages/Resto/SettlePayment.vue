@@ -945,6 +945,19 @@
             v-model:visible="showReceiptModal"
             :receipt-data="receiptData"
         />
+
+        <ChangeModal
+            :show="showChangeModal"
+            :change-value="changeModalData.change"
+            :currency-code="defaultCurrencyCode"
+            :customer-id="changeModalData.customerId"
+            :customer-name="changeModalData.customerName"
+            :order-id="changeModalData.orderId"
+            :customers="customers"
+            @close="handleChangeModalClose"
+            @load-to-e-wallet="handleLoadToEWallet"
+        />
+
         <Toast />
     </div>
 </template>
@@ -964,6 +977,7 @@ import { thermalPrinter } from "@/Services/ThermalPrinterService";
 import moment from "moment-timezone";
 import { ArrowLeftIcon } from "@heroicons/vue/24/outline";
 import axios from "axios";
+import ChangeModal from "@/Components/Resto/ChangeModal.vue";
 
 const props = defineProps<{ cart: any }>();
 
@@ -1052,6 +1066,9 @@ const defaultCurrencyCode = computed(
 );
 
 const hasMultipleCurrencies = computed(() => currencies.value.length > 1);
+
+// Customers for e-wallet loading
+const customers = ref<any[]>([]);
 
 const selectedPaymentMethodId = ref<number | null>(
     availablePaymentMethods.value[0]?.id ?? null
@@ -1756,6 +1773,13 @@ const canSettle = computed(() => {
 const showReceiptModal = ref(false);
 const receiptData = ref<any>(null);
 const isSubmitting = ref(false);
+const showChangeModal = ref(false);
+const changeModalData = ref<{
+    change: number;
+    orderId: number | null;
+    customerId: number | null;
+    customerName: string;
+}>({ change: 0, orderId: null, customerId: null, customerName: "" });
 
 // Mixed Payment toggle function
 const toggleMixedPayment = () => {
@@ -1901,6 +1925,7 @@ const addPaymentToMix = () => {
         amount: amountPaidBase.value,
         amount_applied: amountApplied,
         change_amount: changeAmount,
+        is_default_cash: method.is_default_cash || false,
     };
 
     mixedPayments.value.push(payment);
@@ -1940,7 +1965,21 @@ const focusAmount = async () => {
 
 onMounted(() => {
     focusAmount();
+    fetchAllCustomers();
 });
+
+const fetchAllCustomers = async () => {
+    try {
+        const response = await axios.get(route("customers.search"));
+        if (response.data && Array.isArray(response.data)) {
+            customers.value = response.data;
+            console.log("Customers fetched:", customers.value.length);
+        }
+    } catch (error) {
+        console.error("Failed to fetch customers:", error);
+        customers.value = [];
+    }
+};
 
 const appendDigit = (digit: string) => {
     if (!isCashMethod.value) {
@@ -2024,28 +2063,59 @@ const navigateBack = () => {
     });
 };
 
-const showChangeDialog = async (changeValue: number) => {
+const showChangeDialog = async (changeValue: number, orderData: any) => {
     const normalizedChange = Math.max(0, Number(changeValue) || 0);
-    const hasChange = normalizedChange > 0;
 
-    await Swal.fire({
-        title: hasChange
-            ? formatMoney(normalizedChange, defaultCurrencyCode.value)
-            : "Payment received exact amount",
-        text: hasChange
-            ? "Change to return to customer"
-            : "Payment received exact amount",
-        icon: "success",
-        confirmButtonText: "OK",
-        didOpen: () => {
-            const confirmButton = document.querySelector(
-                ".swal2-confirm"
-            ) as HTMLButtonElement;
-            confirmButton?.focus();
-        },
-    });
+    // Get customer from order data or cart
+    const customer = orderData?.customer || props.cart?.customer;
 
+    changeModalData.value = {
+        change: normalizedChange,
+        orderId: orderData?.id || null,
+        customerId: customer?.id || null,
+        customerName: customer?.customer_name || "",
+    };
+
+    showChangeModal.value = true;
+};
+
+const handleChangeModalClose = () => {
+    showChangeModal.value = false;
     router.visit(route("table-rooms.index"));
+};
+
+const handleLoadToEWallet = async (customerId: number, amount: number) => {
+    try {
+        // Get customer name from customers list or changeModalData
+        const customer = customers.value.find((c) => c.id === customerId);
+        const customerName =
+            customer?.customer_name || changeModalData.value.customerName;
+
+        await axios.post(route("ewallet.load-change"), {
+            customer_id: customerId,
+            customer_name: customerName,
+            order_id: changeModalData.value.orderId,
+            amount: amount,
+        });
+
+        toast.add({
+            severity: "success",
+            summary: "E-Wallet Loaded",
+            detail: `${formatMoney(
+                amount,
+                defaultCurrencyCode.value
+            )} has been loaded to customer's e-wallet.`,
+            life: 3000,
+        });
+    } catch (error) {
+        console.error("Failed to load to e-wallet:", error);
+        toast.add({
+            severity: "error",
+            summary: "Failed",
+            detail: "Could not load change to e-wallet. Please try again.",
+            life: 3000,
+        });
+    }
 };
 
 /**
@@ -2067,49 +2137,109 @@ const printReceiptSlips = async (orderData: any, paymentData: any) => {
             : [paymentData];
 
         // Get default payment method using is_default_cash flag
-        const defaultPaymentMethod = availablePaymentMethods.value.find(
-            (method: any) =>
-                method.payment_type === "cash" && method.is_default_cash
+        console.log("===== FINDING DEFAULT PAYMENT METHOD =====");
+        console.log(
+            "Available payment methods:",
+            availablePaymentMethods.value
+        );
+        console.log(
+            "Payment methods details:",
+            availablePaymentMethods.value.map((m) => ({
+                id: m.id,
+                name: m.name,
+                payment_type: m.payment_type,
+                is_default_cash: m.is_default_cash,
+            }))
         );
 
-        console.log("Default payment method:", defaultPaymentMethod);
-        console.log("All payments:", payments);
+        const defaultPaymentMethod = availablePaymentMethods.value.find(
+            (method: any) =>
+                method.payment_type?.toLowerCase() === "cash" &&
+                method.is_default_cash === true
+        );
+
+        console.log("Default payment method found:", defaultPaymentMethod);
+        console.log("All payments received:", payments);
+        console.log(
+            "Payment details:",
+            payments.map((p) => ({
+                method: p.method || p.methodName,
+                is_default_cash: p.is_default_cash,
+                payment_method_id: p.payment_method_id,
+                amount: p.amount_paid || p.amount_applied,
+            }))
+        );
 
         // Filter payments that are NOT the default payment method
         const nonDefaultPayments = payments.filter((payment: any) => {
-            // Only skip if this payment matches the default payment method
-            if (defaultPaymentMethod) {
-                // Check by method name (case-insensitive)
-                const paymentMethodName = (payment.method || "").toLowerCase();
-                const defaultMethodName = (
-                    defaultPaymentMethod.name || ""
-                ).toLowerCase();
+            // Check if payment has is_default_cash flag set to true
+            const isDefaultCash =
+                payment.is_default_cash === true ||
+                payment.is_default_cash === 1 ||
+                payment.is_default_cash === "true" ||
+                payment.is_default_cash === "1";
 
-                if (paymentMethodName === defaultMethodName) {
-                    console.log("Excluding default payment:", payment.method);
-                    return false;
-                }
+            console.log(
+                `Checking payment: ${payment.method || payment.methodName}`
+            );
+            console.log(`  - is_default_cash: ${payment.is_default_cash}`);
+            console.log(`  - isDefaultCash: ${isDefaultCash}`);
+            console.log(`  - payment_method_id: ${payment.payment_method_id}`);
+            console.log(
+                `  - defaultPaymentMethod.id: ${defaultPaymentMethod?.id}`
+            );
 
-                // Also check if payment type is cash and matches default
-                if (
-                    payment.payment_type_value === "cash" &&
-                    defaultPaymentMethod.payment_type === "cash"
-                ) {
-                    // If it's a cash payment, check if it's using the default currency
-                    if (paymentMethodName === defaultMethodName) {
-                        console.log(
-                            "Excluding default cash payment:",
-                            payment.method
-                        );
-                        return false;
-                    }
-                }
+            if (isDefaultCash) {
+                console.log(
+                    "✓ Excluding default cash payment:",
+                    payment.method || payment.methodName
+                );
+                return false;
             }
-            console.log("Including payment:", payment.method);
+
+            // Also check against default payment method as fallback
+            if (
+                defaultPaymentMethod &&
+                payment.payment_method_id === defaultPaymentMethod.id
+            ) {
+                console.log(
+                    "✓ Excluding payment by matching default payment method ID:",
+                    payment.method || payment.methodName
+                );
+                return false;
+            }
+
+            console.log(
+                "✗ Including payment:",
+                payment.method || payment.methodName
+            );
             return true;
         });
 
         console.log("Non-default payments:", nonDefaultPayments);
+
+        // Don't print if there are no non-default payments OR if there are only default payments
+        if (
+            nonDefaultPayments.length === 0 ||
+            payments.length ===
+                nonDefaultPayments.length +
+                    (payments.length - nonDefaultPayments.length)
+        ) {
+            // If all payments are default cash, skip printing
+            const allDefaultCash = payments.every((payment: any) => {
+                return (
+                    payment.is_default_cash === true ||
+                    payment.is_default_cash === 1
+                );
+            });
+
+            if (allDefaultCash || nonDefaultPayments.length === 0) {
+                console.log(
+                    "All payments are default cash or no non-default payments, skipping receipt slip"
+                );
+                return;
+            }
+        }
 
         // Check if this is a mixed payment (multiple payments)
         const isMixedPayment = payments.length > 1;
@@ -2125,7 +2255,12 @@ const printReceiptSlips = async (orderData: any, paymentData: any) => {
             payments: nonDefaultPayments.map((payment: any) => ({
                 paymentMethod:
                     payment.method || payment.payment_type || "Payment",
-                amountPaid: payment.amount_paid || payment.amount_applied || 0,
+                amountPaid:
+                    payment.amount_in_payment_currency ||
+                    payment.amount_paid ||
+                    payment.amount_applied ||
+                    0,
+                currency: payment.currency,
                 referenceNumber: payment.reference_number || undefined,
                 customerName: payment.customer_name || undefined,
                 customerContact: payment.customer_contact || undefined,
@@ -2155,7 +2290,7 @@ const printReceiptSlips = async (orderData: any, paymentData: any) => {
 
 const processReceipt = async (data: any) => {
     if (!data) {
-        await showChangeDialog(changeAmount.value);
+        await showChangeDialog(changeAmount.value, null);
         return;
     }
 
@@ -2211,7 +2346,7 @@ const processReceipt = async (data: any) => {
         } else {
             totalChange = Number(data.payment?.change ?? changeAmount.value);
         }
-        await showChangeDialog(totalChange);
+        await showChangeDialog(totalChange, data);
     }
 };
 

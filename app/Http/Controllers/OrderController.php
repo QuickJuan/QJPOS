@@ -131,20 +131,28 @@ class OrderController extends Controller
                 'exportAsPdf' => ['boolean'],
             ]);
 
+            // Trim all email addresses to remove any whitespace
+            $emails = array_map('trim', $validated['emails']);
+            $emails = array_filter($emails); // Remove empty values
+
             // Queue email sending job with receipt image attachment
-            \Mail::to($validated['emails'])
+            \Mail::to($emails)
                 ->queue(new \App\Mail\ReceiptMail($order));
 
             return response()->json([
                 'success' => true,
                 'message' => 'Receipt email queued successfully.',
-                'recipients' => count($validated['emails']),
+                'recipients' => count($emails),
             ]);
         } catch (\Exception $e) {
-            \Log::error('Send receipt email error: ' . $e->getMessage());
+            \Log::error('Send receipt email error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile()
+            ]);
             return response()->json([
                 'success' => false,
-                'message' => 'There was an error sending the email.',
+                'message' => 'There was an error sending the email: ' . $e->getMessage(),
             ], 500);
         }
     }

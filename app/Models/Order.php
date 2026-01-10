@@ -31,6 +31,7 @@ class Order extends Model
         'is_mixed_payment',
         'change_loaded_to_ewallet',
         'is_change_loaded_to_ewallet',
+        'ewallet_load_amount',
         'vatable_sales',
         'vat_amount',
         'vat_exempt_sales',

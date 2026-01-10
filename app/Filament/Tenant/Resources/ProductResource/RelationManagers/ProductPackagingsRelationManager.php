@@ -52,10 +52,6 @@ class ProductPackagingsRelationManager extends RelationManager
                     ->required()
                     ->numeric()
                     ->label('Unit Price'),
-                TextInput::make('qty')
-                    ->required()
-                    ->numeric()
-                    ->label('Quantity'),
                 SpatieMediaLibraryFileUpload::make('featured_image')
                     ->collection('featured_image')
                     ->image()
@@ -86,9 +82,6 @@ class ProductPackagingsRelationManager extends RelationManager
                 TextColumn::make('price')
                     ->money('php', true)
                     ->label('Unit Price'),
-
-                TextColumn::make('qty')
-                    ->label('Quantity'),
             ])
             ->filters([
                 //
@@ -97,6 +90,13 @@ class ProductPackagingsRelationManager extends RelationManager
                 Tables\Actions\CreateAction::make(),
             ])
             ->actions([
+                Tables\Actions\Action::make('manage_inventory')
+                    ->label('Inventory')
+                    ->icon('heroicon-o-cube')
+                    ->url(fn ($record) => route('filament.tenant.resources.product-packagings.edit', [
+                        'record' => $record->id,
+                        'tenant' => tenant('id'),
+                    ])),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])

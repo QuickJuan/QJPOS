@@ -249,9 +249,18 @@ class CartService
     ): CartItem {
         $amount = $pricingData['vatable_sales'] + $pricingData['vat_amount'] + $pricingData['non_vat_sales'];
 
+        // Use product packaging name if available, otherwise use product receipt alias
+        $description = $product->receipt_alias;
+        if ($request['product_packaging_id'] ?? null) {
+            $productPackaging = ProductPackaging::find($request['product_packaging_id']);
+            if ($productPackaging) {
+                $description = $productPackaging->name;
+            }
+        }
+
         return $cart->cartItems()->create([
             'product_id'           => $product->id,
-            'description'          => $product->receipt_alias,
+            'description'          => $description,
             'product_packaging_id' => $request['product_packaging_id'] ?? null,
             'quantity'             => $quantity,
             'price'                => $price,
