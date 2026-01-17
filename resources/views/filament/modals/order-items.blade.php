@@ -25,19 +25,28 @@
         $price = (float) ($item->price ?? 0);
 
         $amount = (float) ($item->sub_total ?? $item->amount ?? 0);
-        $amountLabel = ($isChild && $price <= 0)
-            ? 'Package item'
-            : number_format($amount, 2);
+        $subTotal = (float) ($item->sub_total ?? 0);
+        $itemDiscount = (float) ($item->discount_amount ?? 0);
+        $lessVat = (float) ($item->less_tax ?? 0);
+        $netAmount = (float) ($item->amount ?? $subTotal);
+
+        $subTotalLabel = number_format($subTotal, 2);
+        $itemDiscountLabel = number_format($itemDiscount, 2);
+        $lessVatLabel = number_format($lessVat, 2);
+        $amountLabel = number_format($netAmount, 2);
 
         $paddingRem = max(0, $level) * 1.0;
 
         $rows = '<tr class="border-b last:border-b-0">'
-            . '<td class="py-2 pr-3"><span style="padding-left: ' . e((string) $paddingRem) . 'rem">'
+            . '<td class="py-2 pr-4"><span style="padding-left: ' . e((string) $paddingRem) . 'rem">'
             . ($isChild ? '• ' : '')
             . e($name)
             . '</span></td>'
-            . '<td class="py-2 text-right tabular-nums">' . e($qtyLabel) . '</td>'
-            . '<td class="py-2 text-right tabular-nums">' . e($amountLabel) . '</td>'
+            . '<td class="py-2 px-4 text-right tabular-nums whitespace-nowrap">' . e($qtyLabel) . '</td>'
+            . '<td class="py-2 pl-4 text-right tabular-nums whitespace-nowrap">' . e($amountLabel) . '</td>'
+            . '<td class="py-2 px-4 text-right tabular-nums whitespace-nowrap">' . e($itemDiscountLabel) . '</td>'
+            . '<td class="py-2 px-4 text-right tabular-nums whitespace-nowrap">' . e($lessVatLabel) . '</td>'
+            . '<td class="py-2 px-4 text-right tabular-nums whitespace-nowrap">' . e($subTotalLabel) . '</td>'
             . '</tr>';
 
         $children = $itemsByParent->get($item->id, collect())->sortBy('id')->values();
@@ -75,12 +84,15 @@
         </div>
     @else
         <div class="overflow-x-auto">
-            <table class="min-w-full text-sm">
+            <table class="w-full min-w-full text-sm">
                 <thead>
                     <tr class="border-b">
-                        <th class="py-2 text-left font-medium text-gray-700">Item</th>
-                        <th class="py-2 text-right font-medium text-gray-700">Qty</th>
-                        <th class="py-2 text-right font-medium text-gray-700">Amount</th>
+                        <th class="py-2 pr-4 text-left font-medium text-gray-700 w-1/2">Item</th>
+                        <th class="py-2 px-4 text-right font-medium text-gray-700 whitespace-nowrap">Qty</th>
+                        <th class="py-2 pl-4 text-right font-medium text-gray-700 whitespace-nowrap">Amount</th>
+                        <th class="py-2 px-4 text-right font-medium text-gray-700 whitespace-nowrap">Item Discount</th>
+                        <th class="py-2 px-4 text-right font-medium text-gray-700 whitespace-nowrap">Less VAT</th>
+                        <th class="py-2 px-4 text-right font-medium text-gray-700 whitespace-nowrap">Sub Total</th>
                     </tr>
                 </thead>
                 <tbody>

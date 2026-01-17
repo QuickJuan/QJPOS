@@ -69,7 +69,7 @@ class DetailedSalesItemReportResource extends Resource
                     ->dateTime('M d, Y h:i A')
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('order.id')
+                Tables\Columns\TextColumn::make('order.invoice_no')
                     ->label('Receipt #')
                     ->searchable()
                     ->sortable(),

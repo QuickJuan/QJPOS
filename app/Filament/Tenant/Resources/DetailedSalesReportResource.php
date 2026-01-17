@@ -88,44 +88,35 @@ class DetailedSalesReportResource extends Resource
                     ->state(fn () => 'View')
                     ->badge()
                     ->color('primary')
-                    ->icon('heroicon-o-arrow-top-right-on-square')
-                    ->alignCenter()
-                    ->url(fn (?Order $record) => $record
-                        ? OrderResource::getUrl('edit', ['record' => $record])
-                        : null)
-                    ->visible(fn (?Order $record): bool => (bool) $record),
-
-                Tables\Columns\TextColumn::make('view_items')
-                    ->label('')
-                    ->state(fn () => 'Items')
-                    ->badge()
-                    ->color('gray')
                     ->icon('heroicon-o-eye')
                     ->alignCenter()
                     ->action(
-                        Tables\Actions\Action::make('view_items')
-                            ->label('View Items')
+                        Tables\Actions\Action::make('view_order')
+                            ->label('View')
                             ->modalHeading(fn (?Order $record) => $record
-                                ? ('Order Items (Receipt # ' . $record->id . ')')
-                                : 'Order Items')
-                            ->modalWidth('4xl')
+                                ? ('Order Details (Receipt # ' . ($record->invoice_no ?: $record->id) . ')')
+                                : 'Order Details')
+                            ->modalWidth('3xl')
                             ->modalSubmitAction(false)
                             ->modalCancelActionLabel('Close')
                             ->modalContent(function (?Order $record) {
                                 if ($record) {
                                     $record->loadMissing([
+                                        'branch',
+                                        'cashier',
+                                        'customer',
+                                        'payments.paymentMethod',
                                         'orderItems.product',
                                         'orderItems.productPackaging',
                                     ]);
                                 }
 
-                                return view('filament.modals.order-items', [
+                                return view('filament.modals.order-details-with-items', [
                                     'order' => $record,
                                 ]);
                             })
                             ->action(fn () => null)
-                    )
-                    ->visible(fn (?Order $record): bool => (int) (($record?->order_items_count) ?? 0) > 0),
+                            ),
 
                 Tables\Columns\TextColumn::make('branch.name')
                     ->label('Branch')
@@ -137,12 +128,12 @@ class DetailedSalesReportResource extends Resource
                     ->dateTime('M d, Y h:i A')
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('id')
+                Tables\Columns\TextColumn::make('invoice_no')
                     ->label('Receipt #')
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('customer.name')
+                Tables\Columns\TextColumn::make('customer.customer_name')
                     ->label('Customer')
                     ->searchable()
                     ->default('Walk-in'),
