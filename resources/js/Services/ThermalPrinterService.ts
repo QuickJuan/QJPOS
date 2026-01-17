@@ -156,6 +156,13 @@ interface BluetoothPrintService {
     characteristic: BluetoothRemoteGATTCharacteristic | null;
 }
 
+interface UsbPrintService {
+    device: USBDevice | null;
+    interfaceNumber: number | null;
+    alternateSetting: number | null;
+    endpointOut: number | null;
+}
+
 interface StructuredDenominationCurrency {
     currency_id: number | string;
     currency_code: string;
@@ -343,6 +350,15 @@ class ThermalPrinterService {
         characteristic: null,
     };
 
+    private usb: UsbPrintService = {
+        device: null,
+        interfaceNumber: null,
+        alternateSetting: null,
+        endpointOut: null,
+    };
+
+    private transport: 'bluetooth' | 'usb' | null = null;
+
     private currentConfig: PrinterConfig | null = null;
     private reconnectAttempts: number = 0;
     private maxReconnectAttempts: number = 3;
@@ -391,6 +407,13 @@ class ThermalPrinterService {
     }
 
     /**
+     * Check if WebUSB is supported
+     */
+    public isUsbSupported(): boolean {
+        return typeof navigator !== 'undefined' && 'usb' in navigator;
+    }
+
+    /**
      * Load printer configuration from API
      */
     public async loadPrinterConfig(type: 'kitchen' | 'bar' | 'receipt'): Promise<PrinterConfig | null> {
@@ -409,6 +432,11 @@ class ThermalPrinterService {
      * If device is provided, reuse existing connection instead of requesting new pairing
      */
     public async connectToPrinter(config?: PrinterConfig, existingDevice?: BluetoothDevice): Promise<boolean> {
+        // If we were previously connected via USB, clean it up first.
+        if (this.transport === 'usb') {
+            await this.disconnectFromPrinter();
+        }
+
         if (!this.isBluetoothSupported()) {
             throw new Error('Web Bluetooth is not supported in this browser');
         }
@@ -492,9 +520,113 @@ class ThermalPrinterService {
             this.isReconnecting = false;
 
             console.log('✅ Successfully connected to thermal printer');
+            this.transport = 'bluetooth';
             return true;
         } catch (error) {
             console.error('❌ Failed to connect to printer:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Connect to a USB thermal printer using WebUSB.
+     * Note: This requires a Chromium-based browser + HTTPS (or localhost).
+     */
+    public async connectToUsbPrinter(config?: PrinterConfig, existingDevice?: USBDevice): Promise<boolean> {
+        // If we were previously connected via Bluetooth, clean it up first.
+        if (this.transport === 'bluetooth') {
+            await this.disconnectFromPrinter();
+        }
+
+        if (!this.isUsbSupported()) {
+            throw new Error('WebUSB is not supported in this browser');
+        }
+
+        const printerConfig = config || this.currentConfig;
+
+        try {
+            const navUsb: USB = (navigator as any).usb;
+            const device: USBDevice = existingDevice || await navUsb.requestDevice({
+                acceptAllDevices: true,
+            });
+
+            if (!device) {
+                throw new Error('No USB device selected');
+            }
+
+            this.usb.device = device;
+            await this.usb.device.open();
+
+            // Many devices require selecting a configuration first.
+            if (!this.usb.device.configuration) {
+                await this.usb.device.selectConfiguration(1);
+            }
+
+            const configuration = this.usb.device.configuration;
+            if (!configuration) {
+                throw new Error('USB device has no active configuration');
+            }
+
+            // Find a usable OUT endpoint.
+            let selectedInterfaceNumber: number | null = null;
+            let selectedAlternateSetting: number | null = null;
+            let selectedEndpointOut: number | null = null;
+
+            for (const iface of configuration.interfaces) {
+                for (const alternate of iface.alternates) {
+                    const outEndpoint = alternate.endpoints.find((ep) => ep.direction === 'out');
+                    if (outEndpoint) {
+                        selectedInterfaceNumber = iface.interfaceNumber;
+                        selectedAlternateSetting = alternate.alternateSetting;
+                        selectedEndpointOut = outEndpoint.endpointNumber;
+                        break;
+                    }
+                }
+                if (selectedInterfaceNumber !== null) break;
+            }
+
+            if (selectedInterfaceNumber === null || selectedAlternateSetting === null || selectedEndpointOut === null) {
+                throw new Error('USB printer interface not found (no OUT endpoint)');
+            }
+
+            this.usb.interfaceNumber = selectedInterfaceNumber;
+            this.usb.alternateSetting = selectedAlternateSetting;
+            this.usb.endpointOut = selectedEndpointOut;
+
+            await this.usb.device.claimInterface(this.usb.interfaceNumber);
+            await this.usb.device.selectAlternateInterface(this.usb.interfaceNumber, this.usb.alternateSetting);
+
+            // Store config for formatting/ESC-POS layout.
+            if (printerConfig) {
+                this.currentConfig = printerConfig;
+            }
+
+            // Clear reconnect state (Bluetooth-only feature).
+            this.reconnectAttempts = 0;
+            this.isReconnecting = false;
+
+            // Track transport.
+            this.transport = 'usb';
+
+            // Listen for disconnection (best-effort).
+            try {
+                navUsb.addEventListener('disconnect', (event: any) => {
+                    const disconnectedDevice: USBDevice | undefined = event?.device;
+                    if (disconnectedDevice && this.usb.device && disconnectedDevice === this.usb.device) {
+                        this.usb = { device: null, interfaceNumber: null, alternateSetting: null, endpointOut: null };
+                        this.transport = null;
+                        this.currentConfig = null;
+                        console.log('⚠️ USB printer disconnected');
+                    }
+                });
+            } catch {
+                // Ignore - some browsers may not support events reliably.
+            }
+
+            console.log('✅ Successfully connected to USB thermal printer');
+            return true;
+        } catch (error) {
+            console.error('❌ Failed to connect to USB printer:', error);
             return false;
         }
     }
@@ -543,13 +675,16 @@ class ThermalPrinterService {
      * Disconnect from printer
      */
     public async disconnectFromPrinter(): Promise<void> {
-        // Remove event listener before disconnecting
-        if (this.bluetooth.device) {
-            this.bluetooth.device.removeEventListener('gattserverdisconnected', this.handleDisconnect.bind(this));
-        }
-
-        if (this.bluetooth.device?.gatt?.connected) {
-            this.bluetooth.device.gatt.disconnect();
+        // Disconnect Bluetooth (if any)
+        try {
+            if (this.bluetooth.device) {
+                this.bluetooth.device.removeEventListener('gattserverdisconnected', this.handleDisconnect.bind(this));
+            }
+            if (this.bluetooth.device?.gatt?.connected) {
+                this.bluetooth.device.gatt.disconnect();
+            }
+        } catch {
+            // Ignore cleanup errors
         }
 
         this.bluetooth = {
@@ -559,6 +694,34 @@ class ThermalPrinterService {
             characteristic: null,
         };
 
+        // Disconnect USB (if any)
+        try {
+            if (this.usb.device) {
+                if (this.usb.interfaceNumber !== null) {
+                    try {
+                        await this.usb.device.releaseInterface(this.usb.interfaceNumber);
+                    } catch {
+                        // Ignore
+                    }
+                }
+                try {
+                    await this.usb.device.close();
+                } catch {
+                    // Ignore
+                }
+            }
+        } catch {
+            // Ignore
+        }
+
+        this.usb = {
+            device: null,
+            interfaceNumber: null,
+            alternateSetting: null,
+            endpointOut: null,
+        };
+
+        this.transport = null;
         this.currentConfig = null;
         this.reconnectAttempts = 0;
         this.isReconnecting = false;
@@ -570,22 +733,61 @@ class ThermalPrinterService {
      * Check if printer is connected
      */
     public isConnected(): boolean {
-        return !!(
+        const bluetoothConnected = !!(
             this.bluetooth.device?.gatt?.connected &&
             this.bluetooth.characteristic
         );
+
+        const usbConnected = !!(
+            this.usb.device &&
+            this.usb.device.opened &&
+            this.usb.interfaceNumber !== null &&
+            this.usb.endpointOut !== null
+        );
+
+        return bluetoothConnected || usbConnected;
     }
 
     /**
      * Send raw data to printer
      */
     private async sendToPrinter(data: Uint8Array): Promise<void> {
-        if (!this.isConnected() || !this.bluetooth.characteristic) {
+        if (!this.isConnected()) {
             throw new Error('Printer not connected');
         }
 
+        // Prefer explicit transport if set, otherwise infer.
+        const transport = this.transport
+            || (this.bluetooth.device?.gatt?.connected ? 'bluetooth' : null)
+            || (this.usb.device?.opened ? 'usb' : null);
+
+        if (transport === 'usb') {
+            if (!this.usb.device || !this.usb.device.opened || this.usb.endpointOut === null) {
+                throw new Error('USB printer not connected');
+            }
+
+            try {
+                // Chunking to avoid OS/driver buffer issues; 64 bytes is a safe default for bulk OUT.
+                const chunkSize = 64;
+                for (let i = 0; i < data.length; i += chunkSize) {
+                    const chunk = data.slice(i, i + chunkSize);
+                    await this.usb.device.transferOut(this.usb.endpointOut, chunk);
+                    await new Promise(resolve => setTimeout(resolve, 2));
+                }
+                return;
+            } catch (error) {
+                console.error('❌ Failed to send data to USB printer:', error);
+                throw error;
+            }
+        }
+
+        // Default to Bluetooth
+        if (!this.bluetooth.characteristic) {
+            throw new Error('Bluetooth printer not connected');
+        }
+
         try {
-            // Split data into chunks (most printers have ~20 byte limit per write)
+            // Split data into chunks (most BLE printers have ~20 byte limit per write)
             const chunkSize = 20;
             for (let i = 0; i < data.length; i += chunkSize) {
                 const chunk = data.slice(i, i + chunkSize);
@@ -596,8 +798,8 @@ class ThermalPrinterService {
         } catch (error) {
             console.error('❌ Failed to send data to printer:', error);
 
-            // If sending failed due to disconnection, trigger reconnection
-            if (!this.isConnected()) {
+            // If sending failed due to disconnection, trigger reconnection (Bluetooth only)
+            if (!this.bluetooth.device?.gatt?.connected) {
                 console.log('🔄 Detected disconnection during send, triggering reconnection...');
                 await this.handleDisconnect();
             }
@@ -2819,12 +3021,14 @@ class ThermalPrinterService {
     /**
      * Connect to a specific printer type (kitchen, bar, receipt)
      */
-    public async connectToPrinterType(type: 'kitchen' | 'bar' | 'receipt'): Promise<boolean> {
+    public async connectToPrinterType(type: 'kitchen' | 'bar' | 'receipt', transport: 'bluetooth' | 'usb' = 'bluetooth'): Promise<boolean> {
         const config = await this.loadPrinterConfig(type);
         if (!config) {
             throw new Error(`No active ${type} printer configuration found`);
         }
-        return this.connectToPrinter(config);
+        return transport === 'usb'
+            ? this.connectToUsbPrinter(config)
+            : this.connectToPrinter(config);
     }
 
     /**
