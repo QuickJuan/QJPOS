@@ -99,6 +99,7 @@
             :less-discount-total="orderItemLessDiscount"
             :table-info="tableInfo"
             :general-settings="props.generalSettings"
+            :is-waiter-mode="props.isWaiterMode"
             @save-order="handleSaveOrder"
             @checkout="handleCheckout"
             @open-discount-modal="openDiscountModal"
@@ -221,6 +222,7 @@ const props = defineProps<{
         company_phone: string;
         company_logo: string;
     };
+    isWaiterMode?: boolean; // Hide settle button in waiter mode
 }>();
 
 const toast = useToast();

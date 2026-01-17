@@ -61,6 +61,28 @@ Route::middleware([
                 Route::get('/', 'list')->name('list');
             });
 
+        // Branches API Routes
+        Route::get('/branches', function () {
+            return response()->json([
+                'data' => \App\Models\Branch::select('id', 'name', 'branch_code')->get(),
+            ]);
+        });
+
+        // Get users for a specific branch
+        Route::get('/branches/{branch}/users', function (\App\Models\Branch $branch) {
+            $users = $branch->users()
+                ->select('users.id', 'users.name', 'users.email')
+                ->whereHas('roles', function ($query) {
+                    $query->whereRaw('LOWER(name) IN (?, ?)', ['waiter', 'server']);
+                })
+                ->orderBy('users.name')
+                ->get();
+
+            return response()->json([
+                'data' => $users,
+            ]);
+        });
+
         // You can add more tenant-specific API routes here
         // Route::apiResource('products', ProductController::class);
         // Route::apiResource('categories', CategoryController::class);

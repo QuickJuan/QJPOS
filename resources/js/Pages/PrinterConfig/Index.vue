@@ -1053,9 +1053,29 @@ const testPrinter = async (printer) => {
             !printer.bluetooth_name && !printer.bluetooth_address;
 
         if (isUSBPrinter) {
-            alert(
-                "USB printer testing is not yet supported. The thermal printer service currently only supports Bluetooth printers.\n\nUSB printer support will be added in a future update."
-            );
+            // Load the specific printer configuration into the service (used for paper size / layout)
+            await thermalPrinter.loadPrinterConfig(printer.type);
+
+            const success = await thermalPrinter.connectToUsbPrinter({
+                name: printer.name,
+                type: printer.type,
+                bluetooth_name: printer.bluetooth_name,
+                bluetooth_address: printer.bluetooth_address,
+                service_uuid: printer.service_uuid,
+                characteristic_uuid: printer.characteristic_uuid,
+                paper_size: printer.paper_size,
+                character_width: printer.character_width,
+                is_active: printer.is_active,
+                auto_cut: printer.auto_cut,
+                cut_spacing: printer.cut_spacing,
+            });
+
+            if (success) {
+                await thermalPrinter.testPrint();
+                alert("USB test print sent successfully!");
+            } else {
+                alert("Failed to connect to USB printer");
+            }
             return;
         }
 

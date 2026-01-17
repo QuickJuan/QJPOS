@@ -67,6 +67,11 @@ class Customer extends Model implements HasMedia
         return $this->hasMany(Order::class);
     }
 
+    public function getNameAttribute(): string
+    {
+        return (string) ($this->customer_name ?? '');
+    }
+
     public function carts(): HasMany
     {
         return $this->hasMany(Cart::class);

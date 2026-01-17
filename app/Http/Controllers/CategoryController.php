@@ -81,4 +81,37 @@ class CategoryController extends Controller
             abort(500, 'Failed to load category');
         }
     }
+
+    /**
+     * Display waiter order taking interface (same as cashier but for waiters)
+     */
+    public function waiterIndex(Request $request, $tableId = null): Response
+    {
+        try {
+            // Load only category metadata initially for better performance
+            $categories = $this->productCategoryService->getCategoriesOnly();
+
+            $currentTable = null;
+            if ($tableId) {
+                $currentTable = TableRoom::find($tableId);
+            }
+
+            // Cart is now provided by HandleInertiaRequests middleware via shared props
+            return Inertia::render('Waiter/Order', [
+                'categories'             => $categories,
+                'currentTable'           => $currentTable,
+                'selectedCategorySlug'   => null,
+                'products'               => [],
+                'categoryName'           => null,
+                'tableId'                => $tableId,
+                'orderType'              => 'dine-in',
+                'isWaiterMode'           => true, // Flag to hide settle button
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed to load waiter interface: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+            abort(500, 'Failed to load waiter interface');
+        }
+    }
 }

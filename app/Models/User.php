@@ -41,6 +41,7 @@ class User extends Authenticatable
         'password',
         'employee_code',
         'branch_id',
+        'current_role',
         'otp_secret',
         'otp_enabled',
         'otp_enabled_at',
@@ -78,6 +79,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password'          => 'hashed',
+            'current_role'      => \App\Enums\CurrentRole::class,
             'otp_enabled'       => 'boolean',
             'otp_enabled_at'    => 'datetime',
         ];

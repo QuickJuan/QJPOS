@@ -2,6 +2,7 @@
 
 namespace App\Filament\Tenant\Resources;
 
+use App\Filament\Tenant\Exports\VoidItemsReport\VoidItemsReportExporter;
 use App\Filament\Tenant\Resources\VoidItemsReportResource\Pages;
 use App\Models\VoidItem;
 use App\Models\Branch;
@@ -13,7 +14,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
 use Filament\Forms\Components\DatePicker;
 use Illuminate\Database\Eloquent\Builder;
-use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportAction;
 
 class VoidItemsReportResource extends Resource
 {
@@ -23,7 +24,7 @@ class VoidItemsReportResource extends Resource
     protected static ?string $modelLabel = 'Void Item';
     protected static ?string $pluralModelLabel = 'Void Items';
     protected static ?string $navigationGroup = 'Sales Report';
-    protected static ?int $navigationSort = 16;
+    protected static ?int $navigationSort = 18;
 
     public static function table(Table $table): Table
     {
@@ -110,8 +111,11 @@ class VoidItemsReportResource extends Resource
             ])
             ->filtersFormColumns(1)
             ->defaultSort('voided_at', 'desc')
-            ->bulkActions([
-                ExportBulkAction::make(),
+            ->headerActions([
+                ExportAction::make()
+                    ->exports([
+                        VoidItemsReportExporter::make()->fromTable(),
+                    ]),
             ]);
     }
 
