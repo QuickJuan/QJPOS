@@ -14,11 +14,18 @@
         $qtyLabel = rtrim(rtrim(number_format($qty, 2, '.', ''), '0'), '.');
 
         $productName = $item->product?->name ?? 'Item';
-        $packagingName = $item->productPackaging?->name;
+        if (is_array($productName)) {
+            $productName = implode(' ', array_map('strval', array_filter($productName, fn ($v) => is_scalar($v) || (is_object($v) && method_exists($v, '__toString')))));
+        }
 
-        $name = $productName;
+        $packagingName = $item->productPackaging?->name;
+        if (is_array($packagingName)) {
+            $packagingName = implode(' ', array_map('strval', array_filter($packagingName, fn ($v) => is_scalar($v) || (is_object($v) && method_exists($v, '__toString')))));
+        }
+
+        $name = (string) $productName;
         if ($packagingName) {
-            $name .= ' (' . $packagingName . ')';
+            $name .= ' (' . (string) $packagingName . ')';
         }
 
         $isChild = $level > 0 || ! empty($item->parent_id);
