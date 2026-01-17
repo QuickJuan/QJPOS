@@ -24,7 +24,7 @@ class CashierSessionResource extends Resource
     protected static ?string $modelLabel = 'X-Reading (Cashier Shift)';
     protected static ?string $pluralModelLabel = 'X-Reading (Cashier Shifts)';
     protected static ?string $navigationGroup = 'Sales Report';
-    protected static ?int $navigationSort = 15;
+    protected static ?int $navigationSort = 17;
 
     public static function table(Table $table): Table
     {

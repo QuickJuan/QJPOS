@@ -19,11 +19,14 @@ class DetailedSalesTotalsStats extends BaseWidget
     protected function getStats(): array
     {
         $totals = (clone $this->getPageTableQuery())
+            ->reorder()
+            ->select([])
             ->selectRaw('COALESCE(SUM(total_amount), 0) as gross_subtotal')
             ->selectRaw('COALESCE(SUM(item_discount), 0) as item_discount')
             ->selectRaw('COALESCE(SUM(less_tax), 0) as less_tax')
             ->selectRaw('COALESCE(SUM(service_charge), 0) as service_charge')
             ->selectRaw('COALESCE(SUM(total_due), 0) as total_due')
+            ->toBase()
             ->first();
 
         $grossSales = (float) ($totals->gross_subtotal ?? 0);

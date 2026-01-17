@@ -24,7 +24,7 @@ class VoidItemsReportResource extends Resource
     protected static ?string $modelLabel = 'Void Item';
     protected static ?string $pluralModelLabel = 'Void Items';
     protected static ?string $navigationGroup = 'Sales Report';
-    protected static ?int $navigationSort = 16;
+    protected static ?int $navigationSort = 18;
 
     public static function table(Table $table): Table
     {

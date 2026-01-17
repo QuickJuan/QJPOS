@@ -3,6 +3,7 @@
 namespace App\Filament\Tenant\Resources;
 
 use App\Filament\Tenant\Exports\DetailedSalesReport\DetailedSalesReportExporter;
+use App\Filament\Tenant\Resources\OrderResource;
 use App\Filament\Tenant\Resources\DetailedSalesReportResource\Pages;
 use App\Models\Branch;
 use App\Models\Order;
@@ -78,9 +79,54 @@ class DetailedSalesReportResource extends Resource
                         'cashier',
                         'customer',
                         'payments.paymentMethod',
-                    ]);
+                    ])
+                    ->withCount('orderItems');
             })
             ->columns([
+                Tables\Columns\TextColumn::make('view_record')
+                    ->label('')
+                    ->state(fn () => 'View')
+                    ->badge()
+                    ->color('primary')
+                    ->icon('heroicon-o-arrow-top-right-on-square')
+                    ->alignCenter()
+                    ->url(fn (?Order $record) => $record
+                        ? OrderResource::getUrl('edit', ['record' => $record])
+                        : null)
+                    ->visible(fn (?Order $record): bool => (bool) $record),
+
+                Tables\Columns\TextColumn::make('view_items')
+                    ->label('')
+                    ->state(fn () => 'Items')
+                    ->badge()
+                    ->color('gray')
+                    ->icon('heroicon-o-eye')
+                    ->alignCenter()
+                    ->action(
+                        Tables\Actions\Action::make('view_items')
+                            ->label('View Items')
+                            ->modalHeading(fn (?Order $record) => $record
+                                ? ('Order Items (Receipt # ' . $record->id . ')')
+                                : 'Order Items')
+                            ->modalWidth('4xl')
+                            ->modalSubmitAction(false)
+                            ->modalCancelActionLabel('Close')
+                            ->modalContent(function (?Order $record) {
+                                if ($record) {
+                                    $record->loadMissing([
+                                        'orderItems.product',
+                                        'orderItems.productPackaging',
+                                    ]);
+                                }
+
+                                return view('filament.modals.order-items', [
+                                    'order' => $record,
+                                ]);
+                            })
+                            ->action(fn () => null)
+                    )
+                    ->visible(fn (?Order $record): bool => (int) (($record?->order_items_count) ?? 0) > 0),
+
                 Tables\Columns\TextColumn::make('branch.name')
                     ->label('Branch')
                     ->searchable()

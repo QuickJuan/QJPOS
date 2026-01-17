@@ -23,7 +23,7 @@ class RefundOrdersReportResource extends Resource
     protected static ?string $modelLabel = 'Refund Order';
     protected static ?string $pluralModelLabel = 'Refund Orders';
     protected static ?string $navigationGroup = 'Sales Report';
-    protected static ?int $navigationSort = 17;
+    protected static ?int $navigationSort = 19;
 
     public static function table(Table $table): Table
     {
