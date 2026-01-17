@@ -177,9 +177,11 @@
                 @foreach ($currencies as $currency)
                     @php
                         $currencyName = (string) ($currency['currency_name'] ?? $currency['currency_code'] ?? 'Currency');
-                        $currencySymbol = (string) ($currency['currency_symbol'] ?? '');
-                        $amount = (float) ($currency['amount'] ?? $currency['total'] ?? 0);
-                        $amountInBase = (float) ($currency['amount_in_base'] ?? $currency['total_in_base'] ?? 0);
+                        $currencySymbol = (string) ($currency['symbol'] ?? ($currency['currency_symbol'] ?? ''));
+
+                        $exchangeRate = (float) ($currency['exchange_rate'] ?? 1);
+                        $amount = (float) ($currency['amount_in_currency'] ?? ($currency['total_amount'] ?? ($currency['amount'] ?? ($currency['total'] ?? 0))));
+                        $amountInBase = (float) ($currency['amount_in_base'] ?? ($currency['total_in_base'] ?? ($exchangeRate > 0 ? ($amount * $exchangeRate) : 0)));
 
                         $denoms = [];
                         if (isset($currency['denominations']) && is_array($currency['denominations'])) {
@@ -202,14 +204,19 @@
 
                         @foreach ($denoms as $denom)
                             @php
-                                $qty = (float) ($denom['quantity'] ?? 0);
-                                $value = (float) ($denom['value'] ?? 0);
+                                $qty = (float) ($denom['count'] ?? ($denom['quantity'] ?? 0));
+                                $label = $denom['label'] ?? ($denom['denomination_label'] ?? null);
+                                $value = (float) ($denom['value'] ?? ($denom['denomination_value'] ?? 0));
                                 $lineTotal = (float) ($denom['total'] ?? ($qty * $value));
+
+                                $displayLabel = is_string($label) && $label !== ''
+                                    ? $label
+                                    : rtrim(rtrim(number_format($value, 2), '0'), '.');
                             @endphp
 
                             @if ($qty > 0)
                                 <div class="denom-line">
-                                    <span class="muted">{{ rtrim(rtrim(number_format($qty, 2), '0'), '.') }} × {{ rtrim(rtrim(number_format($value, 2), '0'), '.') }}</span>
+                                    <span class="muted">{{ (int) $qty }} × {{ $displayLabel }}</span>
                                     <span>{{ $currencySymbol }} {{ number_format($lineTotal, 2) }}</span>
                                 </div>
                             @endif
@@ -229,25 +236,166 @@
             $metaData = is_array($meta['meta_data'] ?? null) ? $meta['meta_data'] : [];
             $cashComparison = is_array($meta['cash_comparison'] ?? null) ? $meta['cash_comparison'] : [];
             $otherComparison = is_array($meta['other_payments_comparison'] ?? null) ? $meta['other_payments_comparison'] : [];
+
+            $baseSymbol = (string) ($meta['base_currency_symbol'] ?? '₱');
+
+            $format = function ($value): string {
+                $number = is_numeric($value) ? (float) $value : 0.0;
+                return number_format($number, 2);
+            };
+
+            $positive = fn ($value) => abs((float) $value);
+
+            $grossSales = (float) ($metaData['gross_sales'] ?? 0);
+            $discounts = is_array($metaData['discounts'] ?? null) ? $metaData['discounts'] : [];
+            $totalDiscount = (float) ($metaData['item_discount'] ?? 0);
+            $lessTax = (float) ($metaData['less_tax'] ?? 0);
+            $netSales = (float) ($metaData['net_sales'] ?? 0);
+            $serviceCharge = (float) ($metaData['service_charge'] ?? 0);
+
+            $vatableSales = (float) ($metaData['vatable_sales'] ?? 0);
+            $vatAmount = (float) ($metaData['vat_amount'] ?? 0);
+            $vatExemptSales = (float) ($metaData['vat_exempt_sales'] ?? 0);
+            $nonVatSales = (float) ($metaData['non_vat_sales'] ?? 0);
+            $zeroRatedSales = (float) ($metaData['zero_rated_sales'] ?? 0);
         @endphp
 
         <table class="kv">
             <tr>
-                <td>Net Sales</td>
-                <td class="right">{{ $meta['base_currency_symbol'] ?? '₱' }} {{ number_format((float) ($metaData['net_sales'] ?? 0), 2) }}</td>
+                <td class="bold">Gross Sales</td>
+                <td class="right">{{ $baseSymbol }} {{ $format($grossSales) }}</td>
+            </tr>
+
+            @if (! empty($discounts))
+                <tr>
+                    <td colspan="2" class="bold" style="padding-top: 8px;">DISCOUNT BREAKDOWN</td>
+                </tr>
+                @foreach ($discounts as $discount)
+                    @php
+                        $name = $discount['discount_name'] ?? 'Discount';
+                        $amount = $discount['total_discount'] ?? 0;
+                    @endphp
+                    <tr>
+                        <td class="muted">{{ $name }}:</td>
+                        <td class="right">{{ $baseSymbol }} {{ $format($positive($amount)) }}</td>
+                    </tr>
+                @endforeach
+            @endif
+
+            <tr>
+                <td class="muted">Total Discount</td>
+                <td class="right">{{ $baseSymbol }} {{ $format($positive($totalDiscount)) }}</td>
             </tr>
             <tr>
-                <td>Service Charge</td>
-                <td class="right">{{ $meta['base_currency_symbol'] ?? '₱' }} {{ number_format((float) ($metaData['service_charge'] ?? 0), 2) }}</td>
+                <td class="muted">Less Tax</td>
+                <td class="right">{{ $baseSymbol }} {{ $format($positive($lessTax)) }}</td>
             </tr>
             <tr>
-                <td>Total Cash (Actual)</td>
-                <td class="right bold">{{ $meta['base_currency_symbol'] ?? '₱' }} {{ number_format((float) ($meta['cash_denomination_total'] ?? 0), 2) }}</td>
+                <td class="bold">Net Sales</td>
+                <td class="right bold">{{ $baseSymbol }} {{ $format($netSales) }}</td>
+            </tr>
+            <tr>
+                <td class="bold">Service Charge</td>
+                <td class="right bold">{{ $baseSymbol }} {{ $format($serviceCharge) }}</td>
+            </tr>
+            <tr>
+                <td class="bold">Total</td>
+                <td class="right bold">{{ $baseSymbol }} {{ $format($netSales + $serviceCharge) }}</td>
+            </tr>
+
+            @if ($vatableSales > 0 || $vatAmount > 0 || $vatExemptSales > 0 || $nonVatSales > 0 || $zeroRatedSales > 0)
+                <tr><td colspan="2" style="padding-top: 8px;"></td></tr>
+                @if ($vatableSales > 0)
+                    <tr>
+                        <td class="muted">VATable Sales</td>
+                        <td class="right">{{ $baseSymbol }} {{ $format($vatableSales) }}</td>
+                    </tr>
+                @endif
+                @if ($vatAmount > 0)
+                    <tr>
+                        <td class="muted">VAT Amount</td>
+                        <td class="right">{{ $baseSymbol }} {{ $format($vatAmount) }}</td>
+                    </tr>
+                @endif
+                @if ($vatExemptSales > 0)
+                    <tr>
+                        <td class="muted">VAT Exempt Sales</td>
+                        <td class="right">{{ $baseSymbol }} {{ $format($vatExemptSales) }}</td>
+                    </tr>
+                @endif
+                @if ($nonVatSales > 0)
+                    <tr>
+                        <td class="muted">Non-VAT Sales</td>
+                        <td class="right">{{ $baseSymbol }} {{ $format($nonVatSales) }}</td>
+                    </tr>
+                @endif
+                @if ($zeroRatedSales > 0)
+                    <tr>
+                        <td class="muted">Zero-Rated Sales</td>
+                        <td class="right">{{ $baseSymbol }} {{ $format($zeroRatedSales) }}</td>
+                    </tr>
+                @endif
+            @endif
+
+            <tr><td colspan="2" style="padding-top: 8px;"></td></tr>
+            <tr>
+                <td class="muted">Shift No</td>
+                <td class="right">{{ $metaData['shift_no'] ?? ($meta['id'] ?? $session->id ?? '—') }}</td>
+            </tr>
+            <tr>
+                <td class="muted">Invoice Start</td>
+                <td class="right">{{ $metaData['min_invoice_no'] ?? 'N/A' }}</td>
+            </tr>
+            <tr>
+                <td class="muted">Invoice End</td>
+                <td class="right">{{ $metaData['max_invoice_no'] ?? 'N/A' }}</td>
+            </tr>
+            <tr>
+                <td class="muted">Bill Start</td>
+                <td class="right">{{ $metaData['min_bill_no'] ?? 'N/A' }}</td>
+            </tr>
+            <tr>
+                <td class="muted">Bill End</td>
+                <td class="right">{{ $metaData['max_bill_no'] ?? 'N/A' }}</td>
+            </tr>
+
+            <tr><td colspan="2" style="padding-top: 8px;"></td></tr>
+            <tr>
+                <td class="muted">Refund Count</td>
+                <td class="right">{{ (int) ($metaData['refund_count'] ?? 0) }}</td>
+            </tr>
+            <tr>
+                <td class="muted">Refund Amount</td>
+                <td class="right">{{ $baseSymbol }} {{ $format($metaData['refund_amount'] ?? 0) }}</td>
+            </tr>
+
+            <tr><td colspan="2" style="padding-top: 8px;"></td></tr>
+            <tr>
+                <td class="muted">Total Orders</td>
+                <td class="right">{{ (int) ($metaData['total_orders'] ?? 0) }}</td>
+            </tr>
+            <tr>
+                <td class="muted">Total SKU</td>
+                <td class="right">{{ (int) ($metaData['total_sku'] ?? 0) }}</td>
+            </tr>
+            <tr>
+                <td class="muted">Total Quantity</td>
+                <td class="right">{{ $format($metaData['total_quantity'] ?? 0) }}</td>
+            </tr>
+
+            <tr><td colspan="2" style="padding-top: 8px;"></td></tr>
+            <tr>
+                <td class="muted">Beginning Cash</td>
+                <td class="right">{{ $baseSymbol }} {{ $format($meta['beginning_cash'] ?? ($session->beginning_cash ?? 0)) }}</td>
+            </tr>
+            <tr>
+                <td class="muted">Cash Denomination</td>
+                <td class="right">{{ $baseSymbol }} {{ $format($meta['cash_denomination_total'] ?? 0) }}</td>
             </tr>
             @if ((float) ($meta['gift_check_total'] ?? 0) > 0)
                 <tr>
-                    <td>Gift Checks</td>
-                    <td class="right">{{ $meta['base_currency_symbol'] ?? '₱' }} {{ number_format((float) ($meta['gift_check_total'] ?? 0), 2) }}</td>
+                    <td class="muted">Gift Checks</td>
+                    <td class="right">{{ $baseSymbol }} {{ $format($meta['gift_check_total'] ?? 0) }}</td>
                 </tr>
             @endif
         </table>
