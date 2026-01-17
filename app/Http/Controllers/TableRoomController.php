@@ -2,6 +2,7 @@
 namespace App\Http\Controllers;
 
 use Exception;
+use App\Enums\CurrentRole;
 use Inertia\Inertia;
 use Inertia\Response;
 use App\Models\TableRoom;
@@ -13,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use App\Http\Requests\TableRoomRequest;
 use App\Http\Resources\TableLocationResource;
 use App\Http\Requests\TableReservationRequest;
+use Illuminate\Support\Str;
 
 class TableRoomController extends Controller
 {
@@ -26,8 +28,32 @@ class TableRoomController extends Controller
         // Get the active branch using user cashier id from session
         $cashierSession = $request->user()->cashierSession;
 
-        if (!$cashierSession) {
-            return redirect()->route('resto.index')->with('error', 'No active cashier session found. Please start a cashier session first.');
+        if (! $cashierSession) {
+            $currentRole = $request->user()->current_role;
+            $currentRoleValue = $currentRole instanceof CurrentRole
+                ? $currentRole->value
+                : (is_string($currentRole) ? $currentRole : (string) $currentRole);
+
+            $currentRoleValue = Str::of($currentRoleValue)
+                ->lower()
+                ->replace(' ', '_')
+                ->replace('-', '_')
+                ->value();
+
+            if ($currentRoleValue !== CurrentRole::ORDER_TAKING->value) {
+                return redirect()->route('resto.index')->with('error', 'No active cashier session found. Please start a cashier session first.');
+            }
+
+            $branchId = $request->user()->branch_id;
+            if (! $branchId) {
+                return redirect()->route('home')->with('error', 'No active branch selected.');
+            }
+
+            $tableRooms = $this->tableRoomService->list($branchId);
+
+            return Inertia::render('Resto/Tables', [
+                'tableRooms' => json_decode(json_encode(TableLocationResource::collection($tableRooms)), true),
+            ]);
         }
 
         $tableRooms = $this->tableRoomService->list($cashierSession->branch_id);

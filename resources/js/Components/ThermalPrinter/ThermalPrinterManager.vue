@@ -18,15 +18,26 @@
                 </span>
             </div>
 
-            <Button
-                v-if="!isConnected"
-                @click="connectPrinter"
-                :loading="connecting"
-                icon="pi pi-bluetooth"
-                label="Connect Printer"
-                size="small"
-                outlined
-            />
+            <div v-if="!isConnected" class="flex items-center gap-2">
+                <Button
+                    @click="connectBluetoothPrinter"
+                    :loading="connectingBluetooth"
+                    icon="pi pi-bluetooth"
+                    label="Connect Bluetooth"
+                    size="small"
+                    outlined
+                />
+
+                <Button
+                    v-if="isUsbSupported"
+                    @click="connectUsbPrinter"
+                    :loading="connectingUsb"
+                    icon="pi pi-link"
+                    label="Connect USB"
+                    size="small"
+                    outlined
+                />
+            </div>
 
             <Button
                 v-else
@@ -41,19 +52,19 @@
 
         <!-- Browser Compatibility Warning -->
         <div
-            v-if="!isBluetoothSupported"
+            v-if="!isBluetoothSupported && !isUsbSupported"
             class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4"
         >
             <div class="flex items-start gap-3">
                 <i class="pi pi-exclamation-triangle text-amber-600 mt-0.5"></i>
                 <div>
                     <h4 class="font-semibold text-amber-800">
-                        Web Bluetooth Not Supported
+                        Printer Connection Not Supported
                     </h4>
                     <p class="text-sm text-amber-700 mt-1">
-                        Please use Chrome, Edge, or Opera browser for Bluetooth
-                        thermal printer support. Firefox and Safari are not
-                        supported.
+                        Please use a Chromium-based browser (Chrome/Edge/Opera)
+                        for Bluetooth or USB thermal printer support. Firefox
+                        and Safari are not supported.
                     </p>
                 </div>
             </div>
@@ -146,18 +157,24 @@ const emit = defineEmits<{
 const toast = useToast();
 
 const isConnected = ref(false);
-const connecting = ref(false);
+const connectingBluetooth = ref(false);
+const connectingUsb = ref(false);
 const printing = ref(false);
 const autoPrinting = ref(false);
 const isBluetoothSupported = ref(false);
+const isUsbSupported = ref(false);
 
 // Check browser compatibility
 const checkBluetoothSupport = () => {
     isBluetoothSupported.value = thermalPrinter.isBluetoothSupported();
 };
 
+const checkUsbSupport = () => {
+    isUsbSupported.value = thermalPrinter.isUsbSupported();
+};
+
 // Connect to printer
-const connectPrinter = async () => {
+const connectBluetoothPrinter = async () => {
     if (!isBluetoothSupported.value) {
         toast.add({
             severity: "error",
@@ -168,7 +185,7 @@ const connectPrinter = async () => {
         return;
     }
 
-    connecting.value = true;
+    connectingBluetooth.value = true;
     try {
         // Try to connect using receipt printer configuration first
         let connected = false;
@@ -218,7 +235,71 @@ const connectPrinter = async () => {
             life: 5000,
         });
     } finally {
-        connecting.value = false;
+        connectingBluetooth.value = false;
+    }
+};
+
+const connectUsbPrinter = async () => {
+    if (!isUsbSupported.value) {
+        toast.add({
+            severity: "error",
+            summary: "Not Supported",
+            detail: "WebUSB is not supported in this browser",
+            life: 5000,
+        });
+        return;
+    }
+
+    connectingUsb.value = true;
+    try {
+        let connected = false;
+        try {
+            connected = await thermalPrinter.connectToPrinterType(
+                "receipt",
+                "usb"
+            );
+        } catch (error) {
+            console.warn(
+                "Failed to connect with receipt config (USB), trying default USB connection:",
+                error
+            );
+            connected = await thermalPrinter.connectToUsbPrinter();
+        }
+
+        isConnected.value = connected;
+
+        if (connected) {
+            toast.add({
+                severity: "success",
+                summary: "Connected",
+                detail: "Successfully connected to USB thermal printer",
+                life: 3000,
+            });
+            emit("connected", true);
+
+            if (props.autoPrint && props.receiptData) {
+                setTimeout(() => {
+                    printReceipt();
+                }, 500);
+            }
+        } else {
+            toast.add({
+                severity: "error",
+                summary: "Connection Failed",
+                detail: "Failed to connect to USB printer",
+                life: 5000,
+            });
+        }
+    } catch (error: any) {
+        console.error("USB connection error:", error);
+        toast.add({
+            severity: "error",
+            summary: "Connection Error",
+            detail: error.message || "Failed to connect to USB printer",
+            life: 5000,
+        });
+    } finally {
+        connectingUsb.value = false;
     }
 };
 
@@ -283,6 +364,7 @@ const checkConnectionStatus = () => {
 // Auto-connect on mount if enabled
 onMounted(async () => {
     checkBluetoothSupport();
+    checkUsbSupport();
     checkConnectionStatus();
 
     // Auto-load receipt printer configuration and connect if auto-connect is enabled
@@ -297,13 +379,14 @@ onMounted(async () => {
                     printReceipt();
                 }, 500);
             } else if (!isConnected.value && props.autoConnect) {
-                await connectPrinter();
+                // Default auto-connect remains Bluetooth for backward compatibility
+                await connectBluetoothPrinter();
             }
         } catch (error) {
             console.error("Failed to load printer config:", error);
             // Continue without config if it fails
             if (!isConnected.value && props.autoConnect) {
-                await connectPrinter();
+                await connectBluetoothPrinter();
             }
         }
     }
@@ -316,7 +399,8 @@ watch(isConnected, (connected) => {
 
 // Expose methods for parent components
 defineExpose({
-    connectPrinter,
+    connectBluetoothPrinter,
+    connectUsbPrinter,
     disconnectPrinter,
     printReceipt,
     openPrinterSettings,

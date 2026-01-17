@@ -23,7 +23,7 @@ class SalesByCashierServerResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-users';
     protected static ?string $navigationLabel = 'Sales by Cashier/Server';
     protected static ?string $navigationGroup = 'Sales Report';
-    protected static ?int $navigationSort = 14;
+    protected static ?int $navigationSort = 16;
 
     public static function table(Table $table): Table
     {

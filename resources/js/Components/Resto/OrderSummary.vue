@@ -99,6 +99,7 @@
             :less-discount-total="orderItemLessDiscount"
             :table-info="tableInfo"
             :general-settings="props.generalSettings"
+            :is-waiter-mode="props.isWaiterMode"
             @save-order="handleSaveOrder"
             @checkout="handleCheckout"
             @open-discount-modal="openDiscountModal"
@@ -106,9 +107,11 @@
             @transfer-order-items="handleTransferOrderItems"
             @view-table="handleViewTable"
             @end-of-shift="handleEndOfShift"
-            @update-order-type="(type: string) => {
-                selectedOrderType = type;
-            }"
+            @update-order-type="
+                (type: string) => {
+                    selectedOrderType = type;
+                }
+            "
         />
 
         <!-- Edit Item Modal -->
@@ -118,6 +121,7 @@
             @save="saveEdit"
             @add-discount="handleAddDiscountToItem"
             @clear-discount="handleClearDiscountFromItem"
+            @add-add-on="handleAddAddOnToItem"
             @add-modifier="handleAddModifierToItem"
         />
 
@@ -143,6 +147,13 @@
             v-model:visible="showAddModifierModal"
             :selected-items="selectedItemsForModal"
             @add="handleModifierAdded"
+        />
+
+        <!-- Add Add-on Modal -->
+        <AddAddOnModal
+            v-model:visible="showAddAddOnModal"
+            :selected-items="selectedItemsForModal"
+            @add="handleAddOnAdded"
         />
 
         <!-- Item Modifiers Modal -->
@@ -198,6 +209,7 @@ import EditItemModal from "./OrderSummary/EditItemModal.vue";
 import DiscountModal from "./OrderSummary/DiscountModal.vue";
 import RequiredReasonModal from "./OrderSummary/RequiredReasonModal.vue";
 import AddModifierModal from "./OrderSummary/AddModifierModal.vue";
+import AddAddOnModal from "./OrderSummary/AddAddOnModal.vue";
 import ItemModifiersModal from "./OrderSummary/ItemModifiersModal.vue";
 import CloseSessionModal from "@/Pages/Resto/Partials/CloseSessionModal.vue";
 import SessionSummaryModal from "@/Pages/Resto/Partials/SessionSummaryModal.vue";
@@ -221,6 +233,7 @@ const props = defineProps<{
         company_phone: string;
         company_logo: string;
     };
+    isWaiterMode?: boolean; // Hide settle button in waiter mode
 }>();
 
 const toast = useToast();
@@ -294,6 +307,7 @@ const tableInfo = computed(() => props.cart?.table_room || props.currentTable);
 const showEditModal = ref(false);
 const showDiscountModal = ref(false);
 const showRequiredReasonModal = ref(false);
+const showAddAddOnModal = ref(false);
 const showAddModifierModal = ref(false);
 const showTransferOrderItemsModal = ref(false);
 const showItemModifiersModal = ref(false);
@@ -326,7 +340,7 @@ watch(
     () => selectedOrderType.value,
     (newVal) => {
         emit("changeOrderType", newVal);
-    }
+    },
 );
 
 // Computed values
@@ -339,7 +353,7 @@ const subtotal = computed(() => {
             const total = item.selected_options.reduce(
                 (optSum: number, option: any) =>
                     optSum + parseFloat(option.price || 0),
-                0
+                0,
             );
             return sum + total;
         }
@@ -374,8 +388,8 @@ const finalTotal = computed(() => total.value + serviceCharge.value);
 
 const selectedItemsForModal = computed(() =>
     orderItems.value.filter((item) =>
-        selectedItemsForDiscount.value.includes(item.id)
-    )
+        selectedItemsForDiscount.value.includes(item.id),
+    ),
 );
 
 // Get current open session from props
@@ -468,7 +482,7 @@ const saveEdit = (editedItem: any) => {
                         life: 3000,
                     });
                 },
-            }
+            },
         );
     }
 };
@@ -480,7 +494,7 @@ const toggleItemForDiscount = (itemId: number, checked: boolean) => {
         }
     } else {
         selectedItemsForDiscount.value = selectedItemsForDiscount.value.filter(
-            (id) => id !== itemId
+            (id) => id !== itemId,
         );
     }
 };
@@ -528,6 +542,43 @@ const handleAddModifier = () => {
     showAddModifierModal.value = true;
 };
 
+const handleAddOnAdded = (_addOnData: any) => {
+    const selectedItemIds = (_addOnData?.selectedCartItems || []).map(
+        (item: any) => item.id,
+    );
+    const productAddOnId = _addOnData?.addOn?.id;
+
+    router.put(
+        route("resto.cart.apply-add-on", {
+            cartItemIds: selectedItemIds,
+        }),
+        {
+            productAddOnId,
+        },
+        {
+            onSuccess: () => {
+                toast.add({
+                    severity: "success",
+                    summary: "Success",
+                    detail: "Add-on added successfully",
+                    life: 3000,
+                });
+
+                showAddAddOnModal.value = false;
+                selectedItemsForDiscount.value = [];
+            },
+            onError: () => {
+                toast.add({
+                    severity: "error",
+                    summary: "Error",
+                    detail: "Failed to add add-on",
+                    life: 3000,
+                });
+            },
+        },
+    );
+};
+
 const handleTransferOrderItems = async () => {
     // Fetch occupied tables
     try {
@@ -538,7 +589,7 @@ const handleTransferOrderItems = async () => {
         // Flatten all tables from all locations and filter occupied ones, excluding current table
         occupiedTables.value = tableRooms.filter(
             (table: any) =>
-                table.status === "occupied" && table.id !== tableInfo.value.id
+                table.status === "occupied" && table.id !== tableInfo.value.id,
         );
 
         selectedTransferTarget.value = null;
@@ -555,7 +606,7 @@ const handleTransferOrderItems = async () => {
 
 const handleModifierAdded = (modifierData: any) => {
     const selectedItemIds = modifierData.selectedCartItems.map(
-        (item: any) => item.id
+        (item: any) => item.id,
     );
 
     router.put(
@@ -586,7 +637,7 @@ const handleModifierAdded = (modifierData: any) => {
                     life: 3000,
                 });
             },
-        }
+        },
     );
 };
 
@@ -648,7 +699,7 @@ const handleRequiredReason = (data: any) => {
                         life: 3000,
                     });
                 },
-            }
+            },
         );
     }
 };
@@ -690,7 +741,7 @@ const handleClearDiscountFromItem = (item: any) => {
                     life: 3000,
                 });
             },
-        }
+        },
     );
 };
 
@@ -698,6 +749,13 @@ const handleAddModifierToItem = (item: any) => {
     // Select the item for modifier
     selectedItemsForDiscount.value = [item.id];
     showAddModifierModal.value = true;
+    showEditModal.value = false;
+};
+
+const handleAddAddOnToItem = (item: any) => {
+    // Select the item for add-on
+    selectedItemsForDiscount.value = [item.id];
+    showAddAddOnModal.value = true;
     showEditModal.value = false;
 };
 
@@ -731,7 +789,7 @@ const handleRemoveModifier = (item: any, modifierValue: number) => {
                     life: 3000,
                 });
             },
-        }
+        },
     );
 };
 
@@ -781,9 +839,8 @@ const handleConfirmCloseSession = async (data: any) => {
 
             // Connect to printer if not already connected
             if (!thermalPrinter.isConnected()) {
-                const connected = await thermalPrinter.connectToPrinterType(
-                    "receipt"
-                );
+                const connected =
+                    await thermalPrinter.connectToPrinterType("receipt");
                 if (!connected) {
                     // Printer not available, show modal
                     showSessionSummaryModal.value = true;
@@ -884,7 +941,7 @@ const confirmTransferOrderItems = () => {
                     life: 3000,
                 });
             },
-        }
+        },
     );
 };
 
@@ -1045,7 +1102,7 @@ const handleCustomerSelected = async (customer: any | null) => {
 // Update cashier state in localStorage
 const updateCashierStateInLocalStorage = (
     tableId: number | null,
-    cartId?: number | null
+    cartId?: number | null,
 ) => {
     try {
         const cashierStateKey = "quickjuan_cashier_state";
@@ -1066,7 +1123,7 @@ const updateCashierStateInLocalStorage = (
             "Updated cashier state with tableId:",
             tableId,
             "cartId:",
-            cartId
+            cartId,
         );
     } catch (error) {
         console.error("Failed to update cashier state in localStorage:", error);

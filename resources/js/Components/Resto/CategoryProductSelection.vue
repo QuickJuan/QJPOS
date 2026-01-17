@@ -105,6 +105,7 @@ const props = defineProps<{
     tableId: string | number;
     locationType: string | null;
     selectedOrderType?: string;
+    isWaiterMode?: boolean;
 }>();
 
 // Initialize stores and composables
@@ -148,7 +149,7 @@ const activeCategories = computed(() => {
     }
 
     const filtered = productStore.getCategories.filter(
-        (category) => category && category.id && category.name
+        (category) => category && category.id && category.name,
     );
 
     return filtered;
@@ -160,7 +161,7 @@ const selectedCategoryId = computed(() => {
         return null;
     }
     const category = activeCategories.value.find(
-        (cat) => cat.slug === selectedCategorySlug.value
+        (cat) => cat.slug === selectedCategorySlug.value,
     );
     return category?.id || null;
 });
@@ -197,7 +198,7 @@ const handleCategorySelection = (category: Category) => {
             {
                 preserveState: false,
                 preserveScroll: false,
-            }
+            },
         );
     }
 };
@@ -213,7 +214,7 @@ const backToCategories = () => {
         {
             preserveState: false,
             preserveScroll: false,
-        }
+        },
     );
 };
 

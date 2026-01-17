@@ -81,4 +81,5 @@ class CategoryController extends Controller
             abort(500, 'Failed to load category');
         }
     }
+
 }

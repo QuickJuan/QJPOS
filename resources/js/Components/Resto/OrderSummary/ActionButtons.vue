@@ -35,8 +35,9 @@
                     <ChevronDownIcon class="w-3 h-3" />
                 </button>
 
-                <!-- Settle Bill Button -->
+                <!-- Settle Bill Button - Hide in waiter mode -->
                 <button
+                    v-if="!isOrderTaking"
                     @click="openSettlePaymentPage"
                     class="py-2 px-3 bg-success-600 text-white rounded-lg font-semibold hover:bg-success-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
                 >
@@ -134,6 +135,7 @@ const props = defineProps<{
         company_phone: string;
         company_logo: string;
     };
+    isWaiterMode?: boolean; // Hide settle button in waiter mode
 }>();
 
 const emit = defineEmits<{
@@ -167,6 +169,16 @@ const orderStore = useOrderStore();
 
 // UsePage
 const page = usePage();
+
+const isOrderTaking = computed(() => {
+    const raw = page.props?.auth?.user?.current_role ?? "";
+    const normalized = String(raw)
+        .toLowerCase()
+        .replaceAll(" ", "_")
+        .replaceAll("-", "_");
+
+    return normalized === "order_taking";
+});
 
 // Modal visibility states
 const showOrderTypeModal = ref(false);
@@ -215,7 +227,7 @@ const orderTypes = [
 const selectedOrderTypeData = computed(() => {
     return (
         orderTypes.find(
-            (orderType) => orderType.value === orderStore.selectedOrderType
+            (orderType) => orderType.value === orderStore.selectedOrderType,
         ) || orderTypes[0]
     );
 });
@@ -266,7 +278,7 @@ const openSettlePaymentPage = () => {
     router.visit(
         route("resto.cart.settle-payment", {
             cart: props.cart.id,
-        })
+        }),
     );
 };
 
@@ -350,7 +362,7 @@ const sendPlacedOrderToPrinter = async (
     tableName: string,
     placedOrderItems: any[],
     servedBy: string,
-    servingNumber?: number | null
+    servingNumber?: number | null,
 ) => {
     if (!placedOrderItems || placedOrderItems.length === 0) {
         throw new Error("No items available to print.");
@@ -360,7 +372,7 @@ const sendPlacedOrderToPrinter = async (
         const connected = await thermalPrinter.connectToPrinterType("kitchen");
         if (!connected) {
             throw new Error(
-                "Printer not connected. Please connect a kitchen printer first."
+                "Printer not connected. Please connect a kitchen printer first.",
             );
         }
     }
@@ -370,7 +382,7 @@ const sendPlacedOrderToPrinter = async (
         tableName || "Table",
         placedOrderItems,
         servedBy,
-        servingNumber
+        servingNumber,
     );
 };
 
@@ -385,7 +397,7 @@ const handleServerConfirm = async (payload: ServerConfirmationPayload) => {
         props.tableId,
         props.cart?.id,
         payload.serverId,
-        payload.servingNumber
+        payload.servingNumber,
     );
 
     if (response.success) {
@@ -407,7 +419,7 @@ const handleServerConfirm = async (payload: ServerConfirmationPayload) => {
                     response.tableRoom?.name || "Table",
                     response.placedOrderItems,
                     response.servedBy,
-                    response.servingNumber ?? null
+                    response.servingNumber ?? null,
                 );
             } catch (printError) {
                 console.error("Failed to print order:", printError);
@@ -425,7 +437,7 @@ const handleServerConfirm = async (payload: ServerConfirmationPayload) => {
         let locationId = response.data?.tableRoom?.table_room_location_id;
         if (locationId) {
             router.visit(
-                route("table-rooms.index", { locationId: locationId })
+                route("table-rooms.index", { locationId: locationId }),
             );
         } else {
             router.visit(route("table-rooms.index"));
@@ -479,13 +491,13 @@ const handleReprintOrder = async () => {
 
     try {
         const response = await httpGet(
-            route("resto.cart.reprint-order", { batchNumber })
+            route("resto.cart.reprint-order", { batchNumber }),
         );
 
         if (!response?.success || !response?.data) {
             throw new Error(
                 response?.error ||
-                    "Unable to fetch placed order items. Please try again."
+                    "Unable to fetch placed order items. Please try again.",
             );
         }
 
@@ -497,7 +509,7 @@ const handleReprintOrder = async () => {
         ) {
             throw new Error(
                 payload?.message ||
-                    "No placed order items found for this batch number."
+                    "No placed order items found for this batch number.",
             );
         }
 
@@ -506,7 +518,7 @@ const handleReprintOrder = async () => {
             payload.tableRoom?.name || "Table",
             payload.placedOrderItems,
             payload.servedBy ?? "N/A",
-            payload.servingNumber ?? null
+            payload.servingNumber ?? null,
         );
 
         toast.add({

@@ -116,12 +116,18 @@
                 </div>
 
                 <!-- Forgot Password Link -->
-                <div class="text-center pt-2">
+                <div class="text-center pt-2 space-y-2">
                     <Link
                         :href="route('password.request')"
-                        class="text-sm text-primary-600 hover:text-primary-700 underline font-medium transition-colors duration-200"
+                        class="block text-sm text-primary-600 hover:text-primary-700 underline font-medium transition-colors duration-200"
                     >
                         Forgot your password?
+                    </Link>
+                    <Link
+                        :href="route('waiter.login')"
+                        class="block text-sm text-neutral-600 hover:text-primary-600 font-medium transition-colors duration-200"
+                    >
+                        Login as Waiter/Server →
                     </Link>
                 </div>
             </form>

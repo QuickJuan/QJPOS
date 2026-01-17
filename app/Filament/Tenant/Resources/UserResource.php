@@ -70,15 +70,16 @@ class UserResource extends Resource
 
                 Toggle::make('otp_enabled')
                     ->label('OTP Enabled')
-                    ->hint('Whether time-based OTP is enabled for this user')
+                    ->hint('Whether OTP is enabled for this user')
                     ->disabled()
                     ->dehydrated(),
 
                 TextInput::make('otp_secret')
-                    ->label('OTP Secret')
-                    ->hint('The secret key for the authenticator app')
-                    ->disabled()
-                    ->dehydrated(false)
+                    ->label('OTP PIN')
+                    ->hint('6-digit PIN for waiter login')
+                    ->maxLength(6)
+                    ->placeholder('Enter 6-digit PIN')
+                    ->helperText('This PIN will be used for waiter login authentication')
                     ->visibleOn('edit'),
             ]);
     }
@@ -139,30 +140,23 @@ class UserResource extends Resource
                     ->modalDescription('This will generate a new time-based OTP secret for this user. The user will need to scan the QR code with their authenticator app.')
                     ->modalSubmitActionLabel('Generate')
                     ->action(function (User $record) {
-                        // Generate the secret and QR code
+                        // Generate a proper TOTP secret for authenticator apps
                         $otpData = OtpSecretService::generateSecret($record->email, config('app.name', 'QuickJuan'));
 
-                        // Save to user
-                        $record->update([
-                            'otp_secret' => $otpData['secret'],
-                            'otp_enabled' => true,
-                            'otp_enabled_at' => now(),
-                        ]);
-
-                        // Store QR code in session for display
-                        session()->put([
-                            'otp_qr_code' => $otpData['qr_code'],
-                            'otp_secret' => $otpData['secret'],
-                        ]);
+                        // Save to user and refresh
+                        $record->otp_secret = $otpData['secret'];
+                        $record->otp_enabled = true;
+                        $record->otp_enabled_at = now();
+                        $record->save();
+                        $record->refresh();
 
                         Notification::make()
                             ->success()
                             ->title('OTP Secret Generated!')
-                            ->body("The user should scan the QR code. Secret: {$otpData['secret']}")
+                            ->body('Scan the QR code to add this account to your authenticator app.')
                             ->persistent()
                             ->send();
-                    })
-                    ->after(function (User $record) {
+
                         // Redirect to show OTP page
                         return redirect()->route('filament.tenant.resources.users.show-otp-qr-code', $record);
                     }),

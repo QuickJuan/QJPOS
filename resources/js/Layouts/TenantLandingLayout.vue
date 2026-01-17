@@ -168,7 +168,7 @@ const page = usePage<PageProps>();
 const authUser = computed(() => page.props.auth?.user ?? null);
 const isAuthenticated = computed(() => Boolean(authUser.value));
 const activeBranch = computed<ActiveBranch | null>(
-    () => page.props.active_branch ?? null
+    () => page.props.active_branch ?? null,
 );
 const authUserName = computed(() => {
     const name =
@@ -184,6 +184,7 @@ const authUserEmail = computed(() => {
             : undefined;
     return email ?? null;
 });
+
 const totalBranches = computed(() => page.props.branches?.length ?? 0);
 const hasMultipleBranches = computed(() => totalBranches.value > 1);
 const brandTitle = computed(
@@ -191,10 +192,10 @@ const brandTitle = computed(
         activeBranch.value?.name ??
         page.props.tenant?.brand_name ??
         page.props.tenant?.name ??
-        "QuickJuan"
+        "QuickJuan",
 );
 const brandLabel = computed(() =>
-    activeBranch.value?.name ? "Current branch" : "Tenant"
+    activeBranch.value?.name ? "Current branch" : "Tenant",
 );
 const brandCTA = computed(() => activeBranch.value?.name ?? brandTitle.value);
 
@@ -236,7 +237,7 @@ const handleLandingLogout = () => {
             onSuccess: () => {
                 window.location.href = route("login");
             },
-        }
+        },
     );
 };
 

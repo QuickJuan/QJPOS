@@ -9,12 +9,15 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\EWalletController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductAddOnController;
 use App\Http\Controllers\TableRoomController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\CashierSessionController;
 use App\Http\Controllers\CashierCashoutController;
+use App\Http\Controllers\PrintXReadingShiftController;
 use App\Http\Controllers\TableManagementController;
 use App\Http\Controllers\TenantLandingController;
+use App\Http\Controllers\Waiter\AuthController as WaiterAuthController;
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
 use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
@@ -70,6 +73,24 @@ if (!isCentralDomain()) {
                 });
         });
 
+    // WAITER AUTHENTICATION ROUTES
+    Route::prefix('waiter')->name('waiter.')->group(function () {
+        Route::controller(WaiterAuthController::class)->group(function () {
+            // Guest routes
+            Route::middleware('guest')->group(function () {
+                Route::get('/login', 'index')->name('login');
+                Route::post('/verify-otp', 'verifyOtp')
+                    ->name('verify-otp')
+                    ->middleware('throttle:5,1');
+            });
+
+            // Auth routes
+            Route::middleware('auth')->group(function () {
+                Route::post('/logout', 'logout')->name('logout');
+            });
+        });
+    });
+
     // ROUTE FOR FORGOT PASSWORD
     Route::controller(PasswordResetLinkController::class)
         ->middleware('guest')
@@ -120,6 +141,11 @@ if (!isCentralDomain()) {
             'tenant' => tenant(),
         ]);
     })->name('test-landing');
+
+    // Print view for X-Reading (Cashier Shift) on bond paper
+    Route::middleware('auth')
+        ->get('/print/x-reading/{cashierSession}', PrintXReadingShiftController::class)
+        ->name('x-reading.print');
 
     // ROUTES FOR AUTHENTICATED USER
     Route::middleware(['auth:sanctum'])
@@ -184,67 +210,85 @@ if (!isCentralDomain()) {
             Route::as('resto.')
                 ->prefix('/resto')
                 ->group(function () {
-                    // Cashier session routes (must come before category routes to avoid slug conflicts)
-                    Route::controller(CashierSessionController::class)
+                    // Shared POS ordering routes (cashiering + order_taking)
+                    Route::middleware('role:cashiering,order_taking')
                         ->group(function () {
-                            Route::get('/preview', 'preview')->name('preview');
-                            Route::get('/close-shift', 'showCloseShift')->name('close-shift');
-                            Route::get('/review/x-readings', 'reviewXTransactions')->name('review-x-readings');
-                            Route::get('/product/{product}/options', 'productOptions')->name('product.options');
-                            Route::post('/session/start', 'startSession')->name('session.start');
-                            Route::post('/session/close', 'closeShift')->name('session.close');
-                            Route::get('/session-summary/{shiftNo}', 'getSessionSummaryById')->name('api.session-summary-by-id');
-                            Route::put('/update-bill-no/{branchId}', 'updateBillNo')->name('update-bill-no');
+                            // Product options (used by order-taking flow too)
+                            Route::get('/product/{product}/options', [CashierSessionController::class, 'productOptions'])->name('product.options');
+
+                            // Product add-ons
+                            Route::get('/product/{product}/add-ons', [ProductAddOnController::class, 'index'])->name('product.add-ons');
+
+                            Route::controller(CartController::class)
+                                ->group(function () {
+                                    Route::post('/cart/create-order', 'create')->name('cart.create-order');
+                                    Route::post('/cart/add', 'addToCart')->name('cart.add');
+                                    Route::post('/cart/search-barcode', 'searchBarcode')->name('cart.search-barcode');
+                                    Route::post('/cart/update-customer', 'updateCustomer')->name('cart.update-customer');
+                                    Route::put('/cart/{cartId}', 'updateCart')->name('cart.update');
+                                    Route::post('/cart/merge', 'mergeCart')->name('cart.merge');
+                                    Route::post('/cart/place-order', 'placeOrder')->name('cart.place-order');
+                                    Route::post('/cart/claim-order/{tableId}', 'claimOrder')->name('cart.claim-order');
+                                    Route::put('/cart/item/discount/', 'applyDiscountToCartItem')->name('cart.apply-discount');
+                                    Route::put('/cart/item/modifier/', 'applyModifierToCartItem')->name('cart.apply-modifier');
+                                    Route::put('/cart/item/modifier/remove', 'removeModifierFromCartItem')->name('cart.remove-modifier');
+                                    Route::put('/cart/item/add-on', 'applyAddOnToCartItem')->name('cart.apply-add-on');
+                                    Route::put('/cart/item/{cartItemId}', 'updateCartItem')->name('cart.update-item');
+                                    Route::put('/cart/item/clear-discount/{cartItemId}', 'clearDiscountToCartItem')->name('cart.clear-discount');
+                                    Route::delete('/cart/item/{cartItemId}', 'deleteCartItem')->name('cart.delete');
+                                });
+
+                            // Category routes (wildcard routes should come last)
+                            Route::controller(\App\Http\Controllers\CategoryController::class)
+                                ->group(function () {
+                                    Route::get('/', 'index')->name('index');
+                                    Route::get('/{categorySlug}', 'show')->name('category');
+                                });
                         });
 
-                    Route::controller(CashierCashoutController::class)
-                        ->prefix('/cashier-cashouts')
-                        ->as('cashier-cashouts.')
+                    // Cashier-only routes
+                    Route::middleware('role:cashiering')
                         ->group(function () {
-                            Route::get('/', 'index')->name('index');
-                            Route::get('/create', 'create')->name('create');
-                            Route::post('/', 'store')->name('store');
-                        });
+                            // Cashier session routes (must come before category routes to avoid slug conflicts)
+                            Route::controller(CashierSessionController::class)
+                                ->group(function () {
+                                    Route::get('/preview', 'preview')->name('preview');
+                                    Route::get('/close-shift', 'showCloseShift')->name('close-shift');
+                                    Route::get('/review/x-readings', 'reviewXTransactions')->name('review-x-readings');
+                                    Route::post('/session/start', 'startSession')->name('session.start');
+                                    Route::post('/session/close', 'closeShift')->name('session.close');
+                                    Route::get('/session-summary/{shiftNo}', 'getSessionSummaryById')->name('api.session-summary-by-id');
+                                    Route::put('/update-bill-no/{branchId}', 'updateBillNo')->name('update-bill-no');
+                                });
 
-                    Route::controller(CartController::class)
-                        ->group(function () {
-                            Route::get('/cart/{cart}/settle-payment', 'showSettlePayment')->name('cart.settle-payment');
-                            Route::post('/cart/create-order', 'create')->name('cart.create-order');
-                            Route::post('/cart/add', 'addToCart')->name('cart.add');
-                            Route::post('/cart/search-barcode', 'searchBarcode')->name('cart.search-barcode');
-                            Route::post('/cart/update-customer', 'updateCustomer')->name('cart.update-customer');
-                            Route::put('/cart/{cartId}', 'updateCart')->name('cart.update');
-                            Route::post('/cart/merge', 'mergeCart')->name('cart.merge');
-                            Route::post('/cart/place-order', 'placeOrder')->name('cart.place-order');
-                            Route::get('/cart/reprint-order/{batchNumber}', 'reprintPlacedOrder')->name('cart.reprint-order');
-                            Route::post('/cart/settle-bill', 'settleBill')->name('cart.settle-bill');
-                            Route::post('/cart/transfer-items}', 'transferItems')->name('cart.transfer-items');
-                            Route::post('/cart/claim-order/{tableId}', 'claimOrder')->name('cart.claim-order');
-                            Route::put('/cart/update-bill-number/{cartId}', 'updateBillNumber')->name('cart.update-bill-number');
-                            Route::post('/order/transfer/{tableId}', 'transferOrder')->name('order.transfer');
-                            Route::put('/cart/item/discount/', 'applyDiscountToCartItem')->name('cart.apply-discount');
-                            Route::put('/cart/item/modifier/', 'applyModifierToCartItem')->name('cart.apply-modifier');
-                            Route::put('/cart/item/modifier/remove', 'removeModifierFromCartItem')->name('cart.remove-modifier');
-                            Route::put('/cart/item/{cartItemId}', 'updateCartItem')->name('cart.update-item');
-                            Route::put('/cart/item/clear-discount/{cartItemId}', 'clearDiscountToCartItem')->name('cart.clear-discount');
-                            Route::put('/cart/item/void/{cartItemId}', 'voidCartItem')->name('cart.void-cart');
-                            Route::delete('/cart/item/{cartItemId}', 'deleteCartItem')->name('cart.delete');
-                            Route::post('/cart/item/delete-with-approval', 'deleteCartItemWithApproval')->name('cart.delete-with-approval');
-                            Route::get('/cart/item/{cartItemId}/approvers', 'getApproversForItem')->name('cart.get-approvers');
-                        });
+                            Route::controller(CashierCashoutController::class)
+                                ->prefix('/cashier-cashouts')
+                                ->as('cashier-cashouts.')
+                                ->group(function () {
+                                    Route::get('/', 'index')->name('index');
+                                    Route::get('/create', 'create')->name('create');
+                                    Route::post('/', 'store')->name('store');
+                                });
 
-                    Route::controller(\App\Http\Controllers\PendingOrdersController::class)
-                        ->as('pending-orders.')
-                        ->group(function () {
-                            Route::get('/pending-orders', 'index')->name('index');
-                            Route::put('/pending-orders/item/{itemId}/toggle-served', 'toggleServed')->name('toggle-served');
-                        });
+                            Route::controller(CartController::class)
+                                ->group(function () {
+                                    Route::get('/cart/{cart}/settle-payment', 'showSettlePayment')->name('cart.settle-payment');
+                                    Route::get('/cart/reprint-order/{batchNumber}', 'reprintPlacedOrder')->name('cart.reprint-order');
+                                    Route::post('/cart/settle-bill', 'settleBill')->name('cart.settle-bill');
+                                    Route::post('/cart/transfer-items}', 'transferItems')->name('cart.transfer-items');
+                                    Route::put('/cart/update-bill-number/{cartId}', 'updateBillNumber')->name('cart.update-bill-number');
+                                    Route::post('/order/transfer/{tableId}', 'transferOrder')->name('order.transfer');
+                                    Route::put('/cart/item/void/{cartItemId}', 'voidCartItem')->name('cart.void-cart');
+                                    Route::post('/cart/item/delete-with-approval', 'deleteCartItemWithApproval')->name('cart.delete-with-approval');
+                                    Route::get('/cart/item/{cartItemId}/approvers', 'getApproversForItem')->name('cart.get-approvers');
+                                });
 
-                    // Category routes (wildcard routes should come last)
-                    Route::controller(\App\Http\Controllers\CategoryController::class)
-                        ->group(function () {
-                            Route::get('/', 'index')->name('index');
-                            Route::get('/{categorySlug}', 'show')->name('category');
+                            Route::controller(\App\Http\Controllers\PendingOrdersController::class)
+                                ->as('pending-orders.')
+                                ->group(function () {
+                                    Route::get('/pending-orders', 'index')->name('index');
+                                    Route::put('/pending-orders/item/{itemId}/toggle-served', 'toggleServed')->name('toggle-served');
+                                });
                         });
                 });
 
@@ -349,6 +393,7 @@ if (!isCentralDomain()) {
             //     ->group(function () {
             //         Route::get('/hourly-sales', [\App\Http\Controllers\HourlySalesReportController::class, 'index'])->name('hourly-sales');
             //     });
+
         });
 
     // // Web Receipt Route (for browser viewing)

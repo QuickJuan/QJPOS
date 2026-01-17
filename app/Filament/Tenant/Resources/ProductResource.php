@@ -710,6 +710,8 @@ class ProductResource extends Resource
             // RelationManagers\BrandRelationManager::class,
             RelationManagers\ProductPackagingsRelationManager::class,
             RelationManagers\OptionsRelationManager::class,
+            RelationManagers\ProductAddOnsRelationManager::class,
+            RelationManagers\RelatedProductsRelationManager::class,
             // Add other relation managers here if needed
         ];
     }
