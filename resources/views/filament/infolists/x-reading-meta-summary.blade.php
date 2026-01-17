@@ -248,7 +248,9 @@
                                     <td class="py-2 text-right whitespace-nowrap">
                                         @if (is_numeric($expectedCurrency))
                                             {{ $symbol }} {{ $format($expectedCurrency) }}
-                                            <span class="text-xs text-gray-500">(≈ {{ $baseSymbol }} {{ $format($expectedBase) }})</span>
+                                            @if (round((float) $expectedCurrency, 2) !== round((float) $expectedBase, 2))
+                                                <span class="text-xs text-gray-500">(≈ {{ $baseSymbol }} {{ $format($expectedBase) }})</span>
+                                            @endif
                                         @else
                                             {{ $baseSymbol }} {{ $format($expectedBase) }}
                                         @endif
@@ -256,7 +258,9 @@
                                     <td class="py-2 text-right whitespace-nowrap">
                                         @if (is_numeric($actualCurrency))
                                             {{ $symbol }} {{ $format($actualCurrency) }}
-                                            <span class="text-xs text-gray-500">(≈ {{ $baseSymbol }} {{ $format($actualBase) }})</span>
+                                            @if (round((float) $actualCurrency, 2) !== round((float) $actualBase, 2))
+                                                <span class="text-xs text-gray-500">(≈ {{ $baseSymbol }} {{ $format($actualBase) }})</span>
+                                            @endif
                                         @else
                                             {{ $baseSymbol }} {{ $format($actualBase) }}
                                         @endif
@@ -264,7 +268,9 @@
                                     <td class="py-2 text-right whitespace-nowrap font-semibold {{ $varianceClass }}">
                                         @if (is_numeric($varianceCurrency))
                                             {{ $symbol }} {{ $fmtSigned($varianceCurrency) }}
-                                            <span class="text-xs text-gray-500">(≈ {{ $baseSymbol }} {{ $fmtSigned($varianceBase) }})</span>
+                                            @if (round((float) $varianceCurrency, 2) !== round((float) $varianceBase, 2))
+                                                <span class="text-xs text-gray-500">(≈ {{ $baseSymbol }} {{ $fmtSigned($varianceBase) }})</span>
+                                            @endif
                                         @else
                                             {{ $baseSymbol }} {{ $fmtSigned($varianceBase) }}
                                         @endif
