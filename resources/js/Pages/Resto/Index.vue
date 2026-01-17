@@ -12,6 +12,7 @@
                 <!-- Left: Menu Toggle -->
                 <button
                     @click="toggleSidebar"
+                    data-sidebar-toggle
                     class="bg-primary text-white rounded-lg p-2.5 shadow hover:bg-primary-600 transition-all"
                 >
                     <svg

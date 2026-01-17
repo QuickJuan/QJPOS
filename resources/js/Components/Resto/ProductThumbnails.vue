@@ -44,12 +44,14 @@
             >
                 <!-- Product Image -->
                 <div class="relative">
-                    <div class="rounded-t-lg bg-gray-50 h-36">
+                    <div
+                        class="rounded-t-lg bg-gray-50 h-36 flex items-center justify-center overflow-hidden"
+                    >
                         <img
                             v-if="product?.featured_image_url"
                             :src="product?.featured_image_url"
                             :alt="product?.name"
-                            class="w-auto h-full object-contain group-hover:scale-105 transition-transform duration-200"
+                            class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-200"
                         />
                         <div
                             v-else
@@ -126,7 +128,7 @@ const getPrice = (product: any) => {
     if (product.multiple_packaging) {
         if (product.product_packagings.length > 0) {
             price = formatMoney(
-                getLowestPriceForProductPackagings(product.product_packagings)
+                getLowestPriceForProductPackagings(product.product_packagings),
             );
         } else {
             formatMoney(parseFloat(product.price || "0").toFixed(2));
