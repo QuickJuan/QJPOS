@@ -1,25 +1,28 @@
 <x-dynamic-component :component="$getEntryWrapperView()" :entry="$entry">
     @php
         $state = $getState();
-        $baseSymbol = is_array($state) ? ($state['base_currency_symbol'] ?? '₱') : '₱';
+
+        $payload = is_array($state) && array_key_exists('breakdown', $state)
+            ? ($state['breakdown'] ?? [])
+            : $state;
+
+        $baseSymbol = is_array($payload) ? ($payload['base_currency_symbol'] ?? '₱') : '₱';
 
         $format = function ($value): string {
             $number = is_numeric($value) ? (float) $value : 0.0;
             return number_format($number, 2);
         };
 
-        $isStructured = is_array($state) && array_key_exists('currencies', $state) && is_array($state['currencies']);
-        $currencies = $isStructured ? ($state['currencies'] ?? []) : [];
-        $totals = $isStructured && is_array($state['totals'] ?? null) ? $state['totals'] : null;
+        $isStructured = is_array($payload) && array_key_exists('currencies', $payload) && is_array($payload['currencies']);
+        $currencies = $isStructured ? ($payload['currencies'] ?? []) : [];
+        $totals = $isStructured && is_array($payload['totals'] ?? null) ? $payload['totals'] : null;
 
         $giftCheckTotal = 0.0;
         if ($isStructured) {
-            $giftCheckTotal = (float) ($state['gift_check_total'] ?? ($totals['gift_check_in_base'] ?? 0) ?? 0);
+            $giftCheckTotal = (float) ($payload['gift_check_total'] ?? ($totals['gift_check_in_base'] ?? 0) ?? 0);
         }
 
-        $hasTotals = $isStructured && $totals && (array_key_exists('cash_in_base', $totals) || array_key_exists('expected_cash_in_base', $totals) || array_key_exists('variance_in_base', $totals));
-
-        $legacyEntries = (! $isStructured && is_array($state)) ? $state : [];
+        $legacyEntries = (! $isStructured && is_array($payload)) ? $payload : [];
         $legacyIsAssociative = ! $isStructured && is_array($legacyEntries) && ! array_is_list($legacyEntries);
         if ($legacyIsAssociative) {
             krsort($legacyEntries, SORT_NUMERIC);
@@ -44,12 +47,6 @@
                         $exchangeRate = (float) ($currency['exchange_rate'] ?? 1);
                         $amountInBase = (float) ($currency['amount_in_base'] ?? ($currency['total_in_base'] ?? ($amountInCurrency * $exchangeRate)));
 
-                        $expectedInCurrency = $currency['expected_in_currency'] ?? null;
-                        $expectedInBase = $currency['expected_in_base'] ?? null;
-                        $varianceInCurrency = $currency['variance_in_currency'] ?? null;
-                        $varianceInBase = $currency['variance_in_base'] ?? null;
-
-                        $hasComparison = is_numeric($expectedInCurrency) || is_numeric($expectedInBase) || is_numeric($varianceInCurrency) || is_numeric($varianceInBase);
                         $denominations = is_array($currency['denominations'] ?? null) ? $currency['denominations'] : [];
                     @endphp
 
@@ -94,43 +91,6 @@
                             </div>
                         @endif
 
-                        @if ($hasComparison)
-                            @php
-                                $varianceClass = 'text-gray-700';
-                                if (is_numeric($varianceInBase) && (float) $varianceInBase > 0) {
-                                    $varianceClass = 'text-emerald-700';
-                                }
-                                if (is_numeric($varianceInBase) && (float) $varianceInBase < 0) {
-                                    $varianceClass = 'text-rose-700';
-                                }
-
-                                $expectedCurrencyValue = is_numeric($expectedInCurrency) ? (float) $expectedInCurrency : 0.0;
-                                $expectedBaseValue = is_numeric($expectedInBase) ? (float) $expectedInBase : ($expectedCurrencyValue * $exchangeRate);
-                                $varianceCurrencyValue = is_numeric($varianceInCurrency) ? (float) $varianceInCurrency : 0.0;
-                                $varianceBaseValue = is_numeric($varianceInBase) ? (float) $varianceInBase : 0.0;
-                            @endphp
-
-                            <div class="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-2 text-xs">
-                                <div class="flex items-center justify-between text-gray-600">
-                                    <span>Expected</span>
-                                    <span class="font-semibold text-gray-900">
-                                        {{ $symbol }} {{ $format($expectedCurrencyValue) }}
-                                        <span class="ml-1 text-[10px] font-normal text-gray-500">
-                                            ≈ {{ $baseSymbol }} {{ $format($expectedBaseValue) }}
-                                        </span>
-                                    </span>
-                                </div>
-                                <div class="flex items-center justify-between font-semibold {{ $varianceClass }}">
-                                    <span>Variance</span>
-                                    <span>
-                                        {{ $symbol }} {{ $format($varianceCurrencyValue) }}
-                                        <span class="ml-1 text-[10px] font-normal text-gray-500">
-                                            ≈ {{ $baseSymbol }} {{ $format($varianceBaseValue) }}
-                                        </span>
-                                    </span>
-                                </div>
-                            </div>
-                        @endif
                     </div>
                 @endforeach
 
@@ -143,35 +103,6 @@
                     </div>
                 @endif
 
-                @if ($hasTotals)
-                    @php
-                        $actual = (float) ($totals['cash_in_base'] ?? $totals['actual_cash_in_base'] ?? 0);
-                        $expected = (float) ($totals['expected_cash_in_base'] ?? 0);
-                        $variance = (float) ($totals['variance_in_base'] ?? ($actual - $expected));
-
-                        $varianceClass = 'text-gray-700';
-                        if ($variance > 0) {
-                            $varianceClass = 'text-emerald-700';
-                        }
-                        if ($variance < 0) {
-                            $varianceClass = 'text-rose-700';
-                        }
-                    @endphp
-                    <div class="space-y-2 rounded-lg border border-gray-200 bg-white p-3 text-sm">
-                        <div class="flex items-center justify-between text-gray-600">
-                            <span>Actual Cash ({{ trim($baseSymbol) }})</span>
-                            <span class="font-semibold text-gray-900">{{ $baseSymbol }} {{ $format($actual) }}</span>
-                        </div>
-                        <div class="flex items-center justify-between text-gray-600">
-                            <span>Expected Cash</span>
-                            <span class="font-semibold text-gray-900">{{ $baseSymbol }} {{ $format($expected) }}</span>
-                        </div>
-                        <div class="flex items-center justify-between font-semibold {{ $varianceClass }}">
-                            <span>Variance</span>
-                            <span>{{ $baseSymbol }} {{ $format($variance) }}</span>
-                        </div>
-                    </div>
-                @endif
             </div>
         @elseif ($legacyIsAssociative)
             <div class="space-y-1 text-sm">

@@ -54,7 +54,7 @@ class ViewCashierSession extends ViewRecord
         return $state;
     }
 
-    protected function normalizeXReadingMetaSummaryState(mixed $metaData, mixed $cashDenominationDetails, mixed $cashDenominationTotal, mixed $beginningCash): array
+    protected function normalizeXReadingMetaSummaryState(mixed $metaData, mixed $cashDenominationDetails, mixed $cashDenominationTotal, mixed $beginningCash, mixed $recordId = null): array
     {
         if (is_string($metaData)) {
             $decoded = json_decode($metaData, true);
@@ -69,7 +69,7 @@ class ViewCashierSession extends ViewRecord
 
         $metaData = is_array($metaData) ? $metaData : [];
 
-        $details = $this->normalizeCashDenominationDetailsState($cashDenominationDetails);
+        $details = $this->normalizeCashDenominationDetailsState($cashDenominationDetails ?: $cashDenominationTotal);
         $baseSymbol = (string) ($details['base_currency_symbol'] ?? '₱');
 
         $actualCashInBase = null;
@@ -87,7 +87,7 @@ class ViewCashierSession extends ViewRecord
             );
         }
 
-        // Fall back to whatever is stored in cash_denomination (could be numeric in older records)
+        // Final fallback (older records)
         if ($actualCashInBase === null) {
             $actualCashInBase = is_numeric($cashDenominationTotal) ? (float) $cashDenominationTotal : 0.0;
         }
@@ -99,10 +99,23 @@ class ViewCashierSession extends ViewRecord
 
         $netSales = (float) ($metaData['net_sales'] ?? 0);
         $serviceCharge = (float) ($metaData['service_charge'] ?? 0);
-        $expectedCash = $netSales + $serviceCharge;
+
+        $cashComparison = is_array($metaData['cash_comparison'] ?? null) ? $metaData['cash_comparison'] : [];
+        $otherPaymentsComparison = is_array($metaData['other_payments_comparison'] ?? null) ? $metaData['other_payments_comparison'] : [];
+        $allComparisons = array_merge($cashComparison, $otherPaymentsComparison);
+
+        $expectedFromPayments = array_reduce(
+            $allComparisons,
+            fn ($carry, $row) => $carry + (float) (is_array($row) ? ($row['expected_amount_in_base'] ?? 0) : 0),
+            0.0
+        );
+
+        // Prefer payment-based expected totals when available, else fallback.
+        $expectedCash = $expectedFromPayments > 0 ? $expectedFromPayments : ($netSales + $serviceCharge);
         $variance = $actualCashInBase - $expectedCash;
 
         return [
+            'id' => is_numeric($recordId) ? (int) $recordId : null,
             'base_currency_symbol' => $baseSymbol,
             'beginning_cash' => (float) ($beginningCash ?? 0),
             'cash_denomination_total' => (float) $actualCashInBase,
@@ -110,6 +123,8 @@ class ViewCashierSession extends ViewRecord
             'expected_cash' => (float) $expectedCash,
             'variance' => (float) $variance,
             'meta_data' => $metaData,
+            'cash_comparison' => $cashComparison,
+            'other_payments_comparison' => $otherPaymentsComparison,
         ];
     }
 
@@ -205,7 +220,11 @@ class ViewCashierSession extends ViewRecord
                         ViewEntry::make('cash_denomination_details')
                             ->label('Denomination Breakdown')
                             ->view('filament.infolists.x-reading-cash-breakdown')
-                            ->state(fn ($record) => $this->normalizeCashDenominationDetailsState($record?->cash_denomination_details ?? $record?->cash_denomination))
+                            ->state(fn ($record) => [
+                                'breakdown' => $this->normalizeCashDenominationDetailsState($record?->cash_denomination_details ?? $record?->cash_denomination),
+                                'cash_comparison' => is_array($record?->meta_data['cash_comparison'] ?? null) ? $record->meta_data['cash_comparison'] : [],
+                                'other_payments_comparison' => is_array($record?->meta_data['other_payments_comparison'] ?? null) ? $record->meta_data['other_payments_comparison'] : [],
+                            ])
                             ->columnSpanFull()
                             ->visible(fn ($record) => ! empty($record->cash_denomination_details) || ! empty($record->cash_denomination)),
                     ])
@@ -222,6 +241,7 @@ class ViewCashierSession extends ViewRecord
                                 $record?->cash_denomination_details,
                                 $record?->cash_denomination,
                                 $record?->beginning_cash,
+                                $record?->id,
                             ))
                             ->columnSpanFull()
                             ->visible(fn ($record) => ! empty($record->meta_data)),

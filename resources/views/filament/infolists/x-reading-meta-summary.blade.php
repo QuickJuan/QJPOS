@@ -4,6 +4,10 @@
         $meta = is_array($state) ? ($state['meta_data'] ?? []) : [];
         $baseSymbol = is_array($state) ? ($state['base_currency_symbol'] ?? '₱') : '₱';
 
+        $cashComparison = is_array($state) ? ($state['cash_comparison'] ?? []) : [];
+        $otherPaymentsComparison = is_array($state) ? ($state['other_payments_comparison'] ?? []) : [];
+        $allComparisons = array_merge(is_array($cashComparison) ? $cashComparison : [], is_array($otherPaymentsComparison) ? $otherPaymentsComparison : []);
+
         $format = function ($value): string {
             $number = is_numeric($value) ? (float) $value : 0.0;
             return number_format($number, 2);
@@ -20,7 +24,14 @@
         $beginningCash = (float) ($state['beginning_cash'] ?? 0);
         $cashDenominationTotal = (float) ($state['cash_denomination_total'] ?? 0);
         $giftCheckTotal = (float) ($state['gift_check_total'] ?? 0);
-        $expectedCash = (float) ($state['expected_cash'] ?? ($netSales + $serviceCharge));
+
+        $expectedFromPayments = array_reduce(
+            $allComparisons,
+            fn ($carry, $row) => $carry + (float) (is_array($row) ? ($row['expected_amount_in_base'] ?? 0) : 0),
+            0.0
+        );
+
+        $expectedCash = (float) ($state['expected_cash'] ?? ($expectedFromPayments > 0 ? $expectedFromPayments : ($netSales + $serviceCharge)));
         $variance = (float) ($state['variance'] ?? ($cashDenominationTotal - $expectedCash));
 
         $positive = fn ($value) => abs((float) $value);
@@ -84,7 +95,7 @@
             </div>
 
             <div class="flex justify-between font-semibold border-b pb-2">
-                <span class="text-gray-700">Total Cash :</span>
+                <span class="text-gray-700">Total:</span>
                 <span class="text-gray-900">{{ $baseSymbol }} {{ $format($netSales + $serviceCharge) }}</span>
             </div>
         </div>
@@ -186,14 +197,135 @@
                     <span class="text-gray-900">{{ $baseSymbol }} {{ $format($giftCheckTotal) }}</span>
                 </div>
             @endif
-            <div class="flex justify-between">
-                <span class="text-gray-600">Expected Cash:</span>
-                <span class="text-gray-900">{{ $baseSymbol }} {{ $format($expectedCash) }}</span>
-            </div>
-            <div class="flex justify-between font-semibold">
-                <span class="text-gray-700">Variance:</span>
-                <span class="text-gray-900">{{ $baseSymbol }} {{ $format($variance) }}</span>
-            </div>
         </div>
+
+        @if (! empty($cashComparison) && is_array($cashComparison))
+            <div class="border-t pt-3">
+                <div class="font-semibold text-gray-700">Cash Comparison</div>
+                <div class="mt-2 overflow-x-auto">
+                    <table class="w-full table-fixed text-sm">
+                        <thead class="text-xs text-gray-500">
+                            <tr class="border-b">
+                                <th class="w-1/4 py-2 text-left font-medium">Method</th>
+                                <th class="w-1/4 py-2 text-right font-medium">Expected</th>
+                                <th class="w-1/4 py-2 text-right font-medium">Actual</th>
+                                <th class="w-1/4 py-2 text-right font-medium">Variance</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            @foreach ($cashComparison as $row)
+                                @php
+                                    if (! is_array($row)) {
+                                        continue;
+                                    }
+
+                                    $method = $row['payment_method_name'] ?? ($row['currency_name'] ?? 'Cash');
+                                    $symbol = $row['symbol'] ?? '';
+
+                                    $expectedCurrency = $row['expected_amount_in_currency'] ?? null;
+                                    $actualCurrency = $row['actual_amount_in_currency'] ?? null;
+                                    $varianceCurrency = $row['variance_in_currency'] ?? null;
+
+                                    $expectedBase = $row['expected_amount_in_base'] ?? 0;
+                                    $actualBase = $row['actual_amount_in_base'] ?? 0;
+                                    $varianceBase = $row['variance_in_base'] ?? 0;
+
+                                    $varianceClass = 'text-gray-900';
+                                    if (is_numeric($varianceBase) && (float) $varianceBase > 0) {
+                                        $varianceClass = 'text-emerald-700';
+                                    }
+                                    if (is_numeric($varianceBase) && (float) $varianceBase < 0) {
+                                        $varianceClass = 'text-rose-700';
+                                    }
+
+                                    $fmtSigned = function ($value) use ($format): string {
+                                        $number = is_numeric($value) ? (float) $value : 0.0;
+                                        return ($number < 0 ? '-' : '') . $format(abs($number));
+                                    };
+                                @endphp
+                                <tr>
+                                    <td class="py-2 pr-4 text-gray-700 whitespace-nowrap">{{ $method }}</td>
+                                    <td class="py-2 text-right whitespace-nowrap">
+                                        @if (is_numeric($expectedCurrency))
+                                            {{ $symbol }} {{ $format($expectedCurrency) }}
+                                            <span class="text-xs text-gray-500">(≈ {{ $baseSymbol }} {{ $format($expectedBase) }})</span>
+                                        @else
+                                            {{ $baseSymbol }} {{ $format($expectedBase) }}
+                                        @endif
+                                    </td>
+                                    <td class="py-2 text-right whitespace-nowrap">
+                                        @if (is_numeric($actualCurrency))
+                                            {{ $symbol }} {{ $format($actualCurrency) }}
+                                            <span class="text-xs text-gray-500">(≈ {{ $baseSymbol }} {{ $format($actualBase) }})</span>
+                                        @else
+                                            {{ $baseSymbol }} {{ $format($actualBase) }}
+                                        @endif
+                                    </td>
+                                    <td class="py-2 text-right whitespace-nowrap font-semibold {{ $varianceClass }}">
+                                        @if (is_numeric($varianceCurrency))
+                                            {{ $symbol }} {{ $fmtSigned($varianceCurrency) }}
+                                            <span class="text-xs text-gray-500">(≈ {{ $baseSymbol }} {{ $fmtSigned($varianceBase) }})</span>
+                                        @else
+                                            {{ $baseSymbol }} {{ $fmtSigned($varianceBase) }}
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        @endif
+
+        @if (! empty($otherPaymentsComparison) && is_array($otherPaymentsComparison))
+            <div class="border-t pt-3">
+                <div class="font-semibold text-gray-700">Other Payments Comparison</div>
+                <div class="mt-2 overflow-x-auto">
+                    <table class="w-full table-fixed text-sm">
+                        <thead class="text-xs text-gray-500">
+                            <tr class="border-b">
+                                <th class="w-1/4 py-2 text-left font-medium">Method</th>
+                                <th class="w-1/4 py-2 text-right font-medium">Expected</th>
+                                <th class="w-1/4 py-2 text-right font-medium">Actual</th>
+                                <th class="w-1/4 py-2 text-right font-medium">Variance</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            @foreach ($otherPaymentsComparison as $row)
+                                @php
+                                    if (! is_array($row)) {
+                                        continue;
+                                    }
+
+                                    $method = $row['payment_method_name'] ?? 'Payment';
+                                    $expectedBase = $row['expected_amount_in_base'] ?? 0;
+                                    $actualBase = $row['actual_amount_in_base'] ?? 0;
+                                    $varianceBase = $row['variance_in_base'] ?? ((float) $actualBase - (float) $expectedBase);
+
+                                    $varianceClass = 'text-gray-900';
+                                    if (is_numeric($varianceBase) && (float) $varianceBase > 0) {
+                                        $varianceClass = 'text-emerald-700';
+                                    }
+                                    if (is_numeric($varianceBase) && (float) $varianceBase < 0) {
+                                        $varianceClass = 'text-rose-700';
+                                    }
+
+                                    $fmtSigned = function ($value) use ($format): string {
+                                        $number = is_numeric($value) ? (float) $value : 0.0;
+                                        return ($number < 0 ? '-' : '') . $format(abs($number));
+                                    };
+                                @endphp
+                                <tr>
+                                    <td class="py-2 pr-4 text-gray-700 whitespace-nowrap">{{ $method }}</td>
+                                    <td class="py-2 text-right whitespace-nowrap">{{ $baseSymbol }} {{ $format($expectedBase) }}</td>
+                                    <td class="py-2 text-right whitespace-nowrap">{{ $baseSymbol }} {{ $format($actualBase) }}</td>
+                                    <td class="py-2 text-right whitespace-nowrap font-semibold {{ $varianceClass }}">{{ $baseSymbol }} {{ $fmtSigned($varianceBase) }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        @endif
     </div>
 </x-dynamic-component>
