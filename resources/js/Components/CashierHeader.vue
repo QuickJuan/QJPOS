@@ -21,7 +21,11 @@
             <!-- Right: Action Buttons -->
             <div class="flex items-center gap-4">
                 <!-- More Options Dropdown -->
-                <div class="relative" ref="moreOptionsRef">
+                <div
+                    v-if="!isOrderTaking"
+                    class="relative"
+                    ref="moreOptionsRef"
+                >
                     <button
                         @click="showMoreOptions = !showMoreOptions"
                         class="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/80 transition hover:border-white/40 hover:bg-white/20"
@@ -235,12 +239,22 @@ const isTableView = computed(() => {
     );
 });
 
+const isOrderTaking = computed(() => {
+    const role = (page.props as any)?.auth?.user?.current_role;
+    return (
+        String(role || "")
+            .toLowerCase()
+            .replace(/\s+/g, "_")
+            .replace(/-+/g, "_") === "order_taking"
+    );
+});
+
 // Methods
 const handlePendingOrdersClick = () => {
     showMoreOptions.value = false;
     const activeBranch = (page.props as any)?.active_branch;
     router.visit(
-        route("resto.pending-orders.index", { branchId: activeBranch?.id })
+        route("resto.pending-orders.index", { branchId: activeBranch?.id }),
     );
 };
 
@@ -299,7 +313,7 @@ const handleLogout = () => {
                 onSuccess: () => {
                     window.location.href = route("login");
                 },
-            }
+            },
         );
     }
 };

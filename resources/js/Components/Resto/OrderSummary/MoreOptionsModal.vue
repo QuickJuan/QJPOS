@@ -50,6 +50,7 @@
                     </p>
 
                     <button
+                        v-if="!isOrderTaking"
                         @click="handleApplyDiscount"
                         :disabled="selectedCount === 0"
                         class="group relative flex w-full items-center gap-4 rounded-2xl border border-slate-200/70 bg-gradient-to-br from-white to-slate-50 p-4 text-left text-secondary-800 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg disabled:translate-y-0 disabled:border-slate-100 disabled:bg-slate-50 disabled:text-slate-400 disabled:shadow-none"
@@ -207,6 +208,7 @@
                     </button>
 
                     <button
+                        v-if="!isOrderTaking"
                         @click="handleReviewTransactions"
                         class="group relative flex w-full items-center gap-4 rounded-2xl border border-slate-200/70 bg-white p-4 text-left text-secondary-800 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
                     >
@@ -242,16 +244,29 @@ import {
     ArrowPathIcon,
 } from "@heroicons/vue/24/outline";
 import { route } from "ziggy-js";
-import { router } from "@inertiajs/vue3";
+import { router, usePage } from "@inertiajs/vue3";
 
 const props = defineProps<{
     visible: boolean;
     orderItems: any[];
     selectedItemsForDiscount?: number[];
+    isWaiterMode?: boolean;
 }>();
 
+const page = usePage<any>();
+
+const isOrderTaking = computed(() => {
+    const raw = page.props?.auth?.user?.current_role ?? "";
+    const normalized = String(raw)
+        .toLowerCase()
+        .replaceAll(" ", "_")
+        .replaceAll("-", "_");
+
+    return normalized === "order_taking";
+});
+
 const selectedCount = computed(
-    () => props.selectedItemsForDiscount?.length ?? 0
+    () => props.selectedItemsForDiscount?.length ?? 0,
 );
 
 const hasOrderItems = computed(() => (props.orderItems ?? []).length > 0);

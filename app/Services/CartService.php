@@ -38,6 +38,11 @@ class CartService
         //DB transaction to maintain consistency
         try {
             return DB::transaction(function () use ($payload) {
+                $user = Auth::user();
+                if (! $user) {
+                    throw new Exception('Unauthenticated.');
+                }
+
                 $table = TableRoom::find($payload['table_id']);
 
                 if (! $table) {
@@ -45,12 +50,13 @@ class CartService
                 }
 
                 //find if ther is a cart that is associated with the table
+                $cashierSessionId = $user->cashierSession?->id;
                 $cart = Cart::firstOrCreate(
                     [
-                        'cashier_id'         => Auth::id(),
-                        'cashier_session_id' => Auth::user()->cashierSession->id,
+                        'cashier_id'         => $user->id,
+                        'cashier_session_id' => $cashierSessionId,
                         'table_room_id'      => $table->id,
-                        'branch_id'          => Auth::user()->branch_id,
+                        'branch_id'          => $user->branch_id,
                     ],
                     [
                         'customer_id' => $payload['customer_id'] ?? null,
@@ -688,20 +694,29 @@ class CartService
 
     public function applyModifierToCartItem(Request $request)
     {
-        // dd($request->all());
+        $user = Auth::user();
+        if (! $user) {
+            throw new Exception('Unauthenticated.');
+        }
+
         $cashierSession = $this->cashierSession->openSession()->first();
+        $activeBranchId = data_get(session('active_branch'), 'id') ?? $user->branch_id;
 
-        if (! $cashierSession) {
-            throw new Exception('No active cashier session found.');
-        }
+        $cartItemIds = (array) ($request->input('cartItemIds') ?? $request->cartItemIds ?? []);
 
-        $cart = Cart::authCashier()->cashierOpenSession($cashierSession->id)->first();
+        $cartItems = CartItem::query()
+            ->whereIn('id', $cartItemIds)
+            ->whereHas('cart', function ($query) use ($activeBranchId, $cashierSession, $user) {
+                $query->where('branch_id', $activeBranchId);
 
-        if (! $cart) {
-            throw new Exception('Cart not found.');
-        }
-
-        $cartItems = CartItem::findMany($request->cartItemIds);
+                // If a cashier session is active for the current user, keep behavior scoped
+                // to that cashier + session.
+                if ($cashierSession) {
+                    $query->where('cashier_id', $user->id)
+                        ->where('cashier_session_id', $cashierSession->id);
+                }
+            })
+            ->get();
 
         if ($cartItems->isEmpty()) {
             throw new Exception('Cart items is empty.');
@@ -748,19 +763,27 @@ class CartService
 
     public function removeModifierFromCartItem(Request $request): mixed
     {
+        $user = Auth::user();
+        if (! $user) {
+            throw new Exception('Unauthenticated.');
+        }
+
         $cashierSession = $this->cashierSession->openSession()->first();
+        $activeBranchId = data_get(session('active_branch'), 'id') ?? $user->branch_id;
 
-        if (! $cashierSession) {
-            throw new Exception('No active cashier session found.');
-        }
+        $cartItemId = $request->input('cartItemId') ?? $request->cartItemId;
 
-        $cart = Cart::authCashier()->cashierOpenSession($cashierSession->id)->first();
+        $cartItem = CartItem::query()
+            ->where('id', $cartItemId)
+            ->whereHas('cart', function ($query) use ($activeBranchId, $cashierSession, $user) {
+                $query->where('branch_id', $activeBranchId);
 
-        if (! $cart) {
-            throw new Exception('Cart not found.');
-        }
-
-        $cartItem = CartItem::findOrFail($request->cartItemId);
+                if ($cashierSession) {
+                    $query->where('cashier_id', $user->id)
+                        ->where('cashier_session_id', $cashierSession->id);
+                }
+            })
+            ->firstOrFail();
 
         if (! $cartItem) {
             throw new Exception('Cart item not found.');

@@ -50,6 +50,41 @@ class TableController extends Controller
     }
 
     /**
+     * Get tables for a specific branch for waiter (order taking) UI.
+     * Returns a stable { data: [...] } shape for frontend consumption.
+     */
+    public function getWaiterTablesByBranch(int $branchId): JsonResponse
+    {
+        $branch = Branch::findOrFail($branchId);
+
+        $tables = $branch->tableRooms()
+            ->with(['carts' => function ($query) {
+                $query->whereHas('cartItems');
+            }])
+            ->orderBy('name')
+            ->get()
+            ->map(function ($table) {
+                $activeCart = $table->carts->first();
+                $hasActiveItems = $activeCart && $activeCart->cartItems->count() > 0;
+
+                return [
+                    'id' => $table->id,
+                    'name' => $table->name,
+                    'table_number' => $table->name,
+                    'capacity' => $table->chairs,
+                    'status' => $table->status,
+                    'cart' => $hasActiveItems ? ['id' => $activeCart?->id] : null,
+                    'has_orders' => $hasActiveItems,
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'data' => $tables,
+        ]);
+    }
+
+    /**
      * Get table with associated cart and items
      */
     public function getTableWithCart(int $tableId): JsonResponse

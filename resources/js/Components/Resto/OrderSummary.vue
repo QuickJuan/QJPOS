@@ -107,9 +107,11 @@
             @transfer-order-items="handleTransferOrderItems"
             @view-table="handleViewTable"
             @end-of-shift="handleEndOfShift"
-            @update-order-type="(type: string) => {
-                selectedOrderType = type;
-            }"
+            @update-order-type="
+                (type: string) => {
+                    selectedOrderType = type;
+                }
+            "
         />
 
         <!-- Edit Item Modal -->
@@ -328,7 +330,7 @@ watch(
     () => selectedOrderType.value,
     (newVal) => {
         emit("changeOrderType", newVal);
-    }
+    },
 );
 
 // Computed values
@@ -341,7 +343,7 @@ const subtotal = computed(() => {
             const total = item.selected_options.reduce(
                 (optSum: number, option: any) =>
                     optSum + parseFloat(option.price || 0),
-                0
+                0,
             );
             return sum + total;
         }
@@ -376,8 +378,8 @@ const finalTotal = computed(() => total.value + serviceCharge.value);
 
 const selectedItemsForModal = computed(() =>
     orderItems.value.filter((item) =>
-        selectedItemsForDiscount.value.includes(item.id)
-    )
+        selectedItemsForDiscount.value.includes(item.id),
+    ),
 );
 
 // Get current open session from props
@@ -470,7 +472,7 @@ const saveEdit = (editedItem: any) => {
                         life: 3000,
                     });
                 },
-            }
+            },
         );
     }
 };
@@ -482,7 +484,7 @@ const toggleItemForDiscount = (itemId: number, checked: boolean) => {
         }
     } else {
         selectedItemsForDiscount.value = selectedItemsForDiscount.value.filter(
-            (id) => id !== itemId
+            (id) => id !== itemId,
         );
     }
 };
@@ -540,7 +542,7 @@ const handleTransferOrderItems = async () => {
         // Flatten all tables from all locations and filter occupied ones, excluding current table
         occupiedTables.value = tableRooms.filter(
             (table: any) =>
-                table.status === "occupied" && table.id !== tableInfo.value.id
+                table.status === "occupied" && table.id !== tableInfo.value.id,
         );
 
         selectedTransferTarget.value = null;
@@ -557,7 +559,7 @@ const handleTransferOrderItems = async () => {
 
 const handleModifierAdded = (modifierData: any) => {
     const selectedItemIds = modifierData.selectedCartItems.map(
-        (item: any) => item.id
+        (item: any) => item.id,
     );
 
     router.put(
@@ -588,7 +590,7 @@ const handleModifierAdded = (modifierData: any) => {
                     life: 3000,
                 });
             },
-        }
+        },
     );
 };
 
@@ -650,7 +652,7 @@ const handleRequiredReason = (data: any) => {
                         life: 3000,
                     });
                 },
-            }
+            },
         );
     }
 };
@@ -692,7 +694,7 @@ const handleClearDiscountFromItem = (item: any) => {
                     life: 3000,
                 });
             },
-        }
+        },
     );
 };
 
@@ -733,7 +735,7 @@ const handleRemoveModifier = (item: any, modifierValue: number) => {
                     life: 3000,
                 });
             },
-        }
+        },
     );
 };
 
@@ -783,9 +785,8 @@ const handleConfirmCloseSession = async (data: any) => {
 
             // Connect to printer if not already connected
             if (!thermalPrinter.isConnected()) {
-                const connected = await thermalPrinter.connectToPrinterType(
-                    "receipt"
-                );
+                const connected =
+                    await thermalPrinter.connectToPrinterType("receipt");
                 if (!connected) {
                     // Printer not available, show modal
                     showSessionSummaryModal.value = true;
@@ -886,7 +887,7 @@ const confirmTransferOrderItems = () => {
                     life: 3000,
                 });
             },
-        }
+        },
     );
 };
 
@@ -1047,7 +1048,7 @@ const handleCustomerSelected = async (customer: any | null) => {
 // Update cashier state in localStorage
 const updateCashierStateInLocalStorage = (
     tableId: number | null,
-    cartId?: number | null
+    cartId?: number | null,
 ) => {
     try {
         const cashierStateKey = "quickjuan_cashier_state";
@@ -1068,7 +1069,7 @@ const updateCashierStateInLocalStorage = (
             "Updated cashier state with tableId:",
             tableId,
             "cartId:",
-            cartId
+            cartId,
         );
     } catch (error) {
         console.error("Failed to update cashier state in localStorage:", error);

@@ -80,6 +80,7 @@ import {
     ClockIcon,
     BanknotesIcon,
     BuildingLibraryIcon,
+    ShoppingCartIcon,
     ArrowRightOnRectangleIcon as LogoutIcon,
 } from "@heroicons/vue/24/outline";
 
@@ -90,7 +91,7 @@ const props = defineProps({
 const page = usePage();
 
 const branchName = computed(
-    () => page?.props?.active_branch?.name || "QuickJuan Branch"
+    () => page?.props?.active_branch?.name || "QuickJuan Branch",
 );
 
 const currentUrl = computed(() => page?.url || window.location.pathname);
@@ -124,7 +125,7 @@ const rawNavigation = [
     {
         name: "Back to Cashiering",
         href: "/resto/home",
-        icon: ShopingCartIcon,
+        icon: ShoppingCartIcon,
     },
 ];
 
@@ -132,7 +133,7 @@ const navigation = computed(() =>
     rawNavigation.map((item) => ({
         ...item,
         active: currentUrl.value.startsWith(item.href),
-    }))
+    })),
 );
 
 const handleLogout = () => {
