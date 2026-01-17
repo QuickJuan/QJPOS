@@ -111,7 +111,7 @@
 
                 <!-- Close Shift Button (Only visible on table view) -->
                 <button
-                    v-if="isTableView"
+                    v-if="isTableView && !isOrderTaking"
                     @click="handleCloseShift"
                     class="flex items-center gap-2 rounded-full bg-warning-500 px-6 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-warning-600"
                 >

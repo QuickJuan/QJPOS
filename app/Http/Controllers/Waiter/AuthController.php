@@ -79,7 +79,9 @@ class AuthController
             'role' => CurrentRole::ORDER_TAKING->value,
         ]);
 
-        return redirect()->intended(route('table-rooms.index'));
+        // Force a full reload so the regenerated CSRF token is reflected in the page.
+        // This prevents 419 "Page Expired" on subsequent POSTs after login.
+        return Inertia::location(route('table-rooms.index'));
     }
 
     public function logout(Request $request)
