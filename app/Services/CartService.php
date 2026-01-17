@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\Branch;
 use App\Models\Product;
 use App\Models\CartItem;
+use App\Models\ProductAddOn;
 use App\Models\Discount;
 use App\Models\TableRoom;
 use App\Models\VoidItem;
@@ -160,7 +161,83 @@ class CartService
             $this->addChildItems($cartItem, $request['selected_options'] ?? [], $product, $quantity, $orderType);
         }
 
+        // Add product add-ons as child items (main product stays as parent)
+        $addOnIds = (array) ($request->input('productAddOnIds')
+            ?? $request->input('product_add_on_ids')
+            ?? $request['productAddOnIds']
+            ?? $request['product_add_on_ids']
+            ?? []);
+
+        if (! empty($addOnIds)) {
+            $this->addProductAddOnsAsChildren($cartItem, $product, $quantity, $addOnIds);
+        }
+
         return $cartItem->load('children');
+    }
+
+    private function addProductAddOnsAsChildren(CartItem $parentItem, Product $parentProduct, float $parentQuantity, array $productAddOnIds): void
+    {
+        $ids = array_values(array_filter(array_map('intval', $productAddOnIds)));
+        if (empty($ids)) {
+            return;
+        }
+
+        $addOns = ProductAddOn::query()
+            ->where('product_id', $parentProduct->id)
+            ->whereIn('id', $ids)
+            ->with(['addonProduct', 'productPackaging'])
+            ->get();
+
+        foreach ($addOns as $addOn) {
+            $childProductId = (int) $addOn->product_addon_id;
+            if ($childProductId <= 0) {
+                continue;
+            }
+
+            $childPrice = (float) ($addOn->add_on_price ?? 0);
+            $childQuantity = 1 * max(1, $parentQuantity);
+
+            $pricingData = $this->calculatePricingData($childPrice, $childQuantity, $parentProduct);
+            $amount      = $pricingData['vatable_sales'] + $pricingData['vat_amount'] + $pricingData['non_vat_sales'];
+
+            $childDescription = $addOn->productPackaging?->name
+                ?? $addOn->addonProduct?->receipt_alias
+                ?? $addOn->addonProduct?->name
+                ?? null;
+
+            $childItem = $parentItem->children()->create([
+                'parent_id'            => $parentItem->id,
+                'cart_id'              => $parentItem->cart_id,
+                'product_id'           => $childProductId,
+                'description'          => $childDescription,
+                'product_packaging_id' => $addOn->product_packaging_id,
+                'quantity'             => $childQuantity,
+                'price'                => $childPrice,
+                'amount'               => $amount,
+                'order_type'           => $parentItem->order_type,
+                'product_type'         => $addOn->addonProduct?->product_type ?? $parentProduct->product_type,
+                'sub_total'            => $amount,
+                'vatable_sales'        => $pricingData['vatable_sales'],
+                'vat_exempt_sales'     => $pricingData['vat_exempt_sales'],
+                'vat_amount'           => $pricingData['vat_amount'],
+                'non_vat_sales'        => $pricingData['non_vat_sales'],
+                'less_tax'             => $pricingData['less_tax'],
+                'is_served'            => $parentItem->is_served,
+                'placed_order'         => $parentItem->placed_order,
+                'served_by'            => $parentItem->served_by,
+                'serving_number'       => $parentItem->serving_number,
+                'served_time'          => $parentItem->served_time,
+                'placed_order_time'    => $parentItem->placed_order_time,
+                'meta_data'            => [
+                    'product_add_on_id' => $addOn->id,
+                ],
+            ]);
+
+            if (! empty($parentItem->batch_number)) {
+                $childItem->batch_number = $parentItem->batch_number;
+                $childItem->save();
+            }
+        }
     }
 
     /**
@@ -759,6 +836,124 @@ class CartService
                 'meta_data' => $existingMetaData,
             ]);
         });
+    }
+
+    public function applyAddOnToCartItem(Request $request): void
+    {
+        $user = Auth::user();
+        if (! $user) {
+            throw new Exception('Unauthenticated.');
+        }
+
+        $cashierSession = $this->cashierSession->openSession()->first();
+        $activeBranchId = data_get(session('active_branch'), 'id') ?? $user->branch_id;
+
+        $cartItemIds = (array) ($request->input('cartItemIds') ?? $request->cartItemIds ?? []);
+        $productAddOnId = (int) ($request->input('productAddOnId') ?? $request->productAddOnId ?? 0);
+
+        if (empty($cartItemIds)) {
+            throw new Exception('Cart items is empty.');
+        }
+
+        if ($productAddOnId <= 0) {
+            throw new Exception('Add-on is required.');
+        }
+
+        $cartItems = CartItem::query()
+            ->whereIn('id', $cartItemIds)
+            ->whereHas('cart', function ($query) use ($activeBranchId, $cashierSession, $user) {
+                $query->where('branch_id', $activeBranchId);
+
+                // If a cashier session is active for the current user, keep behavior scoped
+                // to that cashier + session.
+                if ($cashierSession) {
+                    $query->where('cashier_id', $user->id)
+                        ->where('cashier_session_id', $cashierSession->id);
+                }
+            })
+            ->with(['product'])
+            ->get();
+
+        if ($cartItems->isEmpty()) {
+            throw new Exception('Cart items is empty.');
+        }
+
+        $firstProductId = (int) ($cartItems->first()?->product_id ?? 0);
+        if ($firstProductId <= 0) {
+            throw new Exception('Cart item product is invalid.');
+        }
+
+        $allSameProduct = $cartItems->every(fn(CartItem $item) => (int) $item->product_id === $firstProductId);
+        if (! $allSameProduct) {
+            throw new Exception('Selected items must be from the same product.');
+        }
+
+        $productAddOn = ProductAddOn::query()
+            ->with(['addonProduct', 'productPackaging'])
+            ->findOrFail($productAddOnId);
+
+        if ((int) $productAddOn->product_id !== $firstProductId) {
+            throw new Exception('Selected add-on does not match the selected product.');
+        }
+
+        $parentProduct = $cartItems->first()->product;
+        if (! $parentProduct) {
+            throw new Exception('Product not found.');
+        }
+
+        $childProductId = (int) $productAddOn->product_addon_id;
+        if ($childProductId <= 0) {
+            throw new Exception('Add-on product is invalid.');
+        }
+
+        $childPrice = (float) ($productAddOn->add_on_price ?? 0);
+        $childPackagingId = $productAddOn->product_packaging_id;
+        $childDescription = $productAddOn->productPackaging?->name
+            ?? $productAddOn->addonProduct?->receipt_alias
+            ?? $productAddOn->addonProduct?->name
+            ?? null;
+
+        foreach ($cartItems as $parentItem) {
+            $parentQuantity = (float) ($parentItem->quantity ?? 1);
+            $childQuantity = 1 * max(1, $parentQuantity);
+
+            $pricingData = $this->calculatePricingData($childPrice, $childQuantity, $parentProduct);
+            $amount      = $pricingData['vatable_sales'] + $pricingData['vat_amount'] + $pricingData['non_vat_sales'];
+
+            $childItem = $parentItem->children()->create([
+                'parent_id'            => $parentItem->id,
+                'cart_id'              => $parentItem->cart_id,
+                'product_id'           => $childProductId,
+                'description'          => $childDescription,
+                'product_packaging_id' => $childPackagingId,
+                'quantity'             => $childQuantity,
+                'price'                => $childPrice,
+                'amount'               => $amount,
+                'order_type'           => $parentItem->order_type,
+                'product_type'         => $productAddOn->addonProduct?->product_type ?? $parentProduct->product_type,
+                'sub_total'            => $amount,
+                'vatable_sales'        => $pricingData['vatable_sales'],
+                'vat_exempt_sales'     => $pricingData['vat_exempt_sales'],
+                'vat_amount'           => $pricingData['vat_amount'],
+                'non_vat_sales'        => $pricingData['non_vat_sales'],
+                'less_tax'             => $pricingData['less_tax'],
+                'is_served'            => $parentItem->is_served,
+                'placed_order'         => $parentItem->placed_order,
+                'served_by'            => $parentItem->served_by,
+                'serving_number'       => $parentItem->serving_number,
+                'served_time'          => $parentItem->served_time,
+                'placed_order_time'    => $parentItem->placed_order_time,
+                'meta_data'            => [
+                    'product_add_on_id' => $productAddOn->id,
+                ],
+            ]);
+
+            // Keep add-ons in the same batch context when applied after placing an order.
+            if (! empty($parentItem->batch_number)) {
+                $childItem->batch_number = $parentItem->batch_number;
+                $childItem->save();
+            }
+        }
     }
 
     public function removeModifierFromCartItem(Request $request): mixed

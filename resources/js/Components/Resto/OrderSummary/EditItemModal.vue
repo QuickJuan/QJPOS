@@ -121,7 +121,7 @@
                     >
                         <div
                             v-for="(value, key) in getModifierOptions(
-                                modifierData
+                                modifierData,
                             )"
                             :key="key"
                             class="flex items-start justify-between gap-4"
@@ -244,6 +244,14 @@
                         @click="$emit('clearDiscount', selectedItem)"
                     />
                     <Button
+                        v-if="showAddOnButton"
+                        type="button"
+                        label="Add Add-on"
+                        severity="success"
+                        size="small"
+                        @click="$emit('addAddOn', selectedItem)"
+                    />
+                    <Button
                         type="button"
                         label="Add Modifier"
                         severity="success"
@@ -269,6 +277,8 @@
 import { computed, ref, watch } from "vue";
 import { Button, Dialog, InputNumber } from "primevue";
 import { formatMoney } from "@/Utils/FormatMoney";
+import axios from "axios";
+import { route } from "ziggy-js";
 
 const props = defineProps<{
     visible: boolean;
@@ -280,10 +290,53 @@ const emit = defineEmits<{
     "update:visible": [value: boolean];
     addDiscount: [item: any];
     clearDiscount: [item: any];
+    addAddOn: [item: any];
     addModifier: [item: any];
 }>();
 
 const selectedItem = computed(() => props.selectedOrderItem);
+
+const addOnAvailabilityCache: Record<number, boolean> = {};
+const hasAddOnsForSelectedProduct = ref(false);
+
+const getSelectedProductId = (item: any): number | null => {
+    const raw = item?.product_id ?? item?.product?.id ?? null;
+    const asNumber = Number(raw);
+    return Number.isFinite(asNumber) && asNumber > 0 ? asNumber : null;
+};
+
+const checkHasAddOns = async (item: any) => {
+    hasAddOnsForSelectedProduct.value = false;
+
+    const productId = getSelectedProductId(item);
+    if (!productId) {
+        return;
+    }
+
+    if (
+        Object.prototype.hasOwnProperty.call(addOnAvailabilityCache, productId)
+    ) {
+        hasAddOnsForSelectedProduct.value = !!addOnAvailabilityCache[productId];
+        return;
+    }
+
+    try {
+        const response = await axios.get(
+            route("resto.product.add-ons", { product: productId }),
+        );
+        const addOns = response?.data?.data ?? response?.data ?? [];
+        const available = Array.isArray(addOns) && addOns.length > 0;
+        addOnAvailabilityCache[productId] = available;
+        hasAddOnsForSelectedProduct.value = available;
+    } catch {
+        addOnAvailabilityCache[productId] = false;
+        hasAddOnsForSelectedProduct.value = false;
+    }
+};
+
+const showAddOnButton = computed(() => {
+    return !!selectedItem.value && hasAddOnsForSelectedProduct.value;
+});
 
 const editableItem = ref({
     quantity: 1,
@@ -407,8 +460,25 @@ watch(
         } else {
             editableItem.value = { quantity: 1 };
         }
+
+        if (props.visible) {
+            checkHasAddOns(newItem);
+        } else {
+            hasAddOnsForSelectedProduct.value = false;
+        }
     },
-    { immediate: true }
+    { immediate: true },
+);
+
+watch(
+    () => props.visible,
+    (isVisible) => {
+        if (isVisible) {
+            checkHasAddOns(props.selectedOrderItem);
+        } else {
+            hasAddOnsForSelectedProduct.value = false;
+        }
+    },
 );
 
 const hasModifiers = (item: any) => {

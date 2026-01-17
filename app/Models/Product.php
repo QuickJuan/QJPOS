@@ -125,4 +125,40 @@ class Product extends Model implements HasMedia
     {
         return $this->hasMany(ProductInventory::class, 'product_id');
     }
+
+    public function productAddOns(): HasMany
+    {
+        return $this->hasMany(ProductAddOn::class, 'product_id');
+    }
+
+    public function addOnProducts(): BelongsToMany
+    {
+        return $this->belongsToMany(Product::class, 'product_add_ons', 'product_id', 'product_addon_id')
+            ->withPivot(['id', 'product_packaging_id', 'add_on_price'])
+            ->withTimestamps();
+    }
+
+    public function addOnForProducts(): BelongsToMany
+    {
+        return $this->belongsToMany(Product::class, 'product_add_ons', 'product_addon_id', 'product_id')
+            ->withPivot(['id', 'product_packaging_id', 'add_on_price'])
+            ->withTimestamps();
+    }
+
+    public function relatedProducts(): BelongsToMany
+    {
+        return $this->belongsToMany(Product::class, 'product_related_products', 'product_id', 'related_product_id')
+            ->withTimestamps();
+    }
+
+    public function relatedProductLinks(): HasMany
+    {
+        return $this->hasMany(ProductRelatedProduct::class, 'product_id');
+    }
+
+    public function relatedByProducts(): BelongsToMany
+    {
+        return $this->belongsToMany(Product::class, 'product_related_products', 'related_product_id', 'product_id')
+            ->withTimestamps();
+    }
 }
