@@ -2,6 +2,7 @@
 
 namespace App\Filament\Tenant\Resources;
 
+use App\Filament\Tenant\Exports\CashierSessions\CashierSessionExporter;
 use App\Filament\Tenant\Resources\CashierSessionResource\Pages;
 use App\Models\CashierSession;
 use App\Models\Branch;
@@ -13,6 +14,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
 use Filament\Forms\Components\DatePicker;
 use Illuminate\Database\Eloquent\Builder;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportAction;
 
 class CashierSessionResource extends Resource
 {
@@ -101,6 +103,12 @@ class CashierSessionResource extends Resource
             ])
             ->filtersFormColumns(2)
             ->defaultSort('business_date', 'desc')
+            ->headerActions([
+                ExportAction::make()
+                    ->exports([
+                        CashierSessionExporter::make()->fromTable(),
+                    ]),
+            ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
             ]);

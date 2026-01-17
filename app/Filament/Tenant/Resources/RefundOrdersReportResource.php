@@ -2,6 +2,7 @@
 
 namespace App\Filament\Tenant\Resources;
 
+use App\Filament\Tenant\Exports\RefundOrdersReport\RefundOrdersReportExporter;
 use App\Filament\Tenant\Resources\RefundOrdersReportResource\Pages;
 use App\Models\Order;
 use App\Models\Branch;
@@ -12,7 +13,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
 use Filament\Forms\Components\DatePicker;
 use Illuminate\Database\Eloquent\Builder;
-use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportAction;
 
 class RefundOrdersReportResource extends Resource
 {
@@ -113,8 +114,11 @@ class RefundOrdersReportResource extends Resource
             ])
             ->filtersFormColumns(2)
             ->defaultSort('created_at', 'desc')
-            ->bulkActions([
-                ExportBulkAction::make(),
+            ->headerActions([
+                ExportAction::make()
+                    ->exports([
+                        RefundOrdersReportExporter::make()->fromTable(),
+                    ]),
             ]);
     }
 
