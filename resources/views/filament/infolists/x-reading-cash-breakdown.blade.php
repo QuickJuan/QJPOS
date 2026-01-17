@@ -55,7 +55,7 @@
         }}
     >
         @if ($isStructured)
-            <div class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 @foreach ($currencies as $currency)
                     @php
                         $symbol = $currency['symbol'] ?? '';
@@ -180,17 +180,16 @@
 
                     </div>
                 @endforeach
-
-                @if ($giftCheckTotal > 0)
-                    <div class="border-t pt-3 text-sm">
-                        <div class="flex items-center justify-between font-semibold text-gray-700">
-                            <span>Gift Checks</span>
-                            <span class="text-gray-900">{{ $baseSymbol }} {{ $format($giftCheckTotal) }}</span>
-                        </div>
-                    </div>
-                @endif
-
             </div>
+
+            @if ($giftCheckTotal > 0)
+                <div class="border-t pt-3 text-sm">
+                    <div class="flex items-center justify-between font-semibold text-gray-700">
+                        <span>Gift Checks</span>
+                        <span class="text-gray-900">{{ $baseSymbol }} {{ $format($giftCheckTotal) }}</span>
+                    </div>
+                </div>
+            @endif
         @elseif ($legacyIsAssociative)
             <div class="space-y-1 text-sm">
                 @foreach ($legacyEntries as $denom => $count)

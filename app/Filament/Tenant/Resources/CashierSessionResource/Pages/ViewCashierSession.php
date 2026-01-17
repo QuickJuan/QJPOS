@@ -169,6 +169,8 @@ class ViewCashierSession extends ViewRecord
 
     public function infolist(Infolist $infolist): Infolist
     {
+        $hasCashDenomination = fn ($record) => ! empty($record?->cash_denomination_details) || ! empty($record?->cash_denomination);
+
         return $infolist
             ->schema([
                 Section::make('Session Information')
@@ -195,41 +197,46 @@ class ViewCashierSession extends ViewRecord
                             ]),
                     ]),
 
-                Section::make('Financial Summary')
+                Grid::make(2)
                     ->schema([
-                        Grid::make(3)
+                        Section::make('Financial Summary')
                             ->schema([
-                                TextEntry::make('beginning_cash')
-                                    ->label('Beginning Cash')
-                                    ->money('php')
-                                    ->color('info'),
-                                TextEntry::make('total_sales')
-                                    ->label('Total Sales')
-                                    ->money('php')
-                                    ->color('success')
-                                    ->weight('bold'),
-                                TextEntry::make('closing_cash')
-                                    ->label('Closing Cash')
-                                    ->money('php')
-                                    ->color('warning'),
-                            ]),
-                    ]),
-
-                Section::make('Cash Denomination')
-                    ->schema([
-                        ViewEntry::make('cash_denomination_details')
-                            ->label('Denomination Breakdown')
-                            ->view('filament.infolists.x-reading-cash-breakdown')
-                            ->state(fn ($record) => [
-                                'breakdown' => $this->normalizeCashDenominationDetailsState($record?->cash_denomination_details ?? $record?->cash_denomination),
-                                'cash_comparison' => is_array($record?->meta_data['cash_comparison'] ?? null) ? $record->meta_data['cash_comparison'] : [],
-                                'other_payments_comparison' => is_array($record?->meta_data['other_payments_comparison'] ?? null) ? $record->meta_data['other_payments_comparison'] : [],
+                                Grid::make(3)
+                                    ->schema([
+                                        TextEntry::make('beginning_cash')
+                                            ->label('Beginning Cash')
+                                            ->money('php')
+                                            ->color('info'),
+                                        TextEntry::make('total_sales')
+                                            ->label('Total Sales')
+                                            ->money('php')
+                                            ->color('success')
+                                            ->weight('bold'),
+                                        TextEntry::make('closing_cash')
+                                            ->label('Closing Cash')
+                                            ->money('php')
+                                            ->color('warning'),
+                                    ]),
                             ])
-                            ->columnSpanFull()
-                            ->visible(fn ($record) => ! empty($record->cash_denomination_details) || ! empty($record->cash_denomination)),
+                            ->columnSpan(fn ($record) => $hasCashDenomination($record) ? 1 : 2),
+
+                        Section::make('Cash Denomination')
+                            ->schema([
+                                ViewEntry::make('cash_denomination_details')
+                                    ->label('Denomination Breakdown')
+                                    ->view('filament.infolists.x-reading-cash-breakdown')
+                                    ->state(fn ($record) => [
+                                        'breakdown' => $this->normalizeCashDenominationDetailsState($record?->cash_denomination_details ?? $record?->cash_denomination),
+                                        'cash_comparison' => is_array($record?->meta_data['cash_comparison'] ?? null) ? $record->meta_data['cash_comparison'] : [],
+                                        'other_payments_comparison' => is_array($record?->meta_data['other_payments_comparison'] ?? null) ? $record->meta_data['other_payments_comparison'] : [],
+                                    ])
+                                    ->columnSpanFull(),
+                            ])
+                            ->collapsible()
+                            ->visible($hasCashDenomination)
+                            ->columnSpan(1),
                     ])
-                    ->collapsible()
-                    ->visible(fn ($record) => ! empty($record->cash_denomination_details) || ! empty($record->cash_denomination)),
+                    ->columnSpanFull(),
 
                 Section::make('Meta Data')
                     ->schema([
