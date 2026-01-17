@@ -45,6 +45,7 @@
                     </button>
 
                     <button
+                        v-if="!isOrderTaking"
                         @click="handleCashOutClick"
                         class="w-full flex items-center gap-3 px-4 py-3 text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors"
                     >
@@ -53,6 +54,7 @@
                     </button>
 
                     <button
+                        v-if="!isOrderTaking"
                         @click="handleCashDrawerLogClick"
                         class="w-full flex items-center gap-3 px-4 py-3 text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors"
                     >
@@ -61,6 +63,7 @@
                     </button>
 
                     <button
+                        v-if="!isOrderTaking"
                         @click="handleReviewTransactionsClick"
                         class="w-full flex items-center gap-3 px-4 py-3 text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors"
                     >
@@ -72,6 +75,7 @@
                 <!-- Bottom Actions -->
                 <div class="mt-6 pt-6 border-t border-neutral-200 space-y-3">
                     <button
+                        v-if="!isOrderTaking"
                         @click="handleCloseShift"
                         class="w-full px-4 py-3 bg-warning text-white rounded-lg hover:bg-warning-600 transition-colors font-medium"
                     >
@@ -158,6 +162,16 @@ const companyName = computed(() => {
     return (page.props as any)?.company_info?.company_name || "Restaurant";
 });
 
+const isOrderTaking = computed(() => {
+    const role = (page.props as any)?.auth?.user?.current_role;
+    return (
+        String(role || "")
+            .toLowerCase()
+            .replace(/\s+/g, "_")
+            .replace(/-+/g, "_") === "order_taking"
+    );
+});
+
 const checkCurrentRoute = (currentRoute: any) => {
     return route().current() == currentRoute;
 };
@@ -169,7 +183,9 @@ const toggleSidebar = () => {
 
 const handleTablesClick = () => {
     showSidebar.value = false;
-    router.visit(route("resto.tables"));
+    router.visit(
+        route(isOrderTaking.value ? "table-rooms.index" : "resto.tables"),
+    );
 };
 
 const handleReviewTransactionsClick = () => {
@@ -203,7 +219,7 @@ const handleLogout = () => {
             onSuccess: () => {
                 window.location.href = route("login");
             },
-        }
+        },
     );
 };
 
@@ -219,7 +235,7 @@ const handleCloseSummaryModal = () => {
             onSuccess: () => {
                 window.location.href = route("login");
             },
-        }
+        },
     );
 };
 

@@ -12,6 +12,7 @@
                 <!-- Left: Menu Toggle -->
                 <button
                     @click="toggleSidebar"
+                    data-sidebar-toggle
                     class="bg-primary text-white rounded-lg p-2.5 shadow hover:bg-primary-600 transition-all"
                 >
                     <svg
@@ -192,6 +193,7 @@
                 :table-id="tableId"
                 :location-type="locationType"
                 :selected-order-type="orderStore.selectedOrderType"
+                :is-waiter-mode="props.isWaiterMode"
             />
 
             <!-- Right: Order Summary - Sidebar on mobile/tablet, fixed position on desktop -->
@@ -258,6 +260,8 @@ const toast = useToast();
 // Use order store for managing order type and other order-related state
 const orderStore = useOrderStore();
 
+const isWaiterMode = computed(() => !!props.isWaiterMode);
+
 // Get company settings from shared data
 const generalSettings = computed(
     () =>
@@ -266,7 +270,7 @@ const generalSettings = computed(
             company_address: "",
             company_phone: "",
             company_logo: "",
-        }
+        },
 );
 
 // Get cart from shared data
@@ -300,7 +304,7 @@ const orderItems = computed(() => {
 const cartCount = computed(() => {
     return orderItems.value.reduce(
         (total: number, item: any) => total + (item.quantity || 0),
-        0
+        0,
     );
 });
 // handle order type selection
@@ -338,11 +342,11 @@ const handleShowReceipt = (data: any) => {
     // Prepare receipt data
     const subtotal = orderItems.value.reduce(
         (sum, item) => sum + (item.price || 0),
-        0
+        0,
     );
     const discountAmount = orderItems.value.reduce(
         (sum, item) => sum + (item.discount || 0),
-        0
+        0,
     );
     const discountedSubtotal = subtotal - discountAmount;
     const taxAmount = discountedSubtotal * 0.12; // 12% VAT

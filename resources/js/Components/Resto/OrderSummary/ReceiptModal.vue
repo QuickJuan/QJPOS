@@ -105,9 +105,8 @@ const printReceipt = async () => {
         // Check if printer is connected
         if (!thermalPrinter.isConnected()) {
             // Try to connect to receipt printer
-            const connected = await thermalPrinter.connectToPrinterType(
-                "receipt"
-            );
+            const connected =
+                await thermalPrinter.connectToPrinterType("receipt");
             if (!connected) {
                 toast.add({
                     severity: "error",
@@ -120,7 +119,7 @@ const printReceipt = async () => {
         }
 
         const orderDate = new Date(
-            props.receiptData.order_date || props.receiptData.created_at
+            props.receiptData.order_date || props.receiptData.created_at,
         );
         const dateStr = orderDate.toLocaleDateString("en-US", {
             year: "numeric",
@@ -187,6 +186,6 @@ watch(
                 printButtonRef.value?.focus();
             });
         }
-    }
+    },
 );
 </script>

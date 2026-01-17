@@ -16,7 +16,7 @@ class EnsureUserHasRole
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      * @param  string  $role  The required role (e.g., 'order_taking', 'cashiering')
      */
-    public function handle(Request $request, Closure $next, string $role): Response
+    public function handle(Request $request, Closure $next, string $role, string ...$additionalRoles): Response
     {
         if (!$request->user()) {
             return redirect()->route('login');
@@ -28,11 +28,24 @@ class EnsureUserHasRole
             ? $currentRole->value
             : (is_string($currentRole) ? $currentRole : (string) $currentRole);
 
-        $requiredRoleValue = Str::of($role)
-            ->lower()
-            ->replace(' ', '_')
-            ->replace('-', '_')
-            ->value();
+        // Laravel splits middleware parameters by comma, so role:cashiering,order_taking
+        // arrives as handle(..., 'cashiering', 'order_taking'). Still support a single
+        // comma-separated string defensively.
+        $rawAllowedRoles = collect(array_merge([$role], $additionalRoles))
+            ->flatMap(fn (string $item) => explode(',', $item))
+            ->map(fn ($item) => trim((string) $item))
+            ->filter(fn ($item) => $item !== '')
+            ->values();
+
+        $allowedRoleValues = $rawAllowedRoles
+            ->map(function (string $item) {
+                return Str::of($item)
+                    ->lower()
+                    ->replace(' ', '_')
+                    ->replace('-', '_')
+                    ->value();
+            })
+            ->values();
 
         $currentRoleValue = Str::of($currentRoleValue)
             ->lower()
@@ -44,12 +57,12 @@ class EnsureUserHasRole
         \Log::info('Role check', [
             'user_id' => $request->user()->id,
             'current_role' => $currentRoleValue,
-            'required_role' => $requiredRoleValue,
+            'allowed_roles' => $allowedRoleValues->all(),
             'path' => $request->path(),
         ]);
 
-        // Check if user has the required role
-        if ($currentRoleValue !== $requiredRoleValue) {
+        // Check if user has any allowed role
+        if (!$allowedRoleValues->contains($currentRoleValue)) {
             // Redirect based on current role
             if ($currentRoleValue === CurrentRole::ORDER_TAKING->value) {
                 abort(403, 'Access denied. You are logged in as a waiter and cannot access cashier features.');
@@ -57,7 +70,7 @@ class EnsureUserHasRole
                 abort(403, 'Access denied. You are logged in as a cashier and cannot access waiter features.');
             }
 
-            abort(403, 'Access denied. You do not have the required role. Current: ' . $currentRoleValue . ', Required: ' . $requiredRoleValue);
+            abort(403, 'Access denied. You do not have the required role. Current: ' . $currentRoleValue . ', Allowed: ' . $allowedRoleValues->implode(', '));
         }
 
         return $next($request);

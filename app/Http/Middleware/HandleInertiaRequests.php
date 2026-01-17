@@ -168,7 +168,10 @@ class HandleInertiaRequests extends Middleware
      */
     private function getCartByTableId(Request $request): ?array
     {
-        $tableId = $request->query('tableId');
+        $tableId = $request->query('tableId')
+            ?? $request->route('tableId')
+            ?? $request->input('tableId')
+            ?? $request->input('table_id');
         if (! $tableId) {
             return null;
         }

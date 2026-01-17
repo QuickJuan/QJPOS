@@ -8,6 +8,7 @@
                 <!-- Left: Menu Toggle -->
                 <button
                     @click="toggleSidebar"
+                    data-sidebar-toggle
                     class="bg-primary text-white rounded-lg p-2.5 shadow hover:bg-primary-600 transition-all"
                 >
                     <svg
@@ -142,7 +143,7 @@
                                     class="bg-white rounded-lg shadow-sm border border-neutral-200 p-4 hover:shadow-md transition-all cursor-pointer hover:scale-105 relative opacity-75"
                                     :class="
                                         getTableStatusClasses(
-                                            mergedTable.status
+                                            mergedTable.status,
                                         )
                                     "
                                 >
@@ -178,12 +179,12 @@
                                                     'occupied'
                                                         ? 'bg-red-100 text-red-800'
                                                         : mergedTable.status ===
-                                                          'reserved'
-                                                        ? 'bg-yellow-100 text-yellow-800'
-                                                        : mergedTable.status ===
-                                                          'available'
-                                                        ? 'bg-green-100 text-green-800'
-                                                        : 'bg-gray-100 text-gray-800',
+                                                            'reserved'
+                                                          ? 'bg-yellow-100 text-yellow-800'
+                                                          : mergedTable.status ===
+                                                              'available'
+                                                            ? 'bg-green-100 text-green-800'
+                                                            : 'bg-gray-100 text-gray-800',
                                                 ]"
                                             >
                                                 {{ mergedTable.status }}
@@ -374,7 +375,7 @@ const canonicalizeLocationType = (rawType: unknown): string => {
 const normalizeTableRooms = (raw: any[] = []) => {
     return raw.map((location) => {
         const normalizedType = canonicalizeLocationType(
-            location.location_type ?? location.locationType ?? location.type
+            location.location_type ?? location.locationType ?? location.type,
         );
 
         return {
@@ -383,7 +384,7 @@ const normalizeTableRooms = (raw: any[] = []) => {
             name: location.name ?? location.title ?? "Unnamed",
             tableRooms: Array.isArray(location.tableRooms)
                 ? location.tableRooms
-                : location.table_rooms ?? [],
+                : (location.table_rooms ?? []),
         };
     });
 };
@@ -439,7 +440,7 @@ const groupedLocations = computed(() => {
         .map((group) => ({
             ...group,
             locations: [...group.locations].sort((a, b) =>
-                String(a.name || "").localeCompare(String(b.name || ""))
+                String(a.name || "").localeCompare(String(b.name || "")),
             ),
         }))
         .sort((a, b) => {
@@ -484,7 +485,7 @@ const currentLocation = computed(() => {
 const filteredTables = computed(() => currentLocation.value?.tableRooms || []);
 
 const availableMergeTargets = computed(() =>
-    filteredTables.value.filter((t) => t.status === "occupied")
+    filteredTables.value.filter((t) => t.status === "occupied"),
 );
 
 const availableTransferTargets = computed(() => {
@@ -493,7 +494,7 @@ const availableTransferTargets = computed(() => {
     // Show only available tables from the same location as the source table
     const targets = filteredTables.value.filter(
         (t) =>
-            t.status === "available" && t.id !== transferSourceTable.value?.id
+            t.status === "available" && t.id !== transferSourceTable.value?.id,
     );
 
     return [...targets];
@@ -522,7 +523,7 @@ const getRootTable = (table: any): any => {
         for (const location of locations.value) {
             // Check direct tables
             const directParent = location.tableRooms?.find(
-                (t) => t.id === table.merge_to
+                (t) => t.id === table.merge_to,
             );
             if (directParent) {
                 return getRootTable(directParent);
@@ -653,7 +654,7 @@ const confirmMerge = () => {
                     life: 3000,
                 });
             },
-        }
+        },
     );
 };
 
@@ -699,7 +700,7 @@ const handleClaimOrder = () => {
                     life: 3000,
                 });
             },
-        }
+        },
     );
 };
 
@@ -775,7 +776,7 @@ const confirmTransfer = () => {
                     life: 3000,
                 });
             },
-        }
+        },
     );
 };
 
@@ -819,7 +820,7 @@ const confirmTransferGuest = () => {
                     life: 3000,
                 });
             },
-        }
+        },
     );
 };
 
@@ -832,7 +833,7 @@ const handleViewOrder = () => {
             tableId: selectedTable.value.merged_to
                 ? selectedTable.value.merge_to
                 : selectedTable.value.id,
-        })
+        }),
     );
     closeTableModal();
 };
@@ -866,7 +867,7 @@ const handleUnmergeTable = () => {
                     life: 3000,
                 });
             },
-        }
+        },
     );
 };
 
@@ -876,12 +877,12 @@ const handleRefundOrder = async () => {
         await axios.post(
             route(
                 "transactions.api.orders.refund",
-                selectedTable.value.current_order.id
+                selectedTable.value.current_order.id,
             ),
             {
                 supervisor_name: props.currentUser?.name || "Supervisor",
                 notes: "Refund requested from table action",
-            }
+            },
         );
         toast.add({
             severity: "success",
@@ -923,7 +924,7 @@ watch(
             url.searchParams.set("locationId", newLocationId.toString());
             window.history.replaceState({}, "", url);
         }
-    }
+    },
 );
 
 onMounted(() => {

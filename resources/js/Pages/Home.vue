@@ -97,36 +97,63 @@ const isClockedIn = ref(props.attendanceStatus?.is_clocked_in || false);
 const user = computed(() => props.user);
 const activeBranch = computed(() => page.props.active_branch);
 
-const actions = [
-    // {
-    //     route: "dashboard",
-    //     name: "Dashboard",
-    //     description: "View reports, analytics, and business insights",
-    //     icon: AnalyticsIcon,
-    // },
-    {
-        route: "resto.preview",
-        name: "Start Cashiering",
-        description: "Process sales transactions and manage POS",
-        icon: CashieringIcon,
-    },
-    {
-        route: "resto.pending-orders.index",
-        name: "Pending Orders",
-        description: "View and manage pending kitchen orders",
-        icon: TableOrderingIcon,
-    },
-    {
-        route: "table-management.index",
-        name: "Table Management",
-        description: "Manage restaurant orders and table service",
-        icon: TableOrderingIcon,
-    },
-    {
-        route: "attendance.index",
-        name: "Clock In/Out",
-        description: "Manage your work attendance",
-        icon: ClockInOutIcon,
-    },
-];
+const currentRole = computed(() => {
+    const raw =
+        page.props?.auth?.user?.current_role ?? user.value?.current_role ?? "";
+
+    return String(raw).toLowerCase().replaceAll(" ", "_").replaceAll("-", "_");
+});
+
+const isOrderTaking = computed(() => currentRole.value === "order_taking");
+
+const actions = computed(() => {
+    const commonActions = [
+        {
+            route: "attendance.index",
+            name: "Clock In/Out",
+            description: "Manage your work attendance",
+            icon: ClockInOutIcon,
+        },
+    ];
+
+    if (isOrderTaking.value) {
+        return [
+            {
+                route: "table-rooms.index",
+                name: "Start Order Taking",
+                description: "Take orders and manage table carts",
+                icon: TableOrderingIcon,
+            },
+            ...commonActions,
+        ];
+    }
+
+    return [
+        // {
+        //     route: "dashboard",
+        //     name: "Dashboard",
+        //     description: "View reports, analytics, and business insights",
+        //     icon: AnalyticsIcon,
+        // },
+        {
+            route: "resto.preview",
+            name: "Start Cashiering",
+            description: "Process sales transactions and manage POS",
+            icon: CashieringIcon,
+        },
+        {
+            route: "resto.pending-orders.index",
+            name: "Pending Orders",
+            description: "View and manage pending kitchen orders",
+            icon: TableOrderingIcon,
+        },
+        {
+            route: "table-management.index",
+            name: "Table Management",
+            description: "Manage restaurant orders and table service",
+            icon: TableOrderingIcon,
+        },
+        ...commonActions,
+    ];
+});
 </script>
