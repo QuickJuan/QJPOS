@@ -9,10 +9,22 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\Grid;
 use Filament\Infolists\Components\ViewEntry;
+use Filament\Actions;
 
 class ViewCashierSession extends ViewRecord
 {
     protected static string $resource = CashierSessionResource::class;
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Actions\Action::make('print')
+                ->label('Print')
+                ->icon('heroicon-o-printer')
+                ->url(fn () => route('x-reading.print', $this->record))
+                ->openUrlInNewTab(),
+        ];
+    }
 
     protected function normalizeCashDenominationDetailsState(mixed $state): array
     {
@@ -173,10 +185,15 @@ class ViewCashierSession extends ViewRecord
 
         return $infolist
             ->schema([
-                Section::make('Session Information')
+                Section::make('Cashier Shift Information')
                     ->schema([
-                        Grid::make(3)
+                        Grid::make([
+                            'default' => 1,
+                            'md' => 4,
+                        ])
                             ->schema([
+                                TextEntry::make('id')
+                                    ->label('Cashier Shift No.'),
                                 TextEntry::make('branch.name')
                                     ->label('Branch'),
                                 TextEntry::make('business_date')
@@ -185,7 +202,10 @@ class ViewCashierSession extends ViewRecord
                                 TextEntry::make('cashier.name')
                                     ->label('Cashier'),
                             ]),
-                        Grid::make(2)
+                        Grid::make([
+                            'default' => 1,
+                            'md' => 2,
+                        ])
                             ->schema([
                                 TextEntry::make('started_time')
                                     ->label('Started Time')
@@ -197,11 +217,17 @@ class ViewCashierSession extends ViewRecord
                             ]),
                     ]),
 
-                Grid::make(2)
+                Grid::make([
+                    'default' => 1,
+                    'lg' => 2,
+                ])
                     ->schema([
                         Section::make('Financial Summary')
                             ->schema([
-                                Grid::make(3)
+                                Grid::make([
+                                    'default' => 1,
+                                    'md' => 3,
+                                ])
                                     ->schema([
                                         TextEntry::make('beginning_cash')
                                             ->label('Beginning Cash')

@@ -13,6 +13,7 @@ use App\Http\Controllers\TableRoomController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\CashierSessionController;
 use App\Http\Controllers\CashierCashoutController;
+use App\Http\Controllers\PrintXReadingShiftController;
 use App\Http\Controllers\TableManagementController;
 use App\Http\Controllers\TenantLandingController;
 use App\Http\Controllers\WaiterAuthController;
@@ -139,6 +140,11 @@ if (!isCentralDomain()) {
             'tenant' => tenant(),
         ]);
     })->name('test-landing');
+
+    // Print view for X-Reading (Cashier Shift) on bond paper
+    Route::middleware('auth')
+        ->get('/print/x-reading/{cashierSession}', PrintXReadingShiftController::class)
+        ->name('x-reading.print');
 
     // ROUTES FOR AUTHENTICATED USER
     Route::middleware(['auth:sanctum'])
