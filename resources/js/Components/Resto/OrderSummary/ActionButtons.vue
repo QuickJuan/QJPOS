@@ -35,8 +35,9 @@
                     <ChevronDownIcon class="w-3 h-3" />
                 </button>
 
-                <!-- Settle Bill Button -->
+                <!-- Settle Bill Button - Hide in waiter mode -->
                 <button
+                    v-if="!isWaiterMode"
                     @click="openSettlePaymentPage"
                     class="py-2 px-3 bg-success-600 text-white rounded-lg font-semibold hover:bg-success-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
                 >
@@ -134,6 +135,7 @@ const props = defineProps<{
         company_phone: string;
         company_logo: string;
     };
+    isWaiterMode?: boolean; // Hide settle button in waiter mode
 }>();
 
 const emit = defineEmits<{

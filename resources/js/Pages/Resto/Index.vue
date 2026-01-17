@@ -214,6 +214,7 @@
                     :cart="sharedCart"
                     :current-table="props.currentTable"
                     :general-settings="generalSettings"
+                    :is-waiter-mode="props.isWaiterMode"
                     @show-receipt="handleShowReceipt"
                     @select-table="handleSelectTable"
                     @change-order-type="handleOrderType"
@@ -248,6 +249,7 @@ const props = defineProps<{
     currentUser?: any;
     pendingCashiering?: any;
     sessionSummary?: any;
+    isWaiterMode?: boolean; // Hide settle button for waiter users
 }>();
 
 const page = usePage<PageProps>();

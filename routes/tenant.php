@@ -15,6 +15,7 @@ use App\Http\Controllers\CashierSessionController;
 use App\Http\Controllers\CashierCashoutController;
 use App\Http\Controllers\TableManagementController;
 use App\Http\Controllers\TenantLandingController;
+use App\Http\Controllers\WaiterAuthController;
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
 use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
@@ -69,6 +70,24 @@ if (!isCentralDomain()) {
                     Route::post('/logout', 'logout')->name('logout');
                 });
         });
+
+    // WAITER AUTHENTICATION ROUTES
+    Route::prefix('waiter')->name('waiter.')->group(function () {
+        Route::controller(WaiterAuthController::class)->group(function () {
+            // Guest routes
+            Route::middleware('guest')->group(function () {
+                Route::get('/login', 'index')->name('login');
+                Route::post('/verify-otp', 'verifyOtp')
+                    ->name('verify-otp')
+                    ->middleware('throttle:5,1');
+            });
+
+            // Auth routes
+            Route::middleware('auth')->group(function () {
+                Route::post('/logout', 'logout')->name('logout');
+            });
+        });
+    });
 
     // ROUTE FOR FORGOT PASSWORD
     Route::controller(PasswordResetLinkController::class)
@@ -183,6 +202,7 @@ if (!isCentralDomain()) {
             // ROUTE FOR RESTO CASHIER
             Route::as('resto.')
                 ->prefix('/resto')
+                ->middleware('role:cashiering')
                 ->group(function () {
                     // Cashier session routes (must come before category routes to avoid slug conflicts)
                     Route::controller(CashierSessionController::class)
@@ -349,6 +369,24 @@ if (!isCentralDomain()) {
             //     ->group(function () {
             //         Route::get('/hourly-sales', [\App\Http\Controllers\HourlySalesReportController::class, 'index'])->name('hourly-sales');
             //     });
+
+            // WAITER AUTHENTICATED ROUTES (order taking only)
+            Route::prefix('waiter')
+                ->name('waiter.')
+                ->middleware(['auth', 'role:order_taking'])
+                ->group(function () {
+                    Route::get('/home', function () {
+                        return Inertia::render('Waiter/Home');
+                    })->name('home');
+
+                    Route::get('/tables', function () {
+                        return Inertia::render('Waiter/Tables');
+                    })->name('tables');
+
+                    // POS interface for waiter (same as cashier but without settle)
+                    Route::get('/order/{tableId?}', [CategoryController::class, 'waiterIndex'])
+                        ->name('order');
+                });
         });
 
     // // Web Receipt Route (for browser viewing)

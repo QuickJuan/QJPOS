@@ -15,14 +15,14 @@
 
             <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
                 <p class="text-sm text-gray-700 mb-3 font-semibold">Or enter the secret manually:</p>
-                <div class="bg-white border border-gray-300 rounded p-4">
-                    <code class="text-lg font-mono text-center block break-all">{{ $secret }}</code>
+                <div class="bg-white border border-gray-300 rounded p-4 overflow-x-auto">
+                    <code class="text-sm font-mono break-all">{{ $secret }}</code>
                 </div>
             </div>
 
             <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
                 <p class="text-sm text-gray-700">
-                    <strong>Important:</strong> Make sure the user saves this secret in a safe place. They will need it to recover access to their account if they lose their authenticator app.
+                    <strong>Important:</strong> Make sure the user saves this in their authenticator app. They will use the time-based codes to log in at the waiter terminal.
                 </p>
             </div>
         </div>

@@ -98,8 +98,11 @@ class AuthController extends Controller
         // Commented out for file-based sessions - only works with database sessions
         // $this->invalidateUserSessions($user);
 
-        // Update the user's current branch_id
-        $user->update(['branch_id' => $branch->id]);
+        // Update the user's current branch_id and role
+        $user->update([
+            'branch_id' => $branch->id,
+            'current_role' => \App\Enums\CurrentRole::CASHIERING->value,
+        ]);
 
         Auth::login($user);
 
