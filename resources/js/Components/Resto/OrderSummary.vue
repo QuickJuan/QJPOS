@@ -121,6 +121,7 @@
             @save="saveEdit"
             @add-discount="handleAddDiscountToItem"
             @clear-discount="handleClearDiscountFromItem"
+            @add-add-on="handleAddAddOnToItem"
             @add-modifier="handleAddModifierToItem"
         />
 
@@ -146,6 +147,13 @@
             v-model:visible="showAddModifierModal"
             :selected-items="selectedItemsForModal"
             @add="handleModifierAdded"
+        />
+
+        <!-- Add Add-on Modal -->
+        <AddAddOnModal
+            v-model:visible="showAddAddOnModal"
+            :selected-items="selectedItemsForModal"
+            @add="handleAddOnAdded"
         />
 
         <!-- Item Modifiers Modal -->
@@ -201,6 +209,7 @@ import EditItemModal from "./OrderSummary/EditItemModal.vue";
 import DiscountModal from "./OrderSummary/DiscountModal.vue";
 import RequiredReasonModal from "./OrderSummary/RequiredReasonModal.vue";
 import AddModifierModal from "./OrderSummary/AddModifierModal.vue";
+import AddAddOnModal from "./OrderSummary/AddAddOnModal.vue";
 import ItemModifiersModal from "./OrderSummary/ItemModifiersModal.vue";
 import CloseSessionModal from "@/Pages/Resto/Partials/CloseSessionModal.vue";
 import SessionSummaryModal from "@/Pages/Resto/Partials/SessionSummaryModal.vue";
@@ -298,6 +307,7 @@ const tableInfo = computed(() => props.cart?.table_room || props.currentTable);
 const showEditModal = ref(false);
 const showDiscountModal = ref(false);
 const showRequiredReasonModal = ref(false);
+const showAddAddOnModal = ref(false);
 const showAddModifierModal = ref(false);
 const showTransferOrderItemsModal = ref(false);
 const showItemModifiersModal = ref(false);
@@ -532,6 +542,43 @@ const handleAddModifier = () => {
     showAddModifierModal.value = true;
 };
 
+const handleAddOnAdded = (_addOnData: any) => {
+    const selectedItemIds = (_addOnData?.selectedCartItems || []).map(
+        (item: any) => item.id,
+    );
+    const productAddOnId = _addOnData?.addOn?.id;
+
+    router.put(
+        route("resto.cart.apply-add-on", {
+            cartItemIds: selectedItemIds,
+        }),
+        {
+            productAddOnId,
+        },
+        {
+            onSuccess: () => {
+                toast.add({
+                    severity: "success",
+                    summary: "Success",
+                    detail: "Add-on added successfully",
+                    life: 3000,
+                });
+
+                showAddAddOnModal.value = false;
+                selectedItemsForDiscount.value = [];
+            },
+            onError: () => {
+                toast.add({
+                    severity: "error",
+                    summary: "Error",
+                    detail: "Failed to add add-on",
+                    life: 3000,
+                });
+            },
+        },
+    );
+};
+
 const handleTransferOrderItems = async () => {
     // Fetch occupied tables
     try {
@@ -702,6 +749,13 @@ const handleAddModifierToItem = (item: any) => {
     // Select the item for modifier
     selectedItemsForDiscount.value = [item.id];
     showAddModifierModal.value = true;
+    showEditModal.value = false;
+};
+
+const handleAddAddOnToItem = (item: any) => {
+    // Select the item for add-on
+    selectedItemsForDiscount.value = [item.id];
+    showAddAddOnModal.value = true;
     showEditModal.value = false;
 };
 

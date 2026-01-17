@@ -174,6 +174,17 @@ class CartController extends Controller
         }
     }
 
+    public function applyAddOnToCartItem(Request $request): RedirectResponse
+    {
+        try {
+            $this->cartService->applyAddOnToCartItem($request);
+
+            return redirect()->back()->with('success', 'Add-on added successfully.');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', 'There was an error adding add-on to cart item.');
+        }
+    }
+
     public function removeModifierFromCartItem(Request $request): RedirectResponse
     {
         try {

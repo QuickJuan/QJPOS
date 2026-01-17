@@ -9,6 +9,7 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\EWalletController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductAddOnController;
 use App\Http\Controllers\TableRoomController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\CashierSessionController;
@@ -215,6 +216,9 @@ if (!isCentralDomain()) {
                             // Product options (used by order-taking flow too)
                             Route::get('/product/{product}/options', [CashierSessionController::class, 'productOptions'])->name('product.options');
 
+                            // Product add-ons
+                            Route::get('/product/{product}/add-ons', [ProductAddOnController::class, 'index'])->name('product.add-ons');
+
                             Route::controller(CartController::class)
                                 ->group(function () {
                                     Route::post('/cart/create-order', 'create')->name('cart.create-order');
@@ -228,6 +232,7 @@ if (!isCentralDomain()) {
                                     Route::put('/cart/item/discount/', 'applyDiscountToCartItem')->name('cart.apply-discount');
                                     Route::put('/cart/item/modifier/', 'applyModifierToCartItem')->name('cart.apply-modifier');
                                     Route::put('/cart/item/modifier/remove', 'removeModifierFromCartItem')->name('cart.remove-modifier');
+                                    Route::put('/cart/item/add-on', 'applyAddOnToCartItem')->name('cart.apply-add-on');
                                     Route::put('/cart/item/{cartItemId}', 'updateCartItem')->name('cart.update-item');
                                     Route::put('/cart/item/clear-discount/{cartItemId}', 'clearDiscountToCartItem')->name('cart.clear-discount');
                                     Route::delete('/cart/item/{cartItemId}', 'deleteCartItem')->name('cart.delete');
