@@ -35,13 +35,13 @@
                                 false
                             "
                             @change="
-                            (e) =>
-                                $emit(
-                                    'toggleItemForDiscount',
-                                    item.id,
-                                    (e.target as HTMLInputElement).checked
-                                )
-                        "
+                                (e) =>
+                                    $emit(
+                                        'toggleItemForDiscount',
+                                        item.id,
+                                        (e.target as HTMLInputElement).checked,
+                                    )
+                            "
                             @click.stop
                             class="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary-500 focus:ring-2 mt-1 flex-shrink-0"
                         />
@@ -66,14 +66,14 @@
                                             v-if="item.order_type"
                                             :class="
                                                 getOrderTypeBadgeClass(
-                                                    item.order_type
+                                                    item.order_type,
                                                 )
                                             "
                                             class="text-xs px-2 py-0.5 rounded-full font-medium ml-2 flex-shrink-0"
                                         >
                                             {{
                                                 getOrderTypeLabel(
-                                                    item.order_type
+                                                    item.order_type,
                                                 )
                                             }}
                                         </span>
@@ -96,7 +96,7 @@
                                             >
                                                 {{
                                                     formatQuantity(
-                                                        item.quantity
+                                                        item.quantity,
                                                     )
                                                 }}
                                                 ×
@@ -106,14 +106,14 @@
                                                 >
                                                     {{
                                                         formatMoney(
-                                                            getBasePrice(item)
+                                                            getBasePrice(item),
                                                         )
                                                     }}
                                                 </span>
                                                 <span v-else>
                                                     {{
                                                         formatMoney(
-                                                            getBasePrice(item)
+                                                            getBasePrice(item),
                                                         )
                                                     }}
                                                 </span>
@@ -153,7 +153,7 @@
                                             >
                                                 {{
                                                     formatMoney(
-                                                        item.discount_amount
+                                                        item.discount_amount,
                                                     )
                                                 }}
                                             </p>
@@ -197,7 +197,7 @@
                                             >
                                                 +{{
                                                     formatMoney(
-                                                        getChildAmount(option)
+                                                        getChildAmount(option),
                                                     )
                                                 }}
                                             </template>
@@ -235,44 +235,47 @@
                                 <div class="text-xs text-gray-600 mb-1">
                                     Modifiers:
                                 </div>
-                                <div
-                                    v-for="(
-                                        modifierData, index
-                                    ) in item.meta_data"
-                                    :key="index"
-                                    class="text-xs text-gray-700 space-y-1 ml-3 flex gap-2 items-center"
-                                >
-                                    <div>
-                                        <!-- Modifier Options -->
-                                        <div
+                                <div class="ml-3 flex flex-wrap gap-2">
+                                    <template
+                                        v-for="(
+                                            modifierData, index
+                                        ) in item.meta_data"
+                                        :key="index"
+                                    >
+                                        <template
                                             v-for="(value, key) in modifierData"
                                             :key="key"
-                                            class="flex items-center gap-2"
                                         >
-                                            <span class="text-xs text-gray-700">
-                                                {{ formatModifierValue(value) }}
-                                            </span>
-                                            <!-- Remove Modifier Button -->
-                                            <button
-                                                @click.stop="
-                                                    $emit(
-                                                        'remove-modifier',
-                                                        item,
-                                                        value
-                                                    )
-                                                "
-                                                class="p-1 rounded-md text-red-400 hover:text-red-600 hover:bg-red-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-opacity-50"
-                                                title="Remove modifier"
-                                                :aria-label="`Remove ${formatModifierValue(
-                                                    value
-                                                )} modifier`"
+                                            <span
+                                                class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-secondary-800 border"
                                             >
-                                                <XMarkIcon
-                                                    class="w-3.5 h-3.5"
-                                                />
-                                            </button>
-                                        </div>
-                                    </div>
+                                                <span class="truncate">
+                                                    {{
+                                                        formatModifierValue(
+                                                            value,
+                                                        )
+                                                    }}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    @click.stop="
+                                                        $emit(
+                                                            'remove-modifier',
+                                                            item,
+                                                            value,
+                                                        )
+                                                    "
+                                                    class="inline-flex h-5 w-5 items-center justify-center rounded-full text-red-500 hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-300"
+                                                    title="Remove modifier"
+                                                    :aria-label="`Remove ${formatModifierValue(value)} modifier`"
+                                                >
+                                                    <XMarkIcon
+                                                        class="w-3.5 h-3.5"
+                                                    />
+                                                </button>
+                                            </span>
+                                        </template>
+                                    </template>
                                 </div>
                             </div>
                         </div>
@@ -412,7 +415,7 @@ const getBasePrice = (item: any) => {
     let optionsTotal = 0;
     if (item.selected_options && typeof item.selected_options === "object") {
         optionsTotal = Object.values(
-            item.selected_options as Record<string, any>
+            item.selected_options as Record<string, any>,
         ).reduce((sum: number, option: any) => {
             return sum + parseFloat(String(option.price || 0));
         }, 0);
@@ -563,10 +566,10 @@ const totalOfItems = (item: any) => {
 
     if (hasOptions) {
         const total = Object.values(
-            item.selected_options as Record<string, any>
+            item.selected_options as Record<string, any>,
         ).reduce(
             (sum: number, option: any) => sum + parseFloat(option.price || 0),
-            0
+            0,
         );
         return formatMoney(total);
     }
@@ -589,7 +592,7 @@ watch(
                 }
             });
         }
-    }
+    },
 );
 
 // Also watch for changes in any individual item (e.g., quantity updates)
@@ -618,6 +621,6 @@ watch(
             });
         }
     },
-    { deep: true }
+    { deep: true },
 );
 </script>
