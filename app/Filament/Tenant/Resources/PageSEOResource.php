@@ -1,27 +1,55 @@
 <?php
 
-namespace App\Filament\Tenant\Resources\PageResource\RelationManagers;
+namespace App\Filament\Tenant\Resources;
 
+use App\Models\PageSEO;
+use App\Models\Page;
 use Filament\Forms;
 use Filament\Forms\Form;
-use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
+use App\Filament\Tenant\Resources\PageSEOResource\Pages as PageSEOPages;
 
-class SeoRelationManager extends RelationManager
+class PageSEOResource extends Resource
 {
-    protected static string $relationship = 'seo';
+    protected static ?string $model = PageSEO::class;
 
-    protected static ?string $title = 'SEO Settings';
+    protected static ?string $navigationIcon = 'heroicon-o-magnifying-glass';
 
-    protected static ?string $recordTitleAttribute = 'meta_title';
+    protected static ?string $navigationLabel = 'Page SEO';
 
-    public function form(Form $form): Form
+    protected static ?string $modelLabel = 'Page SEO';
+
+    protected static ?string $pluralModelLabel = 'Page SEO';
+
+    protected static ?string $navigationGroup = 'Page Builder';
+
+    protected static ?int $navigationSort = 2;
+
+    public static function form(Form $form): Form
     {
         return $form
             ->schema([
+                Forms\Components\Section::make('Page Selection')
+                    ->description('Select the page to configure SEO for')
+                    ->schema([
+                        Forms\Components\Select::make('page_id')
+                            ->label('Page')
+                            ->relationship('page', 'title')
+                            ->searchable()
+                            ->preload()
+                            ->required()
+                            ->unique(ignoreRecord: true)
+                            ->helperText('Each page can only have one SEO configuration')
+                            ->getOptionLabelFromRecordUsing(function ($record) {
+                                if ($record->page_type === 'landing_page') {
+                                    return '🏠 Landing Page (Home)';
+                                }
+                                return $record->title;
+                            }),
+                    ]),
+
                 Forms\Components\Section::make('Basic SEO')
                     ->description('Configure basic SEO metadata for search engines')
                     ->schema([
@@ -85,7 +113,7 @@ class SeoRelationManager extends RelationManager
                             ->directory('pages/og-images')
                             ->visibility('public')
                             ->helperText('Recommended size: 1200x630px (leave empty to use featured image)'),
-                    ])->columns(2)->collapsed(),
+                    ])->columns(2)->collapsible(),
 
                 Forms\Components\Section::make('Twitter Card')
                     ->description('Optimize how your page appears when shared on Twitter/X')
@@ -119,7 +147,7 @@ class SeoRelationManager extends RelationManager
                             ->directory('pages/twitter-images')
                             ->visibility('public')
                             ->helperText('Recommended size: 1200x675px (leave empty to use OG image)'),
-                    ])->columns(2)->collapsed(),
+                    ])->columns(2)->collapsible(),
 
                 Forms\Components\Section::make('Structured Data (JSON-LD)')
                     ->description('Add structured data schema for rich search results')
@@ -144,40 +172,90 @@ class SeoRelationManager extends RelationManager
                             ->helperText('Advanced: Add custom JSON-LD structured data')
                             ->rows(5)
                             ->columnSpanFull(),
-                    ])->columns(1)->collapsed(),
+                    ])->columns(1)->collapsible(),
             ]);
     }
 
-    public function table(Table $table): Table
+    public static function table(Table $table): Table
     {
         return $table
-            ->recordTitleAttribute('meta_title')
             ->columns([
+                Tables\Columns\TextColumn::make('page.title')
+                    ->label('Page')
+                    ->searchable()
+                    ->sortable()
+                    ->weight('bold')
+                    ->formatStateUsing(function ($state, $record) {
+                        if ($record->page?->page_type === 'landing_page') {
+                            return '🏠 Landing Page (Home)';
+                        }
+                        return $state;
+                    }),
+
                 Tables\Columns\TextColumn::make('meta_title')
                     ->label('SEO Title')
-                    ->placeholder('Not set'),
+                    ->searchable()
+                    ->limit(40)
+                    ->placeholder('—'),
+
                 Tables\Columns\TextColumn::make('meta_description')
                     ->label('Description')
+                    ->searchable()
                     ->limit(50)
-                    ->placeholder('Not set'),
+                    ->placeholder('—'),
+
+                Tables\Columns\IconColumn::make('has_og_image')
+                    ->label('OG Image')
+                    ->boolean()
+                    ->getStateUsing(fn ($record) => !empty($record->og_image)),
+
+                Tables\Columns\IconColumn::make('has_schema')
+                    ->label('Schema')
+                    ->boolean()
+                    ->getStateUsing(fn ($record) => !empty($record->schema_type) || !empty($record->schema_json)),
+
+                Tables\Columns\TextColumn::make('updated_at')
+                    ->label('Last Updated')
+                    ->dateTime()
+                    ->sortable(),
             ])
             ->filters([
-                //
-            ])
-            ->headerActions([
-                Tables\Actions\CreateAction::make()
-                    ->label('Add SEO Settings')
-                    ->visible(fn (): bool => $this->getOwnerRecord()->seo === null),
+                Tables\Filters\SelectFilter::make('schema_type')
+                    ->label('Schema Type')
+                    ->options([
+                        'Article' => 'Article',
+                        'BlogPosting' => 'Blog Posting',
+                        'WebPage' => 'Web Page',
+                        'Product' => 'Product',
+                        'LocalBusiness' => 'Local Business',
+                        'Organization' => 'Organization',
+                        'FAQPage' => 'FAQ Page',
+                    ]),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])
-            ->emptyStateHeading('No SEO settings configured')
-            ->emptyStateDescription('Add SEO metadata to improve search engine visibility')
-            ->emptyStateActions([
-                Tables\Actions\CreateAction::make()
-                    ->label('Add SEO Settings'),
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                ]),
             ]);
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            //
+        ];
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => PageSEOPages\ListPageSEOS::route('/'),
+            'create' => PageSEOPages\CreatePageSEO::route('/create'),
+            'edit' => PageSEOPages\EditPageSEO::route('/{record}/edit'),
+        ];
     }
 }

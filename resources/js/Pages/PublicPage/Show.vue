@@ -1,13 +1,16 @@
 <template>
-    <Head
-        :title="
-            seo?.meta_title
-                ? seo.meta_title
-                : page.title
-                  ? `${page.title} | ${appName}`
-                  : appName
-        "
-    >
+    <Head :title="seo?.meta_title || appName">
+        <!-- Canonical URL -->
+        <link rel="canonical" :href="seo?.canonical_url || $page.url" />
+
+        <!-- Meta Robots -->
+        <meta
+            v-if="seo?.meta_robots"
+            name="robots"
+            :content="seo.meta_robots"
+        />
+
+        <!-- Basic SEO -->
         <meta
             v-if="seo?.meta_description"
             name="description"
@@ -21,49 +24,68 @@
 
         <!-- Open Graph / Facebook -->
         <meta property="og:type" content="website" />
+        <meta property="og:url" :content="$page.url" />
         <meta
             property="og:title"
-            :content="
-                seo?.meta_title
-                    ? seo.meta_title
-                    : page.title
-                      ? `${page.title} | ${appName}`
-                      : appName
-            "
+            :content="seo?.og_title || seo?.meta_title || appName"
         />
         <meta
-            v-if="seo?.meta_description"
+            v-if="seo?.og_description || seo?.meta_description"
             property="og:description"
-            :content="seo.meta_description"
+            :content="seo?.og_description || seo?.meta_description"
         />
         <meta
-            v-if="page.featured_image"
+            v-if="seo?.og_image || page.featured_image"
             property="og:image"
-            :content="page.featured_image"
+            :content="seo?.og_image || page.featured_image"
         />
 
-        <!-- Twitter -->
-        <meta property="twitter:card" content="summary_large_image" />
+        <!-- Twitter Card -->
+        <meta
+            property="twitter:card"
+            :content="seo?.twitter_card || 'summary_large_image'"
+        />
         <meta
             property="twitter:title"
             :content="
-                seo?.meta_title
-                    ? seo.meta_title
-                    : page.title
-                      ? `${page.title} | ${appName}`
-                      : appName
+                seo?.twitter_title ||
+                seo?.og_title ||
+                seo?.meta_title ||
+                appName
             "
         />
         <meta
-            v-if="seo?.meta_description"
+            v-if="
+                seo?.twitter_description ||
+                seo?.og_description ||
+                seo?.meta_description
+            "
             property="twitter:description"
-            :content="seo.meta_description"
+            :content="
+                seo?.twitter_description ||
+                seo?.og_description ||
+                seo?.meta_description
+            "
         />
         <meta
-            v-if="page.featured_image"
+            v-if="seo?.twitter_image || seo?.og_image || page.featured_image"
             property="twitter:image"
-            :content="page.featured_image"
+            :content="
+                seo?.twitter_image || seo?.og_image || page.featured_image
+            "
         />
+
+        <!-- JSON-LD Structured Data -->
+        <component
+            v-if="seo?.schema_json"
+            :is="'script'"
+            type="application/ld+json"
+            v-html="
+                typeof seo.schema_json === 'string'
+                    ? seo.schema_json
+                    : JSON.stringify(seo.schema_json)
+            "
+        ></component>
     </Head>
 
     <PublicPageLayout

@@ -116,6 +116,17 @@ class PublicPageController extends Controller
                 'meta_title' => $page->seo->meta_title,
                 'meta_description' => $page->seo->meta_description,
                 'meta_keywords' => $page->seo->meta_keywords,
+                'canonical_url' => $page->seo->canonical_url,
+                'meta_robots' => $page->seo->meta_robots,
+                'og_title' => $page->seo->og_title,
+                'og_description' => $page->seo->og_description,
+                'og_image' => $page->seo->og_image ? tenant_asset($page->seo->og_image) : null,
+                'twitter_card' => $page->seo->twitter_card,
+                'twitter_title' => $page->seo->twitter_title,
+                'twitter_description' => $page->seo->twitter_description,
+                'twitter_image' => $page->seo->twitter_image ? tenant_asset($page->seo->twitter_image) : null,
+                'schema_type' => $page->seo->schema_type,
+                'schema_json' => $page->seo->schema_json,
             ] : null,
         ]);
     }
