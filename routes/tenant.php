@@ -92,6 +92,7 @@ if (!isCentralDomain()) {
             // Guest routes
             Route::middleware('guest')->group(function () {
                 Route::get('/login', 'index')->name('login');
+                Route::get('/branches/{branchId}/users', 'getBranchUsers')->name('branch-users');
                 Route::post('/verify-otp', 'verifyOtp')
                     ->name('verify-otp')
                     ->middleware('throttle:5,1');
