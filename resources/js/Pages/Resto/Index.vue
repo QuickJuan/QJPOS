@@ -399,14 +399,16 @@ onMounted(() => {
 
     const categoriesData = getCategoriesData();
 
-    // First, try to load from localStorage
-    loadCategories();
-
-    // If we have fresh server data and no cached data, or server data is newer
+    // Load categories: prefer server data, fallback to localStorage cache
     if (categoriesData && categoriesData.length > 0) {
+        // Fresh server data available - use it and update cache
         loadCategories(categoriesData);
-    } else if (cachedCategories.value.length === 0) {
-        console.warn("No categories available from server or cache");
+    } else {
+        // No server data - try loading from cache
+        loadCategories();
+        if (cachedCategories.value.length === 0) {
+            console.warn("No categories available from server or cache");
+        }
     }
 
     // Load discounts (keeping existing logic)

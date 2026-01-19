@@ -54,6 +54,18 @@ if (!isCentralDomain()) {
 
 ])->group(function () {
 
+    // PUBLIC STATIC FILE ROUTES (no auth required)
+    Route::get('/manifest.json', function () {
+        $manifestPath = public_path('manifest.json');
+        if (file_exists($manifestPath)) {
+            return response()->file($manifestPath, [
+                'Content-Type' => 'application/json',
+                'Cache-Control' => 'public, max-age=3600',
+            ]);
+        }
+        abort(404);
+    })->name('manifest');
+
     // ROUTE FOR AUTHENTICATION
     Route::controller(AuthController::class)
         ->group(function () {
