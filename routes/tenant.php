@@ -17,6 +17,7 @@ use App\Http\Controllers\CashierCashoutController;
 use App\Http\Controllers\PrintXReadingShiftController;
 use App\Http\Controllers\TableManagementController;
 use App\Http\Controllers\TenantLandingController;
+use App\Http\Controllers\PublicPageController;
 use App\Http\Controllers\Waiter\AuthController as WaiterAuthController;
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
 use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
@@ -120,8 +121,21 @@ if (!isCentralDomain()) {
                 ->name('password.confirm.store');
         });
 
-    // ROUTE FOR PUBLIC LANDING PAGE
-    Route::get('/', TenantLandingController::class)->name('landing');
+    // ROUTE FOR PUBLIC LANDING PAGE (for guests and authenticated users)
+    Route::get('/', function (Illuminate\Http\Request $request) {
+        // Check if there's a page builder landing page
+        $hasLandingPage = \App\Models\Page::where('page_type', \App\Enums\PageType::LANDING_PAGE->value)
+            ->where('status', 'published')
+            ->exists();
+
+        if ($hasLandingPage) {
+            // Show page builder landing page for everyone
+            return app(PublicPageController::class)->landing();
+        } else {
+            // Fall back to default tenant landing if no page builder landing exists
+            return app(TenantLandingController::class)($request);
+        }
+    })->name('landing');
 
     Route::get('/product/{slug}', [ProductController::class, 'show'])->name('product.show');
 
@@ -387,6 +401,9 @@ if (!isCentralDomain()) {
                     Route::get('/tables/{tableId}/with-cart', 'getTableWithCart')->name('table-with-cart');
                 });
 
+            // NOTE: Page builder now managed through Filament admin (/admin/pages)
+            // Frontend pages displayed via public routes (/{slug})
+
             // ROUTES FOR REPORTS
             // Route::as('reports.')
             //     ->prefix('/reports')
@@ -395,6 +412,17 @@ if (!isCentralDomain()) {
             //     });
 
         });
+
+    // Public pages routes with optional prefix
+    // Note: Landing pages (page_type = 'landing_page') should only be accessible via the root URL '/'
+    // and not through their slug to avoid duplicate content
+    Route::get('/{slug}', [\App\Http\Controllers\PublicPageController::class, 'show'])
+        ->where('slug', '[a-zA-Z0-9\-]+')
+        ->name('pages.show');  // Root level pages like /test, /about, /contact
+
+    Route::get('/{prefix}/{slug}', [\App\Http\Controllers\PublicPageController::class, 'showWithPrefix'])
+        ->where(['prefix' => '[a-zA-Z0-9\-]+', 'slug' => '[a-zA-Z0-9\-]+'])
+        ->name('pages.show.prefix');  // Prefixed pages like /respiratory/test
 
     // // Web Receipt Route (for browser viewing)
     // Route::get('/receipt/{receiptNumber}', function($receiptNumber) {
