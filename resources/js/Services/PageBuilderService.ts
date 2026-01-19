@@ -1,4 +1,4 @@
-import axios from '@/bootstrap'
+import axios from 'axios';
 
 class PageBuilderService {
   async getPages(filters = {}, page = 1) {
