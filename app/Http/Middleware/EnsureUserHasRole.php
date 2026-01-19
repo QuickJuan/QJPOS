@@ -53,10 +53,25 @@ class EnsureUserHasRole
             ->replace('-', '_')
             ->value();
 
+        // TEMPORARY DEBUG LOGGING
+        \Log::info('🔍 ROLE MIDDLEWARE DEBUG', [
+            'url' => $request->url(),
+            'current_role_raw' => $request->user()->current_role,
+            'current_role_processed' => $currentRoleValue,
+            'allowed_roles' => $allowedRoleValues->toArray(),
+            'middleware_params' => ['role' => $role, 'additional' => $additionalRoles],
+        ]);
+
         // Check if user has any allowed role
         if (!$allowedRoleValues->contains($currentRoleValue)) {
+            \Log::warning('🚫 ROLE CHECK FAILED', [
+                'current' => $currentRoleValue,
+                'allowed' => $allowedRoleValues->toArray(),
+            ]);
             abort(403, 'Access denied. You do not have the required role.');
         }
+
+        \Log::info('✅ ROLE CHECK PASSED');
 
         return $next($request);
     }

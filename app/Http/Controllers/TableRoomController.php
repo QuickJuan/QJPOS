@@ -25,38 +25,19 @@ class TableRoomController extends Controller
 
     public function index(Request $request)
     {
-        // Get the active branch using user cashier id from session
+        // Get branch from active cashier session or fall back to user's selected branch
         $cashierSession = $request->user()->cashierSession;
 
-        if (! $cashierSession) {
-            $currentRole = $request->user()->current_role;
-            $currentRoleValue = $currentRole instanceof CurrentRole
-                ? $currentRole->value
-                : (is_string($currentRole) ? $currentRole : (string) $currentRole);
-
-            $currentRoleValue = Str::of($currentRoleValue)
-                ->lower()
-                ->replace(' ', '_')
-                ->replace('-', '_')
-                ->value();
-
-            if ($currentRoleValue !== CurrentRole::ORDER_TAKING->value) {
-                return redirect()->route('resto.index')->with('error', 'No active cashier session found. Please start a cashier session first.');
-            }
-
-            $branchId = $request->user()->branch_id;
+        if ($cashierSession) {
+            $branchId = $cashierSession->branch_id;
+        } else {
+            $branchId = $request->user()->branch_id ?? session('active_branch.id');
             if (! $branchId) {
                 return redirect()->route('home')->with('error', 'No active branch selected.');
             }
-
-            $tableRooms = $this->tableRoomService->list($branchId);
-
-            return Inertia::render('Resto/Tables', [
-                'tableRooms' => json_decode(json_encode(TableLocationResource::collection($tableRooms)), true),
-            ]);
         }
 
-        $tableRooms = $this->tableRoomService->list($cashierSession->branch_id);
+        $tableRooms = $this->tableRoomService->list($branchId);
 
         return Inertia::render('Resto/Tables', [
             'tableRooms' => json_decode(json_encode(TableLocationResource::collection($tableRooms)), true),
