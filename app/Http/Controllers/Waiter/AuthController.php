@@ -17,7 +17,11 @@ class AuthController
 {
     public function index()
     {
-        return Inertia::render('Waiter/Auth/Login');
+        $branches = Branch::query()->select('id', 'name', 'branch_code')->get();
+
+        return Inertia::render('Waiter/Auth/Login', [
+            'branches' => $branches,
+        ]);
     }
 
     public function verifyOtp(Request $request)
@@ -82,6 +86,28 @@ class AuthController
         // Force a full reload so the regenerated CSRF token is reflected in the page.
         // This prevents 419 "Page Expired" on subsequent POSTs after login.
         return Inertia::location(route('table-rooms.index'));
+    }
+
+    public function getBranchUsers(Request $request, $branchId)
+    {
+        $request->validate([
+            'branch_id' => 'sometimes|exists:branches,id',
+        ]);
+
+        $branch = Branch::findOrFail($branchId);
+
+        $users = User::whereHas('branches', function ($query) use ($branchId) {
+            $query->where('branches.id', $branchId);
+        })
+        ->whereHas('roles', function ($query) {
+            $query->whereIn('name', ['Waiter', 'Server']);
+        })
+        ->select('id', 'name', 'email')
+        ->get();
+
+        return response()->json([
+            'data' => $users,
+        ]);
     }
 
     public function logout(Request $request)

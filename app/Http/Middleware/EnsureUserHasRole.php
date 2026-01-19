@@ -53,25 +53,25 @@ class EnsureUserHasRole
             ->replace('-', '_')
             ->value();
 
-        // Log for debugging
-        \Log::info('Role check', [
-            'user_id' => $request->user()->id,
-            'current_role' => $currentRoleValue,
-            'allowed_roles' => $allowedRoleValues->all(),
-            'path' => $request->path(),
+        // TEMPORARY DEBUG LOGGING
+        \Log::info('🔍 ROLE MIDDLEWARE DEBUG', [
+            'url' => $request->url(),
+            'current_role_raw' => $request->user()->current_role,
+            'current_role_processed' => $currentRoleValue,
+            'allowed_roles' => $allowedRoleValues->toArray(),
+            'middleware_params' => ['role' => $role, 'additional' => $additionalRoles],
         ]);
 
         // Check if user has any allowed role
         if (!$allowedRoleValues->contains($currentRoleValue)) {
-            // Redirect based on current role
-            if ($currentRoleValue === CurrentRole::ORDER_TAKING->value) {
-                abort(403, 'Access denied. You are logged in as a waiter and cannot access cashier features.');
-            } elseif ($currentRoleValue === CurrentRole::CASHIERING->value) {
-                abort(403, 'Access denied. You are logged in as a cashier and cannot access waiter features.');
-            }
-
-            abort(403, 'Access denied. You do not have the required role. Current: ' . $currentRoleValue . ', Allowed: ' . $allowedRoleValues->implode(', '));
+            \Log::warning('🚫 ROLE CHECK FAILED', [
+                'current' => $currentRoleValue,
+                'allowed' => $allowedRoleValues->toArray(),
+            ]);
+            abort(403, 'Access denied. You do not have the required role.');
         }
+
+        \Log::info('✅ ROLE CHECK PASSED');
 
         return $next($request);
     }

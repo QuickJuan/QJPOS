@@ -43,7 +43,7 @@
                                     id="branch"
                                     v-model="form.branch"
                                     label="Select Branch"
-                                    :options="branches"
+                                    :options="props.branches"
                                     optionLabel="name"
                                     optionValue="id"
                                     placeholder="Choose your branch"
@@ -184,19 +184,30 @@ import PrimaryButton from "@/Components/PrimaryButton.vue";
 import SecondaryButton from "@/Components/SecondaryButton.vue";
 import InputOtp from "primevue/inputotp";
 import { useToast } from "primevue";
+import axios from "axios";
 
 const toast = useToast();
 const page = usePage();
 
-const branches = ref([]);
+const props = defineProps({
+    branches: {
+        type: Array,
+        default: () => [],
+    },
+});
+
 const branchUsers = ref([]);
 const loadingUsers = ref(false);
 const otpValue = ref("");
 
 const form = useForm({
     email: "",
-    branch: "",
+    branch: props.branches.length === 1 ? props.branches[0].id : "",
     otp: "",
+});
+
+const companyName = computed(() => {
+    return page.props?.company_info?.company_name || "QuickJuan";
 });
 
 // Watch otpValue and sync with form.otp
@@ -204,19 +215,10 @@ watch(otpValue, (newVal) => {
     form.otp = newVal;
 });
 
+// Load users for the branch if only one branch exists
 onMounted(async () => {
-    // Fetch branches
-    try {
-        const response = await axios.get("/api/branches");
-        branches.value = response.data.data || [];
-    } catch (error) {
-        console.error("Failed to fetch branches:", error);
-        toast.add({
-            severity: "error",
-            summary: "Error",
-            detail: "Failed to load branches",
-            life: 3000,
-        });
+    if (props.branches.length === 1) {
+        await loadBranchUsers(props.branches[0].id);
     }
 });
 
@@ -230,7 +232,7 @@ watch(
             branchUsers.value = [];
             form.email = "";
         }
-    }
+    },
 );
 
 const loadBranchUsers = async (branchId) => {
@@ -246,6 +248,7 @@ const loadBranchUsers = async (branchId) => {
             detail: "Failed to load users for this branch",
             life: 3000,
         });
+        route("waiter.branch-users", branchId);
     } finally {
         loadingUsers.value = false;
     }
