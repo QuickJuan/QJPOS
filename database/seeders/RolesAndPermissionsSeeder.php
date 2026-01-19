@@ -32,10 +32,25 @@ class RolesAndPermissionsSeeder extends Seeder
             Role::firstOrCreate(['name' => $roleName]);
         }
 
-        // You can also create permissions here if needed
-        // Example:
-        // Permission::create(['name' => 'view orders']);
-        // Permission::create(['name' => 'create orders']);
+        // Create permissions
+        $permissions = [
+            // Page Builder permissions
+            'view pages',
+            'create pages',
+            'edit pages',
+            'delete pages',
+            'publish pages',
+        ];
+
+        foreach ($permissions as $permissionName) {
+            Permission::firstOrCreate(['name' => $permissionName]);
+        }
+
+        // Assign permissions to roles
+        $adminRole = Role::where('name', 'Admin')->first();
+        if ($adminRole) {
+            $adminRole->syncPermissions($permissions);
+        }
 
         $this->command->info('Roles and permissions seeded successfully!');
     }
