@@ -41,10 +41,16 @@ class PaymentService
 
                 $cart = Cart::with(['cartItems', 'tableRoom.tableRoomLocation', 'cashierSession'])->findOrFail($payload['cart_id']);
 
+                info('dito cart ');
+                info(json_encode($cart))    ;
+                info('dito cart end');
                 // Save cart and cart items to order (will throw exception if fails)
                 [$order, $changeAmount] = $this->saveCartToOrder($cart, $payload, $paymentContext);
                 // Void items are already saved to void_items table when they were voided
                 $this->saveCartItemsToOrderItems($cart->cartItems, $order);
+
+                info('save cart items to order' );
+                info($order);
 
 
                 $this->inventoryStockService->deductOrderInventory($order);
@@ -143,7 +149,7 @@ class PaymentService
         }
 
         // Get branch_id from cart's cashier session, or fallback to current user's branch
-        $branchId = $cart->cashierSession?->branch_id ?? $cashier->branch_id ?? $cart->branch_id;
+        $branchId = Auth::user()->branch_id;
 
         if (!$branchId) {
             throw new \Exception('Unable to determine branch_id for invoice generation');
@@ -154,11 +160,22 @@ class PaymentService
         // Get customer_id from payload (for credit payments) or from cart
         $customerId = $payload['customer_id'] ?? $cart->customer_id;
 
+        // Resolve an active cashier session: prefer the cart's session, otherwise latest open session for the cashier
+        $cashierSessionId =
+            $cashier->cashierSessions()
+                ->whereNull('closing_time')
+                ->latest('id')
+                ->value('id');
+
+        if (!$cashierSessionId) {
+            throw new \Exception('Unable to settle bill: no active cashier session found.');
+        }
+
         // Create the order
         $order = Order::create([
             'invoice_no'         => $invoiceNumber,
             'cashier_id'         => $cashier->id,
-            'cashier_session_id' => $cashier->cashierSession?->id ?? $cart->cashier_session_id,
+            'cashier_session_id' => $cashierSessionId,
             'bill_no'            => $cart->bill_no,
             'branch_id'          => $branchId,
             'table_room_id'      => $cart->table_room_id,

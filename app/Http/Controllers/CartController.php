@@ -103,6 +103,7 @@ class CartController extends Controller
     {
         try {
             if (! $cartItemId) {
+                info('Cart item ID is empty in updateCartItem');
                 return redirect()->back()->with('error', 'Cart item ID is empty.');
             }
 
@@ -438,8 +439,10 @@ class CartController extends Controller
     public function settleBill(SettleBillRequest $request): JsonResponse | RedirectResponse
     {
         try {
-
+            info('Attempting to settle bill for cart ID: ' . $request->input('cart_id'));
             $order = $this->paymentService->settleBill($request->validated());
+
+            info('Bill settled successfully for cart ID: ' . $request->input('cart_id'));
 
             // return redirect()->back()->with('success', 'Bill settled successfully.');
             return response()->json([

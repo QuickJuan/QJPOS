@@ -49,7 +49,7 @@
                                 Started:
                                 {{
                                     new Date(
-                                        props.openSession.started_time
+                                        props.openSession.started_time,
                                     ).toLocaleString()
                                 }}
                             </p>
@@ -161,7 +161,11 @@ const confirmCloseSessionModal = (event: any) => {
 };
 
 const startSession = () => {
-    if (!beginningCash.value || parseFloat(beginningCash.value) < 0) {
+    const cashValue = parseFloat(beginningCash.value);
+    const branchId =
+        page.props?.active_branch?.id || page.props?.auth?.user?.branch_id;
+
+    if (!Number.isFinite(cashValue) || cashValue < 0) {
         toast.add({
             severity: "error",
             summary: "Error",
@@ -171,15 +175,25 @@ const startSession = () => {
         return;
     }
 
+    if (!branchId) {
+        toast.add({
+            severity: "error",
+            summary: "Missing Branch",
+            detail: "No branch selected. Please pick a branch before starting a shift.",
+            life: 3000,
+        });
+        return;
+    }
+
     router.post(
         route("resto.session.start"),
         {
-            beginning_cash: parseFloat(beginningCash.value),
-            branch_id: page.props?.active_branch?.id || null,
+            beginning_cash: cashValue,
+            branch_id: branchId,
         },
         {
             onSuccess: () => {
-                //
+                router.visit(route("resto.index"));
             },
             onError: (errors) => {
                 console.log("errors :", errors);
@@ -189,12 +203,13 @@ const startSession = () => {
                     detail:
                         "Failed to start session: " +
                         (errors.beginning_cash ||
+                            errors.branch_id ||
                             errors.message ||
                             "Unknown error"),
                     life: 3000,
                 });
             },
-        }
+        },
     );
 };
 

@@ -93,7 +93,7 @@
                                         {{
                                             formatMoney(
                                                 remainingBalance,
-                                                defaultCurrencyCode
+                                                defaultCurrencyCode,
                                             )
                                         }}
                                     </p>
@@ -120,7 +120,7 @@
                                             {{
                                                 formatMoney(
                                                     payment.amount_applied,
-                                                    defaultCurrencyCode
+                                                    defaultCurrencyCode,
                                                 )
                                             }}
                                             <span
@@ -130,7 +130,7 @@
                                                 {{
                                                     formatMoney(
                                                         payment.change_amount,
-                                                        defaultCurrencyCode
+                                                        defaultCurrencyCode,
                                                     )
                                                 }}
                                             </span>
@@ -176,7 +176,7 @@
                                 {{ availablePaymentMethods.length }} configured
                             </span>
                         </div>
-                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        <div class="grid grid-cols-2 2xl:grid-cols-3 gap-2">
                             <button
                                 v-for="method in availablePaymentMethods"
                                 :key="method.id"
@@ -445,7 +445,7 @@
                                             inputmode="decimal"
                                             :placeholder="`Max: ${Math.min(
                                                 selectedCustomerBalance,
-                                                remainingBalance
+                                                remainingBalance,
                                             )}`"
                                             required
                                         />
@@ -456,13 +456,13 @@
                                             <span class="font-bold">{{
                                                 Math.min(
                                                     selectedCustomerBalance,
-                                                    remainingBalance
+                                                    remainingBalance,
                                                 )
                                             }}</span>
                                             pts (₱{{
                                                 Math.min(
                                                     selectedCustomerBalance,
-                                                    remainingBalance
+                                                    remainingBalance,
                                                 ).toFixed(2)
                                             }})
                                         </p>
@@ -490,7 +490,7 @@
                                     {{
                                         formatMoney(
                                             amountTenderedNumber,
-                                            paymentCurrencyCode
+                                            paymentCurrencyCode,
                                         )
                                     }}
                                 </span>
@@ -505,7 +505,7 @@
                                     {{
                                         formatMoney(
                                             amountPaidBase,
-                                            defaultCurrencyCode
+                                            defaultCurrencyCode,
                                         )
                                     }}
                                 </span>
@@ -541,11 +541,11 @@
                                     !isCashMethod && !isMixedPaymentMode
                                         ? 'Auto-filled for non-cash payments.'
                                         : isMixedPaymentMode && !isCashMethod
-                                        ? `Maximum: ${formatMoney(
-                                              remainingBalance,
-                                              defaultCurrencyCode
-                                          )}`
-                                        : undefined
+                                          ? `Maximum: ${formatMoney(
+                                                remainingBalance,
+                                                defaultCurrencyCode,
+                                            )}`
+                                          : undefined
                                 "
                             />
                         </div>
@@ -565,7 +565,7 @@
                                     {{
                                         formatMoney(
                                             totalMixedPayments,
-                                            defaultCurrencyCode
+                                            defaultCurrencyCode,
                                         )
                                     }}
                                 </p>
@@ -598,7 +598,7 @@
                                             <span class="font-semibold">{{
                                                 formatMoney(
                                                     payment.amount_applied,
-                                                    defaultCurrencyCode
+                                                    defaultCurrencyCode,
                                                 )
                                             }}</span>
                                         </p>
@@ -610,7 +610,7 @@
                                             {{
                                                 formatMoney(
                                                     payment.change_amount,
-                                                    defaultCurrencyCode
+                                                    defaultCurrencyCode,
                                                 )
                                             }}
                                         </p>
@@ -683,14 +683,14 @@
                                     {{
                                         formatMoney(
                                             totalMixedPayments,
-                                            defaultCurrencyCode
+                                            defaultCurrencyCode,
                                         )
                                     }}
                                     /
                                     {{
                                         formatMoney(
                                             totalDue,
-                                            defaultCurrencyCode
+                                            defaultCurrencyCode,
                                         )
                                     }}
                                 </span>
@@ -704,7 +704,7 @@
                                         width: `${Math.min(
                                             (totalMixedPayments / totalDue) *
                                                 100,
-                                            100
+                                            100,
                                         )}%`,
                                     }"
                                 ></div>
@@ -717,7 +717,7 @@
                                 <span class="font-semibold text-error-600">{{
                                     formatMoney(
                                         remainingBalance,
-                                        defaultCurrencyCode
+                                        defaultCurrencyCode,
                                     )
                                 }}</span>
                             </p>
@@ -842,7 +842,7 @@
                                             {{
                                                 formatMoney(
                                                     totalDue,
-                                                    defaultCurrencyCode
+                                                    defaultCurrencyCode,
                                                 )
                                             }}
                                             )
@@ -863,7 +863,7 @@
                                                 {{
                                                     formatMoney(
                                                         amountPaidBase,
-                                                        defaultCurrencyCode
+                                                        defaultCurrencyCode,
                                                     )
                                                 }}
                                             </p>
@@ -912,9 +912,9 @@
                                 isSubmitting
                                     ? "Processing..."
                                     : isMixedPaymentMode &&
-                                      remainingBalance <= 0
-                                    ? "Complete Payment"
-                                    : "Settle Bill"
+                                        remainingBalance <= 0
+                                      ? "Complete Payment"
+                                      : "Settle Bill"
                             }}
                         </button>
                     </div>
@@ -989,10 +989,10 @@ const hasCart = computed(() => Boolean(props.cart?.id));
 const tableInfo = computed(() => props.cart?.meta?.table_info ?? null);
 const totals = computed(() => props.cart?.totals ?? {});
 const totalDue = computed(() =>
-    Number(totals.value?.total_due ?? totals.value?.total_amount ?? 0)
+    Number(totals.value?.total_due ?? totals.value?.total_amount ?? 0),
 );
 const cartIdentifier = computed(
-    () => props.cart?.bill_number ?? props.cart?.id ?? null
+    () => props.cart?.bill_number ?? props.cart?.id ?? null,
 );
 const formattedCartNumber = computed(() => {
     const raw = cartIdentifier.value;
@@ -1057,12 +1057,12 @@ const defaultCurrency = computed(() => {
     }
 
     const preferred = currencies.value.find(
-        (currency: any) => currency.is_default
+        (currency: any) => currency.is_default,
     );
     return preferred ?? currencies.value[0] ?? fallbackCurrency;
 });
 const defaultCurrencyCode = computed(
-    () => defaultCurrency.value?.code || "PHP"
+    () => defaultCurrency.value?.code || "PHP",
 );
 
 const hasMultipleCurrencies = computed(() => currencies.value.length > 1);
@@ -1071,16 +1071,16 @@ const hasMultipleCurrencies = computed(() => currencies.value.length > 1);
 const customers = ref<any[]>([]);
 
 const selectedPaymentMethodId = ref<number | null>(
-    availablePaymentMethods.value[0]?.id ?? null
+    availablePaymentMethods.value[0]?.id ?? null,
 );
 const selectedPaymentMethod = computed(
     () =>
         availablePaymentMethods.value.find(
-            (method: any) => method.id === selectedPaymentMethodId.value
-        ) || null
+            (method: any) => method.id === selectedPaymentMethodId.value,
+        ) || null,
 );
 const paymentType = computed(
-    () => selectedPaymentMethod.value?.payment_type || null
+    () => selectedPaymentMethod.value?.payment_type || null,
 );
 const paymentTypeLabels: Record<string, string> = {
     cash: "Cash",
@@ -1102,10 +1102,10 @@ const requiresAdditionalFields = computed(
         isCardMethod.value ||
         isCreditMethod.value ||
         isGiftCheckMethod.value ||
-        isPointsMethod.value
+        isPointsMethod.value,
 );
 const isCustomerSearchDisabled = computed(
-    () => !isCreditMethod.value && !isPointsMethod.value
+    () => !isCreditMethod.value && !isPointsMethod.value,
 );
 const getPaymentTypeLabel = (type?: string | null) => {
     if (!type) {
@@ -1119,7 +1119,7 @@ const getPaymentTypeLabel = (type?: string | null) => {
     return type
         .split("-")
         .map((segment) =>
-            segment ? segment[0].toUpperCase() + segment.slice(1) : segment
+            segment ? segment[0].toUpperCase() + segment.slice(1) : segment,
         )
         .join(" ");
 };
@@ -1127,7 +1127,7 @@ const getPaymentTypeLabel = (type?: string | null) => {
 // Currency is now determined by the selected payment method
 const selectedCurrency = computed(() => {
     const method = availablePaymentMethods.value.find(
-        (pm: any) => pm.id === selectedPaymentMethodId.value
+        (pm: any) => pm.id === selectedPaymentMethodId.value,
     );
 
     if (!method) {
@@ -1151,7 +1151,7 @@ const selectedCurrency = computed(() => {
 });
 
 const paymentCurrencyCode = computed(
-    () => selectedCurrency.value?.code || defaultCurrencyCode.value
+    () => selectedCurrency.value?.code || defaultCurrencyCode.value,
 );
 
 const paymentDetails = reactive({
@@ -1226,16 +1226,16 @@ const syncAmountForNonCashMethods = () => {
 };
 
 const exchangeRate = computed(
-    () => Number(selectedCurrency.value?.exchange_rate ?? 1) || 1
+    () => Number(selectedCurrency.value?.exchange_rate ?? 1) || 1,
 );
 const amountPaidBase = computed(() =>
-    Number((amountTenderedNumber.value * exchangeRate.value).toFixed(2))
+    Number((amountTenderedNumber.value * exchangeRate.value).toFixed(2)),
 );
 const changeAmount = computed(() =>
-    Math.max(0, amountPaidBase.value - totalDue.value)
+    Math.max(0, amountPaidBase.value - totalDue.value),
 );
 const showConversionSummary = computed(
-    () => Math.abs(exchangeRate.value - 1) > 0.0001
+    () => Math.abs(exchangeRate.value - 1) > 0.0001,
 );
 
 const quickAmountOptions = computed(() => {
@@ -1258,20 +1258,20 @@ watch(
     (methods) => {
         if (
             !methods.find(
-                (method: any) => method.id === selectedPaymentMethodId.value
+                (method: any) => method.id === selectedPaymentMethodId.value,
             )
         ) {
             selectedPaymentMethodId.value = methods[0]?.id ?? null;
         }
     },
-    { immediate: true }
+    { immediate: true },
 );
 
 watch(
     () => selectedPaymentMethodId.value,
     (newId) => {
         const method = availablePaymentMethods.value.find(
-            (paymentMethod: any) => paymentMethod.id === newId
+            (paymentMethod: any) => paymentMethod.id === newId,
         );
 
         if (!method) {
@@ -1280,7 +1280,7 @@ watch(
 
         resetPaymentDetails();
         syncAmountForNonCashMethods();
-    }
+    },
 );
 
 watch(
@@ -1288,7 +1288,7 @@ watch(
     () => {
         syncAmountForNonCashMethods();
     },
-    { immediate: true }
+    { immediate: true },
 );
 
 const resetCustomerSearch = () => {
@@ -1371,7 +1371,7 @@ const showChangeCustomerModal = async () => {
         showLoaderOnConfirm: true,
         didOpen: () => {
             const searchInput = document.getElementById(
-                "swal-customer-search"
+                "swal-customer-search",
             ) as HTMLInputElement;
             const resultsDiv = document.getElementById("swal-customer-results");
             let searchTimeout: any = null;
@@ -1392,7 +1392,7 @@ const showChangeCustomerModal = async () => {
                             route("customers.search"),
                             {
                                 params: { query },
-                            }
+                            },
                         );
 
                         if (resultsDiv) {
@@ -1423,7 +1423,7 @@ const showChangeCustomerModal = async () => {
                                             0
                                         } pts</div>
                                     </button>
-                                `
+                                `,
                                     )
                                     .join("");
 
@@ -1436,18 +1436,18 @@ const showChangeCustomerModal = async () => {
                                             async () => {
                                                 const customerId =
                                                     btn.getAttribute(
-                                                        "data-customer-id"
+                                                        "data-customer-id",
                                                     );
                                                 const customerName =
                                                     btn.getAttribute(
-                                                        "data-customer-name"
+                                                        "data-customer-name",
                                                     );
 
                                                 await updateCartCustomer(
-                                                    Number(customerId)
+                                                    Number(customerId),
                                                 );
                                                 Swal.close();
-                                            }
+                                            },
                                         );
                                     });
                             }
@@ -1546,7 +1546,7 @@ watch(
         customerSearchTimeout = setTimeout(() => {
             fetchCustomers(query.trim());
         }, 300);
-    }
+    },
 );
 
 const selectCustomer = async (customer: any) => {
@@ -1587,7 +1587,7 @@ const selectedCustomer = computed(() => {
     if (selectedCustomerId.value) {
         // Try to find in current results first
         const found = customerResults.value.find(
-            (c: any) => c.id === selectedCustomerId.value
+            (c: any) => c.id === selectedCustomerId.value,
         );
         if (found) {
             return found;
@@ -1637,8 +1637,8 @@ const cleanString = (value?: string | null) =>
     typeof value === "string"
         ? value.trim()
         : value !== null && value !== undefined
-        ? String(value).trim()
-        : "";
+          ? String(value).trim()
+          : "";
 
 const additionalFieldsValid = computed(() => {
     if (isEWalletMethod.value) {
@@ -1799,7 +1799,7 @@ const remainingBalance = computed(() => {
 
     const totalPaid = mixedPayments.value.reduce(
         (sum, payment) => sum + (payment.amount_applied || 0),
-        0
+        0,
     );
 
     return Math.max(0, totalDue.value - totalPaid);
@@ -1808,7 +1808,7 @@ const remainingBalance = computed(() => {
 const totalMixedPayments = computed(() => {
     return mixedPayments.value.reduce(
         (sum, payment) => sum + (payment.amount_applied || 0),
-        0
+        0,
     );
 });
 
@@ -1846,7 +1846,7 @@ const canAddPayment = computed(() => {
 
 const addPaymentToMix = () => {
     const method = availablePaymentMethods.value.find(
-        (pm: any) => pm.id === selectedPaymentMethodId.value
+        (pm: any) => pm.id === selectedPaymentMethodId.value,
     );
 
     if (!method) {
@@ -1942,7 +1942,7 @@ const addPaymentToMix = () => {
         summary: "Payment Added",
         detail: `${method.name}: ${formatMoney(
             amountApplied,
-            defaultCurrencyCode.value
+            defaultCurrencyCode.value,
         )}`,
         life: 2000,
     });
@@ -1955,7 +1955,7 @@ const removePayment = (index: number) => {
 const focusAmount = async () => {
     await nextTick();
     const inputElement = amountInputRef.value?.$el?.querySelector(
-        "input"
+        "input",
     ) as HTMLInputElement;
     if (inputElement) {
         inputElement.focus();
@@ -2103,7 +2103,7 @@ const handleLoadToEWallet = async (customerId: number, amount: number) => {
             summary: "E-Wallet Loaded",
             detail: `${formatMoney(
                 amount,
-                defaultCurrencyCode.value
+                defaultCurrencyCode.value,
             )} has been loaded to customer's e-wallet.`,
             life: 3000,
         });
@@ -2126,7 +2126,7 @@ const printReceiptSlips = async (orderData: any, paymentData: any) => {
         // Check if thermal printer is connected
         if (!thermalPrinter.isConnected()) {
             console.log(
-                "Thermal printer not connected, skipping receipt slips"
+                "Thermal printer not connected, skipping receipt slips",
             );
             return;
         }
@@ -2140,7 +2140,7 @@ const printReceiptSlips = async (orderData: any, paymentData: any) => {
         console.log("===== FINDING DEFAULT PAYMENT METHOD =====");
         console.log(
             "Available payment methods:",
-            availablePaymentMethods.value
+            availablePaymentMethods.value,
         );
         console.log(
             "Payment methods details:",
@@ -2149,13 +2149,13 @@ const printReceiptSlips = async (orderData: any, paymentData: any) => {
                 name: m.name,
                 payment_type: m.payment_type,
                 is_default_cash: m.is_default_cash,
-            }))
+            })),
         );
 
         const defaultPaymentMethod = availablePaymentMethods.value.find(
             (method: any) =>
                 method.payment_type?.toLowerCase() === "cash" &&
-                method.is_default_cash === true
+                method.is_default_cash === true,
         );
 
         console.log("Default payment method found:", defaultPaymentMethod);
@@ -2167,7 +2167,7 @@ const printReceiptSlips = async (orderData: any, paymentData: any) => {
                 is_default_cash: p.is_default_cash,
                 payment_method_id: p.payment_method_id,
                 amount: p.amount_paid || p.amount_applied,
-            }))
+            })),
         );
 
         // Filter payments that are NOT the default payment method
@@ -2180,19 +2180,19 @@ const printReceiptSlips = async (orderData: any, paymentData: any) => {
                 payment.is_default_cash === "1";
 
             console.log(
-                `Checking payment: ${payment.method || payment.methodName}`
+                `Checking payment: ${payment.method || payment.methodName}`,
             );
             console.log(`  - is_default_cash: ${payment.is_default_cash}`);
             console.log(`  - isDefaultCash: ${isDefaultCash}`);
             console.log(`  - payment_method_id: ${payment.payment_method_id}`);
             console.log(
-                `  - defaultPaymentMethod.id: ${defaultPaymentMethod?.id}`
+                `  - defaultPaymentMethod.id: ${defaultPaymentMethod?.id}`,
             );
 
             if (isDefaultCash) {
                 console.log(
                     "✓ Excluding default cash payment:",
-                    payment.method || payment.methodName
+                    payment.method || payment.methodName,
                 );
                 return false;
             }
@@ -2204,14 +2204,14 @@ const printReceiptSlips = async (orderData: any, paymentData: any) => {
             ) {
                 console.log(
                     "✓ Excluding payment by matching default payment method ID:",
-                    payment.method || payment.methodName
+                    payment.method || payment.methodName,
                 );
                 return false;
             }
 
             console.log(
                 "✗ Including payment:",
-                payment.method || payment.methodName
+                payment.method || payment.methodName,
             );
             return true;
         });
@@ -2235,7 +2235,7 @@ const printReceiptSlips = async (orderData: any, paymentData: any) => {
 
             if (allDefaultCash || nonDefaultPayments.length === 0) {
                 console.log(
-                    "All payments are default cash or no non-default payments, skipping receipt slip"
+                    "All payments are default cash or no non-default payments, skipping receipt slip",
                 );
                 return;
             }
@@ -2276,7 +2276,7 @@ const printReceiptSlips = async (orderData: any, paymentData: any) => {
         try {
             await thermalPrinter.printReceiptSlip(slipData);
             console.log(
-                `Receipt slip printed for ${nonDefaultPayments.length} payment(s)`
+                `Receipt slip printed for ${nonDefaultPayments.length} payment(s)`,
             );
         } catch (slipError) {
             console.error(`Failed to print receipt slip:`, slipError);
@@ -2341,7 +2341,7 @@ const processReceipt = async (data: any) => {
         if (data.payments && data.payments.length > 0) {
             totalChange = data.payments.reduce(
                 (sum: number, p: any) => sum + Number(p.change_amount || 0),
-                0
+                0,
             );
         } else {
             totalChange = Number(data.payment?.change ?? changeAmount.value);
@@ -2379,7 +2379,7 @@ const handleSettlePayment = async () => {
                 summary: "Incomplete Payment",
                 detail: `Remaining balance: ${formatMoney(
                     remainingBalance.value,
-                    defaultCurrencyCode.value
+                    defaultCurrencyCode.value,
                 )}`,
                 life: 3000,
             });
@@ -2484,7 +2484,7 @@ const handleSettlePayment = async () => {
             cart_id: props.cart.id,
             payment_method_id: selectedPaymentMethodId.value,
             amount_in_payment_currency: Number(
-                amountTenderedNumber.value.toFixed(2)
+                amountTenderedNumber.value.toFixed(2),
             ),
             amount_paid: amountPaidBase.value,
             total_amount: totalDue.value,

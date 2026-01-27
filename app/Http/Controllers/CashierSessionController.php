@@ -159,12 +159,15 @@ class CashierSessionController extends Controller
         ]);
     }
 
-    public function preview(): Response
+    public function preview(Request $request): Response
     {
         // Check if the current auth user has an open cashier session (closing_time is null)
+        // $openSession = $this->cashierSessionService->startSession($request);
+
         $openSession = $this->cashierSessionService->model
-            ->openSession()
-            ->with('cashier')
+            ->where('cashier_id', Auth::id())
+            ->whereNull('closing_time')
+            ->with(['cashier', 'branch'])
             ->first();
 
         return Inertia::render('Resto/Preview', [
