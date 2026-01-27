@@ -567,7 +567,7 @@ const saveEdit = () => {
     if (!selectedItem.value) {
         return;
     }
-
+    console.log("Saving edited item:", editableItem.value);
     emit("save", editableItem.value);
     emit("update:visible", false);
 };

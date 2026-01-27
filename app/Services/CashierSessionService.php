@@ -39,7 +39,7 @@ class CashierSessionService
             ->first();
 
         if ($existingSession) {
-            throw new Exception('You already have an open session. Please continue or close it first before starting new one.');
+           return $existingSession;
         }
 
         $session = $this->model->create([
@@ -52,7 +52,7 @@ class CashierSessionService
             'closing_cash'   => 0,
         ]);
 
-        $branch = Branch::find($request['branch_id']);
+        $branch = Branch::find($request->user()->branch_id);
 
         if (! $branch) {
             throw new Exception('Branch not found.');

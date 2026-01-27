@@ -136,7 +136,7 @@ const actions = computed(() => {
         //     icon: AnalyticsIcon,
         // },
         {
-            route: "resto.preview",
+            route: "resto.start-cashiering",
             name: "Start Cashiering",
             description: "Process sales transactions and manage POS",
             icon: CashieringIcon,

@@ -457,34 +457,43 @@ const removeOrder = (orderItem: any) => {
 };
 
 const saveEdit = (editedItem: any) => {
-    if (editedItem) {
-        router.put(
-            route("resto.cart.update-item", editedItem.id),
-            {
-                quantity: editedItem.quantity,
-                selected_options: editedItem.selected_options || [],
-            },
-            {
-                onSuccess: () => {
-                    showEditModal.value = false;
-                    toast.add({
-                        severity: "success",
-                        summary: "Success",
-                        detail: page.props.flash.success,
-                        life: 3000,
-                    });
-                },
-                onError: (errors) => {
-                    toast.add({
-                        severity: "error",
-                        summary: "Error",
-                        detail: page.props.flash.error,
-                        life: 3000,
-                    });
-                },
-            },
-        );
-    }
+    if (!editedItem) return;
+
+    const payload = {
+        quantity: Number(editedItem.quantity),
+        selected_options: editedItem.selected_options || [],
+        // Include table context so shared cart reload picks up the correct cart
+        tableId:
+            props.tableId ||
+            props.cart?.table_room_id ||
+            props.currentTable?.id,
+    };
+
+    router.put(route("resto.cart.update-item", editedItem.id), payload, {
+        preserveScroll: true,
+        onSuccess: () => {
+            showEditModal.value = false;
+            router.reload({
+                only: ["cart"],
+                data: { tableId: payload.tableId },
+                preserveScroll: true,
+            });
+            toast.add({
+                severity: "success",
+                summary: "Success",
+                detail: page.props.flash.success,
+                life: 3000,
+            });
+        },
+        onError: (errors) => {
+            toast.add({
+                severity: "error",
+                summary: "Error",
+                detail: page.props.flash.error,
+                life: 3000,
+            });
+        },
+    });
 };
 
 const toggleItemForDiscount = (itemId: number, checked: boolean) => {

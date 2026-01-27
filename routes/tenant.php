@@ -266,22 +266,10 @@ if (!isCentralDomain()) {
                                     Route::delete('/cart/item/{cartItemId}', 'deleteCartItem')->name('cart.delete');
                                 });
 
-                            // Category routes (wildcard routes should come last)
-                            Route::controller(\App\Http\Controllers\CategoryController::class)
-                                ->group(function () {
-                                    Route::get('/', 'index')->name('index');
-                                    Route::get('/{categorySlug}', 'show')->name('category');
-                                });
-                        // });
-
-                    // Cashier-only routes
-                    // MIDDLEWARE REMOVED FOR TESTING
-                    // Route::middleware('role:cashiering')
-                        // ->group(function () {
                             // Cashier session routes (must come before category routes to avoid slug conflicts)
                             Route::controller(CashierSessionController::class)
                                 ->group(function () {
-                                    Route::get('/preview', 'preview')->name('preview');
+                                    Route::get('/start-cashiering', 'preview')->name('start-cashiering');
                                     Route::get('/close-shift', 'showCloseShift')->name('close-shift');
                                     Route::get('/review/x-readings', 'reviewXTransactions')->name('review-x-readings');
                                     Route::post('/session/start', 'startSession')->name('session.start');
@@ -311,6 +299,14 @@ if (!isCentralDomain()) {
                                     Route::post('/cart/item/delete-with-approval', 'deleteCartItemWithApproval')->name('cart.delete-with-approval');
                                     Route::get('/cart/item/{cartItemId}/approvers', 'getApproversForItem')->name('cart.get-approvers');
                                 });
+
+                            // Category routes (wildcard routes should come last)
+                            Route::controller(\App\Http\Controllers\CategoryController::class)
+                                ->group(function () {
+                                    Route::get('/', 'index')->name('index');
+                                    Route::get('/{categorySlug}', 'show')->name('category');
+                                });
+                        // });
 
                             Route::controller(\App\Http\Controllers\PendingOrdersController::class)
                                 ->as('pending-orders.')

@@ -639,17 +639,7 @@ class CartService
 
     public function updateCartItem(Request $request, int $cartItemId): mixed
     {
-        $cashierSession = $this->cashierSession->openSession()->first();
 
-        if (! $cashierSession) {
-            throw new Exception('No active cashier session found.');
-        }
-
-        $cart = Cart::authCashier()->cashierOpenSession($cashierSession->id)->first();
-
-        if (! $cart) {
-            throw new Exception('Cart not found.');
-        }
 
         $cartItem = CartItem::find($cartItemId);
 
@@ -657,6 +647,7 @@ class CartService
             throw new Exception('Cart item not found.');
         }
 
+        $product  = $cartItem->product; // Keep product available for tax fields regardless of discount
         $price    = $cartItem->price;
         $quantity = $request['quantity'] ?? $cartItem->quantity;
         $amount   = $price * $quantity;
@@ -704,9 +695,9 @@ class CartService
             'vat_exempt_sales' => $taxData['vat_exempt_sales'],
             'vat_amount'       => $taxData['vat_amount'],
             'less_tax'         => $lessTax,
-            'tax_type'         => $product->vat_type,
-            'tax_percentage'   => $product->vat_rate,
-            'tax_included'     => $product->vat_inclusive,
+            'tax_type'         => $product?->vat_type,
+            'tax_percentage'   => $product?->vat_rate,
+            'tax_included'     => $product?->vat_inclusive,
         ]);
     }
 
