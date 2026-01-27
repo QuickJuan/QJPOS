@@ -300,6 +300,15 @@ if (!isCentralDomain()) {
                                     Route::get('/cart/item/{cartItemId}/approvers', 'getApproversForItem')->name('cart.get-approvers');
                                 });
 
+                            // Pending orders (must be before category wildcard)
+                            Route::controller(\App\Http\Controllers\PendingOrdersController::class)
+                                ->prefix('/pending-orders')
+                                ->as('pending-orders.')
+                                ->group(function () {
+                                    Route::get('/list', 'index')->name('index');
+                                    Route::put('/item/{itemId}/toggle-served', 'toggleServed')->name('toggle-served');
+                                });
+
                             // Category routes (wildcard routes should come last)
                             Route::controller(\App\Http\Controllers\CategoryController::class)
                                 ->group(function () {
@@ -307,14 +316,6 @@ if (!isCentralDomain()) {
                                     Route::get('/{categorySlug}', 'show')->name('category');
                                 });
                         // });
-
-                            Route::controller(\App\Http\Controllers\PendingOrdersController::class)
-                                ->as('pending-orders.')
-                                ->group(function () {
-                                    Route::get('/pending-orders', 'index')->name('index');
-                                    Route::put('/pending-orders/item/{itemId}/toggle-served', 'toggleServed')->name('toggle-served');
-                        //         });
-                        });
                 });
 
             Route::as('table-management.')
