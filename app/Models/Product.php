@@ -35,6 +35,7 @@ class Product extends Model implements HasMedia
         'maximum_stock_level',
         'multiple_packaging',
         'price',
+        'cost',
         'unit_measure',
     ];
 
@@ -46,6 +47,8 @@ class Product extends Model implements HasMedia
         'vat_inclusive'      => 'boolean',
         'track_inventory'    => 'boolean',
         'multiple_packaging' => 'boolean',
+        'price'              => 'decimal:2',
+        'cost'               => 'decimal:2',
     ];
 
     protected $appends = [

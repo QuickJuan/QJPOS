@@ -130,12 +130,30 @@ class ProductResource extends Resource
                     ->maxLength(150)
                     ->label('Receipt Name'),
 
+                Toggle::make('multiple_packaging')
+                    ->label('Multiple Packaging')
+                    ->helperText('Enable if this product uses multiple packaging/pricing. Disables the base price and cost fields.')
+                    ->default(false)
+                    ->inline(false)
+                    ->reactive()
+                    ->live(),
+
                 TextInput::make('price')
-                    ->required()
+                    ->required(fn(Get $get) => ! $get('multiple_packaging') && $get('product_type') !== ProductType::WITH_VARIANT->value)
                     ->default(0)
                     ->numeric()
                     ->label('Price')
-                    ->hidden(fn(Get $get) => $get('product_type') === ProductType::WITH_VARIANT->value),
+                    ->prefix('₱')
+                    ->hidden(fn(Get $get) => $get('product_type') === ProductType::WITH_VARIANT->value || (bool) $get('multiple_packaging')),
+
+                TextInput::make('cost')
+                    ->required(fn(Get $get) => ! $get('multiple_packaging') && $get('product_type') !== ProductType::WITH_VARIANT->value)
+                    ->default(0)
+                    ->numeric()
+                    ->label('Cost')
+                    ->prefix('₱')
+                    ->helperText('Base cost is shown only when multiple packaging is disabled.')
+                    ->hidden(fn(Get $get) => $get('product_type') === ProductType::WITH_VARIANT->value || (bool) $get('multiple_packaging')),
 
                 TextInput::make('barcode')
                     ->label('Barcode')
