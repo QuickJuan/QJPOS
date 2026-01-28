@@ -652,11 +652,11 @@ const handleModifierAdded = (modifierData: any) => {
 
 const handleRequiredReason = (data: any) => {
     // If it's a placed order with approver and OTP, use the approval workflow
-    if (data.orderItem?.placed_order && data.approverId && data.otpCode) {
+    if (data.orderItem?.placed_order && data.approverEmail && data.otpCode) {
         axios
             .post(route("resto.cart.delete-with-approval"), {
                 cart_item_id: data.orderItem.id,
-                approver_id: data.approverId,
+                approver_email: data.approverEmail,
                 otp_code: data.otpCode,
                 reason: data.reason,
             })
