@@ -253,13 +253,13 @@ class CartController extends Controller
 
             $validated = $request->validate([
                 'cart_item_id' => 'required|integer|exists:cart_items,id',
-                'approver_id' => 'required|integer|exists:users,id',
+                'approver_email' => 'required|email|exists:users,email',
                 'otp_code' => 'required|string|digits:6',
                 'reason' => 'nullable|string|max:500',
             ]);
 
             $cartItem = CartItem::findOrFail($validated['cart_item_id']);
-            $approver = User::findOrFail($validated['approver_id']);
+            $approver = User::where('email', $validated['approver_email'])->firstOrFail();
 
             // Verify approver has OTP enabled
             if (!$approver->otp_enabled || !$approver->otp_secret) {

@@ -15,6 +15,7 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\CashierSessionController;
 use App\Http\Controllers\CashierCashoutController;
 use App\Http\Controllers\PrintXReadingShiftController;
+use App\Http\Controllers\PrintSalesInvoiceReportController;
 use App\Http\Controllers\TableManagementController;
 use App\Http\Controllers\TenantLandingController;
 use App\Http\Controllers\PublicPageController;
@@ -173,6 +174,10 @@ if (!isCentralDomain()) {
     Route::middleware('auth')
         ->get('/print/x-reading/{cashierSession}', PrintXReadingShiftController::class)
         ->name('x-reading.print');
+
+    Route::middleware('auth')
+        ->get('/reports/sales-invoice/print', PrintSalesInvoiceReportController::class)
+        ->name('sales-invoice-report.print');
 
     // ROUTES FOR AUTHENTICATED USER
     Route::middleware(['auth:sanctum'])

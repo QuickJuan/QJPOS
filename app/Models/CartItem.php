@@ -26,6 +26,8 @@ class CartItem extends Model
         'non_vat_sales',
         'less_tax',
         'amount',
+        'cost',
+        'profit',
         'order_type',
         'discount',
         'discount_id',
@@ -45,6 +47,8 @@ class CartItem extends Model
 
     protected $casts = [
         'selected_options' => 'array',
+        'cost'             => 'decimal:2',
+        'profit'           => 'decimal:2',
         'meta_data'        => 'array',
         'serving_number'   => 'integer',
     ];
