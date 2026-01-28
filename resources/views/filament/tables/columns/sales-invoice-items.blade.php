@@ -35,6 +35,7 @@
 
     $totals = [
         'qty' => (float) $items->sum(fn ($item) => (float) ($item->quantity ?? 0)),
+        'less_tax' => (float) $items->sum(fn ($item) => (float) ($item->less_tax ?? 0)),
         'discount' => (float) $items->sum(fn ($item) => (float) ($item->discount_amount ?? $item->item_discount ?? 0)),
         'sales' => (float) $items->sum(fn ($item) => (float) ($item->sub_total ?? $item->amount ?? 0)),
         'cost' => (float) $items->sum(fn ($item) => (float) ($item->cost ?? 0)),
@@ -60,7 +61,10 @@
                         <th class="py-2 px-2 text-left font-medium text-gray-700 whitespace-nowrap text-[11px]">Status</th>
                         <th class="py-2 px-2 text-left font-medium text-gray-700 whitespace-nowrap text-[11px]">Item Code</th>
                         <th class="py-2 px-2 text-left font-medium text-gray-700 text-[11px]">Description</th>
+                        <th class="py-2 px-2 text-right font-medium text-gray-700 whitespace-nowrap text-[11px]">Price</th>
                         <th class="py-2 px-2 text-right font-medium text-gray-700 whitespace-nowrap text-[11px]">Qty</th>
+                        <th class="py-2 px-2 text-right font-medium text-gray-700 whitespace-nowrap text-[11px]">Amount</th>
+                        <th class="py-2 px-2 text-right font-medium text-gray-700 whitespace-nowrap text-[11px]">Less Tax</th>
                         <th class="py-2 px-2 text-right font-medium text-gray-700 whitespace-nowrap text-[11px]">Discount</th>
                         <th class="py-2 px-2 text-right font-medium text-gray-700 whitespace-nowrap text-[11px]">Sales</th>
                         <th class="py-2 px-2 text-right font-medium text-gray-700 whitespace-nowrap text-[11px]">Cost</th>
@@ -97,6 +101,9 @@
                                     ?? $item->product?->barcode
                                     ?? ($item->product_id ? ('PRD-' . $item->product_id) : 'N/A');
 
+                                $lessTax = $formatCurrency($item->less_tax ?? 0);
+                                $price = $formatCurrency($item->price ?? 0);
+                                $amount = $formatCurrency($item->amount ?? ($item->price ?? 0) * ($item->quantity ?? 0));
                                 $discount = $formatCurrency($item->discount_amount ?? $item->item_discount ?? 0);
                                 $sales = $formatCurrency($item->sub_total ?? $item->amount ?? 0);
                                 $cost = $formatCurrency($item->cost ?? 0);
@@ -116,7 +123,10 @@
 
                                 <td class="py-2 px-2 text-left align-top whitespace-nowrap text-[11px]">{{ $code }}</td>
                                 <td class="py-2 px-2 text-left align-top text-[11px]">{{ $description }}</td>
+                                <td class="py-2 px-2 text-right tabular-nums whitespace-nowrap text-[11px]">{{ $price }}</td>
                                 <td class="py-2 px-2 text-right tabular-nums whitespace-nowrap text-[11px]">{{ $qty }}</td>
+                                <td class="py-2 px-2 text-right tabular-nums whitespace-nowrap text-[11px]">{{ $amount }}</td>
+                                <td class="py-2 px-2 text-right tabular-nums whitespace-nowrap text-[11px]">{{ $lessTax }}</td>
                                 <td class="py-2 px-2 text-right tabular-nums whitespace-nowrap text-[11px]">{{ $discount }}</td>
                                 <td class="py-2 px-2 text-right tabular-nums whitespace-nowrap text-[11px]">{{ $sales }}</td>
                                 <td class="py-2 px-2 text-right tabular-nums whitespace-nowrap text-[11px]">{{ $cost }}</td>
@@ -127,12 +137,12 @@
 
                         <tr class="border-t font-semibold">
                             <td class="py-2 px-2 text-[11px]">Totals</td>
-                            <td class="py-2 px-2 text-[11px]"></td>
-                            <td class="py-2 px-2 text-[11px]"></td>
-                            <td class="py-2 px-2 text-[11px]"></td>
-                            <td class="py-2 px-2 text-[11px]"></td>
-                            <td class="py-2 px-2 text-[11px]"></td>
+                            <td class="py-2 px-2 text-[11px]"></td> <!-- Item Code placeholder -->
+
+                            <td class="py-2 px-2 text-[11px]"></td> <!-- Price placeholder -->
                             <td class="py-2 px-2 text-right tabular-nums whitespace-nowrap text-[11px]">{{ $formatQty($totals['qty']) }}</td>
+                            <td class="py-2 px-2 text-[11px]"></td> <!-- Amount placeholder -->
+                            <td class="py-2 px-2 text-right tabular-nums whitespace-nowrap text-[11px]">{{ $formatCurrency($totals['less_tax']) }}</td>
                             <td class="py-2 px-2 text-right tabular-nums whitespace-nowrap text-[11px]">{{ $formatCurrency($totals['discount']) }}</td>
                             <td class="py-2 px-2 text-right tabular-nums whitespace-nowrap text-[11px]">{{ $formatCurrency($totals['sales']) }}</td>
                             <td class="py-2 px-2 text-right tabular-nums whitespace-nowrap text-[11px]">{{ $formatCurrency($totals['cost']) }}</td>
