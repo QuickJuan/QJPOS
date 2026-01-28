@@ -2,7 +2,6 @@
 
 namespace App\Filament\Tenant\Resources;
 
-use App\Filament\Tenant\Exports\SalesInvoiceReport\SalesInvoiceReportExporter;
 use App\Filament\Tenant\Resources\SalesInvoiceReportResource\Pages;
 use App\Models\Branch;
 use App\Models\Order;
@@ -14,7 +13,6 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use pxlrbt\FilamentExcel\Actions\Tables\ExportAction;
 
 class SalesInvoiceReportResource extends Resource
 {
@@ -142,12 +140,7 @@ class SalesInvoiceReportResource extends Resource
             ])
             ->filtersFormColumns(2)
             ->defaultSort('created_at', 'desc')
-            ->headerActions([
-                ExportAction::make()
-                    ->exports([
-                        SalesInvoiceReportExporter::make()->fromTable(),
-                    ]),
-            ]);
+            ->headerActions([]);
     }
 
     public static function getPages(): array
