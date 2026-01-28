@@ -19,6 +19,7 @@ class PrintSalesInvoiceReportController extends Controller
             ->with([
                 'branch',
                 'cashier',
+                'cashierSession',
                 'customer',
                 'payments.paymentMethod',
                 'orderItems.product',

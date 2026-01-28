@@ -29,6 +29,7 @@
         'receipt' => $order?->invoice_no ?: $order?->id ?: '-',
         'branch' => $order?->branch?->name ?? '-',
         'cashier' => $order?->cashier?->name ?? '-',
+        'session' => $order?->cashierSession?->id ? ('Shift #' . $order->cashierSession->id) : '-',
         'customer' => $order?->customer?->name ?? 'Walk-in',
         'status' => ucfirst((string) ($order->status ?? '-')),
     ];
@@ -57,6 +58,7 @@
                         <th class="py-2 px-2 text-left font-medium text-gray-700 whitespace-nowrap text-[11px]">Receipt #</th>
                         <th class="py-2 px-2 text-left font-medium text-gray-700 whitespace-nowrap text-[11px]">Branch</th>
                         <th class="py-2 px-2 text-left font-medium text-gray-700 whitespace-nowrap text-[11px]">Cashier</th>
+                        <th class="py-2 px-2 text-left font-medium text-gray-700 whitespace-nowrap text-[11px]">Shift #</th>
                         <th class="py-2 px-2 text-left font-medium text-gray-700 whitespace-nowrap text-[11px]">Customer</th>
                         <th class="py-2 px-2 text-left font-medium text-gray-700 whitespace-nowrap text-[11px]">Status</th>
                         <th class="py-2 px-2 text-left font-medium text-gray-700 whitespace-nowrap text-[11px]">Item Code</th>
@@ -116,6 +118,7 @@
                                     <td class="py-2 px-2 align-top text-[11px]" rowspan="{{ $rowspan }}">{{ $meta['receipt'] }}</td>
                                     <td class="py-2 px-2 align-top text-[11px]" rowspan="{{ $rowspan }}">{{ $meta['branch'] }}</td>
                                     <td class="py-2 px-2 align-top text-[11px]" rowspan="{{ $rowspan }}">{{ $meta['cashier'] }}</td>
+                                    <td class="py-2 px-2 align-top text-[11px]" rowspan="{{ $rowspan }}">{{ $meta['session'] }}</td>
                                     <td class="py-2 px-2 align-top text-[11px]" rowspan="{{ $rowspan }}">{{ $meta['customer'] }}</td>
                                     <td class="py-2 px-2 align-top text-[11px]" rowspan="{{ $rowspan }}">{{ $meta['status'] }}</td>
                                     @php $first = false; @endphp
@@ -137,8 +140,14 @@
 
                         <tr class="border-t font-semibold">
                             <td class="py-2 px-2 text-[11px]">Totals</td>
+                            <td class="py-2 px-2 text-[11px]"></td> <!-- Receipt placeholder -->
+                            <td class="py-2 px-2 text-[11px]"></td> <!-- Branch placeholder -->
+                            <td class="py-2 px-2 text-[11px]"></td> <!-- Cashier placeholder -->
+                            <td class="py-2 px-2 text-[11px]"></td> <!-- Cashier Session placeholder -->
+                            <td class="py-2 px-2 text-[11px]"></td> <!-- Customer placeholder -->
+                            <td class="py-2 px-2 text-[11px]"></td> <!-- Status placeholder -->
                             <td class="py-2 px-2 text-[11px]"></td> <!-- Item Code placeholder -->
-
+                            <td class="py-2 px-2 text-[11px]"></td> <!-- Description placeholder -->
                             <td class="py-2 px-2 text-[11px]"></td> <!-- Price placeholder -->
                             <td class="py-2 px-2 text-right tabular-nums whitespace-nowrap text-[11px]">{{ $formatQty($totals['qty']) }}</td>
                             <td class="py-2 px-2 text-[11px]"></td> <!-- Amount placeholder -->

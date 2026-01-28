@@ -33,6 +33,7 @@ class SalesInvoiceReportResource extends Resource
                     ->with([
                         'branch',
                         'cashier',
+                        'cashierSession',
                         'customer',
                         'payments.paymentMethod',
                         'orderItems.product',
@@ -99,7 +100,7 @@ class SalesInvoiceReportResource extends Resource
                     ->searchable(),
 
                 SelectFilter::make('cashier_session_id')
-                    ->label('Cashier Session')
+                    ->label('Shift #')
                     ->relationship('cashierSession', 'id')
                     ->searchable()
                     ->preload(),
