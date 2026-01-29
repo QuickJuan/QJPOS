@@ -147,11 +147,16 @@ class AuthController
 
     public function logout(Request $request)
     {
+        $currentRole = $request->user()?->current_role;
+        $redirectUrl = $currentRole === CurrentRole::CASHIERING->value
+            ? route('login', ['_fresh' => time()])
+            : route('waiter.login', ['_fresh' => time()]);
+
         auth()->logout();
         $request->session()->flush();
         $request->session()->regenerateToken();
 
-        return redirect()->route('waiter.login', ['_fresh' => time()]);
+        return redirect()->to($redirectUrl);
     }
 
     protected function ensureIsNotRateLimited(Request $request): void

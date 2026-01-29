@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Enums\CurrentRole;
 use App\Models\Branch;
 use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
@@ -127,6 +128,11 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
+        $currentRole = $request->user()?->current_role;
+        $redirectUrl = $currentRole === CurrentRole::ORDER_TAKING->value
+            ? route('waiter.login', ['_fresh' => time()])
+            : route('login', ['_fresh' => time()]);
+
         auth()->logout();
 
         // Clear session data
@@ -135,8 +141,8 @@ class AuthController extends Controller
         // Regenerate the CSRF token
         $request->session()->regenerateToken();
 
-        // Redirect to login with query parameter to force fresh page load
-        return redirect()->route('login', ['_fresh' => time()]);
+        // Redirect to role-aware login with query parameter to force fresh page load
+        return redirect()->to($redirectUrl);
     }
 
     /**
