@@ -44,11 +44,21 @@ class UserResource extends Resource
 
                 TextInput::make('password')
                     ->password()
-                    ->required()
+                    ->label('Password')
+                    ->required(fn (string $context): bool => $context === 'create')
                     ->minLength(8)
                     ->maxLength(255)
-                    ->dehydrateStateUsing(fn($state) => bcrypt($state))
-                    ->visibleOn('create'),
+                    ->helperText(fn (string $context): ?string => $context === 'edit' ? 'Leave blank to keep current password.' : null)
+                    ->dehydrateStateUsing(fn ($state) => filled($state) ? bcrypt($state) : null)
+                    ->dehydrated(fn ($state) => filled($state)),
+
+                TextInput::make('password_confirmation')
+                    ->password()
+                    ->label('Confirm Password')
+                    ->same('password')
+                    ->required(fn (string $context): bool => $context === 'create')
+                    ->dehydrated(false)
+                    ->visible(fn (string $context): bool => in_array($context, ['create', 'edit'], true)),
 
                 Select::make('branches')
                     ->label('Branch')
