@@ -53,63 +53,60 @@
                                 />
                             </div>
 
-                            <!-- Email Selection -->
+                            <!-- User Identifier -->
                             <div class="space-y-2">
-                                <SelectField
-                                    id="email"
-                                    v-model="form.email"
-                                    label="Select Your Email"
-                                    :options="branchUsers"
-                                    optionLabel="email"
-                                    optionValue="email"
-                                    placeholder="Choose your email"
+                                <TextField
+                                    id="identifier"
+                                    v-model="form.identifier"
+                                    label="Username or Email"
+                                    type="text"
+                                    placeholder="Enter your username or email"
+                                    :error="form.errors.identifier"
+                                    :disabled="!form.branch"
                                     required
-                                    :error="form.errors.email"
-                                    :disabled="!form.branch || loadingUsers"
                                 />
                             </div>
                         </div>
 
                         <!-- Right Column: OTP & Keypad -->
                         <div class="space-y-5 md:order-2 order-2">
-                            <!-- OTP Input -->
+                            <!-- OTP / PIN Input -->
                             <div class="space-y-3">
                                 <label
                                     class="block text-sm font-medium text-neutral-700 text-center"
                                 >
-                                    Enter 6-Digit OTP
+                                    {{ codeLabel }}
                                 </label>
                                 <div class="flex justify-center">
                                     <InputOtp
                                         v-model="otpValue"
-                                        :length="6"
+                                        :length="resolvedCodeLength"
                                         integerOnly
-                                        :disabled="!form.email"
-                                        @complete="handleOtpComplete"
+                                        mask
+                                        :disabled="codeEntryDisabled"
+                                        @complete="handleCodeComplete"
                                     >
-                                        <template
-                                            #default="{ attrs, events, index }"
-                                        >
+                                        <template #default="{ attrs, events }">
                                             <input
-                                                type="text"
+                                                type="password"
+                                                inputmode="numeric"
                                                 v-bind="attrs"
                                                 v-on="events"
                                                 class="w-10 h-12 md:w-12 md:h-14 text-center text-xl md:text-2xl font-bold border-2 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none transition-all disabled:bg-neutral-100 disabled:cursor-not-allowed"
                                                 :class="{
-                                                    'border-red-500':
-                                                        form.errors.otp,
+                                                    'border-red-500': codeError,
                                                     'border-neutral-300':
-                                                        !form.errors.otp,
+                                                        !codeError,
                                                 }"
                                             />
                                         </template>
                                     </InputOtp>
                                 </div>
                                 <p
-                                    v-if="form.errors.otp"
+                                    v-if="codeError"
                                     class="text-sm text-red-600 mt-1 text-center"
                                 >
-                                    {{ form.errors.otp }}
+                                    {{ codeError }}
                                 </p>
                             </div>
 
@@ -121,7 +118,7 @@
                                     type="button"
                                     @click="addDigit(num.toString())"
                                     class="h-14 text-xl font-semibold rounded-lg bg-neutral-100 hover:bg-neutral-200 active:bg-neutral-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    :disabled="form.processing || !form.email"
+                                    :disabled="codeEntryDisabled"
                                 >
                                     {{ num }}
                                 </button>
@@ -129,7 +126,7 @@
                                     type="button"
                                     @click="clearOtp"
                                     class="h-14 text-lg font-semibold rounded-lg bg-red-100 hover:bg-red-200 active:bg-red-300 text-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    :disabled="form.processing || !form.email"
+                                    :disabled="codeEntryDisabled"
                                 >
                                     Clear
                                 </button>
@@ -137,7 +134,7 @@
                                     type="button"
                                     @click="addDigit('0')"
                                     class="h-14 text-xl font-semibold rounded-lg bg-neutral-100 hover:bg-neutral-200 active:bg-neutral-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    :disabled="form.processing || !form.email"
+                                    :disabled="codeEntryDisabled"
                                 >
                                     0
                                 </button>
@@ -145,7 +142,7 @@
                                     type="button"
                                     @click="backspace"
                                     class="h-14 text-lg font-semibold rounded-lg bg-neutral-100 hover:bg-neutral-200 active:bg-neutral-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    :disabled="form.processing || !form.email"
+                                    :disabled="codeEntryDisabled"
                                 >
                                     ⌫
                                 </button>
@@ -160,8 +157,8 @@
                             :disabled="
                                 form.processing ||
                                 !form.branch ||
-                                !form.email ||
-                                otpValue.length !== 6
+                                !form.identifier ||
+                                otpValue.length !== resolvedCodeLength
                             "
                             :loading="form.processing"
                             class="w-full py-3 text-base font-semibold"
@@ -176,15 +173,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
-import { useForm, Link } from "@inertiajs/vue3";
-import { usePage } from "@inertiajs/vue3";
+import { ref, computed, watch } from "vue";
+import { useForm, usePage } from "@inertiajs/vue3";
 import SelectField from "@/Components/Form/SelectField.vue";
+import TextField from "@/Components/Form/TextField.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
-import SecondaryButton from "@/Components/SecondaryButton.vue";
 import InputOtp from "primevue/inputotp";
 import { useToast } from "primevue";
-import axios from "axios";
 
 const toast = useToast();
 const page = usePage();
@@ -194,65 +189,57 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    loginMethod: {
+        type: String,
+        default: "otp",
+    },
+    codeLength: {
+        type: Number,
+        default: 6,
+    },
 });
 
-const branchUsers = ref([]);
-const loadingUsers = ref(false);
+const resolvedLoginMethod = computed(() =>
+    ["otp", "pincode"].includes(props.loginMethod) ? props.loginMethod : "otp",
+);
+
+const resolvedCodeLength = computed(
+    () => props.codeLength || (resolvedLoginMethod.value === "pincode" ? 4 : 6),
+);
+
+const codeField = computed(() =>
+    resolvedLoginMethod.value === "pincode" ? "pincode" : "otp",
+);
+
+const codeLabel = computed(() =>
+    resolvedLoginMethod.value === "pincode"
+        ? `Enter ${resolvedCodeLength.value}-Digit Pincode`
+        : `Enter ${resolvedCodeLength.value}-Digit OTP`,
+);
+
 const otpValue = ref("");
 
 const form = useForm({
-    email: "",
+    identifier: "",
     branch: props.branches.length === 1 ? props.branches[0].id : "",
     otp: "",
+    pincode: "",
 });
 
 const companyName = computed(() => {
     return page.props?.company_info?.company_name || "QuickJuan";
 });
 
-// Watch otpValue and sync with form.otp
 watch(otpValue, (newVal) => {
-    form.otp = newVal;
+    form[codeField.value] = newVal;
+    const opposite = codeField.value === "otp" ? "pincode" : "otp";
+    form[opposite] = "";
 });
 
-// Load users for the branch if only one branch exists
-onMounted(async () => {
-    if (props.branches.length === 1) {
-        await loadBranchUsers(props.branches[0].id);
-    }
-});
-
-// Watch for branch selection to load users automatically
-watch(
-    () => form.branch,
-    async (branchId) => {
-        if (branchId) {
-            await loadBranchUsers(branchId);
-        } else {
-            branchUsers.value = [];
-            form.email = "";
-        }
-    },
+const codeError = computed(() => form.errors[codeField.value]);
+const codeEntryDisabled = computed(
+    () => !form.identifier || !form.branch || form.processing,
 );
-
-const loadBranchUsers = async (branchId) => {
-    try {
-        loadingUsers.value = true;
-        const response = await axios.get(`/api/branches/${branchId}/users`);
-        branchUsers.value = response.data.data || [];
-    } catch (error) {
-        console.error("Failed to fetch branch users:", error);
-        toast.add({
-            severity: "error",
-            summary: "Error",
-            detail: "Failed to load users for this branch",
-            life: 3000,
-        });
-        route("waiter.branch-users", branchId);
-    } finally {
-        loadingUsers.value = false;
-    }
-};
 
 const handleSubmit = () => {
     verifyOtp();
@@ -271,20 +258,20 @@ const verifyOtp = () => {
             });
         },
         onError: (errors) => {
-            console.error("OTP verify error:", errors);
-            if (errors.otp) {
+            console.error("Waiter login error:", errors);
+            if (errors[codeField.value]) {
                 toast.add({
                     severity: "error",
                     summary: "Error",
-                    detail: errors.otp,
+                    detail: errors[codeField.value],
                     life: 3000,
                 });
             }
-            if (errors.email) {
+            if (errors.identifier) {
                 toast.add({
                     severity: "error",
                     summary: "Error",
-                    detail: errors.email,
+                    detail: errors.identifier,
                     life: 3000,
                 });
             }
@@ -297,20 +284,23 @@ const verifyOtp = () => {
                 });
             }
             otpValue.value = "";
-            form.otp = "";
+            form[codeField.value] = "";
         },
     });
 };
 
-const handleOtpComplete = () => {
-    // Auto-submit when OTP is complete
-    if (otpValue.value.length === 6 && form.branch && form.email) {
+const handleCodeComplete = () => {
+    if (
+        otpValue.value.length === resolvedCodeLength.value &&
+        form.branch &&
+        form.identifier
+    ) {
         verifyOtp();
     }
 };
 
 const addDigit = (digit) => {
-    if (otpValue.value.length < 6) {
+    if (otpValue.value.length < resolvedCodeLength.value) {
         otpValue.value += digit;
     }
 };
@@ -321,7 +311,7 @@ const backspace = () => {
 
 const clearOtp = () => {
     otpValue.value = "";
-    form.otp = "";
-    form.clearErrors("otp");
+    form[codeField.value] = "";
+    form.clearErrors(codeField.value);
 };
 </script>

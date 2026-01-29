@@ -140,6 +140,7 @@ class CartService
         $quantity  = $request['quantity'] ?? 1;
         $basePrice = $this->getProductPrice($product, $productPackaging);
         $price     = $this->applyVatToPrice($basePrice, $product);
+        $unitCost  = $this->getProductCost($product, $productPackaging);
         $orderType = $request['order_type'];
 
         // Calculate pricing and tax for main item
@@ -153,7 +154,8 @@ class CartService
             $quantity,
             $price,
             $pricingData,
-            $orderType
+            $orderType,
+            $unitCost
         );
 
         // Add child items (options/add-ons) if applicable
@@ -200,6 +202,11 @@ class CartService
             $pricingData = $this->calculatePricingData($childPrice, $childQuantity, $parentProduct);
             $amount      = $pricingData['vatable_sales'] + $pricingData['vat_amount'] + $pricingData['non_vat_sales'];
 
+            $addOnProduct    = $addOn->addonProduct;
+            $addOnPackaging  = $addOn->productPackaging;
+            $addOnUnitCost   = $addOnProduct ? $this->getProductCost($addOnProduct, $addOnPackaging) : 0;
+            [$childCost, $childProfit] = $this->calculateCostAndProfit($addOnUnitCost, $childQuantity, $amount);
+
             $childDescription = $addOn->productPackaging?->name
                 ?? $addOn->addonProduct?->receipt_alias
                 ?? $addOn->addonProduct?->name
@@ -228,6 +235,8 @@ class CartService
                 'serving_number'       => $parentItem->serving_number,
                 'served_time'          => $parentItem->served_time,
                 'placed_order_time'    => $parentItem->placed_order_time,
+                'cost'                 => $childCost,
+                'profit'               => $childProfit,
                 'meta_data'            => [
                     'product_add_on_id' => $addOn->id,
                 ],
@@ -266,6 +275,20 @@ class CartService
         return $product->multiple_packaging && $productPackaging
             ? (float) $productPackaging->price
             : (float) $product->price;
+    }
+
+    private function getProductCost(Product $product, ?ProductPackaging $productPackaging): float
+    {
+        return $product->multiple_packaging && $productPackaging
+            ? (float) ($productPackaging->cost ?? 0)
+            : (float) ($product->cost ?? 0);
+    }
+
+    private function calculateCostAndProfit(float $unitCost, float $quantity, float $subTotal): array
+    {
+        $cost = $unitCost * $quantity;
+
+        return [$cost, $subTotal - $cost];
     }
 
     /**
@@ -328,9 +351,11 @@ class CartService
         float $quantity,
         float $price,
         array $pricingData,
-        string $orderType
+        string $orderType,
+        float $unitCost
     ): CartItem {
         $amount = $pricingData['vatable_sales'] + $pricingData['vat_amount'] + $pricingData['non_vat_sales'];
+        [$cost, $profit] = $this->calculateCostAndProfit($unitCost, $quantity, $amount);
 
         // Use product packaging name if available, otherwise use product receipt alias
         $description = $product->receipt_alias;
@@ -359,6 +384,8 @@ class CartService
             'tax_type'             => $product->vat_type,
             'tax_percentage'       => $product->vat_rate,
             'tax_included'         => $product->vat_inclusive,
+            'cost'                 => $cost,
+            'profit'               => $profit,
 
         ]);
     }
@@ -424,6 +451,17 @@ class CartService
             $pricingData = $this->calculatePricingData($childPrice, $childQuantity, $parentProduct);
             $amount      = $pricingData['vatable_sales'] + $pricingData['vat_amount'] + $pricingData['non_vat_sales'];
 
+            $childPackaging = null;
+            if (! empty($childItemData['product_packaging_id'])) {
+                $childPackaging = ProductPackaging::find($childItemData['product_packaging_id']);
+            }
+
+            $childUnitCost = $childProduct
+                ? $this->getProductCost($childProduct, $childPackaging)
+                : 0;
+
+            [$childCost, $childProfit] = $this->calculateCostAndProfit($childUnitCost, $childQuantity, $amount);
+
             $parentItem->children()->create([
                 'parent_id'            => $parentItem->id,
                 'cart_id'              => $parentItem->cart_id,
@@ -443,6 +481,8 @@ class CartService
                 'less_tax'             => $pricingData['less_tax'],
                 'served_time'          => $parentItem->served_time,
                 'placed_order_time'     => $parentItem->placed_order_time,
+                'cost'                 => $childCost,
+                'profit'               => $childProfit,
                 'meta_data'            => [
                     'option_id'   => $selectedOption['id'] ?? null,
                     'option_name' => $selectedOption['option_name'] ?? null,
@@ -685,6 +725,16 @@ class CartService
         // Apply tax logic based on discount's remove_tax flag
         $taxData = $this->applyDiscountTaxLogic($discountComputation ?? [], $subtotal, $shouldRemoveTax);
 
+        $productPackaging = $cartItem->product_packaging_id
+            ? ProductPackaging::find($cartItem->product_packaging_id)
+            : null;
+
+        $unitCost = $product
+            ? $this->getProductCost($product, $productPackaging)
+            : 0;
+
+        [$cost, $profit] = $this->calculateCostAndProfit($unitCost, $quantity, $subtotal);
+
         return $cartItem->update([
             'quantity'         => $quantity,
             'amount'           => $amount,
@@ -698,6 +748,8 @@ class CartService
             'tax_type'         => $product?->vat_type,
             'tax_percentage'   => $product?->vat_rate,
             'tax_included'     => $product?->vat_inclusive,
+            'cost'             => $cost,
+            'profit'           => $profit,
         ]);
     }
 
@@ -741,6 +793,16 @@ class CartService
             // Apply tax logic based on discount's remove_tax flag
             $taxData = $this->applyDiscountTaxLogic($calculatedDiscountAmount, $subTotal, $shouldRemoveTax);
 
+            $productPackaging = $cartItem->product_packaging_id
+                ? ProductPackaging::find($cartItem->product_packaging_id)
+                : null;
+
+            $unitCost = $cartItem->product
+                ? $this->getProductCost($cartItem->product, $productPackaging)
+                : 0;
+
+            [$cost, $profit] = $this->calculateCostAndProfit($unitCost, $cartItem->quantity, $subTotal);
+
             $cartItem->update([
                 'amount'           => $amount,
                 'discount_id'      => $discount->id,
@@ -752,6 +814,8 @@ class CartService
                 'vat_amount'       => $taxData['vat_amount'],
                 'less_tax'         => $lessTax,
                 'sub_total'        => $subTotal,
+                'cost'             => $cost,
+                'profit'           => $profit,
             ]);
 
             $results[] = $cartItem;
@@ -911,6 +975,11 @@ class CartService
             $pricingData = $this->calculatePricingData($childPrice, $childQuantity, $parentProduct);
             $amount      = $pricingData['vatable_sales'] + $pricingData['vat_amount'] + $pricingData['non_vat_sales'];
 
+            $addOnProduct   = $productAddOn->addonProduct;
+            $addOnPackaging = $productAddOn->productPackaging;
+            $unitCost       = $addOnProduct ? $this->getProductCost($addOnProduct, $addOnPackaging) : 0;
+            [$childCost, $childProfit] = $this->calculateCostAndProfit($unitCost, $childQuantity, $amount);
+
             $childItem = $parentItem->children()->create([
                 'parent_id'            => $parentItem->id,
                 'cart_id'              => $parentItem->cart_id,
@@ -934,6 +1003,8 @@ class CartService
                 'serving_number'       => $parentItem->serving_number,
                 'served_time'          => $parentItem->served_time,
                 'placed_order_time'    => $parentItem->placed_order_time,
+                'cost'                 => $childCost,
+                'profit'               => $childProfit,
                 'meta_data'            => [
                     'product_add_on_id' => $productAddOn->id,
                 ],
@@ -1025,6 +1096,16 @@ class CartService
         $pricingData = $this->calculatePricingData($price, $quantity, $product);
         $subtotal    = $amount; //$pricingData['vatable_sales'] + $pricingData['vat_amount'] + $pricingData['non_vat_sales'];
 
+        $productPackaging = $cartItem->product_packaging_id
+            ? ProductPackaging::find($cartItem->product_packaging_id)
+            : null;
+
+        $unitCost = $product
+            ? $this->getProductCost($product, $productPackaging)
+            : 0;
+
+        [$cost, $profit] = $this->calculateCostAndProfit($unitCost, $quantity, $subtotal);
+
         return $cartItem->update([
             'discount_amount'  => 0.00,
             'discount_id'      => null,
@@ -1035,6 +1116,8 @@ class CartService
             'vat_amount'       => $pricingData['vat_amount'],
             'non_vat_sales'    => $pricingData['non_vat_sales'],
             'less_tax'         => $pricingData['less_tax'],
+            'cost'             => $cost,
+            'profit'           => $profit,
         ]);
     }
 

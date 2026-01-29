@@ -46,19 +46,24 @@ class AuthController extends Controller
         ]);
 
         $request->validate([
-            'email'    => 'required|email',
+            'identifier'    => 'required|string',
             'password' => 'required',
             'branch'   => 'required|exists:branches,id',
         ]);
 
         $this->ensureIsNotRateLimited($request);
 
-        $user = User::where('email', $request->email)->first();
+        $identifier = Str::lower($request->input('identifier'));
+
+        $user = User::where(function ($query) use ($identifier) {
+            $query->whereRaw('LOWER(email) = ?', [$identifier])
+                ->orWhereRaw('LOWER(username) = ?', [$identifier]);
+        })->first();
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
             RateLimiter::hit($this->throttleKey($request));
             return back()->withErrors([
-                'email' => 'The provided credentials are incorrect.',
+                'identifier' => 'The provided credentials are incorrect.',
             ]);
         }
 
@@ -168,6 +173,6 @@ class AuthController extends Controller
 
     protected function throttleKey(Request $request): string
     {
-        return Str::lower($request->input('email')) . '|' . $request->ip();
+        return Str::lower((string) $request->input('identifier')) . '|' . $request->ip();
     }
 }
