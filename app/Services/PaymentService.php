@@ -251,6 +251,8 @@ class PaymentService
             'non_vat_sales'        => $cartItem->non_vat_sales ?? 0,
             'less_tax'             => $cartItem->less_tax ?? 0,
             'amount'               => $cartItem->amount,
+            'cost'                 => $cartItem->cost,
+            'profit'               => $cartItem->profit,
             'order_type'           => $cartItem->order_type,
             'discount_id'          => $cartItem->discount_id,
             'coupon_code'          => $cartItem->coupon_code,

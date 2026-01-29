@@ -51,12 +51,12 @@
                 <!-- Email Field -->
                 <div class="space-y-2">
                     <TextField
-                        id="email"
-                        v-model="form.email"
-                        label="Email Address"
-                        type="email"
-                        placeholder="Enter your email address"
-                        :error="form.errors.email"
+                        id="identifier"
+                        v-model="form.identifier"
+                        label="Email or Username"
+                        type="text"
+                        placeholder="Enter your email or username"
+                        :error="form.errors.identifier"
                         required
                     />
                 </div>
@@ -80,7 +80,7 @@
                         :disabled="
                             form.processing ||
                             // !form.branch ||
-                            !form.email ||
+                            !form.identifier ||
                             !form.password
                         "
                         class="w-full bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 shadow-lg"
@@ -168,9 +168,9 @@ const companyName = computed(() => {
 });
 
 const form = useForm({
-    email: "",
+    identifier: "",
     password: "",
-    branch: props.branches.length <= 1 ? props.branches?.[0]?.id : [],
+    branch: props.branches.length <= 1 ? props.branches?.[0]?.id : "",
 });
 
 const login = () => {

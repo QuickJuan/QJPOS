@@ -161,7 +161,7 @@
                                     {{ cashierName }}
                                 </p>
                                 <p class="text-xs text-slate-500">
-                                    Cashier Account
+                                    {{ accountLabel }}
                                 </p>
                             </div>
                             <div
@@ -248,6 +248,10 @@ const isOrderTaking = computed(() => {
             .replace(/-+/g, "_") === "order_taking"
     );
 });
+
+const accountLabel = computed(() =>
+    isOrderTaking.value ? "Waiter Account" : "Cashier Account",
+);
 
 // Methods
 const handlePendingOrdersClick = () => {

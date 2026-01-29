@@ -37,8 +37,10 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'username',
         'email',
         'password',
+        'pincode',
         'employee_code',
         'branch_id',
         'current_role',
@@ -54,6 +56,7 @@ class User extends Authenticatable
      */
     protected $hidden = [
         'password',
+        'pincode',
         'remember_token',
         'two_factor_recovery_codes',
         'two_factor_secret',
@@ -79,6 +82,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password'          => 'hashed',
+            'pincode'           => 'hashed',
             'current_role'      => \App\Enums\CurrentRole::class,
             'otp_enabled'       => 'boolean',
             'otp_enabled_at'    => 'datetime',

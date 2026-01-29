@@ -74,13 +74,18 @@ class UserResource extends Resource
                     ->disabled()
                     ->dehydrated(),
 
-                TextInput::make('otp_secret')
-                    ->label('OTP PIN')
-                    ->hint('6-digit PIN for waiter login')
-                    ->maxLength(6)
-                    ->placeholder('Enter 6-digit PIN')
+                TextInput::make('pincode')
+                    ->label('PIN code')
+                    ->hint(fn () => config('waiter.login_method') === 'pincode' ? 'PIN for waiter login' : 'PIN (used when pincode login is enabled)')
+                    ->maxLength((int) config('waiter.pincode_length', 4))
+                    ->minLength((int) config('waiter.pincode_length', 4))
+                    ->numeric()
+                    ->placeholder(fn () => 'Enter ' . config('waiter.pincode_length', 4) . '-digit PIN')
                     ->helperText('This PIN will be used for waiter login authentication')
-                    ->visibleOn('edit'),
+                    ->visibleOn('edit')
+                    ->formatStateUsing(fn () => null) // never display hashed pin
+                    ->dehydrateStateUsing(fn ($state) => filled($state) ? $state : null)
+                    ->dehydrated(fn ($state) => filled($state)),
             ]);
     }
 
