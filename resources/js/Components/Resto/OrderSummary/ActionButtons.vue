@@ -19,7 +19,8 @@
                 <!-- Place Order Button - Show whenever there are items to place -->
                 <button
                     @click="handlePlaceOrder"
-                    class="px-4 py-2.5 bg-success-600 text-white rounded-lg font-semibold hover:bg-success-700 transition-colors text-sm whitespace-nowrap"
+                    :disabled="!hasItemsToPlace"
+                    class="px-4 py-2.5 bg-success-600 text-white rounded-lg font-semibold hover:bg-success-700 transition-colors text-sm whitespace-nowrap disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed"
                 >
                     Place Order
                 </button>
@@ -160,9 +161,9 @@ const emit = defineEmits<{
 // Use applied discount from props
 const appliedDiscount = computed(() => props.appliedDiscount);
 
-// Check if there are items that can be placed (have placed_order false)
+// Check if there are items that can be placed (not yet placed)
 const hasItemsToPlace = computed(() => {
-    return props.orderItems.some((item) => item.placed_order === false);
+    return props.orderItems.some((item) => !item.placed_order);
 });
 
 const { placeOrder } = useTable();
@@ -364,6 +365,16 @@ const handleEndOfShift = () => {
 
 // Handle place order with response handling
 const handlePlaceOrder = async () => {
+    if (!hasItemsToPlace.value) {
+        toast.add({
+            severity: "warn",
+            summary: "No New Items",
+            detail: "Add items before placing an order.",
+            life: 2500,
+        });
+        return;
+    }
+
     // Show server selection modal first
     showServerSelectionModal.value = true;
 };
