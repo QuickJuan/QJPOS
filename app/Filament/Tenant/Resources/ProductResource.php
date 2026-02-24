@@ -25,6 +25,7 @@ use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Actions\BulkAction;
 use Filament\Tables\Actions\ImportAction;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -76,6 +77,7 @@ class ProductResource extends Resource
                         ProductType::WITH_VARIANT->value => 'With Variant',
                         ProductType::COMPOSITE->value => 'Composite',
                         ProductType::BUNDLE->value => 'Bundle',
+                        ProductType::SERVICE->value => 'Service',
                     ])
                     ->default(ProductType::SIMPLE->value)
                     ->live()
@@ -83,8 +85,12 @@ class ProductResource extends Resource
                         if ($state !== ProductType::SIMPLE->value) {
                             $set('track_inventory', false);
                         }
+
+                        if ($state === ProductType::SERVICE->value) {
+                            $set('open_price', true);
+                        }
                     })
-                    ->helperText('Choose how this product behaves in POS and inventory.'),
+                    ->helperText('Choose how this product behaves in POS and inventory. Service items are open price and excluded from kitchen printing.'),
 
                 Select::make('preparation_location_id')
                     ->relationship('preparationLocation', 'description')
@@ -139,7 +145,7 @@ class ProductResource extends Resource
                     ->live(),
 
                 TextInput::make('price')
-                    ->required(fn(Get $get) => ! $get('multiple_packaging') && $get('product_type') !== ProductType::WITH_VARIANT->value)
+                    ->required(fn(Get $get) => ! $get('multiple_packaging') && $get('product_type') !== ProductType::WITH_VARIANT->value && ! $get('open_price'))
                     ->default(0)
                     ->numeric()
                     ->label('Price')
@@ -154,6 +160,13 @@ class ProductResource extends Resource
                     ->prefix('₱')
                     ->helperText('Base cost is shown only when multiple packaging is disabled.')
                     ->hidden(fn(Get $get) => $get('product_type') === ProductType::WITH_VARIANT->value || (bool) $get('multiple_packaging')),
+
+                Toggle::make('open_price')
+                    ->label('Open Price')
+                    ->helperText('Enable when the price will be set at the counter with manager approval.')
+                    ->default(false)
+                    ->inline(false)
+                    ->reactive(),
 
                 TextInput::make('barcode')
                     ->label('Barcode')
@@ -610,6 +623,17 @@ class ProductResource extends Resource
                 TextColumn::make('brand.name')
                     ->label('Brand')
                     ->searchable()
+                    ->sortable(),
+
+                TextColumn::make('product_type')
+                    ->label('Type')
+                    ->formatStateUsing(fn ($state) => str_replace('_', ' ', ucfirst((string) $state)))
+                    ->badge()
+                    ->sortable(),
+
+                IconColumn::make('open_price')
+                    ->label('Open Price')
+                    ->boolean()
                     ->sortable(),
 
             ])

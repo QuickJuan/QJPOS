@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\CartItem;
 use App\Models\ProductAddOn;
 use App\Models\Discount;
+use App\Enums\Discount\TypeEnum as DiscountTypeEnum;
 use App\Models\TableRoom;
 use App\Models\VoidItem;
 use App\Events\OrderPlaced;
@@ -17,12 +18,16 @@ use Illuminate\Http\Request;
 use App\Models\CashierSession;
 use App\Models\ProductPackaging;
 use App\Enums\TableRoomStatusType;
+use App\Enums\Product\Type as ProductType;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Http\Resources\CartResource;
 use Illuminate\Support\Facades\Auth;
 use App\Enums\TableRoomLocation\LocationType;
+use App\Enums\TableRoomLocation\ServiceChargeType;
 use App\Http\Resources\PreparationItemCollectionResource;
+use App\Services\OtpSecretService;
+use Illuminate\Validation\ValidationException;
 
 class CartService
 {
@@ -138,7 +143,9 @@ class CartService
 
         // Extract request data
         $quantity  = $request['quantity'] ?? 1;
-        $basePrice = $this->getProductPrice($product, $productPackaging);
+
+        [$basePrice, $metaData] = $this->determineBasePrice($product, $productPackaging, $request);
+
         $price     = $this->applyVatToPrice($basePrice, $product);
         $unitCost  = $this->getProductCost($product, $productPackaging);
         $orderType = $request['order_type'];
@@ -155,7 +162,8 @@ class CartService
             $price,
             $pricingData,
             $orderType,
-            $unitCost
+            $unitCost,
+            $metaData
         );
 
         // Add child items (options/add-ons) if applicable
@@ -342,6 +350,101 @@ class CartService
     }
 
     /**
+     * Determine the base price for an item, handling open-price validation when enabled.
+     */
+    private function determineBasePrice(Product $product, ?ProductPackaging $productPackaging, Request $request): array
+    {
+        $metaData = [];
+
+        if ((bool) $product->open_price) {
+            [$overridePrice, $approverId] = $this->validateOpenPrice($request);
+
+            $metaData = [
+                'open_price'     => true,
+                'override_price' => $overridePrice,
+            ];
+
+            if ($approverId) {
+                $metaData['approved_by'] = $approverId;
+            }
+
+            return [$overridePrice, $metaData];
+        }
+
+        return [$this->getProductPrice($product, $productPackaging), $metaData];
+    }
+
+    /**
+     * Validate the open-price payload and required manager approval.
+     * Returns an array of [overridePrice, approverId].
+     */
+    private function validateOpenPrice(Request $request): array
+    {
+        $overridePrice = (float) ($request->input('override_price')
+            ?? $request->input('price')
+            ?? $request->input('total_price')
+            ?? 0);
+
+        if ($overridePrice <= 0) {
+            throw ValidationException::withMessages([
+                'override_price' => 'A valid price is required for open-price items.',
+            ]);
+        }
+
+        $approverEmail = (string) $request->input('approver_email');
+        $otpCode       = (string) $request->input('otp_code');
+
+        if (trim($approverEmail) === '' || trim($otpCode) === '') {
+            throw ValidationException::withMessages([
+                'approver_email' => 'Manager approval (email and OTP) is required for open-price items.',
+            ]);
+        }
+
+        $approver = User::where('email', $approverEmail)->first();
+
+        if (! $approver) {
+            throw ValidationException::withMessages([
+                'approver_email' => 'Approver not found.',
+            ]);
+        }
+
+        $permission     = 'override open price';
+        $superAdminRole = 'Super Admin';
+
+        $roleAuthorized = $approver->hasRole($superAdminRole);
+        $permAuthorized = $roleAuthorized ? true : $approver->can($permission);
+
+        if (! ($roleAuthorized || $permAuthorized)) {
+            throw ValidationException::withMessages([
+                'approver_email' => 'Approver is not authorized for open-price overrides.',
+            ]);
+        }
+
+        $requestingUser = $request->user();
+        if ($requestingUser && $requestingUser->branch_id && $approver->branch_id && $approver->branch_id !== $requestingUser->branch_id) {
+            throw ValidationException::withMessages([
+                'approver_email' => 'Approver must belong to the same branch.',
+            ]);
+        }
+
+        if (! $approver->otp_enabled || empty($approver->otp_secret)) {
+            throw ValidationException::withMessages([
+                'approver_email' => 'Approver does not have OTP enabled.',
+            ]);
+        }
+
+        $otpValid = OtpSecretService::verifyCode($approver->otp_secret, $otpCode, 4);
+
+        if (! $otpValid) {
+            throw ValidationException::withMessages([
+                'otp_code' => 'Invalid or expired OTP code.',
+            ]);
+        }
+
+        return [$overridePrice, $approver->id];
+    }
+
+    /**
      * Create main cart item with calculated pricing
      */
     private function createCartItem(
@@ -352,7 +455,8 @@ class CartService
         float $price,
         array $pricingData,
         string $orderType,
-        float $unitCost
+        float $unitCost,
+        array $metaData = []
     ): CartItem {
         $amount = $pricingData['vatable_sales'] + $pricingData['vat_amount'] + $pricingData['non_vat_sales'];
         [$cost, $profit] = $this->calculateCostAndProfit($unitCost, $quantity, $amount);
@@ -386,6 +490,7 @@ class CartService
             'tax_included'         => $product->vat_inclusive,
             'cost'                 => $cost,
             'profit'               => $profit,
+            'meta_data'            => empty($metaData) ? null : $metaData,
 
         ]);
     }
@@ -594,6 +699,38 @@ class CartService
         return $cart->fresh();
     }
 
+    public function updateServiceCharge(Request $request, int $cartId): Cart
+    {
+        $cart = Cart::with('tableRoom.tableRoomLocation')->find($cartId);
+
+        if (! $cart) {
+            throw new Exception('Cart not found.');
+        }
+
+        $user = Auth::user();
+        if ($user && $cart->branch_id && $cart->branch_id !== $user->branch_id) {
+            throw new Exception('Unauthorized cart access.');
+        }
+
+        $location = $cart->tableRoom?->tableRoomLocation;
+        if (! $location) {
+            throw new Exception('Table location not found.');
+        }
+
+        $chargeType = $location->service_charge_type ?? ServiceChargeType::AUTO->value;
+        if ($chargeType !== ServiceChargeType::MANUAL->value) {
+            throw new Exception('Service charge is auto-computed for this location.');
+        }
+
+        $amount = max(0, (float) $request->input('service_charge', 0));
+
+        $cart->update([
+            'service_charge' => $amount,
+        ]);
+
+        return $cart->fresh();
+    }
+
     public function mergeCart(Request $request, int $sourceCartId, int $targetTableId): mixed
     {
         $cashierSession = $this->cashierSession->openSession()->first();
@@ -701,10 +838,18 @@ class CartService
             $discount        = Discount::find($cartItem->discount_id);
             $shouldRemoveTax = $discount?->remove_tax ?? false;
 
+            $manualAmount = null;
+            if ($discount && $discount->type === DiscountTypeEnum::MANUAL->value) {
+                $manualAmount = (float) $cartItem->discount_amount;
+            }
+
             $results = $this->discountService->calculateDiscountAmount(
                 $cartItem->discount_id,
                 [$cartItem->id],
-                $quantity
+                $quantity,
+                null,
+                null,
+                $manualAmount
             );
 
             $discountComputation = $results[0] ?? null;
@@ -761,6 +906,18 @@ class CartService
         $discount        = Discount::findOrFail($request->discount_id);
         $shouldRemoveTax = $discount->remove_tax ?? false;
 
+        $manualAmount = null;
+        if ($discount->type === DiscountTypeEnum::MANUAL->value) {
+            $manualAmount = (float) $request->input('discount_amount', 0);
+
+            if ($manualAmount <= 0) {
+                throw new Exception('Manual discount amount is required.');
+            }
+
+            $maxApplicable = $cartItems->sum(fn ($item) => $item->price * $item->quantity);
+            $manualAmount  = min($manualAmount, $maxApplicable);
+        }
+
         // Get PAX parameters from request if discount requires it
         $paxCount = $request->pax_count ?? null;
         $discountedPax = $request->discounted_pax ?? null;
@@ -770,7 +927,8 @@ class CartService
             $request->cartItemIds,
             null,
             $paxCount,
-            $discountedPax
+            $discountedPax,
+            $manualAmount
         );
 
         $results = [];
@@ -780,14 +938,13 @@ class CartService
             $amount                   = $cartItem->price * $cartItem->quantity;
             $subTotal                 = $amount - ($calculatedDiscountAmount['lessTax'] + $calculatedDiscountAmount['discountAmount']);
 
+            $product = $cartItem->product;
+
             // Determine less_tax: use from discount calculation if available, otherwise calculate from product VAT
             $lessTax = $calculatedDiscountAmount['lessTax'] ?? 0;
 
-            if ($lessTax == 0 && ! $shouldRemoveTax) {
-                $product = $cartItem->product;
-                if ($product && $product->vat_type === 'VAT' && $product->vat_inclusive) {
-                    $lessTax = $this->calculateInclusiveTaxAmount($subTotal, $product->vat_rate);
-                }
+            if ($lessTax == 0 && ! $shouldRemoveTax && $product && $product->vat_type === 'VAT' && $product->vat_inclusive) {
+                $lessTax = $this->calculateInclusiveTaxAmount($subTotal, $product->vat_rate);
             }
 
             // Apply tax logic based on discount's remove_tax flag
@@ -1281,6 +1438,8 @@ class CartService
                         ->orderBy('id')
                         ->get();
 
+                    $cartItems = $this->removeServiceItems($cartItems);
+
                     $newOrderItems = new PreparationItemCollectionResource($cartItems);
 
                     //get served by user where batch number is equal to order number
@@ -1337,6 +1496,8 @@ class CartService
         }
 
         $cartItems = $query->orderBy('id')->get();
+
+    $cartItems = $this->removeServiceItems($cartItems);
 
         // Debug log before filtering
         Log::info('Before filtering', [
@@ -1407,6 +1568,32 @@ class CartService
         }
 
         return $item;
+    }
+
+    /**
+     * Remove service-type items (and their children) from collections used for printing.
+     */
+    private function removeServiceItems($items)
+    {
+        return $items->filter(function ($item) {
+            if ($this->isServiceItem($item)) {
+                return false;
+            }
+
+            if ($item->relationLoaded('childrenRecursive') && $item->childrenRecursive) {
+                $filtered = $this->removeServiceItems($item->childrenRecursive);
+                $item->setRelation('childrenRecursive', $filtered);
+            }
+
+            return true;
+        })->values();
+    }
+
+    private function isServiceItem($item): bool
+    {
+        $type = strtolower((string) ($item->product_type ?? $item->product?->product_type ?? ''));
+
+        return $type === ProductType::SERVICE->value;
     }
 
     public function claimOrder(int $tableId): mixed

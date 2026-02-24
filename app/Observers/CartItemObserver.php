@@ -3,6 +3,7 @@
 namespace App\Observers;
 
 use App\Models\CartItem;
+use App\Enums\TableRoomLocation\ServiceChargeType;
 
 class CartItemObserver
 {
@@ -42,9 +43,14 @@ class CartItemObserver
         }
 
         // Load the table relationship
-        $cart->load('tableRoom');
+        $cart->load('tableRoom.tableRoomLocation');
 
         if (!$cart->tableRoom) {
+            return;
+        }
+
+        $location = $cart->tableRoom->tableRoomLocation;
+        if ($location && $location->service_charge_type === ServiceChargeType::MANUAL->value) {
             return;
         }
 

@@ -46,7 +46,7 @@ class ProductCategoryService
                 'media', // Eager load category media
                 'products' => fn($query) => $query
                     ->where('is_active', true)
-                    ->select('id', 'name', 'average_cost', 'receipt_alias', 'description', 'category_id', 'brand_id', 'total_onhand', 'price', 'unit_measure', 'multiple_packaging', 'uuid')
+                    ->select('id', 'name', 'average_cost', 'receipt_alias', 'description', 'category_id', 'brand_id', 'total_onhand', 'price', 'unit_measure', 'multiple_packaging', 'uuid', 'product_type', 'open_price', 'vat_type', 'vat_rate', 'vat_inclusive')
                     ->with([
                         'productPackagings' => fn($q) => $q->with('media'), // Eager load packaging media
                         'options',
@@ -120,7 +120,7 @@ class ProductCategoryService
 
             return $category->products()
                 ->where('is_active', true)
-                ->select('id', 'name', 'average_cost', 'receipt_alias', 'description', 'category_id', 'brand_id', 'total_onhand', 'price', 'unit_measure', 'multiple_packaging', 'uuid')
+                ->select('id', 'name', 'average_cost', 'receipt_alias', 'description', 'category_id', 'brand_id', 'total_onhand', 'price', 'unit_measure', 'multiple_packaging', 'uuid', 'product_type', 'open_price', 'vat_type', 'vat_rate', 'vat_inclusive')
                 ->with([
                     'productPackagings' => fn($q) => $q->with('media'),
                     'options.optionItems.product.media',

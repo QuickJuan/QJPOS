@@ -356,16 +356,18 @@ const canonicalizeLocationType = (rawType: unknown): string => {
 
     if (
         [
-            "takeout",
-            "take-out",
-            "take away",
-            "take-away",
+            "deliver",
             "delivery",
             "pickup",
             "pick-up",
-            "take away",
+            "courier",
+            "rider",
         ].includes(type)
     ) {
+        return "deliver";
+    }
+
+    if (["takeout", "take-out", "take away", "take-away"].includes(type)) {
         return "takeout";
     }
 
@@ -397,6 +399,7 @@ const locations = computed(() => {
 const LOCATION_TYPE_ORDER: Record<string, number> = {
     "dine-in": 0,
     takeout: 1,
+    deliver: 1,
     other: 2,
 };
 
@@ -405,7 +408,9 @@ const getLocationTypeLabel = (type: string): string => {
         case "dine-in":
             return "Dine-In Areas";
         case "takeout":
-            return "Takeout & Delivery Areas";
+            return "Takeout Areas";
+        case "deliver":
+            return "Delivery Areas";
         default:
             return "Other Areas";
     }

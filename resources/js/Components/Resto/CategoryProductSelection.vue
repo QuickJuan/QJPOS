@@ -77,6 +77,18 @@
             @confirm="handlePackagingConfirm"
             @cancel="handlePackagingCancel"
         />
+
+        <OpenPriceModal
+            v-model="showOpenPriceModal"
+            :product="pendingOpenPrice?.product"
+            :default-price="pendingOpenPrice?.defaultPrice"
+            @confirm="handleOpenPriceConfirm"
+            @update:modelValue="
+                (value: boolean) => {
+                    if (!value) handleOpenPriceCancel();
+                }
+            "
+        />
     </section>
 </template>
 
@@ -88,6 +100,7 @@ import { useToast } from "primevue/usetoast";
 import Category from "@/Types/Category";
 import ProductThumbnails from "@/Components/Resto/ProductThumbnails.vue";
 import PackagingSelectionModal from "@/Components/Resto/PackagingSelectionModal.vue";
+import OpenPriceModal from "@/Components/Resto/OpenPriceModal.vue";
 import BeverageIcon from "@/Components/icons/CashierIcons/BeverageIcon.vue";
 import FoodIcon from "@/Components/icons/CashierIcons/FoodIcon.vue";
 import DessertIcon from "@/Components/icons/CashierIcons/DessertIcon.vue";
@@ -118,6 +131,10 @@ const {
     selectedProductForPackaging,
     handlePackagingConfirm: baseHandlePackagingConfirm,
     handlePackagingCancel,
+    showOpenPriceModal,
+    pendingOpenPrice,
+    handleOpenPriceConfirm,
+    handleOpenPriceCancel,
 } = useProduct();
 
 // Local state for selected category

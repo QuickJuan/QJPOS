@@ -9,7 +9,9 @@ use App\Models\TableRoomLocation;
 use Filament\Forms\Components\Select;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Get;
 use App\Enums\TableRoomLocation\LocationType;
+use App\Enums\TableRoomLocation\ServiceChargeType;
 use App\Filament\Tenant\Resources\TableRoomLocationResource\Pages;
 
 class TableRoomLocationResource extends Resource
@@ -27,13 +29,28 @@ class TableRoomLocationResource extends Resource
                     ->required()
                     ->maxLength(255),
 
+                TextInput::make('service_charge_label')
+                    ->label('Service Charge Label')
+                    ->placeholder('Service Charge')
+                    ->helperText('Defaults to "Service Charge" when left blank.'),
+
+                Select::make('service_charge_type')
+                    ->label('Service Charge Type')
+                    ->options(ServiceChargeType::filamentOptions())
+                    ->default(ServiceChargeType::AUTO->value)
+                    ->required()
+                    ->live(),
+
                 TextInput::make('service_charge')
                     ->required()
                     ->numeric()
                     ->minValue(0)
                     ->maxValue(100)
                     ->default(0)
-                    ->step(0.01),
+                    ->step(0.01)
+                    ->label('Service Charge (%)')
+                    ->helperText('Applied automatically when type is Auto. For Manual, set the amount in cart.')
+                    ->disabled(fn (Get $get) => $get('service_charge_type') === ServiceChargeType::MANUAL->value),
 
                     Select::make('location_type')
                         ->label('Location Type')
@@ -50,8 +67,18 @@ class TableRoomLocationResource extends Resource
                     ->sortable()
                     ->searchable(),
 
+                TextColumn::make('service_charge_label')
+                    ->label('Charge Label')
+                    ->formatStateUsing(fn ($state) => $state ?: 'Service Charge')
+                    ->sortable(),
+
                 TextColumn::make('service_charge')
                     ->label('Service Charge (%)')
+                    ->sortable()
+                    ->searchable(),
+
+                TextColumn::make('service_charge_type')
+                    ->label('Charge Type')
                     ->sortable()
                     ->searchable(),
             ])

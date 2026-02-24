@@ -256,7 +256,7 @@ const props = defineProps<{
 const page = usePage<any>();
 
 const isOrderTaking = computed(() => {
-    const raw = page.props?.auth?.user?.current_role ?? "";
+    const raw = page.props?.auth?.user?.user_interface ?? "";
     const normalized = String(raw)
         .toLowerCase()
         .replaceAll(" ", "_")

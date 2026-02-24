@@ -24,6 +24,8 @@ use App\Http\Requests\CreateTableCartRequest;
 use App\Http\Resources\ReceiptOrdersResource;
 use App\Http\Requests\ApplyDiscountToCartItemRequest;
 use App\Http\Requests\VoidCartItemRequest;
+use App\Http\Requests\UpdateServiceChargeRequest;
+use Illuminate\Validation\ValidationException;
 
 class CartController extends Controller
 {
@@ -60,8 +62,10 @@ class CartController extends Controller
         try {
             $this->cartService->addToCart($request);
             return redirect()->back()->with('success', 'Item added to cart successfully.');
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (Exception $e) {
-            return redirect()->back()->with('error', 'There was an error adding item to cart.');
+            return redirect()->back()->with('error', $e->getMessage() ?: 'There was an error adding item to cart.');
         }
     }
 
@@ -77,6 +81,17 @@ class CartController extends Controller
             return redirect()->back()->with('success', 'Cart updated successfully.');
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'There was an error updating cart.');
+        }
+    }
+
+    public function updateServiceCharge(UpdateServiceChargeRequest $request, int $cartId): RedirectResponse
+    {
+        try {
+            $this->cartService->updateServiceCharge($request, $cartId);
+
+            return redirect()->back()->with('success', 'Service charge updated successfully.');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage() ?: 'There was an error updating service charge.');
         }
     }
 

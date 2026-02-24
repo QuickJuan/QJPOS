@@ -65,7 +65,11 @@ class PaymentService
                 if ($cart->table_room_id
                     && $cart->tableRoom
                     && $cart->tableRoom->tableRoomLocation
-                    && $cart->tableRoom->tableRoomLocation->location_type != LocationType::TAKEOUT->value) {
+                    && ! in_array(
+                        $cart->tableRoom->tableRoomLocation->location_type,
+                        [LocationType::TAKEOUT->value, LocationType::DELIVER->value],
+                        true
+                    )) {
 
                     TableRoom::where('id', $cart->table_room_id)->update([
                         'status'        => TableRoomStatusType::AVAILABLE->value,
@@ -735,7 +739,11 @@ class PaymentService
         if ($cart->table_room_id
             && $cart->tableRoom
             && $cart->tableRoom->tableRoomLocation
-            && $cart->tableRoom->tableRoomLocation->location_type != LocationType::TAKEOUT->value) {
+            && ! in_array(
+                $cart->tableRoom->tableRoomLocation->location_type,
+                [LocationType::TAKEOUT->value, LocationType::DELIVER->value],
+                true
+            )) {
 
             TableRoom::where('id', $cart->table_room_id)->update([
                 'status' => TableRoomStatusType::AVAILABLE->value,

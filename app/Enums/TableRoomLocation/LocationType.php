@@ -10,4 +10,5 @@ enum LocationType: string
 
     case DINE_IN = "dine-in";
     case TAKEOUT = "takeout";
+    case DELIVER = "deliver";
 }

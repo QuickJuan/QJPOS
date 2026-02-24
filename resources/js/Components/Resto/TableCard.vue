@@ -44,10 +44,10 @@
                             table.status === 'occupied'
                                 ? 'bg-red-100 text-red-800'
                                 : table.status === 'reserved'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : table.status === 'available'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-gray-100 text-gray-800',
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : table.status === 'available'
+                                    ? 'bg-green-100 text-green-800'
+                                    : 'bg-gray-100 text-gray-800',
                         ]"
                     >
                         {{ table.status }}
@@ -87,7 +87,8 @@ const props = defineProps<{
 }>();
 
 const startTimeLabel = computed(() => {
-    return props.table?.tableRoomLocation?.location_type === "takeout"
+    const type = props.table?.tableRoomLocation?.location_type;
+    return ["takeout", "deliver"].includes(type)
         ? "Order Start"
         : "Dining Start";
 });

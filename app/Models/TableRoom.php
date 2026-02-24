@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Enums\TableRoomLocation\ServiceChargeType;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TableRoom extends Model implements HasMedia
@@ -103,13 +104,23 @@ class TableRoom extends Model implements HasMedia
         // Get the location with service charge
         $location = $this->tableRoomLocation;
 
+        if (! $location) {
+            return 0;
+        }
+
+        $chargeType = $location->service_charge_type ?? ServiceChargeType::AUTO->value;
+
+        if ($chargeType === ServiceChargeType::MANUAL->value) {
+            return (float) ($cart?->service_charge ?? 0);
+        }
+
         // If no location or no service charge configured, return 0
-        if (!$location || !$location->service_charge || $location->location_type !== 'dine-in') {
+        if (! $location->service_charge || $location->location_type !== 'dine-in') {
             return 0;
         }
 
         // Calculate service charge based on cart's subtotal
-        $subtotal = $cart->cartItems->sum('sub_total');
+        $subtotal = $cart?->cartItems?->sum('sub_total') ?? 0;
         $serviceChargeAmount = ($location->service_charge / 100) * $subtotal;
 
         // Round to nearest

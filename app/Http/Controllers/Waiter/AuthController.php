@@ -100,7 +100,7 @@ class AuthController
         }
 
         $user->branch_id = $branch->id;
-        $user->current_role = CurrentRole::ORDER_TAKING->value;
+        $user->user_interface = CurrentRole::ORDER_TAKING->value;
         $user->save();
         $user->refresh();
 
@@ -112,7 +112,7 @@ class AuthController
 
         \Log::info('Waiter login successful', [
             'user_id' => $user->id,
-            'current_role' => $user->current_role,
+            'user_interface' => $user->user_interface,
             'session_id' => $request->session()->getId(),
             'role' => CurrentRole::ORDER_TAKING->value,
             'login_method' => $loginMethod,
@@ -147,8 +147,8 @@ class AuthController
 
     public function logout(Request $request)
     {
-        $currentRole = $request->user()?->current_role;
-        $redirectUrl = $currentRole === CurrentRole::CASHIERING->value
+        $currentInterface = $request->user()?->user_interface;
+        $redirectUrl = $currentInterface === CurrentRole::CASHIERING->value
             ? route('login', ['_fresh' => time()])
             : route('waiter.login', ['_fresh' => time()]);
 

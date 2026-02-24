@@ -240,7 +240,7 @@ const isTableView = computed(() => {
 });
 
 const isOrderTaking = computed(() => {
-    const role = (page.props as any)?.auth?.user?.current_role;
+    const role = (page.props as any)?.auth?.user?.user_interface;
     return (
         String(role || "")
             .toLowerCase()

@@ -85,7 +85,7 @@
                             <span class="font-semibold">
                                 {{
                                     formatCurrency(
-                                        cartSummary?.serviceCharge || 0
+                                        cartSummary?.serviceCharge || 0,
                                     )
                                 }}
                             </span>
@@ -491,7 +491,9 @@ const isTakeoutOccupied = computed(() => {
         props.table &&
         props.table.status === "occupied" &&
         props.table.tableRoomLocation &&
-        props.table.tableRoomLocation.location_type === "takeout"
+        ["takeout", "deliver"].includes(
+            props.table.tableRoomLocation.location_type,
+        )
     );
 });
 
@@ -581,7 +583,7 @@ const flattenItems = (items: any[]): any[] => {
 const extractItemsFromGroups = (groups: any[]): any[] => {
     const normalizedGroups = normalizeCollection(groups);
     return normalizedGroups.flatMap((group) =>
-        flattenItems(group?.cartItems ?? group?.cart_items ?? [])
+        flattenItems(group?.cartItems ?? group?.cart_items ?? []),
     );
 };
 
@@ -591,7 +593,7 @@ const getCartItems = (cart: Record<string, any> | null | undefined): any[] => {
     }
 
     const rawGroups = normalizeCollection(
-        (cart as any).cart_items ?? (cart as any).cartItems
+        (cart as any).cart_items ?? (cart as any).cartItems,
     );
 
     if (!rawGroups.length) {
@@ -599,7 +601,7 @@ const getCartItems = (cart: Record<string, any> | null | undefined): any[] => {
     }
 
     const hasGroupStructure = rawGroups.some((entry) =>
-        Array.isArray(entry?.cartItems ?? entry?.cart_items)
+        Array.isArray(entry?.cartItems ?? entry?.cart_items),
     );
 
     return hasGroupStructure
@@ -610,7 +612,7 @@ const getCartItems = (cart: Record<string, any> | null | undefined): any[] => {
 const sumCartItemSubtotals = (items: any[]): number => {
     return items.reduce((total, item) => {
         const subTotal = parseCurrencyValue(
-            item?.sub_total ?? item?.subTotal ?? item?.subtotal ?? 0
+            item?.sub_total ?? item?.subTotal ?? item?.subtotal ?? 0,
         );
         return total + subTotal;
     }, 0);
@@ -624,16 +626,18 @@ const cartSummary = computed(() => {
 
     const cartItems = getCartItems(cart);
     const precomputedOrderTotal = parseCurrencyValue(
-        cart.order_total ?? cart.totals?.sub_total ?? cart.totals?.total_amount
+        cart.order_total ?? cart.totals?.sub_total ?? cart.totals?.total_amount,
     );
     const orderTotal =
         precomputedOrderTotal > 0
             ? precomputedOrderTotal
             : cartItems.length
-            ? sumCartItemSubtotals(cartItems)
-            : parseCurrencyValue(cart.total_amount ?? 0);
+              ? sumCartItemSubtotals(cartItems)
+              : parseCurrencyValue(cart.total_amount ?? 0);
     const serviceCharge = parseCurrencyValue(
-        cart.totals?.service_charge ?? cart.service_charge ?? cart.serviceCharge
+        cart.totals?.service_charge ??
+            cart.service_charge ??
+            cart.serviceCharge,
     );
     const runningTotal = orderTotal + serviceCharge;
 
@@ -786,7 +790,7 @@ const appendPaxDigit = (digit: number) => {
 
 const removeLastPaxDigit = () => {
     const currentString = ensureNonNegative(
-        normalizePaxValue(pax.value)
+        normalizePaxValue(pax.value),
     ).toString();
     const trimmed =
         currentString.length <= 1 ? "0" : currentString.slice(0, -1);
@@ -901,7 +905,7 @@ watch(
         } else {
             resetCustomerSelection();
         }
-    }
+    },
 );
 
 onBeforeUnmount(() => {
