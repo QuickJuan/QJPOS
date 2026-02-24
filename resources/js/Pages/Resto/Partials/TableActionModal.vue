@@ -122,11 +122,7 @@
                     />
 
                     <Button
-                        v-if="
-                            !isTakeoutOccupied &&
-                            table &&
-                            table.status === 'occupied'
-                        "
+                        v-if="table && table.status === 'occupied'"
                         label="View Order"
                         icon="pi pi-eye"
                         class="table-action-btn w-full h-14 justify-start gap-3 rounded-xl text-left"

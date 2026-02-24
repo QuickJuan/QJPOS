@@ -188,7 +188,7 @@ class HandleInertiaRequests extends Middleware
             $cart->refresh();
 
             // Load only essential relationships to avoid N+1 and timeout issues
-            $cart->load(['tableRoom', 'customer']);
+            $cart->load(['tableRoom.tableRoomLocation', 'customer']);
 
             // Load cart items with their products separately to avoid deep nesting
             if ($cart->relationLoaded('cartItems') || $cart->cartItems) {

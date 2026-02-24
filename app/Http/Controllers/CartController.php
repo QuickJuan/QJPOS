@@ -84,13 +84,28 @@ class CartController extends Controller
         }
     }
 
-    public function updateServiceCharge(UpdateServiceChargeRequest $request, int $cartId): RedirectResponse
+    public function updateServiceCharge(UpdateServiceChargeRequest $request, int $cartId): RedirectResponse|JsonResponse
     {
         try {
-            $this->cartService->updateServiceCharge($request, $cartId);
+            $cart = $this->cartService->updateServiceCharge($request, $cartId);
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Service charge updated successfully.',
+                    'cart'    => $cart,
+                ]);
+            }
 
             return redirect()->back()->with('success', 'Service charge updated successfully.');
         } catch (Exception $e) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage() ?: 'There was an error updating service charge.',
+                ], 422);
+            }
+
             return redirect()->back()->with('error', $e->getMessage() ?: 'There was an error updating service charge.');
         }
     }

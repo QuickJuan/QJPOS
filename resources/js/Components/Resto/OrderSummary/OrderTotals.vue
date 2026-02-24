@@ -23,11 +23,10 @@
                     {{ formatMoney(Number(lessDiscountTotal || 0).toFixed(2)) }}
                 </span>
             </div>
-            <div
-                v-if="props.serviceCharge"
-                class="flex justify-between text-sm"
-            >
-                <span class="text-secondary-600">+ Service Charge: </span>
+            <div v-if="showServiceCharge" class="flex justify-between text-sm">
+                <span class="text-secondary-600">
+                    + {{ serviceChargeLabel || "Service Charge" }}:
+                </span>
                 <span class="font-medium">
                     +
                     {{ formatMoney(Number(serviceCharge || 0).toFixed(2)) }}
@@ -45,6 +44,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
 import { formatMoney } from "@/Utils/FormatMoney";
 
 const props = defineProps<{
@@ -55,6 +55,8 @@ const props = defineProps<{
     lessTaxTotal: number;
     lessDiscountTotal: number;
     serviceCharge: number;
+    serviceChargeLabel?: string;
+    serviceChargeType?: string | null;
     appliedDiscount: {
         discountName: string;
         discountAmount: number;
@@ -62,4 +64,15 @@ const props = defineProps<{
         removeTax?: boolean;
     } | null;
 }>();
+
+const showServiceCharge = computed(() => {
+    const hasAmount = Number(props.serviceCharge || 0) > 0;
+    const isManual = (props.serviceChargeType || "").toLowerCase() === "manual";
+
+    return hasAmount || isManual;
+});
+
+const serviceChargeLabel = computed(() => {
+    return props.serviceChargeLabel || "Service Charge";
+});
 </script>

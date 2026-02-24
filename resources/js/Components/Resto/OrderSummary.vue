@@ -81,6 +81,8 @@
                 :less-discount-total="orderItemLessDiscount"
                 :applied-discount="appliedDiscount"
                 :service-charge="serviceCharge"
+                :service-charge-label="serviceChargeLabel"
+                :service-charge-type="serviceChargeType"
             />
         </div>
 
@@ -100,6 +102,8 @@
             :table-info="tableInfo"
             :general-settings="props.generalSettings"
             :is-waiter-mode="props.isWaiterMode"
+            :service-charge-type="serviceChargeType"
+            :service-charge-label="serviceChargeLabel"
             @save-order="handleSaveOrder"
             @checkout="handleCheckout"
             @open-discount-modal="openDiscountModal"
@@ -107,6 +111,7 @@
             @transfer-order-items="handleTransferOrderItems"
             @view-table="handleViewTable"
             @end-of-shift="handleEndOfShift"
+            @set-service-charge="handleOpenServiceCharge"
             @update-order-type="
                 (type: string) => {
                     selectedOrderType = type;
@@ -133,6 +138,14 @@
             :available-discounts="page.props.available_discounts"
             :table-pax="props.currentTable?.number_of_pax"
             @apply="handleApplyDiscount"
+        />
+
+        <ServiceChargeModal
+            v-model:visible="showServiceChargeModal"
+            :label="serviceChargeLabel"
+            :initial-amount="serviceCharge"
+            :is-manual="serviceChargeType === 'manual'"
+            @save="handleSaveServiceCharge"
         />
 
         <!-- Required Reason Modal -->
@@ -204,6 +217,7 @@ import PageProps from "@/Types/PageProps";
 import CustomerInfo from "./OrderSummary/CustomerInfo.vue";
 import CartItems from "./OrderSummary/CartItems.vue";
 import OrderTotals from "./OrderSummary/OrderTotals.vue";
+import ServiceChargeModal from "./OrderSummary/ServiceChargeModal.vue";
 import ActionButtons from "./OrderSummary/ActionButtons.vue";
 import EditItemModal from "./OrderSummary/EditItemModal.vue";
 import DiscountModal from "./OrderSummary/DiscountModal.vue";
@@ -217,6 +231,7 @@ import axios from "axios";
 import TransferOrderItemsModal from "@/Pages/Resto/Partials/TransferOrderItemsModal.vue";
 import { thermalPrinter } from "@/Services/ThermalPrinterService";
 import { useCashier } from "@/composables/useCashier";
+import { formatMoney } from "@/Utils/FormatMoney";
 
 const props = defineProps<{
     cart: any;
@@ -254,13 +269,48 @@ const availableDiscounts = computed(() => {
     return page.props.available_discounts || [];
 });
 
+const cartData = computed(() => {
+    return props.cart || (page.props as any)?.cart || null;
+});
+
+const cartTotals = computed(() => {
+    return (cartData.value as any)?.totals || {};
+});
+
 // Get order items from cart
 const orderItems = computed(() => {
-    return props.cart?.cart_items || page.props.sharedCart?.cart_items || [];
+    return (cartData.value as any)?.cart_items || [];
 });
 
 const serviceCharge = computed(() => {
-    return props.cart?.service_charge || page.props.cart?.service_charge || 0;
+    const totalCharge = cartTotals.value?.service_charge;
+    const legacyCharge = (cartData.value as any)?.service_charge;
+    return Number(totalCharge ?? legacyCharge ?? 0);
+});
+
+const serviceChargeLabel = computed(() => {
+    return (
+        cartTotals.value?.service_charge_label ||
+        (cartData.value as any)?.meta?.table_info?.service_charge_label ||
+        (cartData.value as any)?.table_room?.table_room_location
+            ?.service_charge_label ||
+        "Service Charge"
+    );
+});
+
+const serviceChargeType = computed(() => {
+    const typeFromTotals = cartTotals.value?.service_charge_type;
+    const typeFromMeta = (cartData.value as any)?.meta?.table_info
+        ?.service_charge_type;
+    const typeFromTable = (cartData.value as any)?.table_room
+        ?.table_room_location?.service_charge_type;
+
+    return (
+        typeFromTotals ||
+        typeFromMeta ||
+        typeFromTable ||
+        ""
+    ).toLowerCase();
 });
 
 const orderItemSubTotal = computed(() => {
@@ -311,6 +361,7 @@ const showAddAddOnModal = ref(false);
 const showAddModifierModal = ref(false);
 const showTransferOrderItemsModal = ref(false);
 const showItemModifiersModal = ref(false);
+const showServiceChargeModal = ref(false);
 const showCloseSessionModal = ref(false);
 const showSessionSummaryModal = ref(false);
 const selectedOrderItem = ref(props.selectedOrderItem);
@@ -549,6 +600,71 @@ const handleCheckout = (data: any) => {
 
 const handleAddModifier = () => {
     showAddModifierModal.value = true;
+};
+
+const handleOpenServiceCharge = () => {
+    if (serviceChargeType.value !== "manual") {
+        toast.add({
+            severity: "warn",
+            summary: "Service Charge",
+            detail: "This table uses automatic service charge.",
+            life: 2500,
+        });
+        return;
+    }
+
+    showServiceChargeModal.value = true;
+};
+
+const handleSaveServiceCharge = async (amount: number) => {
+    const cartId = (cartData.value as any)?.id;
+
+    if (!cartId) {
+        toast.add({
+            severity: "warn",
+            summary: "No Active Cart",
+            detail: "Open an order before setting service charge.",
+            life: 2500,
+        });
+        return;
+    }
+
+    try {
+        // Force absolute endpoint to avoid any relative resolution to /resto
+        const origin = window.location.origin;
+        const url = `${origin}/resto/cart/${cartId}/service-charge`;
+
+        console.debug("Service charge PUT", { url, cartId, amount });
+
+        await axios.put(url, {
+            service_charge: amount,
+        });
+
+        await router.reload({ only: ["cart"] });
+
+        toast.add({
+            severity: "success",
+            summary: "Service Charge Updated",
+            detail: `${serviceChargeLabel.value} set to ${formatMoney(
+                Number(amount || 0).toFixed(2),
+            )}`,
+            life: 2500,
+        });
+    } catch (error: any) {
+        const message =
+            error?.response?.data?.message ||
+            error?.response?.data?.errors?.service_charge?.[0] ||
+            "Failed to update service charge.";
+
+        toast.add({
+            severity: "error",
+            summary: "Update Failed",
+            detail: message,
+            life: 3000,
+        });
+    } finally {
+        showServiceChargeModal.value = false;
+    }
 };
 
 const handleAddOnAdded = (_addOnData: any) => {

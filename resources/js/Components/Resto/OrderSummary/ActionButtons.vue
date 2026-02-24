@@ -60,6 +60,8 @@
             v-model:visible="showMoreOptionsModal"
             :order-items="orderItems"
             :selected-items-for-discount="selectedItemsForDiscount"
+            :service-charge-type="props.serviceChargeType"
+            :service-charge-label="props.serviceChargeLabel"
             @save-order="handleSaveOrder"
             @open-discount-modal="handleApplyDiscount"
             @add-modifier="handleAddModifier"
@@ -69,6 +71,7 @@
             @printer-config="handlePrinterConfig"
             @end-of-shift="handleEndOfShift"
             @transfer-order-items="handleTransferOrderItems"
+            @open-service-charge="handleOpenServiceCharge"
         />
 
         <BillModal
@@ -136,6 +139,8 @@ const props = defineProps<{
         company_logo: string;
     };
     isWaiterMode?: boolean; // Hide settle button in waiter mode
+    serviceChargeType?: string | null;
+    serviceChargeLabel?: string;
 }>();
 
 const emit = defineEmits<{
@@ -149,6 +154,7 @@ const emit = defineEmits<{
     viewTable: [];
     printerConfig: [];
     endOfShift: [];
+    setServiceCharge: [];
 }>();
 
 // Use applied discount from props
@@ -255,6 +261,11 @@ const handleApplyDiscount = () => {
 // Handle add modifier from more options modal
 const handleAddModifier = () => {
     emit("addModifier");
+    showMoreOptionsModal.value = false;
+};
+
+const handleOpenServiceCharge = () => {
+    emit("setServiceCharge");
     showMoreOptionsModal.value = false;
 };
 
