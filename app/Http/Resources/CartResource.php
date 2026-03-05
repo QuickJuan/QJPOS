@@ -21,6 +21,10 @@ class CartResource extends JsonResource
         $lessTax = $this->cartItems->sum('less_tax');
         $subTotal = $totalAmount - ( $lessDiscount + $lessTax);
 
+        $location = $this->tableRoom?->tableRoomLocation;
+        $serviceChargeLabel = $location?->service_charge_label ?? 'Service Charge';
+        $serviceChargeType = $location?->service_charge_type ?? null;
+
         return [
             // Cart Information
             'id'           => $this->id,
@@ -77,6 +81,8 @@ class CartResource extends JsonResource
                 'vat_exempt_sales'=> (float) $this->cartItems->sum('vat_exempt_sales'),
                 'non_vat_sales'   => (float) $this->cartItems->sum('non_vat_sales'),
                 'service_charge'  => (float) $this->service_charge ?? 0,
+                'service_charge_label' => $serviceChargeLabel,
+                'service_charge_type'  => $serviceChargeType,
                 'total_due'       => (float) $this->service_charge + $subTotal,
             ],
 
@@ -95,6 +101,8 @@ class CartResource extends JsonResource
                     'id'       => $this->table_room_id,
                     'name'     => $this->tableRoom?->name,
                     'location' => $this->tableRoom?->tableRoomLocation?->name,
+                    'service_charge_label' => $serviceChargeLabel,
+                    'service_charge_type'  => $serviceChargeType,
                 ],
             ],
         ];

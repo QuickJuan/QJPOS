@@ -9,8 +9,15 @@ class TableRoomLocation extends Model
     protected $fillable = [
         'name',
         'service_charge',
-        'location_type'
+        'location_type',
+        'service_charge_label',
+        'service_charge_type',
     ];
+
+    public function getServiceChargeLabelAttribute($value): string
+    {
+        return $value ?: 'Service Charge';
+    }
 
     public function tableRooms(): HasMany
     {

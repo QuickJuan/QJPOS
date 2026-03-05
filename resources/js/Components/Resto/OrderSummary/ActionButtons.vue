@@ -19,7 +19,8 @@
                 <!-- Place Order Button - Show whenever there are items to place -->
                 <button
                     @click="handlePlaceOrder"
-                    class="px-4 py-2.5 bg-success-600 text-white rounded-lg font-semibold hover:bg-success-700 transition-colors text-sm whitespace-nowrap"
+                    :disabled="!hasItemsToPlace"
+                    class="px-4 py-2.5 bg-success-600 text-white rounded-lg font-semibold hover:bg-success-700 transition-colors text-sm whitespace-nowrap disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed"
                 >
                     Place Order
                 </button>
@@ -60,6 +61,8 @@
             v-model:visible="showMoreOptionsModal"
             :order-items="orderItems"
             :selected-items-for-discount="selectedItemsForDiscount"
+            :service-charge-type="props.serviceChargeType"
+            :service-charge-label="props.serviceChargeLabel"
             @save-order="handleSaveOrder"
             @open-discount-modal="handleApplyDiscount"
             @add-modifier="handleAddModifier"
@@ -69,6 +72,7 @@
             @printer-config="handlePrinterConfig"
             @end-of-shift="handleEndOfShift"
             @transfer-order-items="handleTransferOrderItems"
+            @open-service-charge="handleOpenServiceCharge"
         />
 
         <BillModal
@@ -136,6 +140,8 @@ const props = defineProps<{
         company_logo: string;
     };
     isWaiterMode?: boolean; // Hide settle button in waiter mode
+    serviceChargeType?: string | null;
+    serviceChargeLabel?: string;
 }>();
 
 const emit = defineEmits<{
@@ -149,14 +155,15 @@ const emit = defineEmits<{
     viewTable: [];
     printerConfig: [];
     endOfShift: [];
+    setServiceCharge: [];
 }>();
 
 // Use applied discount from props
 const appliedDiscount = computed(() => props.appliedDiscount);
 
-// Check if there are items that can be placed (have placed_order false)
+// Check if there are items that can be placed (not yet placed)
 const hasItemsToPlace = computed(() => {
-    return props.orderItems.some((item) => item.placed_order === false);
+    return props.orderItems.some((item) => !item.placed_order);
 });
 
 const { placeOrder } = useTable();
@@ -171,7 +178,7 @@ const orderStore = useOrderStore();
 const page = usePage();
 
 const isOrderTaking = computed(() => {
-    const raw = page.props?.auth?.user?.current_role ?? "";
+    const raw = page.props?.auth?.user?.user_interface ?? "";
     const normalized = String(raw)
         .toLowerCase()
         .replaceAll(" ", "_")
@@ -255,6 +262,11 @@ const handleApplyDiscount = () => {
 // Handle add modifier from more options modal
 const handleAddModifier = () => {
     emit("addModifier");
+    showMoreOptionsModal.value = false;
+};
+
+const handleOpenServiceCharge = () => {
+    emit("setServiceCharge");
     showMoreOptionsModal.value = false;
 };
 
@@ -353,6 +365,16 @@ const handleEndOfShift = () => {
 
 // Handle place order with response handling
 const handlePlaceOrder = async () => {
+    if (!hasItemsToPlace.value) {
+        toast.add({
+            severity: "warn",
+            summary: "No New Items",
+            detail: "Add items before placing an order.",
+            life: 2500,
+        });
+        return;
+    }
+
     // Show server selection modal first
     showServerSelectionModal.value = true;
 };

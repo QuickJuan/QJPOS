@@ -618,6 +618,16 @@
                 </div>
             </div>
         </div>
+
+        <OpenPriceModal
+            v-model="showOpenPriceModal"
+            :product="pendingOpenPrice?.product || productData"
+            :default-price="pendingOpenPrice?.defaultPrice ?? totalAmount"
+            @confirm="handleOpenPriceConfirm"
+            @update:modelValue="(value: boolean) => {
+                if (!value) handleOpenPriceCancel();
+            }"
+        />
     </CashieringLayout>
 </template>
 
@@ -629,9 +639,11 @@ import { useToast } from "primevue";
 import CashieringLayout from "@/Layouts/CashieringLayout.vue";
 import ChevronLeftIcon from "@/Components/icons/ChevronLeftIcon.vue";
 import ImageIcon from "@/Components/icons/ImageIcon.vue";
+import OpenPriceModal from "@/Components/Resto/OpenPriceModal.vue";
 import Product from "@/Types/Product";
 import PageProps from "@/Types/PageProps";
 import { formatMoney } from "@/Utils/FormatMoney";
+import { useProduct } from "@/composables/useProduct";
 
 type ProductResponse = {
     data: Product & {
@@ -645,6 +657,13 @@ type ProductResponse = {
 const props = defineProps<{ product: ProductResponse }>();
 const toast = useToast();
 const page = usePage<PageProps>();
+const {
+    submitCartPayload,
+    showOpenPriceModal,
+    pendingOpenPrice,
+    handleOpenPriceConfirm,
+    handleOpenPriceCancel,
+} = useProduct();
 
 const productData = computed(() => props.product?.data || {});
 const coverImage = computed(
@@ -1041,8 +1060,7 @@ const addToCart = () => {
         (option: any) => option.items && option.items.length > 0
     );
 
-    router.post(
-        route("resto.cart.add"),
+    submitCartPayload(
         {
             product_id: productData.value?.id,
             product_packaging_id: productPackagingId.value,
@@ -1054,6 +1072,8 @@ const addToCart = () => {
             order_type: orderType.value,
             withParent: hasChildItems,
         },
+        productData.value,
+        totalAmount.value,
         {
             onSuccess: () => {
                 router.visit(route("resto.index", { tableId: tableId.value }));
@@ -1064,12 +1084,12 @@ const addToCart = () => {
                     life: 2500,
                 });
             },
-            onError: (errors) => {
+            onError: (errors: any) => {
                 console.error(errors);
                 toast.add({
                     severity: "error",
                     summary: "Error",
-                    detail: errors.message || "Unable to add item to cart.",
+                    detail: errors?.message || "Unable to add item to cart.",
                     life: 3000,
                 });
             },

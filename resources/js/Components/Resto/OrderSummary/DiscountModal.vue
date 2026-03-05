@@ -41,7 +41,7 @@
                                         Less Tax:
                                         {{
                                             formatMoney(
-                                                lessTaxValue[index] || 0
+                                                lessTaxValue[index] || 0,
                                             )
                                         }}
                                     </p>
@@ -49,7 +49,7 @@
                                         Less Discount:
                                         {{
                                             formatMoney(
-                                                lessDiscountValue[index] || 0
+                                                lessDiscountValue[index] || 0,
                                             )
                                         }}
                                     </p>
@@ -63,7 +63,7 @@
                                         formatMoney(
                                             (
                                                 item.quantity * item.price
-                                            ).toFixed(2)
+                                            ).toFixed(2),
                                         )
                                     }}
                                 </p>
@@ -129,6 +129,29 @@
                         <span class="text-secondary-900">
                             {{ formatMoney(selectedItemsSubtotal.toFixed(2)) }}
                         </span>
+                    </div>
+
+                    <!-- Manual Amount Input -->
+                    <div
+                        v-if="isManualDiscount"
+                        class="space-y-2 pb-3 border-b"
+                    >
+                        <p class="text-sm font-semibold text-secondary-700">
+                            Manual Discount Amount
+                        </p>
+                        <input
+                            v-model.number="manualAmount"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            class="w-full px-3 py-2 border rounded-lg text-sm"
+                            placeholder="Enter amount"
+                            @input="recalculateDiscount"
+                        />
+                        <p class="text-xs text-secondary-500 italic">
+                            Cashier-entered amount distributed across selected
+                            items.
+                        </p>
                     </div>
 
                     <!-- Total Less Tax -->
@@ -402,7 +425,7 @@ const emit = defineEmits<{
             discountAmount: number;
             discountType: string;
             removeTax?: boolean;
-        }
+        },
     ];
     "update:visible": [value: boolean];
 }>();
@@ -410,6 +433,7 @@ const emit = defineEmits<{
 const selectedDiscountId = ref("");
 const paxCount = ref<number | null>(null);
 const discountedPax = ref<number | null>(null);
+const manualAmount = ref<number | null>(null);
 const toast = useToast();
 const page = usePage<PageProps>();
 
@@ -436,6 +460,10 @@ const selectedDiscount = computed(() => {
     return getDiscountById(selectedDiscountId.value);
 });
 
+const isManualDiscount = computed(() => {
+    return (selectedDiscount.value?.type ?? "") === "manual";
+});
+
 const selectedItemsSubtotal = computed(() => {
     return props.selectedItems.reduce((sum, item) => {
         const itemPrice = parseFloat(item.price || "0");
@@ -459,7 +487,7 @@ const percentageDiscounts = computed(() => {
 const fixedDiscounts = computed(() => {
     const discounts = getDiscountsArray();
     const fixed = discounts.filter(
-        (d) => d.type === "fixed" || d.type === "amount"
+        (d) => d.type === "fixed" || d.type === "amount",
     );
     return fixed;
 });
@@ -468,7 +496,9 @@ const otherDiscounts = computed(() => {
     const discounts = getDiscountsArray();
     const other = discounts.filter(
         (d) =>
-            d.type !== "percentage" && d.type !== "fixed" && d.type !== "amount"
+            d.type !== "percentage" &&
+            d.type !== "fixed" &&
+            d.type !== "amount",
     );
 
     return other;
@@ -477,6 +507,9 @@ const otherDiscounts = computed(() => {
 // Select discount method
 const selectDiscount = (discount: any) => {
     selectedDiscountId.value = String(discount.id);
+
+    // Reset manual amount when switching discounts
+    manualAmount.value = isManualDiscount.value ? null : manualAmount.value;
 
     // Reset PAX values when selecting a new discount
     // Use table's number_of_pax as default if available, otherwise default to 1
@@ -496,37 +529,89 @@ const selectDiscount = (discount: any) => {
 const recalculateDiscount = () => {
     if (!selectedDiscount.value) return;
 
+    if (isManualDiscount.value) {
+        const amount = Number(manualAmount.value) || 0;
+
+        // Reset when no amount yet
+        if (amount <= 0) {
+            lessTaxValue.value = props.selectedItems.map(() => 0);
+            lessDiscountValue.value = props.selectedItems.map(() => 0);
+            discountTotal.value = formatMoney(
+                selectedItemsSubtotal.value.toFixed(2),
+            );
+            previewData.value = null;
+            return;
+        }
+
+        const lineTotals = props.selectedItems.map(
+            (item: any) => Number(item.quantity) * Number(item.price),
+        );
+        const totalLines = lineTotals.reduce((sum, val) => sum + val, 0);
+        const cappedAmount = Math.min(amount, totalLines || 0);
+
+        const discountsPerItem = lineTotals.map((line) => {
+            if (line <= 0 || totalLines <= 0) {
+                return 0;
+            }
+
+            const prorated = (line / totalLines) * cappedAmount;
+            return Math.min(prorated, line);
+        });
+
+        lessTaxValue.value = props.selectedItems.map(() => 0);
+        lessDiscountValue.value = discountsPerItem;
+
+        const totalManualDiscount = discountsPerItem.reduce(
+            (sum, val) => sum + (Number(val) || 0),
+            0,
+        );
+
+        discountTotal.value = formatMoney(
+            (selectedItemsSubtotal.value - totalManualDiscount).toFixed(2),
+        );
+
+        previewData.value = {
+            discount_amount: totalManualDiscount,
+            item_discounts: props.selectedItems.map((item, index) => ({
+                id: item.id,
+                discount_amount: discountsPerItem[index] ?? 0,
+            })),
+        };
+
+        return;
+    }
+
     const calculatedDiscountAmount = calculateDiscountAmount(
-        selectedDiscount.value
+        selectedDiscount.value,
     );
 
     lessTaxValue.value = calculatedDiscountAmount.map((d) => d?.lessTax || 0);
     lessDiscountValue.value = calculatedDiscountAmount.map(
-        (d) => d?.discountAmount || 0
+        (d) => d?.discountAmount || 0,
     );
 
     // Calculate totals directly instead of relying on computed properties
     const calculatedLessTax = lessTaxValue.value.reduce(
         (sum, val) => sum + (val || 0),
-        0
+        0,
     );
     const calculatedLessDiscount = lessDiscountValue.value.reduce(
         (sum, val) => sum + (val || 0),
-        0
+        0,
     );
 
     discountTotal.value = formatMoney(
         (
             selectedItemsSubtotal.value -
             (calculatedLessTax + calculatedLessDiscount)
-        ).toFixed(2)
+        ).toFixed(2),
     );
 
     // Set previewData with calculated values
     previewData.value = {
         discount_amount: lessDiscountValue.value.reduce(
             (sum, val) => sum + val,
-            0
+            0,
         ),
         item_discounts: calculatedDiscountAmount.map((d, index) => ({
             id: props.selectedItems[index].id,
@@ -568,15 +653,15 @@ watch(
             recalculateDiscount();
         }
     },
-    { immediate: false }
+    { immediate: false },
 );
 
 const totalLessTax = computed(() =>
-    lessTaxValue.value.reduce((sum, val) => sum + (val || 0), 0)
+    lessTaxValue.value.reduce((sum, val) => sum + (val || 0), 0),
 );
 
 const totalLessDiscount = computed(() =>
-    lessDiscountValue.value.reduce((sum, val) => sum + (val || 0), 0)
+    lessDiscountValue.value.reduce((sum, val) => sum + (val || 0), 0),
 );
 
 const applyDiscount = () => {
@@ -604,6 +689,20 @@ const applyDiscount = () => {
                 severity: "error",
                 summary: "Validation Error",
                 detail: "Discounted PAX cannot exceed total PAX",
+                life: 3000,
+            });
+            return;
+        }
+    }
+
+    if (isManualDiscount.value) {
+        const amount = Number(manualAmount.value) || 0;
+
+        if (amount <= 0) {
+            toast.add({
+                severity: "error",
+                summary: "Validation Error",
+                detail: "Please enter a manual discount amount",
                 life: 3000,
             });
             return;
@@ -651,7 +750,7 @@ const applyDiscount = () => {
                     life: 3000,
                 });
             },
-        }
+        },
     );
 
     emit("update:visible", false);
@@ -661,7 +760,7 @@ const calculateDiscountAmount = (discount: any) => {
     if (!discount) return [];
 
     const lineTotals = props.selectedItems.map(
-        (item: any) => Number(item.quantity) * Number(item.price)
+        (item: any) => Number(item.quantity) * Number(item.price),
     );
 
     const allocations =
@@ -708,7 +807,7 @@ const calculateDiscountAmount = (discount: any) => {
                                   ? (allocation / paxCount.value) *
                                         discountedPax.value
                                   : discount.amount,
-                              vatExemptDiscounted
+                              vatExemptDiscounted,
                           );
 
                 // Regular portion - keeps tax, becomes vatable sales
@@ -739,7 +838,7 @@ const calculateDiscountAmount = (discount: any) => {
                                   ? (allocation / paxCount.value) *
                                         discountedPax.value
                                   : discount.amount,
-                              discountedPortionAmount
+                              discountedPortionAmount,
                           );
 
                 const regularVatableSales =
@@ -762,7 +861,7 @@ const calculateDiscountAmount = (discount: any) => {
                 discount,
                 amount,
                 itemTax,
-                allocation ?? undefined
+                allocation ?? undefined,
             );
         }
 
@@ -775,7 +874,7 @@ const calculateDiscountAmount = (discount: any) => {
                 return calculateFixedDiscount(
                     discount,
                     amount,
-                    allocation ?? undefined
+                    allocation ?? undefined,
                 );
 
             default:
@@ -806,7 +905,7 @@ const calculateDiscountWithTaxRemoval = (
     discount: any,
     amount: number,
     itemTax: any,
-    allocatedAmount?: number
+    allocatedAmount?: number,
 ) => {
     let vatExempt = 0;
     let lessTax = 0;
@@ -855,7 +954,7 @@ const calculatePercentageDiscount = (discount: any, amount: number) => {
 const calculateFixedDiscount = (
     discount: any,
     amount: number,
-    allocatedAmount?: number
+    allocatedAmount?: number,
 ) => {
     const vatExempt = 0;
     const vatableSales = amount / taxRate.value;

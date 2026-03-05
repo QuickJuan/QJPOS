@@ -1016,6 +1016,11 @@ class ThermalPrinterService {
             commands.push(...this.stringToBytes(separatorLine));
             commands.push(...this.ESC_POS.LINE_FEED);
 
+            // Total quantity line
+            const totalQty = this.calculateReceiptTotalQuantity(receiptData.items);
+            commands.push(...this.stringToBytes(this.formatTotalLine('Total Qty:', totalQty)));
+            commands.push(...this.ESC_POS.LINE_FEED);
+
             // Totals section
             // Subtotal
             const subtotal = typeof receiptData.totals.total_amount === 'string' ? parseFloat(receiptData.totals.total_amount) || 0 : receiptData.totals.total_amount;
@@ -1792,6 +1797,26 @@ class ThermalPrinterService {
         return quantity > 0 ? quantity : 1;
     }
 
+    private calculateBillTotalQuantity(groups: any[]): number {
+        return (groups || []).reduce((total, group) => {
+            const items = group?.cartItems || [];
+            const groupTotal = items.reduce((sum: number, item: any) => {
+                return sum + this.normalizeQuantity(item?.quantity);
+            }, 0);
+            return total + groupTotal;
+        }, 0);
+    }
+
+    private calculateReceiptTotalQuantity(groups: any[]): number {
+        return (groups || []).reduce((total, group) => {
+            const items = group?.orderItems || [];
+            const groupTotal = items.reduce((sum: number, item: any) => {
+                return sum + this.normalizeQuantity(item?.quantity);
+            }, 0);
+            return total + groupTotal;
+        }, 0);
+    }
+
     private formatQuantityValue(quantity: number): string {
         if (Number.isInteger(quantity)) {
             return quantity.toString();
@@ -2272,6 +2297,11 @@ class ThermalPrinterService {
 
             // Items separator
             commands.push(...this.stringToBytes(separatorLine));
+            commands.push(...this.ESC_POS.LINE_FEED);
+
+            // Total quantity line
+            const totalQty = this.calculateBillTotalQuantity(billData.items);
+            commands.push(...this.stringToBytes(this.formatTotalLine('Total Qty:', totalQty)));
             commands.push(...this.ESC_POS.LINE_FEED);
 
             //only show the sub total if they are not equal with the total

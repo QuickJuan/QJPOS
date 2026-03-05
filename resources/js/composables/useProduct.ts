@@ -12,6 +12,77 @@ export const useProduct = () => {
 
     const showPackagingModal = ref(false);
     const selectedProductForPackaging = ref<any>(null);
+    const showOpenPriceModal = ref(false);
+    const pendingOpenPrice = ref<{
+        payload: Record<string, any>;
+        product: any;
+        defaultPrice: number;
+        options?: {
+            onSuccess?: () => void;
+            onError?: (errors: any) => void;
+        };
+    } | null>(null);
+
+    const postAddToCart = (
+        payload: Record<string, any>,
+        product: any,
+        basePrice: number,
+        options: {
+            force?: boolean;
+            onSuccess?: () => void;
+            onError?: (errors: any) => void;
+        } = {},
+    ) => {
+        const force = options.force ?? false;
+
+        if (!force && product?.open_price) {
+            pendingOpenPrice.value = {
+                payload,
+                product,
+                defaultPrice: basePrice,
+                options,
+            };
+            showOpenPriceModal.value = true;
+            return;
+        }
+
+        router.post(
+            route("resto.cart.add"),
+            payload,
+            {
+                preserveScroll: false,
+                onSuccess: () => {
+                    if (options.onSuccess) {
+                        options.onSuccess();
+                    } else {
+                        toast.add({
+                            severity: "success",
+                            summary: "Success",
+                            detail: page.props.flash.success,
+                            life: 3000,
+                        });
+                    }
+                },
+                onError: (errors) => {
+                    console.error("Failed to add item to cart:", errors);
+                    options.onError?.(errors);
+                },
+            }
+        );
+    };
+
+    const submitCartPayload = (
+        payload: Record<string, any>,
+        product: any,
+        basePrice: number,
+        options?: {
+            force?: boolean;
+            onSuccess?: () => void;
+            onError?: (errors: any) => void;
+        },
+    ) => {
+        postAddToCart(payload, product, basePrice, options);
+    };
 
     const buildOptionItemsPayload = (option: any) => {
         return (
@@ -79,8 +150,7 @@ export const useProduct = () => {
                 );
             } else {
                 // No user-selectable options or only default options, add to cart with packaging
-                router.post(
-                    route("resto.cart.add"),
+                postAddToCart(
                     {
                         quantity: 1,
                         product_id: product.id,
@@ -88,24 +158,12 @@ export const useProduct = () => {
                         table_id: tableId,
                         total_price: parseFloat(packaging.price || 0),
                         order_type: selectedOrderType,
-                            product_type: product.product_type,
+                        product_type: product.product_type,
                         selected_options: defaultOptions,
                         withParent: hasDefaultChildItems,
                     },
-                    {
-                        preserveScroll: false,
-                        onSuccess: () => {
-                            toast.add({
-                                severity: "success",
-                                summary: "Success",
-                                detail: page.props.flash.success,
-                                life: 3000,
-                            });
-                        },
-                        onError: (errors) => {
-                            console.error("Failed to add item to cart:", errors);
-                        },
-                    }
+                    product,
+                    parseFloat(packaging.price || 0),
                 );
             }
         } else {
@@ -130,8 +188,7 @@ export const useProduct = () => {
                         );
                     } else {
                         // No user-selectable options or only default options, add to cart with packaging
-                        router.post(
-                            route("resto.cart.add"),
+                        postAddToCart(
                             {
                                 quantity: 1,
                                 product_id: product.id,
@@ -143,23 +200,8 @@ export const useProduct = () => {
                                 selected_options: defaultOptions,
                                 withParent: hasDefaultChildItems,
                             },
-                            {
-                                preserveScroll: false,
-                                onSuccess: () => {
-                                    toast.add({
-                                        severity: "success",
-                                        summary: "Success",
-                                        detail: page.props.flash.success,
-                                        life: 3000,
-                                    });
-                                },
-                                onError: (errors) => {
-                                    console.error(
-                                        "Failed to add item to cart:",
-                                        errors
-                                    );
-                                },
-                            }
+                            product,
+                            parseFloat(packaging.price || 0),
                         );
                     }
                 } else {
@@ -180,36 +222,22 @@ export const useProduct = () => {
                     );
                 } else {
                     // No user-selectable options or only default options, add to cart without packaging
-                    router.post(
-                        route("resto.cart.add"),
+                    const basePrice = Number(product.price ?? product.average_cost ?? 0);
+
+                    postAddToCart(
                         {
                             quantity: 1,
                             product_id: product.id,
                             product_packaging_id: null,
                             table_id: tableId,
-                            total_price: parseFloat(product.average_cost || "0"),
+                            total_price: basePrice,
                             order_type: selectedOrderType,
                             product_type: product.product_type,
                             selected_options: defaultOptions,
                             withParent: hasDefaultChildItems,
                         },
-                        {
-                            preserveScroll: false,
-                            onSuccess: () => {
-                                toast.add({
-                                    severity: "success",
-                                    summary: "Success",
-                                    detail: page.props.flash.success,
-                                    life: 3000,
-                                });
-                            },
-                            onError: (errors) => {
-                                console.error(
-                                    "Failed to add item to cart:",
-                                    errors
-                                );
-                            },
-                        }
+                        product,
+                        basePrice,
                     );
                 }
             }
@@ -230,11 +258,90 @@ export const useProduct = () => {
         selectedProductForPackaging.value = null;
     };
 
+    const handleOpenPriceConfirm = (payload: { price: number; approverEmail: string; otpCode: string }) => {
+        if (!pendingOpenPrice.value) return;
+
+        const { payload: basePayload, product, options } =
+            pendingOpenPrice.value;
+
+        postAddToCart(
+            {
+                ...basePayload,
+                override_price: payload.price,
+                approver_email: payload.approverEmail,
+                otp_code: payload.otpCode,
+            },
+            product,
+            payload.price,
+            {
+                ...(options || {}),
+                force: true,
+                onSuccess: () => {
+                    showOpenPriceModal.value = false;
+                    pendingOpenPrice.value = null;
+
+                    if (options?.onSuccess) {
+                        options.onSuccess();
+                    } else {
+                        toast.add({
+                            severity: "success",
+                            summary: "Success",
+                            detail: page.props.flash.success,
+                            life: 3000,
+                        });
+                    }
+                },
+                onError: (errors: any) => {
+                    const firstError = (val: any) => {
+                        if (Array.isArray(val)) return val[0];
+                        if (typeof val === "string") return val;
+                        if (val && typeof val.message === "string") return val.message;
+                        return null;
+                    };
+
+                    const message =
+                        firstError(errors?.approver_email) ||
+                        firstError(errors?.otp_code) ||
+                        firstError(errors?.override_price) ||
+                        "Failed to add item to cart.";
+
+                    toast.add({
+                        severity: "error",
+                        summary: "Approval Failed",
+                        detail: message,
+                        life: 3500,
+                    });
+
+                    // Keep modal open and payload intact for retry
+                    showOpenPriceModal.value = true;
+                    pendingOpenPrice.value = {
+                        payload: basePayload,
+                        product,
+                        defaultPrice: payload.price,
+                        options,
+                    };
+
+                    options?.onError?.(errors);
+                },
+            },
+        );
+    };
+
+    const handleOpenPriceCancel = () => {
+        showOpenPriceModal.value = false;
+        pendingOpenPrice.value = null;
+    };
+
     return {
         addToCart,
         showPackagingModal,
         selectedProductForPackaging,
         handlePackagingConfirm,
         handlePackagingCancel,
+        showOpenPriceModal,
+        pendingOpenPrice,
+        handleOpenPriceConfirm,
+        handleOpenPriceCancel,
+        submitCartPayload,
     };
 };

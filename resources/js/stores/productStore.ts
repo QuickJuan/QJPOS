@@ -6,6 +6,8 @@ export interface Product {
     name: string;
     description?: string;
     price: number;
+    product_type?: string;
+    open_price?: boolean;
     vat_type?: string;
     vat_rate?: number;
     vat_inclusive?: boolean;

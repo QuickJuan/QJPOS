@@ -107,7 +107,7 @@ class AuthController extends Controller
         // Update the user's current branch_id and role
         $user->update([
             'branch_id' => $branch->id,
-            'current_role' => \App\Enums\CurrentRole::CASHIERING->value,
+            'user_interface' => \App\Enums\CurrentRole::CASHIERING->value,
         ]);
 
         Auth::login($user);
@@ -128,8 +128,8 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        $currentRole = $request->user()?->current_role;
-        $redirectUrl = $currentRole === CurrentRole::ORDER_TAKING->value
+        $currentInterface = $request->user()?->user_interface;
+        $redirectUrl = $currentInterface === CurrentRole::ORDER_TAKING->value
             ? route('waiter.login', ['_fresh' => time()])
             : route('login', ['_fresh' => time()]);
 

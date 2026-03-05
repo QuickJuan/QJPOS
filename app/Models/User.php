@@ -43,7 +43,7 @@ class User extends Authenticatable
         'pincode',
         'employee_code',
         'branch_id',
-        'current_role',
+        'user_interface',
         'otp_secret',
         'otp_enabled',
         'otp_enabled_at',
@@ -83,7 +83,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password'          => 'hashed',
             'pincode'           => 'hashed',
-            'current_role'      => \App\Enums\CurrentRole::class,
+            'user_interface'    => \App\Enums\CurrentRole::class,
             'otp_enabled'       => 'boolean',
             'otp_enabled_at'    => 'datetime',
         ];

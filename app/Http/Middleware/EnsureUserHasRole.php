@@ -22,7 +22,7 @@ class EnsureUserHasRole
             return redirect()->route('login');
         }
 
-        $currentRole = $request->user()->current_role;
+        $currentRole = $request->user()->user_interface;
 
         $currentRoleValue = $currentRole instanceof CurrentRole
             ? $currentRole->value
@@ -56,7 +56,7 @@ class EnsureUserHasRole
         // TEMPORARY DEBUG LOGGING
         \Log::info('🔍 ROLE MIDDLEWARE DEBUG', [
             'url' => $request->url(),
-            'current_role_raw' => $request->user()->current_role,
+            'current_role_raw' => $request->user()->user_interface,
             'current_role_processed' => $currentRoleValue,
             'allowed_roles' => $allowedRoleValues->toArray(),
             'middleware_params' => ['role' => $role, 'additional' => $additionalRoles],

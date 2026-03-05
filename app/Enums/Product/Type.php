@@ -11,4 +11,5 @@ enum Type: string
     case WITH_VARIANT = "with_variant";
     case COMPOSITE    = "composite";
     case BUNDLE       = "bundle";
+    case SERVICE      = "service";
 }

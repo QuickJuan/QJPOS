@@ -18,6 +18,8 @@ class TableLocationResource extends JsonResource
             'id'             => $this->id,
             'name'           => $this->name,
             'serviceCharge' => $this->service_charge,
+            'serviceChargeLabel' => $this->service_charge_label ?? 'Service Charge',
+            'serviceChargeType' => $this->service_charge_type,
             'locationType'    => $this->location_type, // Assuming 'locationType' is a relationship and 'name' is the attribute you want to include'
             'tableRooms'     => TableListingResource::collection($this->whenLoaded('tableRooms')),
             'tableRoomCount' => $this->tableRooms->count()

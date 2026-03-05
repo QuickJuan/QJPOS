@@ -9,4 +9,5 @@ enum TypeEnum: string
 
     case FIXED      = "fixed";
     case PERCENTAGE = "percentage";
+    case MANUAL     = "manual";
 }

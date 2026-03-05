@@ -40,6 +40,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'edit pages',
             'delete pages',
             'publish pages',
+            'override open price',
         ];
 
         foreach ($permissions as $permissionName) {
@@ -47,9 +48,15 @@ class RolesAndPermissionsSeeder extends Seeder
         }
 
         // Assign permissions to roles
-        $adminRole = Role::where('name', 'Admin')->first();
+        $adminRole   = Role::where('name', 'Admin')->first();
+        $managerRole = Role::where('name', 'Manager')->first();
+
         if ($adminRole) {
             $adminRole->syncPermissions($permissions);
+        }
+
+        if ($managerRole) {
+            $managerRole->givePermissionTo('override open price');
         }
 
         $this->command->info('Roles and permissions seeded successfully!');

@@ -99,7 +99,9 @@ const activeBranch = computed(() => page.props.active_branch);
 
 const currentRole = computed(() => {
     const raw =
-        page.props?.auth?.user?.current_role ?? user.value?.current_role ?? "";
+        page.props?.auth?.user?.user_interface ??
+        user.value?.user_interface ??
+        "";
 
     return String(raw).toLowerCase().replaceAll(" ", "_").replaceAll("-", "_");
 });

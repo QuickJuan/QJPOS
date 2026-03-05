@@ -21,6 +21,8 @@ class ProductResource extends JsonResource
             'average_cost'        => $this->average_cost,
             'receipt_alias'       => $this->receipt_alias,
             'description'         => $this->description,
+            'product_type'        => $this->product_type,
+            'open_price'          => (bool) $this->open_price,
             'category_id'         => $this->category_id,
             'brand_id'            => $this->brand_id,
             'total_onhand'        => $this->total_onhand ?? '0',

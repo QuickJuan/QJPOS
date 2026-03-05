@@ -24,6 +24,7 @@ class ApplyDiscountToCartItemRequest extends FormRequest
             'cartItemIds'   => ['required', 'array', 'min:1'],
             'cartItemIds.*' => ['integer', 'distinct', 'exists:cart_items,id'],
             'discount_id'   => 'required|numeric|exists:discounts,id',
+            'discount_amount' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 }

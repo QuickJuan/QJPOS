@@ -146,6 +146,36 @@
                     </p>
 
                     <button
+                        v-if="
+                            (props.serviceChargeType || '').toLowerCase() ===
+                            'manual'
+                        "
+                        @click="handleOpenServiceCharge"
+                        class="group relative flex w-full items-center gap-4 rounded-2xl border border-slate-200/70 bg-white p-4 text-left text-secondary-800 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
+                    >
+                        <span
+                            class="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600"
+                        >
+                            <PlusIcon class="w-5 h-5" />
+                        </span>
+                        <div>
+                            <p class="text-base font-semibold">
+                                Set
+                                {{
+                                    props.serviceChargeLabel || "Service Charge"
+                                }}
+                            </p>
+                            <p class="text-xs text-secondary-500">
+                                Enter a manual
+                                {{
+                                    props.serviceChargeLabel || "service charge"
+                                }}
+                                amount for this table.
+                            </p>
+                        </div>
+                    </button>
+
+                    <button
                         @click="handlePrintBill"
                         :disabled="!hasOrderItems"
                         class="group relative flex w-full items-center gap-4 rounded-2xl border border-slate-200/70 bg-white p-4 text-left text-secondary-800 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg disabled:translate-y-0 disabled:border-slate-100 disabled:bg-slate-50 disabled:text-slate-400 disabled:shadow-none"
@@ -251,12 +281,14 @@ const props = defineProps<{
     orderItems: any[];
     selectedItemsForDiscount?: number[];
     isWaiterMode?: boolean;
+    serviceChargeType?: string | null;
+    serviceChargeLabel?: string;
 }>();
 
 const page = usePage<any>();
 
 const isOrderTaking = computed(() => {
-    const raw = page.props?.auth?.user?.current_role ?? "";
+    const raw = page.props?.auth?.user?.user_interface ?? "";
     const normalized = String(raw)
         .toLowerCase()
         .replaceAll(" ", "_")
@@ -281,6 +313,7 @@ const emit = defineEmits<{
     viewTable: [];
     printerConfig: [];
     endOfShift: [];
+    openServiceCharge: [];
     "update:visible": [value: boolean];
 }>();
 
@@ -302,6 +335,11 @@ const handleAddModifier = () => {
 
 const handleTransferOrderItems = () => {
     emit("transferOrderItems");
+    emit("update:visible", false);
+};
+
+const handleOpenServiceCharge = () => {
+    emit("openServiceCharge");
     emit("update:visible", false);
 };
 

@@ -21,12 +21,17 @@ class DiscountService
      * paxCount: Number of people sharing the item
      * discountedPax: Number of people entitled to discount
      */
-    public function calculateDiscountAmount(int $discountId, array $itemIds, ?float $quantity = null, ?int $paxCount = null, ?int $discountedPax = null)
+    public function calculateDiscountAmount(int $discountId, array $itemIds, ?float $quantity = null, ?int $paxCount = null, ?int $discountedPax = null, ?float $overrideAmount = null)
     {
         $discount = $this->discount->find($discountId);
 
         if (! $discount) {
             return [];
+        }
+
+        // Resolve amount override (used for manual discounts supplied by cashier)
+        if ($overrideAmount !== null) {
+            $discount->amount = $overrideAmount;
         }
 
         $cartItems = CartItem::whereIn('id', $itemIds)->get()->keyBy('id');
@@ -52,7 +57,7 @@ class DiscountService
             return [];
         }
 
-        $allocations = $this->buildFixedAllocations($discount, $itemsData);
+        $allocations = $this->buildFixedAllocations($discount, $itemsData, $overrideAmount);
         $results     = [];
 
         foreach ($itemsData as $index => $data) {
@@ -71,9 +76,9 @@ class DiscountService
             }
 
             $results[] = match ($discount['type']) {
-                'percentage'      => $this->calculatePercentageDiscount($discount, $amount),
-                'fixed', 'amount' => $this->calculateFixedDiscount($discount, $amount, $allocatedAmount),
-                default           => $this->calculateFixedDiscount($discount, $amount, $allocatedAmount),
+                'percentage'            => $this->calculatePercentageDiscount($discount, $amount),
+                'fixed', 'amount', 'manual' => $this->calculateFixedDiscount($discount, $amount, $allocatedAmount),
+                default                 => $this->calculateFixedDiscount($discount, $amount, $allocatedAmount),
             };
         }
 
@@ -231,18 +236,40 @@ class DiscountService
         ];
     }
 
-    private function buildFixedAllocations(Discount $discount, array $itemsData): array
+    private function buildFixedAllocations(Discount $discount, array $itemsData, ?float $overrideAmount = null): array
     {
-        if (! in_array($discount->type, ['fixed', 'amount'], true)) {
+        if (! in_array($discount->type, ['fixed', 'amount', 'manual'], true)) {
             return [];
         }
 
-        $discountValue = (float) $discount->amount;
+        $discountValue = (float) ($overrideAmount ?? $discount->amount);
 
         if ($discountValue <= 0) {
             return array_fill(0, count($itemsData), 0.0);
         }
 
+        // If an override is provided (manual discount), distribute proportionally across items
+        if ($overrideAmount !== null) {
+            $total = array_sum(array_map(static fn ($item) => (float) ($item['amount'] ?? 0), $itemsData));
+
+            if ($total <= 0) {
+                return array_fill(0, count($itemsData), 0.0);
+            }
+
+            return array_map(static function ($item) use ($discountValue, $total) {
+                $amount = (float) ($item['amount'] ?? 0);
+
+                if ($amount <= 0) {
+                    return 0.0;
+                }
+
+                $proRated = ($amount / $total) * $discountValue;
+
+                return min($proRated, $amount);
+            }, $itemsData);
+        }
+
+        // Default behavior: apply full fixed amount per item (legacy)
         return array_map(static function ($item) use ($discountValue) {
             $amount = (float) ($item['amount'] ?? 0);
 
