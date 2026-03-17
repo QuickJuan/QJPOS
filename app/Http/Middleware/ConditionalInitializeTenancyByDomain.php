@@ -4,13 +4,13 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
+use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 
-class ConditionalInitializeTenancyBySubdomain
+class ConditionalInitializeTenancyByDomain
 {
-    protected InitializeTenancyBySubdomain $initializeTenancy;
+    protected InitializeTenancyByDomain $initializeTenancy;
 
-    public function __construct(InitializeTenancyBySubdomain $initializeTenancy)
+    public function __construct(InitializeTenancyByDomain $initializeTenancy)
     {
         $this->initializeTenancy = $initializeTenancy;
     }

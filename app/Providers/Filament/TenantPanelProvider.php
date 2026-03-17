@@ -19,7 +19,7 @@ use ShuvroRoy\FilamentSpatieLaravelBackup\FilamentSpatieLaravelBackupPlugin;
 use Althinect\FilamentSpatieRolesPermissions\FilamentSpatieRolesPermissionsPlugin;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
-use App\Http\Middleware\ConditionalInitializeTenancyBySubdomain;
+use App\Http\Middleware\ConditionalInitializeTenancyByDomain;
 use App\Http\Middleware\ConditionalPreventAccessFromCentralDomains;
 
 class TenantPanelProvider extends PanelProvider
@@ -69,7 +69,7 @@ class TenantPanelProvider extends PanelProvider
         return [
             // CRITICAL: Initialize tenancy FIRST, before authentication
             // This ensures User model queries use tenant database
-            ConditionalInitializeTenancyBySubdomain::class,
+            ConditionalInitializeTenancyByDomain::class,
             ConditionalPreventAccessFromCentralDomains::class,
 
             EncryptCookies::class,

@@ -21,7 +21,7 @@ use App\Http\Controllers\TenantLandingController;
 use App\Http\Controllers\PublicPageController;
 use App\Http\Controllers\Waiter\AuthController as WaiterAuthController;
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
-use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
+use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 use Laravel\Fortify\Http\Controllers\TwoFactorAuthenticationController;
@@ -49,7 +49,7 @@ if (!isCentralDomain()) {
     require __DIR__.'/jetstream.php';
 
     Route::middleware([
-        InitializeTenancyBySubdomain::class,
+        InitializeTenancyByDomain::class,
         PreventAccessFromCentralDomains::class,
         'web',
 

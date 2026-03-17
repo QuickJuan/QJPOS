@@ -110,7 +110,7 @@ class TenancyServiceProvider extends ServiceProvider
         $this->bootEvents();
         $this->mapRoutes();
         $this->callableMethodsIfInTenantDomain();
-        TenantAssetsController::$tenancyMiddleware = Middleware\InitializeTenancyBySubdomain::class;
+        TenantAssetsController::$tenancyMiddleware = Middleware\InitializeTenancyByDomain::class;
         $this->makeTenancyMiddlewareHighestPriority();
     }
 
@@ -166,8 +166,6 @@ class TenancyServiceProvider extends ServiceProvider
             // DO NOT include PreventAccessFromCentralDomains here - it should only be in tenant routes
             // Even higher priority than the initialization middleware
             Middleware\InitializeTenancyByDomain::class,
-            Middleware\InitializeTenancyBySubdomain::class,
-            Middleware\InitializeTenancyByDomainOrSubdomain::class,
             Middleware\InitializeTenancyByPath::class,
             Middleware\InitializeTenancyByRequestData::class,
         ];
@@ -190,11 +188,11 @@ class TenancyServiceProvider extends ServiceProvider
             return Route::post('/livewire/update', $handle)
                 ->middleware(
                     'web',
-                    Middleware\InitializeTenancyBySubdomain::class,
+                    Middleware\InitializeTenancyByDomain::class,
                 );
         });
 
         // specify the right identification middleware
-        FilePreviewController::$middleware = ['web', Middleware\InitializeTenancyBySubdomain::class];
+        FilePreviewController::$middleware = ['web', Middleware\InitializeTenancyByDomain::class];
     }
 }
