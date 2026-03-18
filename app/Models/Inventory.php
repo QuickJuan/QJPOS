@@ -16,7 +16,33 @@ class Inventory extends Model
         'unit_measure_id',
         'cost',
         'default_location',
+        'low_stock_threshold',
+        'overstock_threshold',
     ];
+
+    protected $casts = [
+        'low_stock_threshold' => 'integer',
+        'overstock_threshold' => 'integer',
+    ];
+
+    public function getTotalStockAttribute(): float
+    {
+        return (float) ($this->relationLoaded('locationStocks')
+            ? $this->locationStocks->sum('current_stock')
+            : $this->locationStocks()->sum('current_stock'));
+    }
+
+    public function isLowStock(): bool
+    {
+        return $this->low_stock_threshold > 0
+            && $this->total_stock <= $this->low_stock_threshold;
+    }
+
+    public function isOverstock(): bool
+    {
+        return $this->overstock_threshold > 0
+            && $this->total_stock >= $this->overstock_threshold;
+    }
 
     public function defaultLocation(): BelongsTo
     {

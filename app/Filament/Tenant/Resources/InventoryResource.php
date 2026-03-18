@@ -75,6 +75,22 @@ class InventoryResource extends Resource
                     ->preload()
                     ->searchable(),
 
+                TextInput::make('low_stock_threshold')
+                    ->label('Low Stock Threshold')
+                    ->numeric()
+                    ->minValue(0)
+                    ->default(0)
+                    ->suffix(fn (?Inventory $record) => $record?->unitMeasure?->symbol ?? $record?->unit_measure ?? '')
+                    ->helperText('Alert when total stock falls at or below this amount (0 = disabled).'),
+
+                TextInput::make('overstock_threshold')
+                    ->label('Overstock Threshold')
+                    ->numeric()
+                    ->minValue(0)
+                    ->default(0)
+                    ->suffix(fn (?Inventory $record) => $record?->unitMeasure?->symbol ?? $record?->unit_measure ?? '')
+                    ->helperText('Alert when total stock rises at or above this amount (0 = disabled).'),
+
                 Repeater::make('unitConversions')
                     ->label('Unit Conversions (Smaller Units)')
                     ->relationship('unitConversions')
@@ -169,6 +185,37 @@ class InventoryResource extends Resource
                     ->state(fn (Inventory $record) => self::renderLocationStocks($record))
                     ->html()
                     ->wrap(),
+
+                TextColumn::make('stock_status')
+                    ->label('Stock Alert')
+                    ->badge()
+                    ->state(function (Inventory $record): string {
+                        if ($record->isLowStock()) {
+                            return 'Low Stock';
+                        }
+                        if ($record->isOverstock()) {
+                            return 'Overstock';
+                        }
+                        return 'Normal';
+                    })
+                    ->color(function (Inventory $record): string {
+                        if ($record->isLowStock()) {
+                            return 'danger';
+                        }
+                        if ($record->isOverstock()) {
+                            return 'warning';
+                        }
+                        return 'success';
+                    })
+                    ->icon(function (Inventory $record): string {
+                        if ($record->isLowStock()) {
+                            return 'heroicon-o-exclamation-triangle';
+                        }
+                        if ($record->isOverstock()) {
+                            return 'heroicon-o-arrow-trending-up';
+                        }
+                        return 'heroicon-o-check-circle';
+                    }),
             ])
             ->filters([
                 //
@@ -249,6 +296,27 @@ class InventoryResource extends Resource
         $trimmed   = rtrim(rtrim($formatted, '0'), '.');
 
         return $trimmed === '' ? '0' : $trimmed;
+    }
+
+    public static function getNavigationBadge(): ?string
+    {
+        $lowStockCount = \App\Models\Inventory::query()
+            ->where('low_stock_threshold', '>', 0)
+            ->whereExists(function ($query) {
+                $query->selectRaw(1)
+                    ->from('inventory_location_stocks')
+                    ->whereColumn('inventory_location_stocks.inventory_id', 'inventories.id')
+                    ->groupBy('inventory_location_stocks.inventory_id')
+                    ->havingRaw('SUM(current_stock) <= inventories.low_stock_threshold');
+            })
+            ->count();
+
+        return $lowStockCount > 0 ? (string) $lowStockCount : null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'danger';
     }
 
     public static function getRelations(): array

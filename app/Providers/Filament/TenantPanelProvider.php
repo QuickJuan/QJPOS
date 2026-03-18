@@ -42,6 +42,7 @@ class TenantPanelProvider extends PanelProvider
             ->widgets([
                 Widgets\AccountWidget::class,
                 Widgets\FilamentInfoWidget::class,
+                \App\Filament\Tenant\Widgets\LowStockWidget::class,
             ])
             ->plugins([
                 FilamentSpatieLaravelBackupPlugin::make()
