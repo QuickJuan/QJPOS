@@ -34,6 +34,11 @@ class ManageSettings extends SettingsPage
                     ->label('Company Contact')
                     ->maxLength(255),
 
+                Textarea::make('contact_recipient_emails')
+                    ->label('Contact form recipients (CSV)')
+                    ->helperText('Comma-separated email addresses that will receive contact form submissions.')
+                    ->rows(2),
+
                 Select::make('timezone')
                     ->label('Timezone')
                     ->options([

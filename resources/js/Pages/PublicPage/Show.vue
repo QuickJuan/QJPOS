@@ -96,16 +96,22 @@
         <div class="min-h-screen bg-gray-50">
             <!-- Page Header - Only show if title exists and hide_title is false -->
             <div
-                v-if="page.title && !page.hide_title && page.featured_image"
+                v-if="page.title && !page.hide_title && featuredImageUrl"
                 class="relative h-64 bg-gray-900"
             >
                 <img
-                    :src="page.featured_image"
+                    :src="featuredImageUrl"
                     :alt="page.title"
                     class="w-full h-full object-cover opacity-70"
                 />
-                <div class="absolute inset-0 flex items-center justify-center">
-                    <h1 class="text-4xl font-bold text-white">
+                <div
+                    class="absolute inset-0 flex items-center"
+                    :class="titleJustifyClass"
+                >
+                    <h1
+                        class="text-4xl font-bold text-white"
+                        :class="titleAlignClass"
+                    >
                         {{ page.title }}
                     </h1>
                 </div>
@@ -115,7 +121,10 @@
                 class="bg-white border-b"
             >
                 <div class="max-w-7xl mx-auto py-8 px-4">
-                    <h1 class="text-4xl font-bold text-gray-900">
+                    <h1
+                        class="text-4xl font-bold text-gray-900"
+                        :class="titleAlignClass"
+                    >
                         {{ page.title }}
                     </h1>
                 </div>
@@ -138,6 +147,7 @@
 <script setup>
 import { defineProps, defineAsyncComponent } from "vue";
 import { Head } from "@inertiajs/vue3";
+import { computed } from "vue";
 import PublicPageLayout from "@/Layouts/PublicPageLayout.vue";
 
 // Import block components
@@ -177,6 +187,39 @@ const props = defineProps({
     companyLogo: String,
 });
 
+const resolveAsset = (path) => {
+    if (!path) return null;
+    if (path.startsWith("http://") || path.startsWith("https://")) return path;
+    if (path.startsWith("/")) return path;
+    return `/storage/${path}`;
+};
+
+const featuredImageUrl = computed(() =>
+    resolveAsset(props.page?.featured_image),
+);
+
+const titleAlignment = computed(
+    () => props.page?.content_json?.title_alignment || "center",
+);
+
+const titleAlignClass = computed(
+    () =>
+        ({
+            left: "text-left",
+            center: "text-center",
+            right: "text-right",
+        })[titleAlignment.value] || "text-center",
+);
+
+const titleJustifyClass = computed(
+    () =>
+        ({
+            left: "justify-start",
+            center: "justify-center",
+            right: "justify-end",
+        })[titleAlignment.value] || "justify-center",
+);
+
 const blockComponents = {
     banner: BannerBlock,
     text: TextBlock,
@@ -189,6 +232,9 @@ const blockComponents = {
     stats: StatsBlock,
     newsletter: NewsletterBlock,
     "contact-form": ContactFormBlock,
+    contact_form: ContactFormBlock,
+    contactform: ContactFormBlock,
+    contact: ContactFormBlock,
 };
 
 const getBlockComponent = (type) => {

@@ -12,6 +12,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
 class PageBlockTypeResource extends Resource
@@ -35,7 +36,7 @@ class PageBlockTypeResource extends Resource
         return $form
             ->schema([
                 Section::make('Block Type Information')
-                    ->description('Define a new page block type')
+                    ->description('Block types are predefined in code and read-only')
                     ->schema([
                         TextInput::make('name')
                             ->required()
@@ -117,15 +118,8 @@ class PageBlockTypeResource extends Resource
                         'media' => 'Media',
                     ]),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ]);
+            ->actions([])
+            ->bulkActions([]);
     }
 
     public static function getRelations(): array
@@ -139,8 +133,26 @@ class PageBlockTypeResource extends Resource
     {
         return [
             'index' => Pages\ListPageBlockTypes::route('/'),
-            'create' => Pages\CreatePageBlockType::route('/create'),
-            'edit' => Pages\EditPageBlockType::route('/{record}/edit'),
         ];
+    }
+
+    public static function canCreate(): bool
+    {
+        return false;
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return false;
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return false;
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return false;
     }
 }

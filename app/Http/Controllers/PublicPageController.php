@@ -110,6 +110,7 @@ class PublicPageController extends Controller
                 'url_prefix' => $page->url_prefix,
                 'description' => $page->description,
                 'featured_image' => $page->featured_image,
+                'content_json' => $page->content_json,
                 'blocks' => $blocks,
             ],
             'seo' => $page->seo ? [

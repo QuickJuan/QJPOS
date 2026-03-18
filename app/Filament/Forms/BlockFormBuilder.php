@@ -63,7 +63,7 @@ class BlockFormBuilder
                     TextInput::make('content.overlay_opacity')
                         ->label('Overlay Opacity')
                         ->numeric()
-                        ->default(0)
+                        ->default(0.25)
                         ->minValue(0)
                         ->maxValue(1)
                         ->step(0.1)
@@ -86,6 +86,25 @@ class BlockFormBuilder
                             'outline' => 'Outline',
                         ])
                         ->default('primary'),
+
+                    Select::make('content.alignment')
+                        ->label('Text Alignment')
+                        ->options([
+                            'left' => 'Left',
+                            'center' => 'Center',
+                            'right' => 'Right',
+                        ])
+                        ->default('center'),
+
+                    TextInput::make('content.text_color')
+                        ->label('Text Color')
+                        ->default('#ffffff')
+                        ->helperText('Hex color, e.g., #ffffff'),
+
+                    TextInput::make('content.background_color')
+                        ->label('Background Color')
+                        ->default('#0f172a')
+                        ->helperText('Hex color for banner background when no image'),
                 ])->columns(2),
         ];
     }

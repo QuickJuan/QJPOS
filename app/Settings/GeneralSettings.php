@@ -17,6 +17,7 @@ class GeneralSettings extends Settings
     public ?string $hero_image;
     public ?string $timezone = 'UTC';
     public float $points_earning_rate = 100; // Amount needed to earn 1 point
+    public ?string $contact_recipient_emails = '';
 
 
     public static function group(): string

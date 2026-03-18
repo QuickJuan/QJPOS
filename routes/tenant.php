@@ -19,6 +19,7 @@ use App\Http\Controllers\PrintSalesInvoiceReportController;
 use App\Http\Controllers\TableManagementController;
 use App\Http\Controllers\TenantLandingController;
 use App\Http\Controllers\PublicPageController;
+use App\Http\Controllers\ContactInquiryController;
 use App\Http\Controllers\Waiter\AuthController as WaiterAuthController;
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
@@ -439,6 +440,9 @@ if (!isCentralDomain()) {
     Route::get('/{slug}', [\App\Http\Controllers\PublicPageController::class, 'show'])
         ->where('slug', '[a-zA-Z0-9\-]+')
         ->name('pages.show');  // Root level pages like /test, /about, /contact
+
+    // Contact form submission
+    Route::post('/contact-form', [ContactInquiryController::class, 'store'])->name('contact-form.submit');
 
     Route::get('/{prefix}/{slug}', [\App\Http\Controllers\PublicPageController::class, 'showWithPrefix'])
         ->where(['prefix' => '[a-zA-Z0-9\-]+', 'slug' => '[a-zA-Z0-9\-]+'])
