@@ -58,9 +58,11 @@ class TenantPanelProvider extends PanelProvider
             ->navigationGroups([
                 'Store',
                 'Products',
+                'Inventory',
                 'Table / Rooms',
-                'System'
-                // Add more group names as needed
+                'Finance',
+                'Payroll',
+                'System',
             ]);
     }
 
