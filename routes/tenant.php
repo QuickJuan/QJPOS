@@ -16,6 +16,15 @@ use App\Http\Controllers\CashierSessionController;
 use App\Http\Controllers\CashierCashoutController;
 use App\Http\Controllers\PrintXReadingShiftController;
 use App\Http\Controllers\PrintSalesInvoiceReportController;
+use App\Http\Controllers\PrintLowStockReportController;
+use App\Http\Controllers\PrintOverstockReportController;
+use App\Http\Controllers\PrintBestSellerReportController;
+use App\Http\Controllers\PrintDailySummaryReportController;
+use App\Http\Controllers\PrintSalesByDateReportController;
+use App\Http\Controllers\PrintVoidItemsReportController;
+use App\Http\Controllers\PrintRefundOrdersReportController;
+use App\Http\Controllers\PrintDetailedSalesItemReportController;
+use App\Http\Controllers\PrintSalesByCashierServerController;
 use App\Http\Controllers\TableManagementController;
 use App\Http\Controllers\TenantLandingController;
 use App\Http\Controllers\PublicPageController;
@@ -195,6 +204,46 @@ if (!isCentralDomain()) {
     Route::middleware('auth')
         ->get('/reports/sales-invoice/print', PrintSalesInvoiceReportController::class)
         ->name('sales-invoice-report.print');
+
+    Route::middleware('auth')
+        ->get('/reports/low-stock/print', PrintLowStockReportController::class)
+        ->name('reports.low-stock.print');
+
+    Route::middleware('auth')
+        ->get('/reports/overstock/print', PrintOverstockReportController::class)
+        ->name('reports.overstock.print');
+
+    Route::middleware('auth')
+        ->get('/reports/best-seller/print', PrintBestSellerReportController::class)
+        ->name('reports.best-seller.print');
+
+    Route::middleware('auth')
+        ->get('/reports/daily-summary/print', PrintDailySummaryReportController::class)
+        ->name('reports.daily-summary.print');
+
+    Route::middleware('auth')
+        ->get('/reports/sales-by-date/print', PrintSalesByDateReportController::class)
+        ->name('reports.sales-by-date.print');
+
+    Route::middleware('auth')
+        ->get('/reports/void-items/print', PrintVoidItemsReportController::class)
+        ->name('reports.void-items.print');
+
+    Route::middleware('auth')
+        ->get('/reports/refund-orders/print', PrintRefundOrdersReportController::class)
+        ->name('reports.refund-orders.print');
+
+    Route::middleware('auth')
+        ->get('/reports/detailed-sales/print', \App\Http\Controllers\PrintDetailedSalesReportController::class)
+        ->name('reports.detailed-sales.print');
+
+    Route::middleware('auth')
+        ->get('/reports/sales-by-cashier-server/print', PrintSalesByCashierServerController::class)
+        ->name('reports.sales-by-cashier-server.print');
+
+    Route::middleware('auth')
+        ->get('/reports/detailed-sales-item/print', PrintDetailedSalesItemReportController::class)
+        ->name('reports.detailed-sales-item.print');
 
     // ROUTES FOR AUTHENTICATED USER
     Route::middleware(['auth:sanctum'])

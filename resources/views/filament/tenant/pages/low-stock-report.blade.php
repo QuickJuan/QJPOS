@@ -44,7 +44,7 @@
         </div>
         <div class="flex gap-2">
             <button
-                onclick="window.print()"
+                onclick="window.open('{{ route('reports.low-stock.print') }}', '_blank')"
                 class="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none"
             >
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
