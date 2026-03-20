@@ -304,6 +304,26 @@ if (!isCentralDomain()) {
                     Route::post('/attendance/toggle', 'toggle')->name('toggle');
                 });
 
+            // USER INBOX (notifications)
+            Route::as('user.inbox.')
+                ->prefix('/user/inbox')
+                ->controller(\App\Http\Controllers\UserInboxController::class)
+                ->group(function () {
+                    Route::get('/', 'index')->name('index');
+                    Route::post('/mark-all-read', 'markAllRead')->name('mark-all-read');
+                    Route::post('/{id}/mark-read', 'markRead')->name('mark-read');
+                    Route::delete('/{id}', 'destroy')->name('destroy');
+                });
+
+            // USER LEAVES (employee self-service)
+            Route::as('user.leaves.')
+                ->prefix('/user/leaves')
+                ->controller(\App\Http\Controllers\UserLeaveController::class)
+                ->group(function () {
+                    Route::get('/', 'index')->name('index');
+                    Route::post('/', 'store')->name('store');
+                });
+
             // ROUTE FOR RESTO CASHIER
             Route::as('resto.')
                 ->prefix('/resto')

@@ -4,7 +4,9 @@ namespace App\Providers;
 
 use App\Models\User;
 use App\Models\CartItem;
+use App\Models\LeaveRequest;
 use App\Observers\CartItemObserver;
+use App\Observers\LeaveRequestObserver;
 use Laravel\Fortify\Fortify;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\ServiceProvider;
@@ -38,6 +40,7 @@ class AppServiceProvider extends ServiceProvider
     {
         // Register observers
         CartItem::observe(CartItemObserver::class);
+        LeaveRequest::observe(LeaveRequestObserver::class);
 
         // Sanctum stateful domains configuration
         if (app()->environment('local', 'development', 'production')) {

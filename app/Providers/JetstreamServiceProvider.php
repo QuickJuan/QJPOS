@@ -31,7 +31,11 @@ class JetstreamServiceProvider extends ServiceProvider
 
         Vite::prefetch(concurrency: 3);
 
-       
+        // Override Jetstream's profile controller to inject leave credits
+        $this->app->bind(
+            \Laravel\Jetstream\Http\Controllers\Inertia\UserProfileController::class,
+            \App\Http\Controllers\UserProfileController::class
+        );
     }
 
     /**

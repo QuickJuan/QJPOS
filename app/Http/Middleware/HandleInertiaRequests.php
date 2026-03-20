@@ -272,6 +272,7 @@ class HandleInertiaRequests extends Middleware
             'currencies' => fn() => $this->debugLoadProperty('currencies', fn() => $this->loadTenantCurrencies()),
             'default_currency' => fn() => $this->debugLoadProperty('default_currency', fn() => $this->getDefaultCurrency()),
             'payment_methods' => fn() => $this->debugLoadProperty('payment_methods', fn() => $this->loadTenantPaymentMethods()),
+            'unread_notifications_count' => fn() => $this->getUnreadNotificationsCount($request),
         ];
 
         return $sharedData;
@@ -467,6 +468,15 @@ class HandleInertiaRequests extends Middleware
         } catch (\Exception $e) {
             \Log::error('Failed to load default currency in HandleInertiaRequests: ' . $e->getMessage());
             return null;
+        }
+    }
+
+    private function getUnreadNotificationsCount(Request $request): int
+    {
+        try {
+            return $request->user()?->unreadNotifications()->count() ?? 0;
+        } catch (\Exception $e) {
+            return 0;
         }
     }
 

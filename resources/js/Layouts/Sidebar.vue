@@ -51,8 +51,15 @@
                 >
                     {{ item.name }}
                 </span>
+                <!-- Unread badge -->
                 <span
-                    v-if="item.active"
+                    v-if="item.badge && item.badge.value > 0"
+                    class="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white"
+                >
+                    {{ item.badge.value > 99 ? "99+" : item.badge.value }}
+                </span>
+                <span
+                    v-else-if="item.active"
                     class="ml-auto h-2.5 w-2.5 rounded-full bg-primary-300/90 shadow-[0_0_8px_rgba(56,189,248,0.6)]"
                 />
             </Link>
@@ -81,6 +88,7 @@ import {
     BanknotesIcon,
     BuildingLibraryIcon,
     ShoppingCartIcon,
+    CalendarDaysIcon,
     ArrowRightOnRectangleIcon as LogoutIcon,
 } from "@heroicons/vue/24/outline";
 
@@ -96,6 +104,10 @@ const branchName = computed(
 
 const currentUrl = computed(() => page?.url || window.location.pathname);
 
+const unreadCount = computed(
+    () => page?.props?.unread_notifications_count ?? 0,
+);
+
 const rawNavigation = [
     {
         name: "Profile",
@@ -106,6 +118,7 @@ const rawNavigation = [
         name: "Inbox",
         href: "/user/inbox",
         icon: EnvelopeIcon,
+        badge: unreadCount,
     },
     {
         name: "Attendance",
@@ -116,6 +129,11 @@ const rawNavigation = [
         name: "Payroll",
         href: "/user/payroll",
         icon: BanknotesIcon,
+    },
+    {
+        name: "Leaves",
+        href: "/user/leaves",
+        icon: CalendarDaysIcon,
     },
     {
         name: "Loans",
