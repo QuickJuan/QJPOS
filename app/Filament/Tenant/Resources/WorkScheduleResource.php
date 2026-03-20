@@ -17,7 +17,7 @@ class WorkScheduleResource extends Resource
     protected static ?string $model = WorkSchedule::class;
 
     protected static ?string $navigationIcon  = 'heroicon-o-calendar-days';
-    protected static ?string $navigationGroup = 'Human Resource';
+    protected static ?string $navigationGroup = 'HR and Payroll';
     protected static ?string $navigationLabel = 'Work Schedules';
     protected static ?int    $navigationSort  = 15;
 

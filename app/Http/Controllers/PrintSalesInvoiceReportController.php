@@ -5,13 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Branch;
 use App\Models\Order;
 use App\Models\User;
+use App\Settings\GeneralSettings;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 
 class PrintSalesInvoiceReportController extends Controller
 {
-    public function __invoke(Request $request)
+    public function __invoke(Request $request, GeneralSettings $settings)
     {
         $filters = $this->normalizeFilters($request);
 
@@ -36,9 +37,12 @@ class PrintSalesInvoiceReportController extends Controller
             ->get();
 
         return view('reports.sales-invoice-print', [
-            'orders' => $orders,
+            'orders'        => $orders,
             'filterSummary' => $this->buildFilterSummary($filters),
-            'grandTotals' => $this->computeGrandTotals($orders),
+            'grandTotals'   => $this->computeGrandTotals($orders),
+            'companyName'   => $settings->company_name ?? 'QuickJuan POS',
+            'companyAddress' => $settings->company_address ?? '',
+            'generatedAt'   => now()->format('M d, Y h:i A'),
         ]);
     }
 

@@ -15,7 +15,7 @@ class ScheduleTypeResource extends Resource
     protected static ?string $model = ScheduleType::class;
 
     protected static ?string $navigationIcon  = 'heroicon-o-tag';
-    protected static ?string $navigationGroup = 'Human Resource';
+    protected static ?string $navigationGroup = 'HR and Payroll';
     protected static ?string $navigationLabel = 'Shift Types';
     protected static ?int    $navigationSort  = 20;
 
