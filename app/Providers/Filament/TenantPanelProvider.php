@@ -50,6 +50,7 @@ class TenantPanelProvider extends PanelProvider
                     ->usingPolingInterval('30s'), // Optional: polling interval
                 FilamentSpatieRolesPermissionsPlugin::make(),
             ])
+            ->databaseNotifications()
             ->middleware($this->registerMiddlewares())
             ->login()
             ->authMiddleware([

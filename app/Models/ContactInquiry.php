@@ -17,6 +17,7 @@ class ContactInquiry extends Model
         'message',
         'fields',
         'meta',
+        'status',
     ];
 
     protected $casts = [

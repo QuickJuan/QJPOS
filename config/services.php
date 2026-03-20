@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'recaptcha' => [
+        'site_key' => env('RECAPTCHA_SITE_KEY', ''),
+        'secret'   => env('RECAPTCHA_SECRET_KEY', ''),
+        // Minimum score (0.0–1.0) to accept a submission. 0.5 is Google's recommended default.
+        'threshold' => env('RECAPTCHA_THRESHOLD', 0.5),
+    ],
+
 ];

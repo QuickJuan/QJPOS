@@ -6,6 +6,7 @@ use App\Mail\ContactInquirySubmitted;
 use App\Models\ContactInquiry;
 use App\Settings\GeneralSettings;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Filament\Notifications\Actions\Action;
 use Filament\Notifications\Notification;
@@ -15,6 +16,31 @@ class ContactInquiryController extends Controller
 {
     public function store(Request $request)
     {
+        // reCAPTCHA v3 verification — skip on local or when no secret key is configured
+        $secret = config('services.recaptcha.secret');
+        if (! app()->environment('local') && $secret) {
+            $request->validate([
+                'recaptcha_token' => ['required', 'string'],
+            ], [
+                'recaptcha_token.required' => 'reCAPTCHA verification failed. Please try again.',
+            ]);
+
+            $verify = Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
+                'secret'   => $secret,
+                'response' => $request->input('recaptcha_token'),
+                'remoteip' => $request->ip(),
+            ]);
+
+            $score = $verify->json('score', 0);
+            $threshold = (float) config('services.recaptcha.threshold', 0.5);
+
+            if (! $verify->json('success') || $score < $threshold) {
+                return response()->json([
+                    'message' => 'reCAPTCHA verification failed. Please try again.',
+                ], 422);
+            }
+        }
+
         $data = $request->validate([
             'name' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
@@ -64,8 +90,6 @@ class ContactInquiryController extends Controller
                 ->sendToDatabase($user);
         }
 
-        return response()->json([
-            'message' => 'Submitted',
-        ]);
+        return response()->json(['message' => 'Submitted']);
     }
 }

@@ -8,8 +8,9 @@ use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Columns\TagsColumn;
+use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 
 class ContactInquiryResource extends Resource
@@ -25,12 +26,24 @@ class ContactInquiryResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('name')->disabled(),
-                Forms\Components\TextInput::make('email')->disabled(),
-                Forms\Components\TextInput::make('phone')->disabled(),
-                Forms\Components\Textarea::make('message')->rows(4)->disabled(),
-                Forms\Components\KeyValue::make('fields')->disabled(),
-                Forms\Components\KeyValue::make('meta')->disabled(),
+                Forms\Components\Select::make('status')
+                    ->options([
+                        'open'   => 'Open',
+                        'closed' => 'Closed',
+                    ])
+                    ->default('open')
+                    ->required()
+                    ->columnSpanFull(),
+                Forms\Components\Placeholder::make('created_at')
+                    ->label('Received')
+                    ->content(fn ($record) => $record?->created_at?->format('F j, Y g:i A'))
+                    ->columnSpanFull(),
+                Forms\Components\KeyValue::make('fields')
+                    ->disabled()
+                    ->columnSpanFull(),
+                Forms\Components\KeyValue::make('meta')
+                    ->disabled()
+                    ->columnSpanFull(),
             ]);
     }
 
@@ -40,10 +53,23 @@ class ContactInquiryResource extends Resource
             ->columns([
                 TextColumn::make('name')->label('Name')->sortable()->searchable(),
                 TextColumn::make('email')->label('Email')->sortable()->searchable(),
-                TextColumn::make('phone')->label('Phone')->sortable()->searchable(),
-                TextColumn::make('created_at')->label('Received')->since()->sortable(),
+                TextColumn::make('status')
+                    ->label('Status')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'open'   => 'warning',
+                        'closed' => 'success',
+                        default  => 'gray',
+                    })
+                    ->sortable(),
+                TextColumn::make('created_at')->label('Received')->dateTime('M j, Y g:i A')->sortable(),
             ])
             ->filters([
+                SelectFilter::make('status')
+                    ->options([
+                        'open'   => 'Open',
+                        'closed' => 'Closed',
+                    ]),
                 Filter::make('recent')->label('Last 7 days')->query(fn ($query) => $query->where('created_at', '>=', now()->subDays(7))),
                 TrashedFilter::make(),
             ])
@@ -64,7 +90,8 @@ class ContactInquiryResource extends Resource
     {
         return [
             'index' => Pages\ListContactInquiries::route('/'),
-            'view' => Pages\ViewContactInquiry::route('/{record}'),
+            'view'  => Pages\ViewContactInquiry::route('/{record}'),
+            'edit'  => Pages\EditContactInquiry::route('/{record}/edit'),
         ];
     }
 }

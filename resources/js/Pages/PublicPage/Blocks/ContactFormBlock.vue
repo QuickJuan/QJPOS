@@ -3,7 +3,39 @@
         <h2 class="text-3xl font-bold text-gray-900 mb-6">
             {{ content.title }}
         </h2>
-        <form @submit.prevent="submitForm" class="max-w-2xl space-y-6">
+
+        <!-- Success state -->
+        <div v-if="submitted" class="flex flex-col items-start gap-3 py-8">
+            <div class="flex items-center gap-3">
+                <svg
+                    class="w-8 h-8 text-green-500 shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                </svg>
+                <p class="text-lg font-semibold text-green-700">
+                    {{
+                        content.success_message ||
+                        "Thank you! We will get back to you soon."
+                    }}
+                </p>
+            </div>
+            <button
+                @click="resetForm"
+                class="text-sm text-gray-500 underline hover:text-gray-700"
+            >
+                Send another message
+            </button>
+        </div>
+
+        <form v-else @submit.prevent="submitForm" class="max-w-2xl space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <template v-for="field in fields" :key="field.key">
                     <div
@@ -36,7 +68,7 @@
                         <textarea
                             v-else-if="field.type === 'textarea'"
                             v-model="form[field.key]"
-                            rows="field.rows || 4"
+                            :rows="field.rows || 4"
                             :required="field.required"
                             :placeholder="field.placeholder || ''"
                             class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-600"
@@ -69,21 +101,73 @@
                     </div>
                 </template>
             </div>
+
+            <p v-if="errorMessage" class="text-sm text-red-600">
+                {{ errorMessage }}
+            </p>
+
             <button
                 type="submit"
-                class="bg-orange-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-orange-700 transition-colors"
+                :disabled="submitting"
+                class="flex items-center gap-2 bg-orange-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-orange-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
-                {{ content.button_text || "Send Message" }}
+                <svg
+                    v-if="submitting"
+                    class="w-4 h-4 animate-spin"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                >
+                    <circle
+                        class="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        stroke-width="4"
+                    />
+                    <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v8z"
+                    />
+                </svg>
+                {{
+                    submitting
+                        ? "Sending…"
+                        : content.button_text || "Send Message"
+                }}
             </button>
-            <p v-if="message" class="text-sm" :class="messageClass">
-                {{ message }}
+
+            <p v-if="recaptchaEnabled" class="text-xs text-gray-400">
+                Protected by reCAPTCHA.
+                <a
+                    href="https://policies.google.com/privacy"
+                    target="_blank"
+                    class="underline"
+                    >Privacy</a
+                >
+                &amp;
+                <a
+                    href="https://policies.google.com/terms"
+                    target="_blank"
+                    class="underline"
+                    >Terms</a
+                >
+                apply.
             </p>
         </form>
     </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch } from "vue";
+import {
+    ref,
+    reactive,
+    computed,
+    watch,
+    onMounted,
+    onBeforeUnmount,
+} from "vue";
 import axios from "axios";
 
 const props = defineProps({
@@ -91,6 +175,40 @@ const props = defineProps({
     settings: Object,
 });
 
+// ─── reCAPTCHA v3 ─────────────────────────────────────────────────────────
+const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY || "";
+const recaptchaEnabled = computed(() => !!RECAPTCHA_SITE_KEY);
+
+let recaptchaScriptEl = null;
+
+const loadRecaptchaScript = () => {
+    if (!recaptchaEnabled.value || document.getElementById("recaptcha-script"))
+        return;
+    recaptchaScriptEl = document.createElement("script");
+    recaptchaScriptEl.id = "recaptcha-script";
+    recaptchaScriptEl.src = `https://www.google.com/recaptcha/api.js?render=${RECAPTCHA_SITE_KEY}`;
+    recaptchaScriptEl.async = true;
+    document.head.appendChild(recaptchaScriptEl);
+};
+
+const getRecaptchaToken = () => {
+    return new Promise((resolve) => {
+        if (!recaptchaEnabled.value || !window.grecaptcha) {
+            resolve(null);
+            return;
+        }
+        window.grecaptcha.ready(() => {
+            window.grecaptcha
+                .execute(RECAPTCHA_SITE_KEY, { action: "contact_form" })
+                .then(resolve)
+                .catch(() => resolve(null));
+        });
+    });
+};
+
+onMounted(loadRecaptchaScript);
+
+// ─── Form fields ───────────────────────────────────────────────────────────
 const slugify = (value) =>
     value
         .toString()
@@ -102,21 +220,16 @@ const slugify = (value) =>
 const fields = computed(() => {
     const provided = props.content?.fields;
     if (Array.isArray(provided) && provided.length) {
-        return provided.map((field, index) => {
-            const key = field.key || slugify(field.label || `field_${index}`);
-            return {
-                label: field.label || "Field",
-                type: field.type || "text",
-                required: !!field.required,
-                placeholder: field.placeholder || "",
-                options: field.options || [],
-                rows: field.rows,
-                key,
-            };
-        });
+        return provided.map((field, index) => ({
+            label: field.label || "Field",
+            type: field.type || "text",
+            required: !!field.required,
+            placeholder: field.placeholder || "",
+            options: field.options || [],
+            rows: field.rows,
+            key: field.key || slugify(field.label || `field_${index}`),
+        }));
     }
-
-    // Fallback defaults
     return [
         { key: "name", label: "Name", type: "text", required: true },
         { key: "email", label: "Email", type: "email", required: true },
@@ -129,14 +242,11 @@ const form = reactive({});
 
 const initializeForm = () => {
     fields.value.forEach((field) => {
-        if (!(field.key in form)) {
-            form[field.key] = "";
-        }
+        if (!(field.key in form)) form[field.key] = "";
     });
 };
 
 initializeForm();
-
 watch(
     () => fields.value,
     () => initializeForm(),
@@ -149,31 +259,53 @@ const inputType = (type) => {
     return "text";
 };
 
-const message = ref("");
-const messageClass = ref("");
-
+// ─── Submission ────────────────────────────────────────────────────────────
+const submitted = ref(false);
 const submitting = ref(false);
+const errorMessage = ref("");
+
+const resetForm = () => {
+    submitted.value = false;
+    Object.keys(form).forEach((k) => (form[k] = ""));
+};
 
 const submitForm = async () => {
     submitting.value = true;
-    message.value = "";
+    errorMessage.value = "";
+
     try {
+        const recaptchaToken = await getRecaptchaToken();
+
+        const byType = (type) => fields.value.find((f) => f.type === type)?.key;
+        const nameKey =
+            fields.value.find((f) => f.key === "name")?.key ??
+            fields.value.find((f) => f.type === "text")?.key;
+        const emailKey = byType("email");
+        const phoneKey = byType("phone");
+        const msgKey = byType("textarea");
+
         const payload = {
-            name: form.name ?? "",
-            email: form.email ?? "",
-            phone: form.phone ?? "",
-            message: form.message ?? "",
+            name: (nameKey ? form[nameKey] : null) ?? "",
+            email: (emailKey ? form[emailKey] : null) ?? "",
+            phone: (phoneKey ? form[phoneKey] : null) ?? "",
+            message: (msgKey ? form[msgKey] : null) ?? "",
             fields: { ...form },
+            ...(recaptchaToken ? { recaptcha_token: recaptchaToken } : {}),
         };
 
         await axios.post("/contact-form", payload);
-        message.value = "Thank you! We will get back to you soon.";
-        messageClass.value = "text-green-600";
-        Object.keys(form).forEach((key) => (form[key] = ""));
+        submitted.value = true;
     } catch (error) {
-        console.error(error);
-        message.value = "Something went wrong. Please try again.";
-        messageClass.value = "text-red-600";
+        const serverMsg = error?.response?.data?.message;
+        const validationErrors = error?.response?.data?.errors;
+        if (validationErrors) {
+            errorMessage.value = Object.values(validationErrors)
+                .flat()
+                .join(" ");
+        } else {
+            errorMessage.value =
+                serverMsg || "Something went wrong. Please try again.";
+        }
     } finally {
         submitting.value = false;
     }
