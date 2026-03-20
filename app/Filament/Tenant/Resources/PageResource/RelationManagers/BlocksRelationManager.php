@@ -93,6 +93,11 @@ class BlocksRelationManager extends RelationManager
                 Section::make('Contact Form Content')
                     ->hidden(fn ($get, $record) => $record === null || !$this->isBlockType($get('block_type_id'), 'contact-form'))
                     ->schema(BlockFormBuilder::getFormSchema('contact-form')),
+
+                // Product List Block Content
+                Section::make('Product List Content')
+                    ->hidden(fn ($get, $record) => $record === null || !$this->isBlockType($get('block_type_id'), 'product-list'))
+                    ->schema(BlockFormBuilder::getFormSchema('product-list')),
             ]);
     }
 

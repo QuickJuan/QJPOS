@@ -270,6 +270,28 @@ class PageBlockTypesSeeder extends Seeder
                     'background' => 'white',
                 ],
             ],
+            [
+                'name' => 'Product List',
+                'slug' => 'product-list',
+                'icon' => 'shopping-bag',
+                'description' => 'Ecommerce-style product listing with client-side search, category & group filters, and optional Add-to-Cart button.',
+                'category' => 'commerce',
+                'component_name' => 'ProductListBlock',
+                'schema_template' => [
+                    'content' => [
+                        'title' => 'Our Products',
+                        'description' => 'Browse our full selection',
+                    ],
+                    'settings' => [
+                        'show_add_to_cart' => true,
+                        'page_size' => 12,
+                    ],
+                ],
+                'settings_schema' => [
+                    'show_add_to_cart' => true,
+                    'page_size' => 12,
+                ],
+            ],
         ];
 
         foreach ($blockTypes as $blockType) {

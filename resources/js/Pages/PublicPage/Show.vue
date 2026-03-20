@@ -193,6 +193,9 @@ const NewsletterBlock = defineAsyncComponent(
 const ContactFormBlock = defineAsyncComponent(
     () => import("./Blocks/ContactFormBlock.vue"),
 );
+const ProductListBlock = defineAsyncComponent(
+    () => import("./Blocks/ProductListBlock.vue"),
+);
 
 const props = defineProps({
     page: Object,
@@ -250,6 +253,9 @@ const blockComponents = {
     contact_form: ContactFormBlock,
     contactform: ContactFormBlock,
     contact: ContactFormBlock,
+    "product-list": ProductListBlock,
+    product_list: ProductListBlock,
+    productlist: ProductListBlock,
 };
 
 const getBlockComponent = (type) => {

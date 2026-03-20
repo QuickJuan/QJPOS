@@ -11,6 +11,7 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\ColorPicker;
 
 class BlockFormBuilder
 {
@@ -31,6 +32,7 @@ class BlockFormBuilder
             'stats' => self::getStatsSchema(),
             'newsletter' => self::getNewsletterSchema(),
             'contact-form' => self::getContactFormSchema(),
+            'product-list' => self::getProductListSchema(),
             default => self::getDefaultSchema(),
         };
     }
@@ -96,15 +98,28 @@ class BlockFormBuilder
                         ])
                         ->default('center'),
 
-                    TextInput::make('content.text_color')
-                        ->label('Text Color')
+                    ColorPicker::make('content.text_color')
+                        ->label('Text Color (fallback for heading & subtitle)')
                         ->default('#ffffff')
-                        ->helperText('Hex color, e.g., #ffffff'),
+                        ->helperText('Used when heading/subtitle colors are not set.'),
 
-                    TextInput::make('content.background_color')
+                    ColorPicker::make('content.heading_color')
+                        ->label('Heading Color')
+                        ->helperText('Specific color for the main headline only. Defaults to Text Color.'),
+
+                    ColorPicker::make('content.subtitle_color')
+                        ->label('Subtitle Color')
+                        ->helperText('Specific color for the subtitle only. Defaults to Text Color.'),
+
+                    ColorPicker::make('content.background_color')
                         ->label('Background Color')
                         ->default('#0f172a')
-                        ->helperText('Hex color for banner background when no image'),
+                        ->helperText('Used when no background image is set.'),
+
+                    ColorPicker::make('content.overlay_color')
+                        ->label('Overlay Color')
+                        ->default('#000000')
+                        ->helperText('Color tinted over the image, combined with Overlay Opacity.'),
                 ])->columns(2),
         ];
     }
@@ -231,6 +246,19 @@ class BlockFormBuilder
                         ->numeric()
                         ->minValue(1)
                         ->placeholder('Leave empty to show all'),
+                ])->columns(2),
+
+            Section::make('Appearance')
+                ->schema([
+                    ColorPicker::make('settings.bg_color')
+                        ->label('Section Background Color')
+                        ->default('#020617')
+                        ->helperText('Applied to the whole section background.'),
+
+                    ColorPicker::make('settings.text_color')
+                        ->label('Heading & Description Color')
+                        ->default('#ffffff')
+                        ->helperText('Color for the section title and description text.'),
                 ])->columns(2),
 
             Section::make('Product Filters')
@@ -556,6 +584,113 @@ class BlockFormBuilder
                         ->addActionLabel('Add Field')
                         ->defaultItems(4)
                         ->minItems(1),
+                ])->columns(2),
+        ];
+    }
+
+    /**
+     * Product List Block: Full ecommerce-style listing with client-side search/filter
+     */
+    private static function getProductListSchema(): array
+    {
+        return [
+            Section::make('Section Header')
+                ->schema([
+                    TextInput::make('content.title')
+                        ->label('Section Title')
+                        ->placeholder('Our Menu')
+                        ->columnSpan(2),
+
+                    TextInput::make('content.subtitle')
+                        ->label('Tag Line (small text above title)')
+                        ->placeholder('Explore our selection')
+                        ->columnSpan(2),
+
+                    Textarea::make('content.description')
+                        ->label('Description (below title)')
+                        ->rows(2)
+                        ->columnSpan(2),
+                ])->columns(2),
+
+            Section::make('Filter Layout')
+                ->schema([
+                    Select::make('settings.filter_layout')
+                        ->label('Filter Display Style')
+                        ->options([
+                            'tags'    => 'Tags — clickable pill tags above the grid',
+                            'sidebar' => 'Sidebar — categories listed on the left column',
+                        ])
+                        ->default('tags')
+                        ->helperText('Controls how category and group filters are presented to customers.'),
+                ]),
+
+            Section::make('Appearance')
+                ->schema([
+                    ColorPicker::make('settings.bg_color')
+                        ->label('Section Background Color')
+                        ->default('#020617')
+                        ->helperText('Applied to the whole section background.'),
+
+                    ColorPicker::make('settings.text_color')
+                        ->label('Heading & Description Color')
+                        ->default('#ffffff')
+                        ->helperText('Color for the section title, subtitle, and description.'),
+                ])->columns(2),
+
+            Section::make('Product Card Colors')
+                ->schema([
+                    ColorPicker::make('settings.card_bg_color')
+                        ->label('Card Background')
+                        ->default('#0f172a')
+                        ->helperText('Background color of each product card.'),
+
+                    ColorPicker::make('settings.card_title_color')
+                        ->label('Card Title Color')
+                        ->default('#ffffff')
+                        ->helperText('Product name text color.'),
+
+                    ColorPicker::make('settings.card_desc_color')
+                        ->label('Card Description Color')
+                        ->default('#94a3b8')
+                        ->helperText('Product description text color.'),
+
+                    ColorPicker::make('settings.card_price_color')
+                        ->label('Price Color')
+                        ->default('#fb923c')
+                        ->helperText('Price text color on each card.'),
+                ])->columns(2),
+
+            Section::make('Filter Tag Colors')
+                ->schema([
+                    ColorPicker::make('settings.tag_color')
+                        ->label('Tag Text Color (inactive)')
+                        ->default('#94a3b8')
+                        ->helperText('Text color of unselected filter tags/pills.'),
+
+                    ColorPicker::make('settings.tag_active_bg')
+                        ->label('Active Tag Background')
+                        ->default('#f97316')
+                        ->helperText('Background color of the selected/active filter tag.'),
+
+                    ColorPicker::make('settings.tag_active_text')
+                        ->label('Active Tag Text Color')
+                        ->default('#ffffff')
+                        ->helperText('Text color of the selected/active filter tag.'),
+                ])->columns(2),
+
+            Section::make('Display Settings')
+                ->schema([
+                    TextInput::make('settings.page_size')
+                        ->label('Products per page (load-more)')
+                        ->numeric()
+                        ->minValue(4)
+                        ->default(12)
+                        ->helperText('How many products to show before the "Load more" button.'),
+
+                    Toggle::make('settings.show_add_to_cart')
+                        ->label('Show "Add to Cart" button')
+                        ->default(true)
+                        ->helperText('Toggle to hide the cart button (e.g. for browse-only menus).'),
                 ])->columns(2),
         ];
     }

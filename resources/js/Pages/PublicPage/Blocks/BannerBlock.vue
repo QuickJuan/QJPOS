@@ -27,14 +27,14 @@
             >
                 <h2
                     class="text-4xl md:text-5xl font-bold mb-4"
-                    :style="{ color: textColor }"
+                    :style="{ color: headingColor }"
                 >
                     {{ content.title }}
                 </h2>
                 <p
                     v-if="content.subtitle"
                     class="text-xl mb-6"
-                    :style="{ color: textColor }"
+                    :style="{ color: subtitleColor }"
                 >
                     {{ content.subtitle }}
                 </p>
@@ -78,12 +78,28 @@ const overlayOpacity = computed(() => {
     return Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), 1) : 0;
 });
 
+const overlayHex = computed(() => props.content?.overlay_color || "#000000");
+
+const hexToRgb = (hex) => {
+    const h = hex.replace("#", "");
+    const r = parseInt(h.substring(0, 2), 16);
+    const g = parseInt(h.substring(2, 4), 16);
+    const b = parseInt(h.substring(4, 6), 16);
+    return `${r}, ${g}, ${b}`;
+};
+
 const overlayColor = computed(() => {
     if (!imageSrc.value) return backgroundColor.value;
-    return `rgba(0, 0, 0, ${overlayOpacity.value})`;
+    return `rgba(${hexToRgb(overlayHex.value)}, ${overlayOpacity.value})`;
 });
 
 const textColor = computed(() => props.content?.text_color || "#ffffff");
+const headingColor = computed(
+    () => props.content?.heading_color || textColor.value,
+);
+const subtitleColor = computed(
+    () => props.content?.subtitle_color || textColor.value,
+);
 
 const alignment = computed(() => props.content?.alignment || "center");
 

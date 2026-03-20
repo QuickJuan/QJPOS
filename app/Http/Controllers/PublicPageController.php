@@ -81,6 +81,11 @@ class PublicPageController extends Controller
                     $data['products'] = $this->resolveBlockProducts($block->settings ?? []);
                 }
 
+                // Inject all active products for the product-list block
+                if ($block->blockType->slug === 'product-list') {
+                    $data['products'] = $this->resolveAllProducts();
+                }
+
                 return $data;
             });
 
@@ -185,8 +190,28 @@ class PublicPageController extends Controller
                 'price'       => $product->price,
                 'category'    => $product->category?->name,
                 'image_url'   => $product->featured_image_url,
+                'groups'      => $product->groups->pluck('name')->all(),
             ];
         })->values()->all();
+    }
+
+    private function resolveAllProducts(): array
+    {
+        return Product::where('is_active', true)
+            ->with(['category', 'groups'])
+            ->orderBy('name')
+            ->get()
+            ->map(function (Product $product) {
+                return [
+                    'id'          => $product->id,
+                    'name'        => $product->name,
+                    'description' => $product->description,
+                    'price'       => $product->price,
+                    'category'    => $product->category?->name,
+                    'image_url'   => $product->featured_image_url,
+                    'groups'      => $product->groups->pluck('name')->all(),
+                ];
+            })->values()->all();
     }
 
     /**

@@ -1,17 +1,19 @@
 <template>
-    <section class="px-6 py-16 bg-slate-950">
+    <section class="px-6 py-16" :style="{ backgroundColor: bgColor }">
         <div class="mx-auto max-w-6xl space-y-8">
             <!-- Header -->
             <div v-if="content.title || content.description" class="space-y-2">
                 <p
                     v-if="content.description"
                     class="text-xs uppercase tracking-[0.4em] text-primary-300"
+                    :style="{ color: fontColor }"
                 >
                     {{ content.description }}
                 </p>
                 <h2
                     v-if="content.title"
-                    class="text-3xl font-black text-white md:text-4xl"
+                    class="text-3xl font-black md:text-4xl"
+                    :style="{ color: fontColor }"
                 >
                     {{ content.title }}
                 </h2>
@@ -290,6 +292,9 @@ const props = defineProps({
     settings: { type: Object, default: () => ({}) },
     products: { type: Array, default: null },
 });
+
+const bgColor = computed(() => props.settings?.bg_color || "#020617");
+const fontColor = computed(() => props.settings?.text_color || "#ffffff");
 
 const displayProducts = computed(() =>
     props.products !== null ? props.products : (props.content?.products ?? []),
