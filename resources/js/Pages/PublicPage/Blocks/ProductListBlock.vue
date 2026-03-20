@@ -370,7 +370,10 @@
                         backgroundColor: tagActiveBg + '18',
                     }"
                 >
-                    Load more ({{ filteredAll.length - visibleCount }} remaining)
+                    Load more ({{
+                        filteredAll.length - visibleCount
+                    }}
+                    remaining)
                 </button>
             </div>
         </div>
