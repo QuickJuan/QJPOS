@@ -71,6 +71,7 @@ class TenantPanelProvider extends PanelProvider
                 'Products',
                 'Inventory',
                 'Table / Rooms',
+                'Human Resource',
                 'Finance',
                 'Payroll',
                 'Page Builder',

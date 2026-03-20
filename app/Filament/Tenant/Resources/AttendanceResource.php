@@ -19,7 +19,7 @@ class AttendanceResource extends Resource
     protected static ?string $model = Attendance::class;
 
     protected static ?string $navigationIcon  = 'heroicon-o-clock';
-    protected static ?string $navigationGroup = 'Store';
+    protected static ?string $navigationGroup = 'Human Resource';
     protected static ?int    $navigationSort  = 10;
 
     public static function form(Form $form): Form

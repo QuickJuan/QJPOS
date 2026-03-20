@@ -20,9 +20,9 @@ class CareerResource extends Resource
     protected static ?string $model = Career::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-briefcase';
-    protected static ?string $navigationGroup = 'Page Builder';
+    protected static ?string $navigationGroup = 'Human Resource';
     protected static ?string $navigationLabel = 'Careers';
-    protected static ?int $navigationSort = 20;
+    protected static ?int $navigationSort = 30;
 
     public static function form(Form $form): Form
     {
