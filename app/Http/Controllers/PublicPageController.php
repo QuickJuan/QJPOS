@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Career;
 use App\Models\Page;
 use App\Models\NavigationItem;
 use App\Models\Product;
@@ -84,6 +85,22 @@ class PublicPageController extends Controller
                 // Inject all active products for the product-list block
                 if ($block->blockType->slug === 'product-list') {
                     $data['products'] = $this->resolveAllProducts();
+                }
+
+                // Inject available careers for the careers block
+                if ($block->blockType->slug === 'careers') {
+                    $data['careers'] = Career::available()
+                        ->orderBy('created_at', 'desc')
+                        ->get()
+                        ->map(fn ($c) => [
+                            'id'              => $c->id,
+                            'title'           => $c->title,
+                            'department'      => $c->department,
+                            'location'        => $c->location,
+                            'employment_type' => $c->employment_type,
+                            'summary'         => $c->summary,
+                            'slug'            => $c->slug,
+                        ])->values()->all();
                 }
 
                 return $data;

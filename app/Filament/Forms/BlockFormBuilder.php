@@ -34,6 +34,7 @@ class BlockFormBuilder
             'newsletter' => self::getNewsletterSchema(),
             'contact-form' => self::getContactFormSchema(),
             'product-list' => self::getProductListSchema(),
+            'careers' => self::getCareersSchema(),
             default => self::getDefaultSchema(),
         };
     }
@@ -521,9 +522,14 @@ class BlockFormBuilder
                     Repeater::make('content.features')
                         ->label('Features')
                         ->schema([
-                            TextInput::make('icon')
-                                ->label('Icon (emoji)')
-                                ->placeholder('e.g. 🍕 or 💰'),
+                            FileUpload::make('image')
+                                ->label('Feature Image')
+                                ->image()
+                                ->disk('public')
+                                ->directory('blocks/features')
+                                ->imageResizeMode('cover')
+                                ->imageCropAspectRatio('1:1')
+                                ->columnSpanFull(),
 
                             TextInput::make('title')
                                 ->label('Title')
@@ -534,11 +540,6 @@ class BlockFormBuilder
                                 ->label('Description')
                                 ->rows(2)
                                 ->placeholder('Short description of this feature'),
-
-                            TextInput::make('icon_color')
-                                ->label('Icon Background Color')
-                                ->placeholder('e.g. teal, orange, blue')
-                                ->default('orange'),
                         ])
                         ->addActionLabel('Add Feature')
                         ->minItems(1)
@@ -745,6 +746,27 @@ class BlockFormBuilder
                         ->default(true)
                         ->helperText('Toggle to hide the cart button (e.g. for browse-only menus).'),
                 ])->columns(2),
+        ];
+    }
+
+    /**
+     * Default schema for unknown block types
+     */
+    private static function getCareersSchema(): array
+    {
+        return [
+            Section::make('Careers Block')
+                ->schema([
+                    TextInput::make('content.title')
+                        ->label('Section Heading')
+                        ->placeholder('We are Hiring!'),
+
+                    Textarea::make('content.subtitle')
+                        ->label('Subheading')
+                        ->rows(2)
+                        ->placeholder('Join our growing team'),
+                ])->columns(1)
+                ->description('The careers block automatically displays all job openings with status "Available". No manual configuration needed.'),
         ];
     }
 

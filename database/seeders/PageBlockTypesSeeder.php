@@ -314,6 +314,21 @@ class PageBlockTypesSeeder extends Seeder
                     'columns' => '3',
                 ],
             ],
+            [
+                'name' => 'Careers',
+                'slug' => 'careers',
+                'icon' => 'briefcase',
+                'description' => 'Job opening cards auto-loaded from available careers.',
+                'category' => 'content',
+                'component_name' => 'CareersBlock',
+                'schema_template' => [
+                    'content' => [
+                        'title' => 'Join Our Team',
+                        'subtitle' => 'Explore open positions and grow with us.',
+                    ],
+                ],
+                'settings_schema' => [],
+            ],
         ];
 
         foreach ($blockTypes as $blockType) {

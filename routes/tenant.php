@@ -19,6 +19,8 @@ use App\Http\Controllers\PrintSalesInvoiceReportController;
 use App\Http\Controllers\TableManagementController;
 use App\Http\Controllers\TenantLandingController;
 use App\Http\Controllers\PublicPageController;
+use App\Http\Controllers\GuestOrderController;
+use App\Http\Controllers\CareerController;
 use App\Http\Controllers\ContactInquiryController;
 use App\Http\Controllers\Waiter\AuthController as WaiterAuthController;
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
@@ -153,6 +155,20 @@ if (!isCentralDomain()) {
     })->name('landing');
 
     Route::get('/product/{slug}', [ProductController::class, 'show'])->name('product.show');
+
+    // Guest cart & checkout (no auth required)
+    Route::prefix('guest')->name('guest.')->group(function () {
+        Route::get('/cart', [GuestOrderController::class, 'cart'])->name('cart');
+        Route::get('/checkout', [GuestOrderController::class, 'checkout'])->name('checkout');
+        Route::post('/checkout', [GuestOrderController::class, 'store'])->name('checkout.store');
+        Route::get('/order/{reference}', [GuestOrderController::class, 'confirmation'])->name('order.confirmation');
+    });
+
+    // Public careers (no auth required)
+    Route::prefix('careers')->name('careers.')->group(function () {
+        Route::get('/{slug}', [CareerController::class, 'show'])->name('show');
+        Route::post('/{id}/apply', [CareerController::class, 'apply'])->name('apply');
+    });
 
     // Serve tenant storage files (receipts, etc.)
     Route::get('/storage/{path}', function ($path) {

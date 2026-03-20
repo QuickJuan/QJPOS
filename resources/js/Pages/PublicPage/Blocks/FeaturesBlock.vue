@@ -30,12 +30,34 @@
                     :key="index"
                     class="flex flex-col items-center text-center"
                 >
-                    <!-- Icon circle -->
+                    <!-- Feature image -->
                     <div
-                        class="w-20 h-20 rounded-full flex items-center justify-center text-3xl mb-4 flex-shrink-0"
-                        :class="iconBgClass(feature.icon_color)"
+                        class="w-24 h-24 rounded-full overflow-hidden mb-4 flex-shrink-0 bg-gray-100"
                     >
-                        {{ feature.icon || "⭐" }}
+                        <img
+                            v-if="feature.image"
+                            :src="`/storage/${feature.image}`"
+                            :alt="feature.title"
+                            class="w-full h-full object-cover"
+                        />
+                        <div
+                            v-else
+                            class="w-full h-full flex items-center justify-center text-gray-300"
+                        >
+                            <svg
+                                class="w-10 h-10"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.5"
+                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                />
+                            </svg>
+                        </div>
                     </div>
 
                     <!-- Title -->
@@ -80,21 +102,4 @@ const gridColsClass = computed(() => {
         }[cols] ?? "md:grid-cols-3"
     );
 });
-
-const colorMap = {
-    orange: "bg-orange-100 text-orange-600",
-    teal: "bg-teal-100 text-teal-600",
-    blue: "bg-blue-100 text-blue-600",
-    green: "bg-green-100 text-green-600",
-    red: "bg-red-100 text-red-600",
-    purple: "bg-purple-100 text-purple-600",
-    yellow: "bg-yellow-100 text-yellow-600",
-    pink: "bg-pink-100 text-pink-600",
-    indigo: "bg-indigo-100 text-indigo-600",
-    gray: "bg-gray-100 text-gray-600",
-};
-
-function iconBgClass(color) {
-    return colorMap[color] ?? colorMap["orange"];
-}
 </script>

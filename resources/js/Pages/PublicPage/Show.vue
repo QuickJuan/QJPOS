@@ -140,6 +140,7 @@
                     :content="block.content"
                     :settings="block.settings"
                     :products="block.products ?? null"
+                    :careers="block.careers ?? []"
                 />
             </div>
         </div>
@@ -154,6 +155,7 @@
             :content="block.content"
             :settings="block.settings"
             :products="block.products ?? null"
+            :careers="block.careers ?? []"
         />
     </TenantLandingLayout>
 </template>
@@ -198,6 +200,9 @@ const ContactFormBlock = defineAsyncComponent(
 );
 const ProductListBlock = defineAsyncComponent(
     () => import("./Blocks/ProductListBlock.vue"),
+);
+const CareersBlock = defineAsyncComponent(
+    () => import("./Blocks/CareersBlock.vue"),
 );
 
 const props = defineProps({
@@ -260,6 +265,7 @@ const blockComponents = {
     "product-list": ProductListBlock,
     product_list: ProductListBlock,
     productlist: ProductListBlock,
+    careers: CareersBlock,
 };
 
 const getBlockComponent = (type) => {
