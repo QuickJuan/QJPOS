@@ -49,7 +49,8 @@ class TenantPanelProvider extends PanelProvider
             ->plugins([
                 FilamentSpatieLaravelBackupPlugin::make()
                     ->usingQueue('backups')
-                    ->usingPolingInterval('30s'),
+                    ->usingPolingInterval('30s')
+                    ->usingPage(\App\Filament\Tenant\Pages\TenantBackups::class),
                 FilamentSpatieRolesPermissionsPlugin::make(),
                 FilamentFullCalendarPlugin::make()
                     ->selectable()
@@ -72,6 +73,7 @@ class TenantPanelProvider extends PanelProvider
                 'Table / Rooms',
                 'Finance',
                 'Payroll',
+                'Page Builder',
                 'Roles and Permissions',
                 'Settings',
                 'Management',

@@ -54,6 +54,13 @@ return [
             'report' => false,
         ],
 
+        'asset-backups' => [
+            'driver' => 'local',
+            'root' => env('ASSET_BACKUP_PATH', storage_path('app/asset-backups')),
+            'throw' => false,
+            'report' => false,
+        ],
+
         'central-backups' => [
             'driver' => 'local',
             'root' => storage_path('app/central-backups'),
