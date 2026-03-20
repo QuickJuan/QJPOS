@@ -220,46 +220,44 @@ class BlockFormBuilder
                     Select::make('content.layout')
                         ->label('Layout')
                         ->options([
-                            'grid' => 'Grid',
+                            'grid'     => 'Grid',
                             'carousel' => 'Carousel',
-                            'list' => 'List',
+                            'list'     => 'List',
                         ])
                         ->default('grid'),
 
-                    Repeater::make('content.products')
-                        ->label('Products')
-                        ->schema([
-                            TextInput::make('name')
-                                ->label('Product Name')
-                                ->required(),
-
-                            Textarea::make('description')
-                                ->label('Description')
-                                ->rows(2),
-
-                            TextInput::make('price')
-                                ->label('Price')
-                                ->numeric()
-                                ->step(0.01)
-                                ->prefixIcon('heroicon-m-banknotes'),
-
-                            FileUpload::make('image')
-                                ->label('Product Image')
-                                ->image()
-                                ->disk('public')
-                                ->directory('blocks/products'),
-
-                            TextInput::make('button_text')
-                                ->label('Button Text')
-                                ->default('View Product'),
-
-                            TextInput::make('button_url')
-                                ->label('Button URL')
-                                ->url(),
-                        ])
-                        ->addActionLabel('Add Product')
-                        ->minItems(1),
+                    TextInput::make('settings.max_products')
+                        ->label('Max Products to Show')
+                        ->numeric()
+                        ->minValue(1)
+                        ->placeholder('Leave empty to show all'),
                 ])->columns(2),
+
+            Section::make('Product Filters')
+                ->description('Select which categories and/or groups to pull products from. Leave both empty to show all active products.')
+                ->schema([
+                    Select::make('settings.category_ids')
+                        ->label('Filter by Categories')
+                        ->multiple()
+                        ->options(fn () => \App\Models\Category::orderBy('name')->pluck('name', 'id'))
+                        ->searchable()
+                        ->placeholder('All categories'),
+
+                    Select::make('settings.group_ids')
+                        ->label('Filter by Groups')
+                        ->multiple()
+                        ->options(fn () => \App\Models\Group::orderBy('name')->pluck('name', 'id'))
+                        ->searchable()
+                        ->placeholder('All groups'),
+
+                    Select::make('settings.product_ids')
+                        ->label('Specific Products')
+                        ->multiple()
+                        ->options(fn () => \App\Models\Product::where('is_active', true)->orderBy('name')->pluck('name', 'id'))
+                        ->searchable()
+                        ->placeholder('Leave empty to use category/group filters')
+                        ->helperText('Selecting specific products overrides category and group filters.'),
+                ]),
         ];
     }
 

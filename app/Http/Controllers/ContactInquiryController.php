@@ -7,6 +7,7 @@ use App\Models\ContactInquiry;
 use App\Settings\GeneralSettings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Filament\Notifications\Actions\Action;
 use Filament\Notifications\Notification;
 use App\Models\User;
 
@@ -48,10 +49,18 @@ class ContactInquiryController extends Controller
 
         // Notify Filament users (Admin/Manager)
         $users = User::role(['Admin', 'Manager'])->get();
+        $viewUrl = '/admin/contact-inquiries/' . $inquiry->id;
         foreach ($users as $user) {
             Notification::make()
                 ->title('New Contact Inquiry')
                 ->body(($inquiry->name ?: 'Someone') . ' sent a message')
+                ->icon('heroicon-o-envelope')
+                ->iconColor('info')
+                ->actions([
+                    Action::make('view')
+                        ->label('View Inquiry')
+                        ->url($viewUrl),
+                ])
                 ->sendToDatabase($user);
         }
 

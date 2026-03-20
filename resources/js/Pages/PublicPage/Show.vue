@@ -89,6 +89,7 @@
     </Head>
 
     <PublicPageLayout
+        v-if="!page.is_landing_page"
         :navigation="navigation"
         :appName="appName"
         :companyLogo="companyLogo"
@@ -138,10 +139,23 @@
                     :is="getBlockComponent(block.type)"
                     :content="block.content"
                     :settings="block.settings"
+                    :products="block.products ?? null"
                 />
             </div>
         </div>
     </PublicPageLayout>
+
+    <TenantLandingLayout v-if="page.is_landing_page">
+        <!-- Landing page blocks render full-width without the gray wrapper -->
+        <component
+            v-for="block in page.blocks"
+            :key="block.id"
+            :is="getBlockComponent(block.type)"
+            :content="block.content"
+            :settings="block.settings"
+            :products="block.products ?? null"
+        />
+    </TenantLandingLayout>
 </template>
 
 <script setup>
@@ -149,6 +163,7 @@ import { defineProps, defineAsyncComponent } from "vue";
 import { Head } from "@inertiajs/vue3";
 import { computed } from "vue";
 import PublicPageLayout from "@/Layouts/PublicPageLayout.vue";
+import TenantLandingLayout from "@/Layouts/TenantLandingLayout.vue";
 
 // Import block components
 const BannerBlock = defineAsyncComponent(

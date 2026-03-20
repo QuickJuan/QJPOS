@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Branch;
+use App\Models\NavigationItem;
 use App\Models\Product;
 use App\Services\ProductCategoryService;
 use App\Services\ProductGroupService;
@@ -40,15 +41,35 @@ class TenantLandingController extends Controller
         $searchQuery = $this->queryString($request, 'search');
         $filterMode = $this->resolveFilterMode($this->queryString($request, 'mode'), $categories, $groups);
 
+        $navigation = NavigationItem::active()
+            ->rootItems()
+            ->with('children')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'id'       => $item->id,
+                    'label'    => $item->label,
+                    'url'      => $item->url,
+                    'target'   => $item->target,
+                    'children' => $item->children->map(fn ($child) => [
+                        'id'     => $child->id,
+                        'label'  => $child->label,
+                        'url'    => $child->url,
+                        'target' => $child->target,
+                    ]),
+                ];
+            });
+
         return Inertia::render('TenantLanding', [
-            'tenant' => tenant(),
-            'branches' => $branches,
-            'categories' => $categories,
-            'groups' => $groups,
+            'tenant'               => tenant(),
+            'branches'             => $branches,
+            'categories'           => $categories,
+            'groups'               => $groups,
             'selectedCategorySlug' => $selectedCategorySlug,
-            'selectedGroupSlug' => $selectedGroupSlug,
-            'filterMode' => $filterMode,
-            'searchQuery' => $searchQuery,
+            'selectedGroupSlug'    => $selectedGroupSlug,
+            'filterMode'           => $filterMode,
+            'searchQuery'          => $searchQuery,
+            'navigation'           => $navigation,
         ]);
     }
 

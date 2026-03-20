@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Page;
 use App\Models\NavigationItem;
+use App\Models\Product;
 use App\Services\PageBuilderService;
 use App\Settings\GeneralSettings;
 use App\Enums\PageType;
@@ -67,13 +68,20 @@ class PublicPageController extends Controller
             ->orderBy('order')
             ->get()
             ->map(function ($block) {
-                return [
-                    'id' => $block->id,
-                    'type' => $block->blockType->slug,
-                    'content' => $block->content,
+                $data = [
+                    'id'       => $block->id,
+                    'type'     => $block->blockType->slug,
+                    'content'  => $block->content,
                     'settings' => $block->settings,
-                    'order' => $block->order,
+                    'order'    => $block->order,
                 ];
+
+                // Inject live products for the products block
+                if ($block->blockType->slug === 'products') {
+                    $data['products'] = $this->resolveBlockProducts($block->settings ?? []);
+                }
+
+                return $data;
             });
 
         // Load navigation items
@@ -112,6 +120,7 @@ class PublicPageController extends Controller
                 'featured_image' => $page->featured_image,
                 'content_json' => $page->content_json,
                 'blocks' => $blocks,
+                'is_landing_page' => $page->page_type === PageType::LANDING_PAGE,
             ],
             'seo' => $page->seo ? [
                 'meta_title' => $page->seo->meta_title,
@@ -130,6 +139,54 @@ class PublicPageController extends Controller
                 'schema_json' => $page->seo->schema_json,
             ] : null,
         ]);
+    }
+
+    /**
+     * Resolve products for a products block based on its filter settings.
+     */
+    private function resolveBlockProducts(array $settings): array
+    {
+        $productIds  = $settings['product_ids'] ?? [];
+        $categoryIds = $settings['category_ids'] ?? [];
+        $groupIds    = $settings['group_ids'] ?? [];
+        $max         = isset($settings['max_products']) && $settings['max_products'] > 0
+            ? (int) $settings['max_products']
+            : null;
+
+        $query = Product::query()
+            ->where('is_active', true)
+            ->with('category');
+
+        if (!empty($productIds)) {
+            // Specific products selected — ignore category/group filters
+            $query->whereIn('id', $productIds);
+        } elseif (!empty($categoryIds) && !empty($groupIds)) {
+            $query->where(function ($q) use ($categoryIds, $groupIds) {
+                $q->whereIn('category_id', $categoryIds)
+                  ->orWhereHas('groups', fn ($g) => $g->whereIn('id', $groupIds));
+            });
+        } elseif (!empty($categoryIds)) {
+            $query->whereIn('category_id', $categoryIds);
+        } elseif (!empty($groupIds)) {
+            $query->whereHas('groups', fn ($g) => $g->whereIn('id', $groupIds));
+        }
+
+        $query->orderBy('name');
+
+        if ($max) {
+            $query->limit($max);
+        }
+
+        return $query->get()->map(function (Product $product) {
+            return [
+                'id'          => $product->id,
+                'name'        => $product->name,
+                'description' => $product->description,
+                'price'       => $product->price,
+                'category'    => $product->category?->name,
+                'image_url'   => $product->featured_image_url,
+            ];
+        })->values()->all();
     }
 
     /**

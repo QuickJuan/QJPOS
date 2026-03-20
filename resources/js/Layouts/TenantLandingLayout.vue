@@ -21,14 +21,62 @@
                 <nav
                     class="hidden items-center gap-6 text-sm font-semibold lg:flex"
                 >
-                    <a
-                        v-for="link in navLinks"
-                        :key="link.label"
-                        :href="link.href"
-                        class="uppercase tracking-[0.2em] text-white/70 transition hover:text-white"
-                    >
-                        {{ link.label }}
-                    </a>
+                    <template v-if="dbNavigation.length > 0">
+                        <template v-for="item in dbNavigation" :key="item.id">
+                            <div
+                                v-if="item.children && item.children.length > 0"
+                                class="relative group"
+                            >
+                                <button
+                                    class="flex items-center gap-1 uppercase tracking-[0.2em] text-white/70 transition hover:text-white"
+                                >
+                                    {{ item.label }}
+                                    <svg
+                                        class="w-3 h-3"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M19 9l-7 7-7-7"
+                                        />
+                                    </svg>
+                                </button>
+                                <div
+                                    class="absolute left-0 mt-2 w-48 rounded-lg bg-slate-800 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50"
+                                >
+                                    <a
+                                        v-for="child in item.children"
+                                        :key="child.id"
+                                        :href="child.url"
+                                        :target="child.target"
+                                        class="block px-4 py-2 text-sm uppercase tracking-[0.2em] text-white/70 hover:text-white hover:bg-slate-700 first:rounded-t-lg last:rounded-b-lg"
+                                        >{{ child.label }}</a
+                                    >
+                                </div>
+                            </div>
+                            <a
+                                v-else
+                                :href="item.url"
+                                :target="item.target"
+                                class="uppercase tracking-[0.2em] text-white/70 transition hover:text-white"
+                                >{{ item.label }}</a
+                            >
+                        </template>
+                    </template>
+                    <template v-else>
+                        <a
+                            v-for="link in navLinks"
+                            :key="link.label"
+                            :href="link.href"
+                            class="uppercase tracking-[0.2em] text-white/70 transition hover:text-white"
+                        >
+                            {{ link.label }}
+                        </a>
+                    </template>
                 </nav>
                 <div class="flex items-center gap-3">
                     <template v-if="isAuthenticated">
@@ -147,6 +195,14 @@ type ActiveBranch = {
     branch_code?: string;
 };
 
+type NavChild = {
+    id: number;
+    label: string;
+    url: string;
+    target?: string | null;
+};
+type NavItem = NavChild & { children?: NavChild[] };
+
 type PageProps = {
     auth?: {
         user?: Record<string, unknown> | null;
@@ -157,6 +213,7 @@ type PageProps = {
         name?: string;
         brand_name?: string;
     } | null;
+    navigation?: NavItem[];
 };
 
 const props = defineProps<{
@@ -198,6 +255,8 @@ const brandLabel = computed(() =>
     activeBranch.value?.name ? "Current branch" : "Tenant",
 );
 const brandCTA = computed(() => activeBranch.value?.name ?? brandTitle.value);
+
+const dbNavigation = computed<NavItem[]>(() => page.props.navigation ?? []);
 
 const navLinks = computed(() => {
     const links = [

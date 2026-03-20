@@ -3,7 +3,11 @@
 namespace App\Filament\Tenant\Resources;
 
 use App\Models\Page;
+use App\Models\PageBlock;
+use App\Models\PageBlockType;
+use App\Models\PageSEO;
 use Filament\Tables;
+use Filament\Forms;
 use App\Enums\PageType;
 use Filament\Forms\Form;
 use Filament\Tables\Table;
@@ -25,6 +29,7 @@ use Filament\Tables\Actions\RestoreAction;
 use Filament\Tables\Actions\ForceDeleteAction;
 use Filament\Tables\Actions\RestoreBulkAction;
 use Filament\Tables\Actions\ForceDeleteBulkAction;
+use Filament\Notifications\Notification;
 use App\Filament\Tenant\Resources\PageResource\Pages;
 use App\Filament\Tenant\Resources\PageResource\RelationManagers\BlocksRelationManager;
 
@@ -291,6 +296,12 @@ class PageResource extends Resource
                         })
                         ->successNotificationTitle('Page duplicated'),
 
+                    Tables\Actions\Action::make('export')
+                        ->label('Export')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->color('success')
+                        ->action(fn (Page $record) => static::exportPage($record)),
+
                     DeleteAction::make(),
 
                     RestoreAction::make(),
@@ -298,8 +309,73 @@ class PageResource extends Resource
                     ForceDeleteAction::make(),
                 ])->button(),
             ])
+            ->headerActions([
+                Tables\Actions\Action::make('importPages')
+                    ->label('Import Pages')
+                    ->icon('heroicon-o-arrow-up-tray')
+                    ->color('primary')
+                    ->form([
+                        Forms\Components\Tabs::make('Import Method')
+                            ->tabs([
+                                Forms\Components\Tabs\Tab::make('File Upload')
+                                    ->schema([
+                                        Forms\Components\FileUpload::make('import_file')
+                                            ->label('Select Pages Export File')
+                                            ->acceptedFileTypes(['application/json', 'text/plain'])
+                                            ->maxSize(5120)
+                                            ->disk('local')
+                                            ->directory('imports')
+                                            ->helperText('Upload a .json file exported from another site (max 5MB)'),
+                                    ]),
+                                Forms\Components\Tabs\Tab::make('Paste JSON')
+                                    ->schema([
+                                        Forms\Components\Textarea::make('import_json')
+                                            ->label('Paste JSON Content')
+                                            ->placeholder('Paste the exported JSON content here...')
+                                            ->rows(10)
+                                            ->helperText('Copy and paste the JSON from an exported file'),
+                                    ]),
+                            ])
+                            ->columnSpanFull(),
+                    ])
+                    ->modalWidth('4xl')
+                    ->action(function (array $data) {
+                        $hasFile = !empty($data['import_file']);
+                        $hasJson = !empty($data['import_json']) && trim($data['import_json']) !== '';
+
+                        if (!$hasFile && !$hasJson) {
+                            Notification::make()->title('Validation Error')->body('Please upload a JSON file or paste JSON content.')->danger()->send();
+                            return;
+                        }
+
+                        if ($hasFile) {
+                            $filePath = is_array($data['import_file']) ? reset($data['import_file']) : $data['import_file'];
+                            $content = null;
+                            foreach (['imports/' . $filePath, 'livewire-tmp/' . $filePath, $filePath] as $path) {
+                                try {
+                                    $content = \Storage::disk('local')->get($path);
+                                    if ($content) break;
+                                } catch (\Exception $e) {
+                                    continue;
+                                }
+                            }
+                            if (!$content) {
+                                Notification::make()->title('File Error')->body('Could not read the uploaded file.')->danger()->send();
+                                return;
+                            }
+                            static::importPagesFromContent($content);
+                        } else {
+                            static::importPagesFromContent($data['import_json']);
+                        }
+                    }),
+            ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\BulkAction::make('exportPages')
+                        ->label('Export Selected')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->color('success')
+                        ->action(fn ($records) => static::exportMultiplePages($records)),
                     Tables\Actions\DeleteBulkAction::make(),
                     RestoreBulkAction::make(),
                     ForceDeleteBulkAction::make(),
@@ -322,5 +398,169 @@ class PageResource extends Resource
             'create' => Pages\CreatePage::route('/create'),
             'edit' => Pages\EditPage::route('/{record}/edit'),
         ];
+    }
+
+    public static function exportPage(Page $page): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $exportData = [
+            'version' => '1.0',
+            'exported_at' => now()->toISOString(),
+            'pages' => [static::serializePage($page)],
+        ];
+        $filename = 'page-export-' . ($page->slug ?: 'landing') . '-' . now()->format('Y-m-d-H-i-s') . '.json';
+        return response()->streamDownload(
+            fn () => print json_encode($exportData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
+            $filename,
+            ['Content-Type' => 'application/json']
+        );
+    }
+
+    public static function exportMultiplePages($pages): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $exportData = [
+            'version' => '1.0',
+            'exported_at' => now()->toISOString(),
+            'pages' => $pages->map(fn ($p) => static::serializePage($p))->values()->toArray(),
+        ];
+        $filename = 'pages-export-' . $pages->count() . '-pages-' . now()->format('Y-m-d-H-i-s') . '.json';
+        return response()->streamDownload(
+            fn () => print json_encode($exportData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
+            $filename,
+            ['Content-Type' => 'application/json']
+        );
+    }
+
+    public static function serializePage(Page $page): array
+    {
+        $blocks = $page->blocks()->with('blockType')->orderBy('order')->get()->map(fn ($block) => [
+            'block_type_slug' => $block->blockType?->slug,
+            'order' => $block->order,
+            'content' => $block->content,
+            'settings' => $block->settings,
+            'visibility_settings' => $block->visibility_settings,
+        ])->toArray();
+
+        $seo = $page->seo;
+
+        return [
+            'title' => $page->title,
+            'slug' => $page->slug,
+            'url_prefix' => $page->url_prefix,
+            'page_type' => $page->page_type instanceof \App\Enums\PageType ? $page->page_type->value : $page->page_type,
+            'status' => $page->status,
+            'hide_title' => $page->hide_title,
+            'featured_image' => null,
+            'featured_video' => $page->featured_video,
+            'content_json' => $page->content_json,
+            'blocks' => $blocks,
+            'seo' => $seo ? [
+                'meta_title' => $seo->meta_title,
+                'meta_description' => $seo->meta_description,
+                'focus_keywords' => $seo->focus_keywords,
+                'meta_robots' => $seo->meta_robots,
+                'og_title' => $seo->og_title,
+                'og_description' => $seo->og_description,
+                'og_image' => null,
+                'twitter_card' => $seo->twitter_card,
+                'twitter_title' => $seo->twitter_title,
+                'twitter_description' => $seo->twitter_description,
+                'twitter_image' => null,
+                'schema_type' => $seo->schema_type,
+                'schema_json' => $seo->schema_json,
+                'canonical_url' => $seo->canonical_url,
+            ] : null,
+        ];
+    }
+
+    public static function importPagesFromContent(string $jsonContent): void
+    {
+        try {
+            $importData = json_decode($jsonContent, true);
+            if (!$importData || !isset($importData['pages'])) {
+                throw new \Exception('Invalid format: missing "pages" array');
+            }
+            $imported = 0;
+            $skipped = 0;
+            $errors = [];
+            foreach ($importData['pages'] as $pageData) {
+                try {
+                    static::importSinglePage($pageData);
+                    $imported++;
+                } catch (\Exception $e) {
+                    $skipped++;
+                    $errors[] = "'{$pageData['title']}': " . $e->getMessage();
+                }
+            }
+            Notification::make()
+                ->title('Import Complete')
+                ->body("{$imported} page(s) imported" . ($skipped ? ", {$skipped} skipped" : ''))
+                ->success()
+                ->send();
+            if (!empty($errors)) {
+                Notification::make()
+                    ->title('Import Warnings')
+                    ->body(implode("\n", array_slice($errors, 0, 5)))
+                    ->warning()
+                    ->send();
+            }
+        } catch (\Exception $e) {
+            Notification::make()->title('Import Failed')->body($e->getMessage())->danger()->send();
+            \Log::error('Page import failed', ['error' => $e->getMessage()]);
+        }
+    }
+
+    public static function importSinglePage(array $pageData): Page
+    {
+        $pageType = $pageData['page_type'] ?? PageType::PAGE->value;
+        $existing = Page::withTrashed()
+            ->where('slug', $pageData['slug'] ?? '')
+            ->where('page_type', $pageType)
+            ->first();
+
+        if ($existing) {
+            if ($existing->trashed()) {
+                $existing->restore();
+            }
+            $page = $existing;
+        } else {
+            $page = new Page();
+        }
+
+        $page->fill([
+            'title' => $pageData['title'],
+            'slug' => $pageData['slug'] ?? null,
+            'url_prefix' => $pageData['url_prefix'] ?? null,
+            'page_type' => $pageType,
+            'status' => $pageData['status'] ?? 'draft',
+            'hide_title' => $pageData['hide_title'] ?? false,
+            'featured_video' => $pageData['featured_video'] ?? null,
+            'content_json' => $pageData['content_json'] ?? null,
+        ]);
+        $page->save();
+
+        if (!empty($pageData['blocks'])) {
+            $page->blocks()->forceDelete();
+            foreach ($pageData['blocks'] as $blockData) {
+                if (empty($blockData['block_type_slug'])) continue;
+                $blockType = PageBlockType::where('slug', $blockData['block_type_slug'])->first();
+                if (!$blockType) continue;
+                $page->blocks()->create([
+                    'block_type_id' => $blockType->id,
+                    'order' => $blockData['order'] ?? 0,
+                    'content' => $blockData['content'] ?? [],
+                    'settings' => $blockData['settings'] ?? [],
+                    'visibility_settings' => $blockData['visibility_settings'] ?? [],
+                ]);
+            }
+        }
+
+        if (!empty($pageData['seo'])) {
+            $seoData = array_filter($pageData['seo'], fn ($v) => $v !== null);
+            if (!empty($seoData)) {
+                $page->seo()->updateOrCreate(['page_id' => $page->id], $seoData);
+            }
+        }
+
+        return $page;
     }
 }

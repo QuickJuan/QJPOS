@@ -90,24 +90,24 @@ class PageBlockTypesSeeder extends Seeder
                 'component_name' => 'ProductsBlock',
                 'schema_template' => [
                     'content' => [
-                        'title' => 'Featured products',
+                        'title'       => 'Featured Products',
                         'description' => 'Highlight best sellers or promos.',
-                        'layout' => 'grid',
-                        'products' => [
-                            [
-                                'name' => 'Sample product',
-                                'description' => 'Short description',
-                                'price' => '0.00',
-                                'image' => null,
-                                'button_text' => 'View product',
-                                'button_url' => '#',
-                            ],
-                        ],
+                        'layout'      => 'grid',
+                    ],
+                    'settings' => [
+                        'category_ids' => [],
+                        'group_ids'    => [],
+                        'max_products' => null,
+                        'padding'      => 'lg',
+                        'background'   => 'dark',
                     ],
                 ],
                 'settings_schema' => [
-                    'padding' => 'lg',
-                    'background' => 'light',
+                    'category_ids' => [],
+                    'group_ids'    => [],
+                    'max_products' => null,
+                    'padding'      => 'lg',
+                    'background'   => 'dark',
                 ],
             ],
             [
