@@ -3,7 +3,9 @@
 namespace App\Filament\Tenant\Resources;
 
 use App\Filament\Tenant\Resources\EmployeeResource\Pages;
+use App\Filament\Tenant\Resources\EmployeeResource\RelationManagers\CashAdvancesRelationManager;
 use App\Filament\Tenant\Resources\EmployeeResource\RelationManagers\EmployeeCompensationsRelationManager;
+use App\Filament\Tenant\Resources\EmployeeResource\RelationManagers\LeaveCreditsRelationManager;
 use App\Models\Employee;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Section;
@@ -322,6 +324,8 @@ class EmployeeResource extends Resource
     {
         return [
             EmployeeCompensationsRelationManager::class,
+            CashAdvancesRelationManager::class,
+            LeaveCreditsRelationManager::class,
         ];
     }
 

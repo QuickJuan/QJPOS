@@ -76,6 +76,21 @@ class Employee extends Model
             ->whereHas('compensationType', fn ($q) => $q->where('type', 'deduction'));
     }
 
+    public function cashAdvances(): HasMany
+    {
+        return $this->hasMany(CashAdvance::class)->orderByDesc('created_at');
+    }
+
+    public function leaveCredits(): HasMany
+    {
+        return $this->hasMany(EmployeeLeaveCredit::class)->orderBy('year', 'desc');
+    }
+
+    public function leaveRequests(): HasMany
+    {
+        return $this->hasMany(LeaveRequest::class)->orderByDesc('start_date');
+    }
+
     /** Full name via user relation */
     public function getNameAttribute(): string
     {
