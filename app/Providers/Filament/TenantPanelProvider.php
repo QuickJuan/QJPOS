@@ -17,6 +17,7 @@ use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use ShuvroRoy\FilamentSpatieLaravelBackup\FilamentSpatieLaravelBackupPlugin;
 use Althinect\FilamentSpatieRolesPermissions\FilamentSpatieRolesPermissionsPlugin;
+use Saade\FilamentFullCalendar\FilamentFullCalendarPlugin;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use App\Http\Middleware\ConditionalInitializeTenancyByDomain;
@@ -43,12 +44,16 @@ class TenantPanelProvider extends PanelProvider
                 Widgets\AccountWidget::class,
                 Widgets\FilamentInfoWidget::class,
                 \App\Filament\Tenant\Widgets\LowStockWidget::class,
+                \App\Filament\Tenant\Widgets\EventCalendarWidget::class,
             ])
             ->plugins([
                 FilamentSpatieLaravelBackupPlugin::make()
-                    ->usingQueue('backups') // Optional: use queue for backups
-                    ->usingPolingInterval('30s'), // Optional: polling interval
+                    ->usingQueue('backups')
+                    ->usingPolingInterval('30s'),
                 FilamentSpatieRolesPermissionsPlugin::make(),
+                FilamentFullCalendarPlugin::make()
+                    ->selectable()
+                    ->editable(),
             ])
             ->databaseNotifications()
             ->middleware($this->registerMiddlewares())
@@ -57,12 +62,19 @@ class TenantPanelProvider extends PanelProvider
                 Authenticate::class,
             ])
             ->navigationGroups([
+                'Customer Management',
                 'Store',
+                'Order',
+                'Sales Report',
+                'Events & Reservations',
                 'Products',
                 'Inventory',
                 'Table / Rooms',
                 'Finance',
                 'Payroll',
+                'Roles and Permissions',
+                'Settings',
+                'Management',
                 'System',
             ]);
     }

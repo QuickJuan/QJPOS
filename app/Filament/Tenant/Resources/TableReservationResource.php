@@ -164,7 +164,7 @@ class TableReservationResource extends Resource
 
     public static function getNavigationGroup(): ?string
     {
-        return 'Table / Rooms';
+        return 'Events & Reservations';
     }
 
     public static function getNavigationSort(): ?int

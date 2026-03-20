@@ -17,9 +17,9 @@ use App\Filament\Tenant\Resources\TableRoomLocationResource\Pages;
 class TableRoomLocationResource extends Resource
 {
     protected static ?string $model = TableRoomLocation::class;
-    protected static ?string $navigationGroup = 'Table / Rooms';
+    protected static ?string $navigationGroup = 'Store';
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-map-pin';
 
     public static function form(Form $form): Form
     {

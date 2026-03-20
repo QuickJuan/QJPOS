@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 class CartItemResource extends Resource
 {
     protected static ?string $model                 = CartItem::class;
-    protected static ?string $navigationGroup       = "Cart";
+    protected static ?string $navigationGroup       = 'Order';
     protected static bool $shouldRegisterNavigation = false;
     protected static ?string $navigationIcon        = 'heroicon-o-rectangle-stack';
 

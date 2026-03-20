@@ -16,7 +16,9 @@ class PreparationLocationResource extends Resource
 {
     protected static ?string $model = PreparationLocation::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon  = 'heroicon-o-map-pin';
+    protected static ?string $navigationGroup = 'Products';
+    protected static ?int    $navigationSort  = 20;
 
     public static function form(Form $form): Form
     {

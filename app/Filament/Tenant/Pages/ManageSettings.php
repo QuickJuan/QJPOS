@@ -13,7 +13,9 @@ use League\Flysystem\UnableToCheckFileExistence;
 
 class ManageSettings extends SettingsPage
 {
-    protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
+    protected static ?string $navigationIcon  = 'heroicon-o-cog-6-tooth';
+    protected static ?string $navigationGroup = 'Management';
+    protected static ?int    $navigationSort  = 1;
 
     protected static string $settings = GeneralSettings::class;
 

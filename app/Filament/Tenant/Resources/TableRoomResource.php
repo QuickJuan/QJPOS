@@ -207,7 +207,7 @@ class TableRoomResource extends Resource
 
     public static function getNavigationGroup(): ?string
     {
-        return 'Table / Rooms';
+        return 'Store';
     }
 
     public static function getNavigationSort(): ?int

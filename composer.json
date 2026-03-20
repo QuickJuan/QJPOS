@@ -21,6 +21,7 @@
         "laravel/tinker": "^2.10.1",
         "malzariey/filament-daterangepicker-filter": "^3.4",
         "pxlrbt/filament-excel": "^2.5",
+        "saade/filament-fullcalendar": "^3.2",
         "shuvroroy/filament-spatie-laravel-backup": "^2.2",
         "spatie/laravel-backup": "^9.3",
         "spomky-labs/otphp": "^11.0",
