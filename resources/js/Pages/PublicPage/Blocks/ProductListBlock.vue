@@ -363,9 +363,14 @@
             <div v-if="showLoadMore" class="flex justify-center pt-4">
                 <button
                     @click="visibleCount += pageSize"
-                    class="rounded-full border border-white/15 bg-white/5 px-8 py-2.5 text-sm font-semibold text-white/80 transition hover:border-white/30 hover:bg-white/10"
+                    class="rounded-full border px-8 py-2.5 text-sm font-semibold transition"
+                    :style="{
+                        borderColor: tagActiveBg,
+                        color: tagActiveBg,
+                        backgroundColor: tagActiveBg + '18',
+                    }"
                 >
-                    Load more
+                    Load more ({{ filteredAll.length - visibleCount }} remaining)
                 </button>
             </div>
         </div>
@@ -373,7 +378,7 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive, defineComponent, h } from "vue";
+import { ref, computed, reactive, watch, defineComponent, h } from "vue";
 
 // ─── Re-usable product card ────────────────────────────────────────────────
 const ProductCard = defineComponent({
@@ -551,6 +556,11 @@ const search = ref("");
 const selectedCategory = ref("");
 const selectedGroup = ref("");
 const visibleCount = ref(pageSize.value);
+
+// Reset visible count when filters or search change
+watch([search, selectedCategory, selectedGroup], () => {
+    visibleCount.value = pageSize.value;
+});
 
 // Sidebar interaction state
 const hoveredCat = ref("");

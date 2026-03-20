@@ -89,7 +89,21 @@ class PageResource extends Resource
                             ->placeholder('page-slug')
                             ->helperText('URL-friendly identifier')
                             ->hidden(fn ($get) => $get('page_type') === PageType::LANDING_PAGE->value)
-                            ->live(),
+                            ->live()
+                            ->afterStateUpdated(function ($state, $set, $get) {
+                                // If the slug is cleared, auto-promote this page to a Landing Page
+                                // so it gets served at the root URL "/" instead of becoming unreachable
+                                if (blank($state) && $get('page_type') !== PageType::LANDING_PAGE->value) {
+                                    $set('page_type', PageType::LANDING_PAGE->value);
+                                    $set('url_prefix', null);
+
+                                    \Filament\Notifications\Notification::make()
+                                        ->info()
+                                        ->title('Switched to Landing Page')
+                                        ->body('Slug cleared — page type automatically set to Landing Page. This page will be served at the root URL (/).')
+                                        ->send();
+                                }
+                            }),
 
                         TextInput::make('url_prefix')
                             ->label('URL Prefix')
@@ -200,6 +214,126 @@ class PageResource extends Resource
                             ->placeholder('https://example.com/video.mp4')
                             ->helperText('Optional featured video URL'),
                     ])->columns(2),
+
+                Section::make('SEO Settings')
+                    ->description('Search engine optimisation metadata for this page')
+                    ->relationship('seo')
+                    ->schema([
+                        Section::make('Basic SEO')
+                            ->schema([
+                                TextInput::make('meta_title')
+                                    ->label('SEO Title')
+                                    ->maxLength(60)
+                                    ->placeholder('Enter SEO title (optimal: 50-60 characters)')
+                                    ->helperText('If empty, the page title will be used'),
+
+                                Textarea::make('meta_description')
+                                    ->label('Meta Description')
+                                    ->maxLength(160)
+                                    ->placeholder('Enter meta description (optimal: 150-160 characters)')
+                                    ->helperText('Brief description for search engines and social media')
+                                    ->rows(3),
+
+                                Textarea::make('meta_keywords')
+                                    ->label('Keywords')
+                                    ->placeholder('keyword1, keyword2, keyword3')
+                                    ->helperText('Comma-separated keywords')
+                                    ->rows(2),
+
+                                TextInput::make('canonical_url')
+                                    ->label('Canonical URL')
+                                    ->url()
+                                    ->placeholder('https://example.com/page')
+                                    ->helperText('Leave empty to auto-generate'),
+
+                                Select::make('meta_robots')
+                                    ->label('Meta Robots')
+                                    ->options([
+                                        'index, follow'     => 'Index, Follow (default)',
+                                        'noindex, follow'   => 'No Index, Follow',
+                                        'index, nofollow'   => 'Index, No Follow',
+                                        'noindex, nofollow' => 'No Index, No Follow',
+                                    ])
+                                    ->default('index, follow'),
+                            ])->columns(2),
+
+                        Section::make('Open Graph / Social Sharing')
+                            ->description('Controls how this page appears when shared on Facebook, LinkedIn, etc.')
+                            ->schema([
+                                TextInput::make('og_title')
+                                    ->label('OG Title')
+                                    ->maxLength(60)
+                                    ->placeholder('Leave empty to use SEO title'),
+
+                                Textarea::make('og_description')
+                                    ->label('OG Description')
+                                    ->maxLength(160)
+                                    ->placeholder('Leave empty to use meta description')
+                                    ->rows(3),
+
+                                FileUpload::make('og_image')
+                                    ->label('OG Image')
+                                    ->image()
+                                    ->disk('public')
+                                    ->directory('pages/og-images')
+                                    ->visibility('public')
+                                    ->helperText('Recommended: 1200×630px'),
+                            ])->columns(2)->collapsed(),
+
+                        Section::make('Twitter / X Card')
+                            ->description('Controls how this page appears when shared on Twitter / X.')
+                            ->schema([
+                                Select::make('twitter_card')
+                                    ->label('Card Type')
+                                    ->options([
+                                        'summary'             => 'Summary',
+                                        'summary_large_image' => 'Summary Large Image',
+                                    ])
+                                    ->default('summary_large_image'),
+
+                                TextInput::make('twitter_title')
+                                    ->label('Twitter Title')
+                                    ->maxLength(60)
+                                    ->placeholder('Leave empty to use OG title'),
+
+                                Textarea::make('twitter_description')
+                                    ->label('Twitter Description')
+                                    ->maxLength(160)
+                                    ->placeholder('Leave empty to use OG description')
+                                    ->rows(3),
+
+                                FileUpload::make('twitter_image')
+                                    ->label('Twitter Image')
+                                    ->image()
+                                    ->disk('public')
+                                    ->directory('pages/twitter-images')
+                                    ->visibility('public')
+                                    ->helperText('Recommended: 1200×675px'),
+                            ])->columns(2)->collapsed(),
+
+                        Section::make('Structured Data (JSON-LD)')
+                            ->description('Add structured data for rich search results')
+                            ->schema([
+                                Select::make('schema_type')
+                                    ->label('Schema Type')
+                                    ->options([
+                                        'Article'       => 'Article',
+                                        'BlogPosting'   => 'Blog Posting',
+                                        'WebPage'       => 'Web Page',
+                                        'Product'       => 'Product',
+                                        'LocalBusiness' => 'Local Business',
+                                        'Organization'  => 'Organization',
+                                        'FAQPage'       => 'FAQ Page',
+                                    ])
+                                    ->placeholder('Select schema type'),
+
+                                Textarea::make('schema_json')
+                                    ->label('Custom JSON-LD')
+                                    ->placeholder('{"@context": "https://schema.org", "@type": "Article", ...}')
+                                    ->rows(4)
+                                    ->helperText('Advanced: custom JSON-LD markup'),
+                            ])->columns(2)->collapsed(),
+                    ])->collapsible(),
             ]);
     }
 
@@ -387,7 +521,6 @@ class PageResource extends Resource
     {
         return [
             BlocksRelationManager::class,
-            PageResource\RelationManagers\SeoRelationManager::class,
         ];
     }
 

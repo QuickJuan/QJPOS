@@ -5,23 +5,32 @@
         </h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div
-                v-for="review in content.reviews"
-                :key="review.customer_name"
+                v-for="(review, index) in content.reviews"
+                :key="index"
                 class="border rounded-lg p-6"
             >
-                <div class="flex items-center mb-4">
+                <div class="flex items-center mb-4 gap-3">
+                    <img
+                        v-if="review.image"
+                        :src="`/storage/${review.image}`"
+                        :alt="review.author"
+                        class="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                    />
                     <div class="flex-1">
                         <h4 class="font-semibold text-gray-900">
-                            {{ review.customer_name }}
+                            {{ review.author }}
                         </h4>
-                        <div class="flex text-yellow-400 text-sm">
+                        <p v-if="review.title" class="text-sm text-gray-500">
+                            {{ review.title }}
+                        </p>
+                        <div class="flex text-yellow-400 text-sm mt-1">
                             <span v-for="n in 5" :key="n">{{
-                                n <= review.rating ? "★" : "☆"
+                                n <= Number(review.rating) ? "★" : "☆"
                             }}</span>
                         </div>
                     </div>
                 </div>
-                <p class="text-gray-600">{{ review.review_text }}</p>
+                <p class="text-gray-600">{{ review.text }}</p>
             </div>
         </div>
     </div>

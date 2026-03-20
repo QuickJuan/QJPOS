@@ -187,6 +187,9 @@ const FaqBlock = defineAsyncComponent(() => import("./Blocks/FaqBlock.vue"));
 const StatsBlock = defineAsyncComponent(
     () => import("./Blocks/StatsBlock.vue"),
 );
+const FeaturesBlock = defineAsyncComponent(
+    () => import("./Blocks/FeaturesBlock.vue"),
+);
 const NewsletterBlock = defineAsyncComponent(
     () => import("./Blocks/NewsletterBlock.vue"),
 );
@@ -248,6 +251,7 @@ const blockComponents = {
     cta: CtaBlock,
     faq: FaqBlock,
     stats: StatsBlock,
+    features: FeaturesBlock,
     newsletter: NewsletterBlock,
     "contact-form": ContactFormBlock,
     contact_form: ContactFormBlock,

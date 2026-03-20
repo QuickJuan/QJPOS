@@ -47,6 +47,7 @@ class User extends Authenticatable
         'otp_secret',
         'otp_enabled',
         'otp_enabled_at',
+        'user_type',
     ];
 
     /**
@@ -108,6 +109,16 @@ class User extends Authenticatable
     public function canLoginTo(Branch $branch): bool
     {
         return $this->branches()->where('branches.id', $branch->id)->exists();
+    }
+
+    public function isCustomer(): bool
+    {
+        return $this->user_type === 'customer';
+    }
+
+    public function isStaff(): bool
+    {
+        return $this->user_type === 'staff' || $this->user_type === null;
     }
 
     /**

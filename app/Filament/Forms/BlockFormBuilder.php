@@ -30,6 +30,7 @@ class BlockFormBuilder
             'cta' => self::getCtaSchema(),
             'faq' => self::getFaqSchema(),
             'stats' => self::getStatsSchema(),
+            'features' => self::getFeaturesSchema(),
             'newsletter' => self::getNewsletterSchema(),
             'contact-form' => self::getContactFormSchema(),
             'product-list' => self::getProductListSchema(),
@@ -491,6 +492,58 @@ class BlockFormBuilder
                         ])
                         ->addActionLabel('Add Statistic')
                         ->minItems(1),
+                ])->columns(2),
+        ];
+    }
+
+    /**
+     * Features Block: Feature grid with icons, title, and description
+     */
+    private static function getFeaturesSchema(): array
+    {
+        return [
+            Section::make('Features Content')
+                ->schema([
+                    TextInput::make('content.title')
+                        ->label('Section Heading')
+                        ->placeholder('Why choose us?'),
+
+                    Textarea::make('content.subtitle')
+                        ->label('Subheading')
+                        ->rows(2)
+                        ->placeholder('A short description below the heading'),
+
+                    Select::make('settings.columns')
+                        ->label('Columns per row')
+                        ->options(['2' => '2 Columns', '3' => '3 Columns', '4' => '4 Columns'])
+                        ->default('3'),
+
+                    Repeater::make('content.features')
+                        ->label('Features')
+                        ->schema([
+                            TextInput::make('icon')
+                                ->label('Icon (emoji)')
+                                ->placeholder('e.g. 🍕 or 💰'),
+
+                            TextInput::make('title')
+                                ->label('Title')
+                                ->required()
+                                ->placeholder('e.g. Fast Delivery'),
+
+                            Textarea::make('description')
+                                ->label('Description')
+                                ->rows(2)
+                                ->placeholder('Short description of this feature'),
+
+                            TextInput::make('icon_color')
+                                ->label('Icon Background Color')
+                                ->placeholder('e.g. teal, orange, blue')
+                                ->default('orange'),
+                        ])
+                        ->addActionLabel('Add Feature')
+                        ->minItems(1)
+                        ->maxItems(12)
+                        ->columnSpanFull(),
                 ])->columns(2),
         ];
     }
