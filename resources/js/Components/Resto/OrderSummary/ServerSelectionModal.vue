@@ -76,7 +76,6 @@ import { usePage } from "@inertiajs/vue3";
 interface Server {
     id: number;
     name: string;
-    employee_code?: string;
 }
 
 const props = defineProps<{
@@ -112,7 +111,7 @@ watch(
             selectedServerId.value = null;
             servingNumber.value = null;
         }
-    }
+    },
 );
 
 const handleConfirm = () => {

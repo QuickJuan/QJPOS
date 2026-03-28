@@ -29,6 +29,8 @@ use App\Http\Controllers\TableManagementController;
 use App\Http\Controllers\TenantLandingController;
 use App\Http\Controllers\PublicPageController;
 use App\Http\Controllers\GuestOrderController;
+use App\Http\Controllers\CouponCodeController;
+use App\Http\Controllers\OnlineOrderController;
 use App\Http\Controllers\CareerController;
 use App\Http\Controllers\ContactInquiryController;
 use App\Http\Controllers\Waiter\AuthController as WaiterAuthController;
@@ -171,6 +173,7 @@ if (!isCentralDomain()) {
         Route::get('/checkout', [GuestOrderController::class, 'checkout'])->name('checkout');
         Route::post('/checkout', [GuestOrderController::class, 'store'])->name('checkout.store');
         Route::get('/order/{reference}', [GuestOrderController::class, 'confirmation'])->name('order.confirmation');
+        Route::post('/coupon/validate', [CouponCodeController::class, 'validateGuest'])->name('coupon.validate');
     });
 
     // Public careers (no auth required)
@@ -399,6 +402,14 @@ if (!isCentralDomain()) {
                                 ->group(function () {
                                     Route::get('/list', 'index')->name('index');
                                     Route::put('/item/{itemId}/toggle-served', 'toggleServed')->name('toggle-served');
+                                });
+
+                            Route::controller(OnlineOrderController::class)
+                                ->prefix('/online-orders')
+                                ->as('online-orders.')
+                                ->group(function () {
+                                    Route::get('/', 'index')->name('index');
+                                    Route::post('/{cart}/process', 'process')->name('process');
                                 });
 
                             // Category routes (wildcard routes should come last)

@@ -106,6 +106,8 @@ class AuthController
 
         Auth::login($user);
 
+        $request->session()->put('active_branch', $branch->toArray());
+
         RateLimiter::clear($this->throttleKey($request));
 
         $request->session()->regenerate();

@@ -36,6 +36,8 @@
                     v-for="product in displayProducts"
                     :key="product.id ?? product.name"
                     :product="product"
+                    :show-add-to-cart="showAddToCart"
+                    @add="addToCart"
                 />
             </div>
 
@@ -247,11 +249,13 @@
 
 <script setup>
 import { computed, ref, onMounted, onBeforeUnmount } from "vue";
+import { useGuestCartStore } from "@/stores/guestCartStore";
 
 // Re-usable card for grid layout
 const ProductCard = {
-    props: { product: Object },
-    setup(props) {
+    props: { product: Object, showAddToCart: Boolean },
+    emits: ["add"],
+    setup(props, { emit }) {
         const resolveImage = (p) => {
             const src = p.image_url ?? p.image ?? null;
             if (!src) return null;
@@ -267,7 +271,7 @@ const ProductCard = {
             const num = parseFloat(price ?? 0);
             return isNaN(num) ? "0.00" : num.toFixed(2);
         };
-        return { resolveImage, formatPrice };
+        return { resolveImage, formatPrice, emit };
     },
     template: `
         <div class="group relative flex flex-col overflow-hidden rounded-2xl bg-slate-900 border border-white/5 hover:border-white/15 transition-all duration-300">
@@ -281,7 +285,17 @@ const ProductCard = {
             <div class="flex flex-1 flex-col gap-2 p-5">
                 <h3 class="text-sm font-black uppercase tracking-[0.15em] text-white">{{ product.name }}</h3>
                 <div v-if="product.description" class="line-clamp-2 text-xs text-slate-400" v-html="product.description" />
-                <span class="mt-auto pt-3 text-lg font-bold text-primary-400">₱{{ formatPrice(product.price) }}</span>
+                <div class="mt-auto flex items-center justify-between gap-3 pt-3">
+                    <span class="text-lg font-bold text-primary-400">₱{{ formatPrice(product.price) }}</span>
+                    <button
+                        v-if="showAddToCart"
+                        type="button"
+                        class="rounded-full border border-primary-500/50 bg-primary-500/10 px-3 py-1.5 text-xs font-semibold text-primary-300 transition hover:bg-primary-500/20"
+                        @click="emit('add', product)"
+                    >
+                        + Add
+                    </button>
+                </div>
             </div>
         </div>
     `,
@@ -295,6 +309,8 @@ const props = defineProps({
 
 const bgColor = computed(() => props.settings?.bg_color || "#020617");
 const fontColor = computed(() => props.settings?.text_color || "#ffffff");
+const showAddToCart = computed(() => props.settings?.show_add_to_cart !== false);
+const guestCartStore = useGuestCartStore();
 
 const displayProducts = computed(() =>
     props.products !== null ? props.products : (props.content?.products ?? []),
@@ -338,5 +354,15 @@ const resolveImage = (product) => {
 const formatPrice = (price) => {
     const num = parseFloat(price ?? 0);
     return isNaN(num) ? "0.00" : num.toFixed(2);
+};
+
+const addToCart = (product) => {
+    guestCartStore.addItem({
+        product_id: product.id,
+        name: product.name,
+        price: Number(product.price ?? 0),
+        image_url: product.image_url ?? null,
+        category: product.category ?? null,
+    });
 };
 </script>

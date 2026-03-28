@@ -74,7 +74,6 @@ class PageSEOResource extends Resource
 
                         Forms\Components\TextInput::make('canonical_url')
                             ->label('Canonical URL')
-                            ->url()
                             ->placeholder('https://example.com/page')
                             ->helperText('Specify the preferred URL if this page has duplicates (leave empty to auto-generate)'),
 
@@ -155,21 +154,22 @@ class PageSEOResource extends Resource
                         Forms\Components\Select::make('schema_type')
                             ->label('Schema Type')
                             ->options([
-                                'Article' => 'Article',
-                                'BlogPosting' => 'Blog Posting',
-                                'WebPage' => 'Web Page',
-                                'Product' => 'Product',
-                                'LocalBusiness' => 'Local Business',
-                                'Organization' => 'Organization',
-                                'FAQPage' => 'FAQ Page',
+                                'Article'             => 'Article',
+                                'BlogPosting'         => 'Blog Posting',
+                                'WebPage'             => 'Web Page',
+                                'Product'             => 'Product',
+                                'SoftwareApplication' => 'Software Application',
+                                'LocalBusiness'       => 'Local Business',
+                                'Organization'        => 'Organization',
+                                'FAQPage'             => 'FAQ Page',
                             ])
                             ->placeholder('Select schema type')
                             ->helperText('Choose the appropriate schema type for this page'),
 
                         Forms\Components\Textarea::make('schema_json')
-                            ->label('Custom JSON-LD Schema')
-                            ->placeholder('{"@context": "https://schema.org", "@type": "Article", ...}')
-                            ->helperText('Advanced: Add custom JSON-LD structured data')
+                            ->label('Extra Properties (JSON)')
+                            ->placeholder('{"name": "My App", "applicationCategory": "BusinessApplication"}')
+                            ->helperText('Optional: additional schema.org properties as a valid JSON object. @context and @type are added automatically from the Schema Type above.')
                             ->rows(5)
                             ->columnSpanFull(),
                     ])->columns(1)->collapsible(),

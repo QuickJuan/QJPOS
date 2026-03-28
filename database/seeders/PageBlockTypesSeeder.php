@@ -329,6 +329,23 @@ class PageBlockTypesSeeder extends Seeder
                 ],
                 'settings_schema' => [],
             ],
+            [
+                'name' => 'Blog',
+                'slug' => 'articles',
+                'icon' => 'document-text',
+                'description' => 'Blog post cards auto-loaded from published Blog Post pages.',
+                'category' => 'content',
+                'component_name' => 'BlogBlock',
+                'schema_template' => [
+                    'content' => [
+                        'title' => 'Latest Blog Posts',
+                        'subtitle' => 'Stay up to date with our latest posts.',
+                    ],
+                ],
+                'settings_schema' => [
+                    'limit' => '',
+                ],
+            ],
         ];
 
         foreach ($blockTypes as $blockType) {

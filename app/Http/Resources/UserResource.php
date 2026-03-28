@@ -18,7 +18,6 @@ class UserResource extends JsonResource
             'name'            => $this->name,
             'email'           => $this->email,
             'password'        => $this->password,
-            'employee_code'   => $this->employee_code,
             'branches'        => BranchResource::collection($this->whenLoaded('branches')),
             'attendances'     => $this->whenLoaded('attendances'),
             'inventoryLogs'   => $this->whenLoaded('inventoryLogs'),

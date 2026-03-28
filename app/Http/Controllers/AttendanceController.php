@@ -3,14 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Attendance;
+use App\Models\Branch;
+use App\Models\Employee;
 use App\Models\User;
 use App\Rules\UserBelongsToBranch;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Carbon\Carbon;
-use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class AttendanceController extends Controller
 {
@@ -19,7 +19,7 @@ class AttendanceController extends Controller
      */
     public function index()
     {
-        $activeBranch = session('active_branch');
+        $activeBranch = $this->resolveActiveBranch();
 
         return Inertia::render('Attendance/Index', [
             'activeBranch' => $activeBranch,
@@ -31,28 +31,28 @@ class AttendanceController extends Controller
      */
     public function toggle(Request $request)
     {
-        $activeBranch = session('active_branch');
-        
-        // Check if user has a branch selected
-        if (!$activeBranch) {
-            return back()->withErrors([
-                'message' => 'Please select a branch before clocking in/out.'
-            ]);
+        $activeBranch = $this->resolveActiveBranch($request);
+
+        if (! $activeBranch) {
+            return $this->attendanceErrorResponse(
+                $request,
+                'Please select a branch before clocking in/out.',
+                400
+            );
         }
 
         $request->validate([
-            'employee_code' => [
-                'required', 
+            'employee_no' => [
+                'required',
                 'string',
                 new UserBelongsToBranch($activeBranch['id'])
             ],
-            'photo' => 'required|string', // base64 encoded image
+            'photo' => 'required|string',
         ]);
-        
-        // Find user by employee code (validation already confirmed user exists and belongs to branch)
-        $user = User::where('employee_code', $request->employee_code)->first();
 
-        // Check if user is currently clocked in at this branch
+        $employee = Employee::where('employee_no', $request->employee_no)->with('user')->first();
+        $user = $employee->user;
+
         $currentAttendance = Attendance::where('user_id', $user->id)
             ->where('branch_id', $activeBranch['id'])
             ->whereNull('actual_timeout')
@@ -61,44 +61,41 @@ class AttendanceController extends Controller
 
         try {
             if ($currentAttendance) {
-                // Clock out - check if 5 minutes have passed since clock in
                 $clockInTime = Carbon::parse($currentAttendance->actual_timein);
                 $now = Carbon::now();
                 $minutesPassed = $clockInTime->diffInMinutes($now);
-                
+
                 if ($minutesPassed < 5) {
                     $remainingMinutes = 5 - $minutesPassed;
-                    
-                    return back()->withErrors([
-                        'message' => "You must wait at least 5 minutes before clocking out. Please wait {$remainingMinutes} more minute(s)."
-                    ]);
+
+                    return $this->attendanceErrorResponse(
+                        $request,
+                        "You must wait at least 5 minutes before clocking out. Please wait {$remainingMinutes} more minute(s).",
+                        422
+                    );
                 }
-                
-                // Clock out - update actual_timeout
+
                 $currentAttendance->update([
                     'actual_timeout' => Carbon::now(),
                 ]);
 
-                // Save clock out photo
                 try {
                     $this->saveAttendancePhoto($request->photo, $currentAttendance, 'clock_out');
                 } catch (\Exception $photoError) {
                     \Log::error('Error saving clock out photo: ' . $photoError->getMessage());
-                    // Continue without photo if photo saving fails
                 }
 
-                return back()->with([
+                return $this->attendanceSuccessResponse($request, [
                     'success' => true,
                     'action' => 'clock_out',
                     'message' => "Successfully clocked out {$user->name}.",
                     'attendance' => $currentAttendance->fresh(),
                     'employee' => [
                         'name' => $user->name,
-                        'employee_code' => $user->employee_code,
+                        'employee_no' => $employee->employee_no,
                     ],
                 ]);
             } else {
-                // Clock in - create new attendance record
                 $attendance = Attendance::create([
                     'user_id' => $user->id,
                     'branch_id' => $activeBranch['id'],
@@ -106,30 +103,31 @@ class AttendanceController extends Controller
                     'actual_timein' => Carbon::now(),
                 ]);
 
-                // Save clock in photo
                 try {
                     $this->saveAttendancePhoto($request->photo, $attendance, 'clock_in');
                 } catch (\Exception $photoError) {
                     \Log::error('Error saving clock in photo: ' . $photoError->getMessage());
-                    // Continue without photo if photo saving fails
                 }
 
-                return back()->with([
+                return $this->attendanceSuccessResponse($request, [
                     'success' => true,
                     'action' => 'clock_in',
                     'message' => "Successfully clocked in {$user->name}.",
                     'attendance' => $attendance,
                     'employee' => [
                         'name' => $user->name,
-                        'employee_code' => $user->employee_code,
+                        'employee_no' => $employee->employee_no,
                     ],
                 ]);
             }
         } catch (\Exception $e) {
             \Log::error('Attendance toggle error: ' . $e->getMessage() . ' | Trace: ' . $e->getTraceAsString());
-            return back()->withErrors([
-                'message' => 'An error occurred while processing attendance: ' . $e->getMessage()
-            ]);
+
+            return $this->attendanceErrorResponse(
+                $request,
+                'An error occurred while processing attendance: ' . $e->getMessage(),
+                500
+            );
         }
     }
 
@@ -178,7 +176,7 @@ class AttendanceController extends Controller
             if (isset($tempFile) && file_exists($tempFile)) {
                 unlink($tempFile);
             }
-            
+
             \Log::error('Photo saving error: ' . $e->getMessage());
             throw $e;
         }
@@ -190,7 +188,7 @@ class AttendanceController extends Controller
     public function history()
     {
         $user = Auth::user();
-        
+
         $attendances = Attendance::where('user_id', $user->id)
             ->orderBy('attendance_date', 'desc')
             ->orderBy('actual_timein', 'desc')
@@ -207,10 +205,9 @@ class AttendanceController extends Controller
      */
     public function checkStatus(Request $request)
     {
-        $activeBranch = session('active_branch');
-        
-        // Check if user has a branch selected
-        if (!$activeBranch) {
+        $activeBranch = $this->resolveActiveBranch($request);
+
+        if (! $activeBranch) {
             return response()->json([
                 'success' => false,
                 'message' => 'Please select a branch before checking status.'
@@ -218,17 +215,16 @@ class AttendanceController extends Controller
         }
 
         $request->validate([
-            'employee_code' => [
+            'employee_no' => [
                 'required',
                 'string',
                 new UserBelongsToBranch($activeBranch['id'])
             ],
         ]);
 
-        // Find user by employee code (validation already confirmed user exists and belongs to branch)
-        $user = User::where('employee_code', $request->employee_code)->first();
+        $employee = Employee::where('employee_no', $request->employee_no)->with('user')->first();
+        $user = $employee->user;
 
-        // Check if user is currently clocked in at this branch
         $currentAttendance = Attendance::where('user_id', $user->id)
             ->where('branch_id', $activeBranch['id'])
             ->whereNull('actual_timeout')
@@ -237,17 +233,17 @@ class AttendanceController extends Controller
 
         $canClockOut = true;
         $timeUntilClockOut = null;
-        
+
         if ($currentAttendance) {
             $clockInTime = Carbon::parse($currentAttendance->actual_timein);
             $now = Carbon::now();
             $minutesPassed = $clockInTime->diffInMinutes($now);
-            
+
             if ($minutesPassed < 5) {
                 $canClockOut = false;
                 $remainingMinutes = 5 - $minutesPassed;
                 $totalSecondsRemaining = (5 * 60) - $clockInTime->diffInSeconds($now);
-                
+
                 $timeUntilClockOut = [
                     'minutes' => $remainingMinutes,
                     'seconds' => $totalSecondsRemaining % 60,
@@ -260,7 +256,7 @@ class AttendanceController extends Controller
             'success' => true,
             'employee' => [
                 'name' => $user->name,
-                'employee_code' => $user->employee_code,
+                'employee_no' => $employee->employee_no,
             ],
             'isClockedIn' => $currentAttendance ? true : false,
             'currentAttendance' => $currentAttendance,
@@ -274,9 +270,9 @@ class AttendanceController extends Controller
      */
     public function today()
     {
-        $activeBranch = session('active_branch');
-        
-        if (!$activeBranch) {
+        $activeBranch = $this->resolveActiveBranch(request());
+
+        if (! $activeBranch) {
             return response()->json([
                 'success' => false,
                 'message' => 'No active branch selected'
@@ -284,12 +280,10 @@ class AttendanceController extends Controller
         }
 
         $today = Carbon::today();
-        
-        $attendance = Attendance::with('user')
+
+        $attendance = Attendance::with(['user', 'user.employee'])
             ->whereDate('attendance_date', $today)
-            ->whereHas('user', function ($query) use ($activeBranch) {
-                $query->where('branch_id', $activeBranch['id']);
-            })
+            ->where('branch_id', $activeBranch['id'])
             ->orderBy('actual_timein', 'desc')
             ->get();
 
@@ -297,5 +291,55 @@ class AttendanceController extends Controller
             'success' => true,
             'attendance' => $attendance
         ]);
+    }
+
+    private function attendanceSuccessResponse(Request $request, array $payload)
+    {
+        if ($request->expectsJson()) {
+            return response()->json($payload);
+        }
+
+        return back()->with($payload);
+    }
+
+    private function attendanceErrorResponse(Request $request, string $message, int $status = 422)
+    {
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => false,
+                'message' => $message,
+            ], $status);
+        }
+
+        return back()->withErrors([
+            'message' => $message,
+        ]);
+    }
+
+    private function resolveActiveBranch(?Request $request = null): ?array
+    {
+        $request ??= request();
+
+        $sessionBranch = $request->session()->get('active_branch');
+
+        if (is_array($sessionBranch) && ! empty($sessionBranch['id'])) {
+            return $sessionBranch;
+        }
+
+        $user = $request->user();
+
+        if (! $user?->branch_id) {
+            return null;
+        }
+
+        $branch = Branch::find($user->branch_id);
+
+        if (! $branch) {
+            return null;
+        }
+
+        $request->session()->put('active_branch', $branch->toArray());
+
+        return $branch->toArray();
     }
 }

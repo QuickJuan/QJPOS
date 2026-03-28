@@ -1421,7 +1421,8 @@ class CartService
                         ]);
 
                     $cart->update([
-                        'table_room_id' => $payload['table_id'],
+                        'table_room_id' => $payload['table_id'] ?? $cart->table_room_id,
+                        'processed_at'  => $cart->source === 'customer' ? now() : $cart->processed_at,
                     ]);
 
                     // Get parent cart items with their option children

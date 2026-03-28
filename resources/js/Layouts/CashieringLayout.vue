@@ -46,6 +46,23 @@
 
                     <button
                         v-if="!isOrderTaking"
+                        @click="handleOnlineOrdersClick"
+                        class="w-full flex items-center justify-between gap-3 px-4 py-3 text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors"
+                    >
+                        <div class="flex items-center gap-3">
+                            <ShoppingBagIcon class="w-5 h-5" />
+                            <span class="font-medium">Online Orders</span>
+                        </div>
+                        <span
+                            v-if="pendingOnlineOrdersCount > 0"
+                            class="inline-flex min-w-6 items-center justify-center rounded-full bg-amber-500 px-2 py-0.5 text-xs font-semibold text-white"
+                        >
+                            {{ pendingOnlineOrdersCount }}
+                        </span>
+                    </button>
+
+                    <button
+                        v-if="!isOrderTaking"
                         @click="handleCashOutClick"
                         class="w-full flex items-center gap-3 px-4 py-3 text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors"
                     >
@@ -128,6 +145,7 @@ import {
     DocumentTextIcon,
     ClipboardDocumentListIcon,
     BanknotesIcon,
+    ShoppingBagIcon,
 } from "@heroicons/vue/24/outline";
 
 const page = usePage();
@@ -172,6 +190,10 @@ const isOrderTaking = computed(() => {
     );
 });
 
+const pendingOnlineOrdersCount = computed(
+    () => (page.props as any)?.pending_online_orders_count ?? 0,
+);
+
 const checkCurrentRoute = (currentRoute: any) => {
     return route().current() == currentRoute;
 };
@@ -191,6 +213,11 @@ const handleTablesClick = () => {
 const handleReviewTransactionsClick = () => {
     showSidebar.value = false;
     router.visit(route("transactions.index"));
+};
+
+const handleOnlineOrdersClick = () => {
+    showSidebar.value = false;
+    router.visit(route("resto.online-orders.index"));
 };
 
 const handleCashOutClick = () => {

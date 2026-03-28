@@ -68,8 +68,17 @@ class PendingOrdersController extends Controller
             $tableName = 'N/A';
             if ($firstItem->cart && $firstItem->cart->tableRoom) {
                 $tableName = $firstItem->cart->tableRoom->name;
+            } elseif ($firstItem->cart && $firstItem->cart->reference_no) {
+                $customerName = data_get($firstItem->cart->meta_data, 'guest_checkout.name');
+                $tableName = trim(($firstItem->cart->reference_no ?? 'Online Order') . ($customerName ? ' - ' . $customerName : ''));
             } elseif ($firstItem->order && $firstItem->order->tableRoom) {
                 $tableName = $firstItem->order->tableRoom->name;
+            } elseif ($firstItem->order && $firstItem->order->meta_data) {
+                $referenceNo = data_get($firstItem->order->meta_data, 'guest_checkout.reference_no');
+                $customerName = data_get($firstItem->order->meta_data, 'guest_checkout.name');
+                if ($referenceNo) {
+                    $tableName = trim($referenceNo . ($customerName ? ' - ' . $customerName : ''));
+                }
             }
 
             // Convert placed_order_time to ISO8601 string, handling both Carbon and string types

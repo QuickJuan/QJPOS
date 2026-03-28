@@ -112,6 +112,8 @@ class AuthController extends Controller
 
         Auth::login($user);
 
+        $request->session()->put('active_branch', $branch->toArray());
+
         RateLimiter::clear($this->throttleKey($request));
 
         // Save session explicitly before redirecting

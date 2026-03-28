@@ -41,7 +41,6 @@ class User extends Authenticatable
         'email',
         'password',
         'pincode',
-        'employee_code',
         'branch_id',
         'user_interface',
         'otp_secret',

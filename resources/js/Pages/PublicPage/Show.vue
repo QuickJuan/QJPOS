@@ -75,29 +75,31 @@
             "
         />
 
-        <!-- JSON-LD Structured Data -->
-        <component
-            v-if="seo?.schema_json"
-            :is="'script'"
-            type="application/ld+json"
-            v-html="
-                typeof seo.schema_json === 'string'
-                    ? seo.schema_json
-                    : JSON.stringify(seo.schema_json)
-            "
-        ></component>
+        <!-- JSON-LD Structured Data injected via onMounted -->
     </Head>
 
     <PublicPageLayout
-        v-if="!page.is_landing_page"
         :navigation="navigation"
         :appName="appName"
         :companyLogo="companyLogo"
     >
-        <div class="min-h-screen bg-gray-50">
+        <div
+            class="min-h-screen"
+            :class="page.is_landing_page ? 'bg-transparent' : 'bg-gray-50'"
+        >
+            <!-- Visually-hidden H1 for SEO when hide_title is enabled -->
+            <h1 v-if="!page.is_landing_page && page.hide_title" class="sr-only">
+                {{ seo?.meta_title || page.title }}
+            </h1>
+
             <!-- Page Header - Only show if title exists and hide_title is false -->
             <div
-                v-if="page.title && !page.hide_title && featuredImageUrl"
+                v-if="
+                    !page.is_landing_page &&
+                    page.title &&
+                    !page.hide_title &&
+                    featuredImageUrl
+                "
                 class="relative h-64 bg-gray-900"
             >
                 <img
@@ -118,7 +120,9 @@
                 </div>
             </div>
             <div
-                v-else-if="page.title && !page.hide_title"
+                v-else-if="
+                    !page.is_landing_page && page.title && !page.hide_title
+                "
                 class="bg-white border-b"
             >
                 <div class="max-w-7xl mx-auto py-8 px-4">
@@ -132,7 +136,7 @@
             </div>
 
             <!-- Page Blocks -->
-            <div class="max-w-7xl mx-auto py-8">
+            <div :class="page.is_landing_page ? '' : 'max-w-7xl mx-auto py-8'">
                 <component
                     v-for="block in page.blocks"
                     :key="block.id"
@@ -141,31 +145,18 @@
                     :settings="block.settings"
                     :products="block.products ?? null"
                     :careers="block.careers ?? []"
+                    :articles="block.articles ?? []"
                 />
             </div>
         </div>
     </PublicPageLayout>
-
-    <TenantLandingLayout v-if="page.is_landing_page">
-        <!-- Landing page blocks render full-width without the gray wrapper -->
-        <component
-            v-for="block in page.blocks"
-            :key="block.id"
-            :is="getBlockComponent(block.type)"
-            :content="block.content"
-            :settings="block.settings"
-            :products="block.products ?? null"
-            :careers="block.careers ?? []"
-        />
-    </TenantLandingLayout>
 </template>
 
 <script setup>
-import { defineProps, defineAsyncComponent } from "vue";
+import { defineProps, defineAsyncComponent, onMounted, onUnmounted } from "vue";
 import { Head } from "@inertiajs/vue3";
 import { computed } from "vue";
 import PublicPageLayout from "@/Layouts/PublicPageLayout.vue";
-import TenantLandingLayout from "@/Layouts/TenantLandingLayout.vue";
 
 // Import block components
 const BannerBlock = defineAsyncComponent(
@@ -204,6 +195,7 @@ const ProductListBlock = defineAsyncComponent(
 const CareersBlock = defineAsyncComponent(
     () => import("./Blocks/CareersBlock.vue"),
 );
+const BlogBlock = defineAsyncComponent(() => import("./Blocks/BlogBlock.vue"));
 
 const props = defineProps({
     page: Object,
@@ -211,6 +203,26 @@ const props = defineProps({
     navigation: Array,
     appName: String,
     companyLogo: String,
+});
+
+// Inject JSON-LD directly into document.head via DOM API.
+// Cannot use v-html inside Inertia's <Head> because the Head component calls
+// setAttribute() for all VNode props, leaving the <script> element empty.
+let jsonLdScript = null;
+onMounted(() => {
+    if (props.seo?.schema_json) {
+        jsonLdScript = document.createElement("script");
+        jsonLdScript.type = "application/ld+json";
+        jsonLdScript.textContent =
+            typeof props.seo.schema_json === "string"
+                ? props.seo.schema_json
+                : JSON.stringify(props.seo.schema_json);
+        document.head.appendChild(jsonLdScript);
+    }
+});
+onUnmounted(() => {
+    jsonLdScript?.remove();
+    jsonLdScript = null;
 });
 
 const resolveAsset = (path) => {
@@ -266,6 +278,7 @@ const blockComponents = {
     product_list: ProductListBlock,
     productlist: ProductListBlock,
     careers: CareersBlock,
+    articles: BlogBlock,
 };
 
 const getBlockComponent = (type) => {

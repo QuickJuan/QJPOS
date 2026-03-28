@@ -382,6 +382,7 @@
 
 <script setup>
 import { ref, computed, reactive, watch, defineComponent, h } from "vue";
+import { useGuestCartStore } from "@/stores/guestCartStore";
 
 // ─── Re-usable product card ────────────────────────────────────────────────
 const ProductCard = defineComponent({
@@ -622,23 +623,18 @@ const showLoadMore = computed(
 );
 
 const cartLoading = reactive({});
+const guestCartStore = useGuestCartStore();
 
 const addToCart = async (product) => {
     cartLoading[product.id] = true;
     try {
-        await fetch("/cart/add", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRF-TOKEN":
-                    document
-                        .querySelector('meta[name="csrf-token"]')
-                        ?.getAttribute("content") ?? "",
-            },
-            body: JSON.stringify({ product_id: product.id, quantity: 1 }),
+        guestCartStore.addItem({
+            product_id: product.id,
+            name: product.name,
+            price: Number(product.price ?? 0),
+            image_url: product.image_url ?? null,
+            category: product.category ?? null,
         });
-    } catch {
-        // cart endpoint may not be wired yet
     } finally {
         cartLoading[product.id] = false;
     }

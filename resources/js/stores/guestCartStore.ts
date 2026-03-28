@@ -10,7 +10,19 @@ export interface GuestCartItem {
     quantity: number;
 }
 
+export interface GuestCoupon {
+    id: number;
+    code: string;
+    name: string;
+    description?: string | null;
+    type: string;
+    value: number;
+    discount_amount: number;
+    minimum_amount?: number | null;
+}
+
 const STORAGE_KEY = "guest_cart";
+const COUPON_STORAGE_KEY = "guest_cart_coupon";
 
 function loadFromStorage(): GuestCartItem[] {
     try {
@@ -25,8 +37,27 @@ function saveToStorage(items: GuestCartItem[]) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
 }
 
+function loadCouponFromStorage(): GuestCoupon | null {
+    try {
+        const raw = localStorage.getItem(COUPON_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch {
+        return null;
+    }
+}
+
+function saveCouponToStorage(coupon: GuestCoupon | null) {
+    if (!coupon) {
+        localStorage.removeItem(COUPON_STORAGE_KEY);
+        return;
+    }
+
+    localStorage.setItem(COUPON_STORAGE_KEY, JSON.stringify(coupon));
+}
+
 export const useGuestCartStore = defineStore("guestCart", () => {
     const items = ref<GuestCartItem[]>(loadFromStorage());
+    const coupon = ref<GuestCoupon | null>(loadCouponFromStorage());
 
     const totalItems = computed(() =>
         items.value.reduce((sum, i) => sum + i.quantity, 0),
@@ -34,6 +65,14 @@ export const useGuestCartStore = defineStore("guestCart", () => {
 
     const totalAmount = computed(() =>
         items.value.reduce((sum, i) => sum + i.price * i.quantity, 0),
+    );
+
+    const discountAmount = computed(() =>
+        Math.min(coupon.value?.discount_amount ?? 0, totalAmount.value),
+    );
+
+    const grandTotal = computed(() =>
+        Math.max(0, totalAmount.value - discountAmount.value),
     );
 
     function addItem(product: Omit<GuestCartItem, "quantity">) {
@@ -65,18 +104,33 @@ export const useGuestCartStore = defineStore("guestCart", () => {
         }
     }
 
+    function setCoupon(nextCoupon: GuestCoupon | null) {
+        coupon.value = nextCoupon;
+        saveCouponToStorage(nextCoupon);
+    }
+
+    function clearCoupon() {
+        setCoupon(null);
+    }
+
     function clearCart() {
         items.value = [];
         localStorage.removeItem(STORAGE_KEY);
+        clearCoupon();
     }
 
     return {
         items,
+        coupon,
         totalItems,
         totalAmount,
+        discountAmount,
+        grandTotal,
         addItem,
         removeItem,
         updateQuantity,
+        setCoupon,
+        clearCoupon,
         clearCart,
     };
 });

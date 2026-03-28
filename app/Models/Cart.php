@@ -15,6 +15,10 @@ class Cart extends Model
         'cashier_session_id',
         'table_room_id',
         'branch_id',
+        'source',
+        'reference_no',
+        'submitted_at',
+        'processed_at',
         'service_charge',
         'discount_id',
         'coupon_id',
@@ -32,6 +36,8 @@ class Cart extends Model
 
     protected $casts = [
         'meta_data' => 'array',
+        'submitted_at' => 'datetime',
+        'processed_at' => 'datetime',
     ];
 
     // SCOPES

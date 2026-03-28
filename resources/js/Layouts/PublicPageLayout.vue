@@ -73,6 +73,19 @@
                                 {{ item.label }}
                             </Link>
                         </template>
+
+                        <Link
+                            :href="route('guest.cart')"
+                            class="relative inline-flex items-center rounded-full border border-orange-200 bg-orange-50 px-4 py-2 text-sm font-semibold text-orange-700 transition hover:border-orange-300 hover:bg-orange-100"
+                        >
+                            Cart
+                            <span
+                                v-if="guestCartCount > 0"
+                                class="ml-2 inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-orange-600 px-1.5 text-xs font-bold text-white"
+                            >
+                                {{ guestCartCount }}
+                            </span>
+                        </Link>
                     </div>
 
                     <!-- Mobile Menu Button -->
@@ -130,6 +143,13 @@
                             {{ child.label }}
                         </Link>
                     </div>
+                    <Link
+                        :href="route('guest.cart')"
+                        class="mt-3 block rounded-xl bg-orange-50 px-4 py-3 font-semibold text-orange-700"
+                    >
+                        Cart
+                        <span v-if="guestCartCount > 0">({{ guestCartCount }})</span>
+                    </Link>
                 </div>
             </nav>
         </header>
@@ -185,8 +205,9 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { Link } from "@inertiajs/vue3";
+import { useGuestCartStore } from "@/stores/guestCartStore";
 
 defineProps({
     navigation: {
@@ -204,4 +225,6 @@ defineProps({
 });
 
 const mobileMenuOpen = ref(false);
+const guestCartStore = useGuestCartStore();
+const guestCartCount = computed(() => guestCartStore.totalItems);
 </script>

@@ -4,6 +4,8 @@ namespace App\Filament\Tenant\Resources;
 use App\Filament\Tenant\Resources\CartResource\Pages;
 use App\Filament\Tenant\Resources\CartResource\RelationManagers\CartItemsRelationManager;
 use App\Models\Cart;
+use App\Services\CartService;
+use Filament\Notifications\Notification;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -56,12 +58,29 @@ class CartResource extends Resource
                 TextColumn::make('cashier.name')
                     ->label('Cashier')
                     ->sortable()
-                    ->searchable(),
+                    ->searchable()
+                    ->placeholder('Online customer'),
+
+                TextColumn::make('source')
+                    ->badge()
+                    ->sortable()
+                    ->color(fn (string $state): string => $state === 'customer' ? 'warning' : 'gray'),
+
+                TextColumn::make('reference_no')
+                    ->label('Reference #')
+                    ->searchable()
+                    ->placeholder('N/A'),
+
+                TextColumn::make('meta_data.guest_checkout.name')
+                    ->label('Customer')
+                    ->searchable()
+                    ->placeholder('N/A'),
 
                 TextColumn::make('cashierSession.beginning_cash')
                     ->label('Cashier Session')
                     ->sortable()
-                    ->searchable(),
+                    ->searchable()
+                    ->placeholder('Not assigned'),
 
                 TextColumn::make('notes')
                     ->label('Notes')
@@ -78,6 +97,27 @@ class CartResource extends Resource
                 //
             ])
             ->actions([
+                Tables\Actions\Action::make('process_online_order')
+                    ->label('Send To Kitchen')
+                    ->icon('heroicon-o-paper-airplane')
+                    ->color('warning')
+                    ->visible(fn (Cart $record): bool => $record->source === 'customer' && blank($record->processed_at))
+                    ->requiresConfirmation()
+                    ->modalHeading('Process online order')
+                    ->modalDescription('This will mark the online order as processed and send its items to the kitchen screen.')
+                    ->action(function (Cart $record) {
+                        app(CartService::class)->placeOrder([
+                            'cart_id' => $record->id,
+                            'table_id' => null,
+                            'served_by' => auth()->id(),
+                            'serving_number' => null,
+                        ]);
+
+                        Notification::make()
+                            ->title('Online order sent to kitchen')
+                            ->success()
+                            ->send();
+                    }),
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),

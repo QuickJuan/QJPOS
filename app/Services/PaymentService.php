@@ -101,7 +101,7 @@ class PaymentService
     private function saveCartToOrder($cart, $payload, array $paymentContext, bool $isMixedPayment = false)
     {
         // Get cart items for processing
-        $serviceCharge = $cart->tableRoom->calculateServiceCharge($cart);
+        $serviceCharge = $cart->tableRoom ? $cart->tableRoom->calculateServiceCharge($cart) : (float) ($cart->service_charge ?? 0);
         $cartItems     = $cart->cartItems;
 
         $totalAmount    = $cartItems->sum('amount');
@@ -125,6 +125,16 @@ class PaymentService
 
         $metaData['change']     = $changeAmount;
         $metaData['settled_at'] = now();
+        if ($cart->source === 'customer') {
+            $metaData['guest_checkout'] = array_merge(
+                $metaData['guest_checkout'] ?? [],
+                [
+                    'reference_no' => $cart->reference_no,
+                    'submitted_at' => optional($cart->submitted_at)->toIso8601String(),
+                    'processed_at' => optional($cart->processed_at)->toIso8601String(),
+                ]
+            );
+        }
 
         if ($isMixedPayment) {
             $metaData['payment_info'] = [

@@ -108,6 +108,11 @@ class BlocksRelationManager extends RelationManager
                 Section::make('Careers Block')
                     ->hidden(fn ($get, $record) => $record === null || !$this->isBlockType($get('block_type_id'), 'careers'))
                     ->schema(BlockFormBuilder::getFormSchema('careers')),
+
+                // Blog Block Content
+                Section::make('Blog Block')
+                    ->hidden(fn ($get, $record) => $record === null || !$this->isBlockType($get('block_type_id'), 'articles'))
+                    ->schema(BlockFormBuilder::getFormSchema('articles')),
             ]);
     }
 

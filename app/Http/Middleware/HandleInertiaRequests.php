@@ -14,6 +14,7 @@ use App\Services\DiscountService;
 use App\Services\ModifierService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
 use App\Services\GeneralSettingsService;
 
 class HandleInertiaRequests extends Middleware
@@ -92,12 +93,19 @@ class HandleInertiaRequests extends Middleware
                 return null;
             }
 
-            // Get the current user's active cashier session
+            $sessionBranch = $request->session()->get('active_branch');
+
+            if (is_array($sessionBranch) && ! empty($sessionBranch['id'])) {
+                return $sessionBranch;
+            }
+
             $branch = Branch::find($request->user()->branch_id);
 
             if (! $branch) {
                 return null;
             }
+
+            $request->session()->put('active_branch', $branch->toArray());
 
             return $branch->toArray();
         } catch (\Exception $e) {
@@ -273,6 +281,7 @@ class HandleInertiaRequests extends Middleware
             'default_currency' => fn() => $this->debugLoadProperty('default_currency', fn() => $this->getDefaultCurrency()),
             'payment_methods' => fn() => $this->debugLoadProperty('payment_methods', fn() => $this->loadTenantPaymentMethods()),
             'unread_notifications_count' => fn() => $this->getUnreadNotificationsCount($request),
+            'pending_online_orders_count' => fn() => $this->getPendingOnlineOrdersCount($request),
         ];
 
         return $sharedData;
@@ -347,7 +356,7 @@ class HandleInertiaRequests extends Middleware
                     ->join('model_has_roles', 'users.id', '=', 'model_has_roles.model_id')
                     ->join('roles', 'model_has_roles.role_id', '=', 'roles.id')
                     ->whereIn('roles.name', ['Server', 'Waiter'])
-                    ->select('users.id', 'users.name', 'users.employee_code')
+                    ->select('users.id', 'users.name')
                     ->orderBy('users.name')
                     ->get()
                     ->toArray();
@@ -372,7 +381,7 @@ class HandleInertiaRequests extends Middleware
             return User::whereHas('roles', function($query) {
                     $query->whereIn('name', ['Server', 'Waiter']);
                 })
-                ->select('id', 'name', 'employee_code')
+                ->select('id', 'name')
                 ->orderBy('name')
                 ->get()
                 ->toArray();
@@ -480,6 +489,40 @@ class HandleInertiaRequests extends Middleware
         }
     }
 
+    private function getPendingOnlineOrdersCount(Request $request): int
+    {
+        if (! tenant() || ! $request->user()) {
+            return 0;
+        }
+
+        try {
+            return Cart::query()
+                ->where('branch_id', $request->user()->branch_id)
+                ->where(function ($query) {
+                    if ($this->cartColumnExists('source')) {
+                        $query->where('source', 'customer');
+                    }
+
+                    $query->orWhereNotNull('meta_data->guest_checkout->reference_no');
+                })
+                ->when(
+                    $this->cartColumnExists('processed_at'),
+                    fn ($query) => $query->whereNull('processed_at'),
+                    fn ($query) => $query->whereNull('meta_data->guest_checkout->processed_at')
+                )
+                ->count();
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    private function cartColumnExists(string $column): bool
+    {
+        static $cache = [];
+
+        return $cache[$column] ??= Schema::hasColumn('carts', $column);
+    }
+
     /**
      * Load active payment methods
      */
@@ -552,5 +595,3 @@ class HandleInertiaRequests extends Middleware
         }
     }
 }
-
-

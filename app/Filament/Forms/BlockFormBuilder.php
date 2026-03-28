@@ -35,6 +35,7 @@ class BlockFormBuilder
             'contact-form' => self::getContactFormSchema(),
             'product-list' => self::getProductListSchema(),
             'careers' => self::getCareersSchema(),
+            'articles' => self::getArticlesSchema(),
             default => self::getDefaultSchema(),
         };
     }
@@ -746,6 +747,33 @@ class BlockFormBuilder
                         ->default(true)
                         ->helperText('Toggle to hide the cart button (e.g. for browse-only menus).'),
                 ])->columns(2),
+        ];
+    }
+
+    /**
+     * Blog Block: auto-loaded blog posts
+     */
+    private static function getArticlesSchema(): array
+    {
+        return [
+            Section::make('Blog Block')
+                ->schema([
+                    TextInput::make('content.title')
+                        ->label('Section Heading')
+                        ->placeholder('Latest Blog Posts'),
+
+                    Textarea::make('content.subtitle')
+                        ->label('Subheading')
+                        ->rows(2)
+                        ->placeholder('Stay up to date with our latest posts'),
+
+                    TextInput::make('settings.limit')
+                        ->label('Max Posts to Show')
+                        ->numeric()
+                        ->minValue(1)
+                        ->placeholder('Leave empty to show all'),
+                ])->columns(1)
+                ->description('Automatically displays published Blog Post pages, newest first.'),
         ];
     }
 

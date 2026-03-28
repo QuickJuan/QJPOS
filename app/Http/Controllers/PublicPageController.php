@@ -87,6 +87,25 @@ class PublicPageController extends Controller
                     $data['products'] = $this->resolveAllProducts();
                 }
 
+                // Inject published blog posts for the articles block
+                if ($block->blockType->slug === 'articles') {
+                    $limit = (int) ($block->settings['limit'] ?? 0);
+                    $query = Page::published()
+                        ->where('page_type', PageType::BLOG->value)
+                        ->orderBy('published_at', 'desc');
+                    if ($limit > 0) {
+                        $query->limit($limit);
+                    }
+                    $data['articles'] = $query->get()->map(fn ($p) => [
+                        'id'             => $p->id,
+                        'title'          => $p->title,
+                        'slug'           => $p->slug,
+                        'excerpt'        => $p->content_json['excerpt'] ?? null,
+                        'featured_image' => $p->featured_image ? '/storage/' . $p->featured_image : null,
+                        'published_at'   => $p->published_at?->toIso8601String(),
+                    ])->values()->all();
+                }
+
                 // Inject available careers for the careers block
                 if ($block->blockType->slug === 'careers') {
                     $data['careers'] = Career::available()
@@ -148,7 +167,11 @@ class PublicPageController extends Controller
                 'meta_title' => $page->seo->meta_title,
                 'meta_description' => $page->seo->meta_description,
                 'meta_keywords' => $page->seo->meta_keywords,
-                'canonical_url' => $page->seo->canonical_url,
+                'canonical_url' => $page->seo->canonical_url
+                    ? (filter_var($page->seo->canonical_url, FILTER_VALIDATE_URL)
+                        ? $page->seo->canonical_url
+                        : url($page->seo->canonical_url))
+                    : url($page->getFullUrlPath()),
                 'meta_robots' => $page->seo->meta_robots,
                 'og_title' => $page->seo->og_title,
                 'og_description' => $page->seo->og_description,
@@ -158,9 +181,38 @@ class PublicPageController extends Controller
                 'twitter_description' => $page->seo->twitter_description,
                 'twitter_image' => $page->seo->twitter_image ? tenant_asset($page->seo->twitter_image) : null,
                 'schema_type' => $page->seo->schema_type,
-                'schema_json' => $page->seo->schema_json,
+                'schema_json' => $this->buildSchemaMarkup($page),
             ] : null,
         ]);
+    }
+
+    private function buildSchemaMarkup(Page $page): ?string
+    {
+        $seo  = $page->seo;
+        $type = $seo->schema_type ?? null;
+        $custom = is_array($seo->schema_json) ? $seo->schema_json : [];
+
+        if (!$type && empty($custom)) {
+            return null;
+        }
+
+        $schema = [
+            '@context' => 'https://schema.org',
+            '@type'    => $type ?? 'WebPage',
+        ] + $custom;
+
+        // Auto-inject common fields when not already set
+        if (empty($schema['name'])) {
+            $schema['name'] = $seo->meta_title ?? $page->title;
+        }
+        if (empty($schema['url'])) {
+            $schema['url'] = url($page->getFullUrlPath());
+        }
+        if (empty($schema['description']) && $seo->meta_description) {
+            $schema['description'] = $seo->meta_description;
+        }
+
+        return json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     }
 
     /**

@@ -28,6 +28,8 @@ class CartResource extends JsonResource
         return [
             // Cart Information
             'id'           => $this->id,
+            'source'       => $this->source ?? 'staff',
+            'reference_no' => $this->reference_no,
             'bill_number'  => str_pad($this->bill_no, 4, '0', STR_PAD_LEFT), // Bill number (generated when printing)
             'cart_date'    => $this->created_at,
             'table_number' => $this->tableRoom?->name,
@@ -97,6 +99,9 @@ class CartResource extends JsonResource
                 'printed_at' => now(),
                 'bill_type'  => 'customer_bill',
                 'notes'      => $this->notes,
+                'submitted_at' => $this->submitted_at,
+                'processed_at' => $this->processed_at,
+                'guest_checkout' => $this->meta_data['guest_checkout'] ?? null,
                 'table_info' => [
                     'id'       => $this->table_room_id,
                     'name'     => $this->tableRoom?->name,

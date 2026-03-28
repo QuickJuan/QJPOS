@@ -20,6 +20,22 @@
 
             <!-- Right: Action Buttons -->
             <div class="flex items-center gap-4">
+                <button
+                    v-if="!isOrderTaking"
+                    @click="handleOnlineOrdersClick"
+                    class="relative flex items-center gap-2 rounded-full border border-amber-300/30 bg-amber-400/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-amber-100 transition hover:border-amber-200/50 hover:bg-amber-400/25"
+                    aria-label="View online customer orders"
+                >
+                    <ShoppingBagIcon class="h-4 w-4" />
+                    <span class="hidden md:inline">Online Orders</span>
+                    <span
+                        v-if="pendingOnlineOrdersCount > 0"
+                        class="inline-flex min-w-6 items-center justify-center rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold tracking-normal text-slate-950"
+                    >
+                        {{ pendingOnlineOrdersCount }}
+                    </span>
+                </button>
+
                 <!-- More Options Dropdown -->
                 <div
                     v-if="!isOrderTaking"
@@ -199,6 +215,7 @@ import {
     PrinterIcon,
     ArrowRightOnRectangleIcon,
     UserIcon,
+    ShoppingBagIcon,
 } from "@heroicons/vue/24/outline";
 
 const page = usePage();
@@ -253,6 +270,10 @@ const accountLabel = computed(() =>
     isOrderTaking.value ? "Waiter Account" : "Cashier Account",
 );
 
+const pendingOnlineOrdersCount = computed(
+    () => (page.props as any)?.pending_online_orders_count ?? 0,
+);
+
 // Methods
 const handlePendingOrdersClick = () => {
     showMoreOptions.value = false;
@@ -260,6 +281,11 @@ const handlePendingOrdersClick = () => {
     router.visit(
         route("resto.pending-orders.index", { branchId: activeBranch?.id }),
     );
+};
+
+const handleOnlineOrdersClick = () => {
+    showMoreOptions.value = false;
+    router.visit(route("resto.online-orders.index"));
 };
 
 const handleViewTableClick = () => {

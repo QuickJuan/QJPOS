@@ -65,7 +65,6 @@ class PageResource extends Resource
                     ->description('Basic page details and visibility')
                     ->schema([
                         TextInput::make('title')
-                            ->required()
                             ->maxLength(255)
                             ->placeholder('Enter page title')
                             ->helperText('Page title is used for SEO if no SEO title is set')
@@ -242,7 +241,6 @@ class PageResource extends Resource
 
                                 TextInput::make('canonical_url')
                                     ->label('Canonical URL')
-                                    ->url()
                                     ->placeholder('https://example.com/page')
                                     ->helperText('Leave empty to auto-generate'),
 
@@ -317,21 +315,22 @@ class PageResource extends Resource
                                 Select::make('schema_type')
                                     ->label('Schema Type')
                                     ->options([
-                                        'Article'       => 'Article',
-                                        'BlogPosting'   => 'Blog Posting',
-                                        'WebPage'       => 'Web Page',
-                                        'Product'       => 'Product',
-                                        'LocalBusiness' => 'Local Business',
-                                        'Organization'  => 'Organization',
-                                        'FAQPage'       => 'FAQ Page',
+                                        'Article'              => 'Article',
+                                        'BlogPosting'          => 'Blog Posting',
+                                        'WebPage'              => 'Web Page',
+                                        'Product'              => 'Product',
+                                        'SoftwareApplication'  => 'Software Application',
+                                        'LocalBusiness'        => 'Local Business',
+                                        'Organization'         => 'Organization',
+                                        'FAQPage'              => 'FAQ Page',
                                     ])
                                     ->placeholder('Select schema type'),
 
                                 Textarea::make('schema_json')
-                                    ->label('Custom JSON-LD')
-                                    ->placeholder('{"@context": "https://schema.org", "@type": "Article", ...}')
+                                    ->label('Extra Properties (JSON)')
+                                    ->placeholder('{"name": "My App", "applicationCategory": "BusinessApplication"}')
                                     ->rows(4)
-                                    ->helperText('Advanced: custom JSON-LD markup'),
+                                    ->helperText('Optional: additional schema.org properties as a valid JSON object. @context and @type are added automatically from the Schema Type above.'),
                             ])->columns(2)->collapsed(),
                     ])->collapsible(),
             ]);

@@ -38,11 +38,6 @@ class UserResource extends Resource
                     ->unique('users', 'email', ignoreRecord: true)
                     ->maxLength(255),
 
-                TextInput::make('employee_code')
-                    ->label('Employee Code')
-                    ->maxLength(255)
-                    ->unique('users', 'employee_code', ignoreRecord: true),
-
                 TextInput::make('password')
                     ->password()
                     ->required()
@@ -65,12 +60,6 @@ class UserResource extends Resource
                 TextColumn::make('email')
                     ->sortable()
                     ->searchable(),
-
-                TextColumn::make('employee_code')
-                    ->label('Employee Code')
-                    ->sortable()
-                    ->searchable()
-                    ->toggleable(),
 
                 TextColumn::make('created_at')
                     ->dateTime()
