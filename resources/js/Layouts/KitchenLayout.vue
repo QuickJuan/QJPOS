@@ -34,6 +34,50 @@
                 </div>
             </div>
 
+            <!-- Navigation -->
+            <nav class="space-y-1 mb-5">
+                <Link
+                    :href="route('resto.pending-orders.index')"
+                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-200 transition"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                        />
+                    </svg>
+                    Kitchen Orders
+                </Link>
+                <Link
+                    :href="route('resto.pending-orders.order-status')"
+                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-200 transition"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                        />
+                    </svg>
+                    Order Status Screen
+                </Link>
+            </nav>
+
             <!-- Connection Status -->
             <div class="mt-auto pt-6 border-t border-gray-300">
                 <div class="flex items-center gap-2">
@@ -77,6 +121,8 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import { Link } from "@inertiajs/vue3";
+import { route } from "ziggy-js";
 import PWAInstallBanner from "@/Components/PWAInstallBanner.vue";
 
 const props = defineProps<{

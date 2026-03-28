@@ -28,8 +28,8 @@
                             batch.minutes_waiting > 60
                                 ? 'bg-gradient-to-r from-red-600 to-red-700'
                                 : batch.minutes_waiting > 30
-                                ? 'bg-gradient-to-r from-orange-500 to-orange-600'
-                                : 'bg-gradient-to-r from-blue-500 to-blue-600',
+                                  ? 'bg-gradient-to-r from-orange-500 to-orange-600'
+                                  : 'bg-gradient-to-r from-blue-500 to-blue-600',
                         ]"
                     >
                         <div class="flex items-start justify-between mb-1">
@@ -49,7 +49,7 @@
                                 >
                                     {{
                                         formatPlacedOrderTime(
-                                            batch.placed_order_time
+                                            batch.placed_order_time,
                                         )
                                     }}
                                 </p>
@@ -104,7 +104,7 @@
                             <div
                                 class="p-2 lg:px-4"
                                 :class="
-                                    item.is_served ? 'bg-green-50' : 'bg-white'
+                                    item.is_ready ? 'bg-lime-50' : 'bg-white'
                                 "
                             >
                                 <!-- Main Item -->
@@ -125,26 +125,22 @@
                                             </h3>
                                         </div>
                                     </div>
-                                    <button
-                                        @click="
-                                            toggleServed(
-                                                item.id,
-                                                !item.is_served,
-                                                item.item_type
-                                            )
-                                        "
-                                        :class="[
-                                            'px-2 py-1 rounded text-base font-medium whitespace-nowrap',
-                                            item.is_served
-                                                ? 'bg-green-600 text-white'
-                                                : 'bg-orange-500 text-white',
-                                        ]"
+                                    <!-- Done badge when item is prepared -->
+                                    <span
+                                        v-if="item.is_ready"
+                                        class="text-xs font-semibold text-lime-700 bg-lime-100 px-2 py-0.5 rounded self-center"
                                     >
-                                        {{
-                                            item.is_served
-                                                ? "✓ Served"
-                                                : "Serve"
-                                        }}
+                                        ✓ Done
+                                    </span>
+                                    <!-- Done button (kitchen staff) -->
+                                    <button
+                                        v-if="!item.is_ready"
+                                        @click="
+                                            markReady(item.id, item.item_type)
+                                        "
+                                        class="px-2 py-1 rounded text-base font-medium whitespace-nowrap bg-orange-500 text-white"
+                                    >
+                                        Done
                                     </button>
                                 </div>
 
@@ -199,6 +195,26 @@
                             ></div>
                         </div>
                     </div>
+                    <!-- Batch footer: single Serve button -->
+                    <div
+                        class="px-3 py-2.5 border-t border-gray-200 bg-gray-50 flex items-center justify-between gap-2"
+                    >
+                        <span class="text-sm text-gray-500">
+                            {{ doneCount(batch) }}/{{ batch.items.length }}
+                            done
+                        </span>
+                        <button
+                            @click="serveBatch(batch.batch_number)"
+                            :class="
+                                allItemsDone(batch)
+                                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                            "
+                            class="px-4 py-1.5 rounded font-semibold text-sm transition"
+                        >
+                            Serve
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -234,7 +250,7 @@ const timezone = computed(() => {
 const longestWaitTime = computed(() => {
     if (pendingOrdersWithMinutes.value.length === 0) return 0;
     return Math.max(
-        ...pendingOrdersWithMinutes.value.map((b) => b.minutes_waiting)
+        ...pendingOrdersWithMinutes.value.map((b) => b.minutes_waiting),
     );
 });
 
@@ -260,16 +276,16 @@ onMounted(() => {
                 onSuccess: () => {
                     console.log(
                         "✅ Pending orders refreshed:",
-                        new Date().toLocaleTimeString()
+                        new Date().toLocaleTimeString(),
                     );
                 },
                 onError: (errors) => {
                     console.error(
                         "❌ Failed to refresh pending orders:",
-                        errors
+                        errors,
                     );
                 },
-            }
+            },
         );
     }, 10000);
 });
@@ -293,16 +309,38 @@ const pendingOrdersWithMinutes = computed(() => {
                   .tz(timezone.value)
                   .diff(
                       moment.utc(batch.placed_order_time).tz(timezone.value),
-                      "minutes"
+                      "minutes",
                   )
             : 0,
     }));
 });
 
+const markReady = (itemId: number, itemType: string = "cart_item") => {
+    router.put(
+        route("resto.pending-orders.mark-ready", { itemId }),
+        { item_type: itemType },
+        { preserveScroll: true },
+    );
+};
+
+const serveBatch = (batchNumber: number) => {
+    router.put(
+        route("resto.pending-orders.batch-serve", { batchNumber }),
+        {},
+        { preserveScroll: true },
+    );
+};
+
+const allItemsDone = (batch: any): boolean =>
+    batch.items.every((i: any) => i.is_ready);
+
+const doneCount = (batch: any): number =>
+    batch.items.filter((i: any) => i.is_ready).length;
+
 const toggleServed = (
     itemId: number,
     isServed: boolean,
-    itemType: string = "cart_item"
+    itemType: string = "cart_item",
 ) => {
     router.put(
         route("resto.pending-orders.toggle-served", {
@@ -314,7 +352,7 @@ const toggleServed = (
         },
         {
             preserveScroll: true,
-        }
+        },
     );
 };
 
@@ -327,12 +365,12 @@ const printBatch = async (batch: any) => {
     try {
         // Filter out served items
         const unservedItems = batch.items.filter(
-            (item: any) => !item.is_served
+            (item: any) => !item.is_served,
         );
 
         if (unservedItems.length === 0) {
             throw new Error(
-                "All items in this batch have already been served."
+                "All items in this batch have already been served.",
             );
         }
 
@@ -368,17 +406,15 @@ const printBatch = async (batch: any) => {
         ];
 
         // Connect to thermal printer
-        const { thermalPrinter } = await import(
-            "@/Services/ThermalPrinterService"
-        );
+        const { thermalPrinter } =
+            await import("@/Services/ThermalPrinterService");
 
         if (!thermalPrinter.isConnected()) {
-            const connected = await thermalPrinter.connectToPrinterType(
-                "kitchen"
-            );
+            const connected =
+                await thermalPrinter.connectToPrinterType("kitchen");
             if (!connected) {
                 throw new Error(
-                    "Printer not connected. Please connect a kitchen printer first."
+                    "Printer not connected. Please connect a kitchen printer first.",
                 );
             }
         }
@@ -389,7 +425,7 @@ const printBatch = async (batch: any) => {
             batch.table_name,
             placedOrderItems,
             batch.served_by || "N/A",
-            batch.serving_number || null
+            batch.serving_number || null,
         );
 
         console.log(`✅ Batch #${batch.batch_number} printed successfully`);

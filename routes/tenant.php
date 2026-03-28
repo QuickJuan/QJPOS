@@ -402,6 +402,9 @@ if (!isCentralDomain()) {
                                 ->as('pending-orders.')
                                 ->group(function () {
                                     Route::get('/list', 'index')->name('index');
+                                    Route::get('/order-status', 'orderStatus')->name('order-status');
+                                    Route::put('/batch/{batchNumber}/serve', 'markBatchServed')->name('batch-serve');
+                                    Route::put('/item/{itemId}/mark-ready', 'markReady')->name('mark-ready');
                                     Route::put('/item/{itemId}/toggle-served', 'toggleServed')->name('toggle-served');
                                 });
 

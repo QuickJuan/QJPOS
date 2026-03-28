@@ -92,6 +92,7 @@ class PendingOrdersController extends Controller
             return [
                 'batch_number' => $batchNumber,
                 'table_name' => $tableName,
+                'serving_number' => $firstItem->serving_number,
                 'placed_order_time' => $placedOrderTime,
                 'items' => $items->map(function ($item) {
                     // Get child items (product options) recursively
@@ -121,6 +122,8 @@ class PendingOrdersController extends Controller
                         'description' => $item->description,
                         'served_time' => $item->served_time,
                         'is_served' => (bool) $item->is_served,
+                        'is_ready' => (bool) $item->is_ready,
+                        'ready_time' => $item->ready_time,
                         'children' => $childItems,
                         'modifiers' => $modifiers,
                     ];
@@ -132,6 +135,40 @@ class PendingOrdersController extends Controller
             'pendingOrders' => $ordersWithTiming,
             'branchId' => $branchId,
         ]);
+    }
+
+    public function markReady(Request $request, $itemId)
+    {
+        $itemType = $request->input('item_type', 'cart_item');
+
+        $item = $itemType === 'order_item'
+            ? OrderItem::findOrFail($itemId)
+            : CartItem::findOrFail($itemId);
+
+        $item->update([
+            'is_ready'   => true,
+            'ready_time' => now(),
+        ]);
+
+        return back()->with('success', 'Item marked as ready');
+    }
+
+    public function markBatchServed(Request $request, $batchNumber)
+    {
+        $now    = now();
+        $userId = auth()->id();
+
+        CartItem::where('batch_number', $batchNumber)
+            ->where('is_served', false)
+            ->where('is_void', false)
+            ->update(['is_served' => true, 'served_time' => $now, 'served_by' => $userId]);
+
+        OrderItem::where('batch_number', $batchNumber)
+            ->where('is_served', false)
+            ->where('is_void', false)
+            ->update(['is_served' => true, 'served_time' => $now, 'served_by' => $userId]);
+
+        return back()->with('success', 'Order #' . $batchNumber . ' served');
     }
 
     public function toggleServed(Request $request, $itemId)
@@ -160,6 +197,75 @@ class PendingOrdersController extends Controller
         }
 
         return back()->with('success', 'Order status updated');
+    }
+
+    public function orderStatus(Request $request)
+    {
+        $branchId = $request->user()->branch_id;
+
+        $pendingCartItems = CartItem::with(['cart.tableRoom'])
+            ->whereHas('cart', fn ($q) => $q->where('branch_id', $branchId))
+            ->where('placed_order', true)
+            ->where('is_served', false)
+            ->where('is_void', false)
+            ->whereNull('parent_id')
+            ->orderBy('batch_number')
+            ->get();
+
+        $pendingOrderItems = OrderItem::with(['order.tableRoom'])
+            ->whereHas('order', fn ($q) => $q->where('branch_id', $branchId))
+            ->where('is_served', false)
+            ->where('is_void', false)
+            ->whereNull('parent_id')
+            ->orderBy('batch_number')
+            ->get();
+
+        $allItems = $pendingCartItems->merge($pendingOrderItems)
+            ->sortBy('batch_number')
+            ->groupBy('batch_number');
+
+        $preparing = [];
+        $serving   = [];
+
+        foreach ($allItems as $batchNumber => $items) {
+            $firstItem  = $items->first();
+            $allReady   = $items->every(fn ($i) => (bool) $i->is_ready);
+            $readyCount = $items->filter(fn ($i) => (bool) $i->is_ready)->count();
+
+            $tableName = 'N/A';
+            if ($firstItem instanceof CartItem) {
+                $cart = $firstItem->cart;
+                if ($cart?->tableRoom) {
+                    $tableName = $cart->tableRoom->name;
+                } elseif ($cart) {
+                    $customer  = data_get($cart->meta_data, 'guest_checkout.name');
+                    $tableName = trim(($cart->reference_no ?? 'Online Order') . ($customer ? ' · ' . $customer : ''));
+                }
+            } elseif ($firstItem instanceof OrderItem) {
+                if ($firstItem->order?->tableRoom) {
+                    $tableName = $firstItem->order->tableRoom->name;
+                }
+            }
+
+            $batch = [
+                'batch_number' => $batchNumber,
+                'display_name' => $firstItem->serving_number ?: ('#' . $batchNumber),
+                'table_name'   => $tableName,
+                'item_count'   => $items->count(),
+                'ready_count'  => $readyCount,
+            ];
+
+            if ($allReady) {
+                $serving[] = $batch;
+            } else {
+                $preparing[] = $batch;
+            }
+        }
+
+        return Inertia::render('Resto/OrderStatus/Index', [
+            'preparing' => $preparing,
+            'serving'   => $serving,
+        ]);
     }
 
     private function getChildItems($item)

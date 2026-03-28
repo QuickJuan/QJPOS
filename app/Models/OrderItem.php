@@ -34,6 +34,7 @@ class OrderItem extends Model
         'coupon_code',
         'sub_total',
         'is_served',
+        'is_ready',
         'placed_order',
         'is_void',
         'reason',
@@ -43,6 +44,7 @@ class OrderItem extends Model
         'serving_number',
         'placed_order_time',
         'served_time',
+        'ready_time',
         'batch_number',
     ];
 
@@ -55,7 +57,8 @@ class OrderItem extends Model
         'discount'         => 'decimal:2',
         'sub_total'        => 'decimal:2',
         'meta_data'        => 'array',
-        'serving_number'   => 'integer',
+        'serving_number'   => 'string',
+        'is_ready'         => 'boolean',
     ];
 
     // SCOPES
