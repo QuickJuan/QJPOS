@@ -196,6 +196,9 @@ const CareersBlock = defineAsyncComponent(
     () => import("./Blocks/CareersBlock.vue"),
 );
 const BlogBlock = defineAsyncComponent(() => import("./Blocks/BlogBlock.vue"));
+const AccordionBlock = defineAsyncComponent(
+    () => import("./Blocks/AccordionBlock.vue"),
+);
 
 const props = defineProps({
     page: Object,
@@ -279,6 +282,7 @@ const blockComponents = {
     productlist: ProductListBlock,
     careers: CareersBlock,
     articles: BlogBlock,
+    accordion: AccordionBlock,
 };
 
 const getBlockComponent = (type) => {

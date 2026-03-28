@@ -113,6 +113,11 @@ class BlocksRelationManager extends RelationManager
                 Section::make('Blog Block')
                     ->hidden(fn ($get, $record) => $record === null || !$this->isBlockType($get('block_type_id'), 'articles'))
                     ->schema(BlockFormBuilder::getFormSchema('articles')),
+
+                // Accordion Block Content
+                Section::make('Accordion Block')
+                    ->hidden(fn ($get, $record) => $record === null || !$this->isBlockType($get('block_type_id'), 'accordion'))
+                    ->schema(BlockFormBuilder::getFormSchema('accordion')),
             ]);
     }
 

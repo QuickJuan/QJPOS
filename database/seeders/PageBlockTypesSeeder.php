@@ -346,6 +346,39 @@ class PageBlockTypesSeeder extends Seeder
                     'limit' => '',
                 ],
             ],
+            [
+                'name' => 'Accordion',
+                'slug' => 'accordion',
+                'icon' => 'bars-3-bottom-right',
+                'description' => 'Collapsible accordion items — each item can have rich text, images, and nested child accordions.',
+                'category' => 'content',
+                'component_name' => 'AccordionBlock',
+                'schema_template' => [
+                    'content' => [
+                        'title' => 'Frequently Asked Questions',
+                        'subtitle' => null,
+                        'items' => [
+                            [
+                                'title' => 'What is included?',
+                                'content_items' => [
+                                    ['type' => 'text', 'text' => '<p>Add your answer here.</p>'],
+                                ],
+                                'children' => [],
+                            ],
+                        ],
+                    ],
+                    'settings' => [
+                        'icon_style'     => 'chevron',
+                        'allow_multiple' => false,
+                        'open_first'     => false,
+                    ],
+                ],
+                'settings_schema' => [
+                    'icon_style'     => 'chevron',
+                    'allow_multiple' => false,
+                    'open_first'     => false,
+                ],
+            ],
         ];
 
         foreach ($blockTypes as $blockType) {

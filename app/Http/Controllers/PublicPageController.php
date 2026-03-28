@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Services\PageBuilderService;
 use App\Settings\GeneralSettings;
 use App\Enums\PageType;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -36,6 +37,11 @@ class PublicPageController extends Controller
             $this->pageBuilderService->incrementViewCount($page);
         }
 
+        // Guard pages that require authentication
+        if ($page->requires_auth && ! Auth::check()) {
+            return $this->unauthorizedResponse();
+        }
+
         return $this->renderPage($page);
     }
 
@@ -55,7 +61,43 @@ class PublicPageController extends Controller
             $this->pageBuilderService->incrementViewCount($page);
         }
 
+        // Guard pages that require authentication
+        if ($page->requires_auth && ! Auth::check()) {
+            return $this->unauthorizedResponse();
+        }
+
         return $this->renderPage($page);
+    }
+
+    /**
+     * Render the 401 Unauthorized Inertia page with nav context.
+     */
+    private function unauthorizedResponse(): Response
+    {
+        $navigation = NavigationItem::active()
+            ->rootItems()
+            ->with('children')
+            ->get()
+            ->map(fn ($item) => [
+                'id'       => $item->id,
+                'label'    => $item->label,
+                'url'      => $item->url,
+                'target'   => $item->target,
+                'auth_only' => (bool) $item->auth_only,
+                'children' => $item->children->map(fn ($child) => [
+                    'id'       => $child->id,
+                    'label'    => $child->label,
+                    'url'      => $child->url,
+                    'target'   => $child->target,
+                    'auth_only' => (bool) $child->auth_only,
+                ])->values()->all(),
+            ]);
+
+        return Inertia::render('PublicPage/Unauthorized', [
+            'navigation'  => $navigation,
+            'appName'     => $this->settings->company_name ?? config('app.name', 'QuickJuan POS'),
+            'companyLogo' => $this->settings->company_logo ? tenant_asset($this->settings->company_logo) : null,
+        ]);
     }
 
     /**
@@ -136,12 +178,14 @@ class PublicPageController extends Controller
                     'label' => $item->label,
                     'url' => $item->url,
                     'target' => $item->target,
+                    'auth_only' => (bool) $item->auth_only,
                     'children' => $item->children->map(function ($child) {
                         return [
                             'id' => $child->id,
                             'label' => $child->label,
                             'url' => $child->url,
                             'target' => $child->target,
+                            'auth_only' => (bool) $child->auth_only,
                         ];
                     }),
                 ];

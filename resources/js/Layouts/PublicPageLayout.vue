@@ -24,7 +24,10 @@
 
                     <!-- Desktop Navigation -->
                     <div class="hidden md:flex items-center space-x-8">
-                        <template v-for="item in navigation" :key="item.id">
+                        <template
+                            v-for="item in visibleNavigation"
+                            :key="item.id"
+                        >
                             <!-- Dropdown Menu -->
                             <div
                                 v-if="item.children && item.children.length > 0"
@@ -122,7 +125,7 @@
                 <!-- Mobile Menu -->
                 <div v-show="mobileMenuOpen" class="md:hidden py-4 border-t">
                     <div
-                        v-for="item in navigation"
+                        v-for="item in visibleNavigation"
                         :key="item.id"
                         class="space-y-2"
                     >
@@ -148,7 +151,9 @@
                         class="mt-3 block rounded-xl bg-orange-50 px-4 py-3 font-semibold text-orange-700"
                     >
                         Cart
-                        <span v-if="guestCartCount > 0">({{ guestCartCount }})</span>
+                        <span v-if="guestCartCount > 0"
+                            >({{ guestCartCount }})</span
+                        >
                     </Link>
                 </div>
             </nav>
@@ -173,7 +178,7 @@
                         <h4 class="font-semibold mb-4">Quick Links</h4>
                         <ul class="space-y-2">
                             <li
-                                v-for="item in navigation.slice(0, 5)"
+                                v-for="item in visibleNavigation.slice(0, 5)"
                                 :key="item.id"
                             >
                                 <Link
@@ -206,10 +211,10 @@
 
 <script setup>
 import { computed, ref } from "vue";
-import { Link } from "@inertiajs/vue3";
+import { Link, usePage } from "@inertiajs/vue3";
 import { useGuestCartStore } from "@/stores/guestCartStore";
 
-defineProps({
+const props = defineProps({
     navigation: {
         type: Array,
         default: () => [],
@@ -223,6 +228,20 @@ defineProps({
         default: null,
     },
 });
+
+const page = usePage();
+const isAuthenticated = computed(() => !!page.props.auth?.user);
+
+const visibleNavigation = computed(() =>
+    props.navigation
+        .filter((item) => !item.auth_only || isAuthenticated.value)
+        .map((item) => ({
+            ...item,
+            children: (item.children ?? []).filter(
+                (child) => !child.auth_only || isAuthenticated.value,
+            ),
+        })),
+);
 
 const mobileMenuOpen = ref(false);
 const guestCartStore = useGuestCartStore();

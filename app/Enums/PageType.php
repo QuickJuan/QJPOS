@@ -9,6 +9,7 @@ enum PageType: string
     case BLOG = 'blog';
     case FAQ = 'faq';
     case LANDING_PAGE = 'landing_page';
+    case USER_GUIDE = 'user_guide';
 
     public function label(): string
     {
@@ -18,6 +19,7 @@ enum PageType: string
             self::BLOG => 'Blog Post',
             self::FAQ => 'FAQ',
             self::LANDING_PAGE => 'Landing Page',
+            self::USER_GUIDE => 'User Guide',
         };
     }
 
@@ -29,6 +31,7 @@ enum PageType: string
             self::BLOG->value => self::BLOG->label(),
             self::FAQ->value => self::FAQ->label(),
             self::LANDING_PAGE->value => self::LANDING_PAGE->label(),
+            self::USER_GUIDE->value => self::USER_GUIDE->label(),
         ];
     }
 
@@ -40,6 +43,7 @@ enum PageType: string
             self::FAQ => 'faq',
             self::PAGE => null,
             self::LANDING_PAGE => null,
+            self::USER_GUIDE => null,
         };
     }
 }

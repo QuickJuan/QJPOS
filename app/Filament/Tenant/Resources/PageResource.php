@@ -195,6 +195,12 @@ class PageResource extends Resource
                                     }
                                 }
                             }),
+
+                        Toggle::make('requires_auth')
+                            ->label('Authenticated Users Only')
+                            ->helperText('This page will only be accessible to logged-in users')
+                            ->default(false)
+                            ->columnSpanFull(),
                     ])->columns(2),
 
                 Section::make('Media')

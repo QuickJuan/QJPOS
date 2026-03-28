@@ -72,12 +72,14 @@ class Page extends Model
         'published_at',
         'scheduled_at',
         'view_count',
+        'requires_auth',
     ];
 
     protected $casts = [
         'content_json' => 'array',
         'page_type' => PageType::class,
         'hide_title' => 'boolean',
+        'requires_auth' => 'boolean',
         'published_at' => 'datetime',
         'scheduled_at' => 'datetime',
     ];

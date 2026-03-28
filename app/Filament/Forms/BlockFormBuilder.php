@@ -36,6 +36,7 @@ class BlockFormBuilder
             'product-list' => self::getProductListSchema(),
             'careers' => self::getCareersSchema(),
             'articles' => self::getArticlesSchema(),
+            'accordion' => self::getAccordionSchema(),
             default => self::getDefaultSchema(),
         };
     }
@@ -774,6 +775,123 @@ class BlockFormBuilder
                         ->placeholder('Leave empty to show all'),
                 ])->columns(1)
                 ->description('Automatically displays published Blog Post pages, newest first.'),
+        ];
+    }
+
+    /**
+     * Accordion Block: Collapsible items with nested child accordions.
+     * Each item has a title, dynamic content blocks (text/image), and optional children.
+     */
+    private static function getAccordionSchema(): array
+    {
+        // Reusable content items repeater schema (text or image per row)
+        $contentItemsSchema = [
+            Select::make('type')
+                ->label('Content Type')
+                ->options(['text' => 'Text (Rich Editor)', 'image' => 'Image'])
+                ->default('text')
+                ->required()
+                ->live(),
+
+            RichEditor::make('text')
+                ->label('Text')
+                ->toolbarButtons(['bold', 'italic', 'underline', 'link', 'bulletList', 'orderedList', 'heading', 'undo', 'redo'])
+                ->visible(fn ($get) => $get('type') === 'text' || !$get('type'))
+                ->columnSpanFull(),
+
+            FileUpload::make('image')
+                ->label('Image')
+                ->image()
+                ->disk('public')
+                ->directory('blocks/accordion')
+                ->maxSize(5120)
+                ->visible(fn ($get) => $get('type') === 'image')
+                ->columnSpanFull(),
+
+            TextInput::make('image_alt')
+                ->label('Alt Text')
+                ->placeholder('Describe the image')
+                ->visible(fn ($get) => $get('type') === 'image'),
+
+            TextInput::make('image_caption')
+                ->label('Caption')
+                ->placeholder('Optional caption below the image')
+                ->visible(fn ($get) => $get('type') === 'image'),
+        ];
+
+        return [
+            Section::make('Accordion Settings')
+                ->schema([
+                    TextInput::make('content.title')
+                        ->label('Section Heading')
+                        ->placeholder('Frequently Asked Questions'),
+
+                    TextInput::make('content.subtitle')
+                        ->label('Subheading')
+                        ->placeholder('Optional subtitle'),
+
+                    Select::make('settings.icon_style')
+                        ->label('Expand Icon Style')
+                        ->options(['chevron' => 'Chevron (›)', 'plus' => 'Plus / Minus (+ / –)'])
+                        ->default('chevron')
+                        ->native(false),
+
+                    Toggle::make('settings.allow_multiple')
+                        ->label('Allow multiple items open at once')
+                        ->default(false),
+
+                    Toggle::make('settings.open_first')
+                        ->label('Open first item by default')
+                        ->default(false),
+                ])->columns(2),
+
+            Section::make('Accordion Items')
+                ->schema([
+                    Repeater::make('content.items')
+                        ->label('')
+                        ->schema([
+                            TextInput::make('title')
+                                ->label('Accordion Title')
+                                ->required()
+                                ->placeholder('Item heading'),
+
+                            Repeater::make('content_items')
+                                ->label('Content blocks')
+                                ->schema($contentItemsSchema)
+                                ->addActionLabel('Add content block')
+                                ->defaultItems(1)
+                                ->collapsible()
+                                ->columnSpanFull(),
+
+                            Repeater::make('children')
+                                ->label('Child Accordions (nested)')
+                                ->schema([
+                                    TextInput::make('title')
+                                        ->label('Child Title')
+                                        ->required()
+                                        ->placeholder('Child item heading'),
+
+                                    Repeater::make('content_items')
+                                        ->label('Content blocks')
+                                        ->schema($contentItemsSchema)
+                                        ->addActionLabel('Add content block')
+                                        ->defaultItems(1)
+                                        ->collapsible()
+                                        ->columnSpanFull(),
+                                ])
+                                ->addActionLabel('Add child accordion')
+                                ->defaultItems(0)
+                                ->collapsible()
+                                ->collapsed()
+                                ->columnSpanFull()
+                                ->helperText('Optional — add nested accordion items inside this item.'),
+                        ])
+                        ->addActionLabel('Add accordion item')
+                        ->minItems(1)
+                        ->collapsible()
+                        ->itemLabel(fn (array $state): ?string => $state['title'] ?? null)
+                        ->columnSpanFull(),
+                ])->columns(1),
         ];
     }
 

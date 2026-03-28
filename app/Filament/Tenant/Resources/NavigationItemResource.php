@@ -90,6 +90,11 @@ class NavigationItemResource extends Resource
                             ->label('Active')
                             ->default(true)
                             ->helperText('Hide navigation items without deleting them'),
+
+                        Toggle::make('auth_only')
+                            ->label('Authenticated Users Only')
+                            ->default(false)
+                            ->helperText('Only show this item to logged-in users'),
                     ])->columns(2),
             ]);
     }
@@ -124,6 +129,14 @@ class NavigationItemResource extends Resource
                 IconColumn::make('is_active')
                     ->label('Active')
                     ->boolean(),
+
+                IconColumn::make('auth_only')
+                    ->label('Auth Only')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-lock-closed')
+                    ->falseIcon('heroicon-o-lock-open')
+                    ->trueColor('warning')
+                    ->falseColor('gray'),
             ])
             ->defaultSort('order')
             ->filters([

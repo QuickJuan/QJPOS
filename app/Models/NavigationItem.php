@@ -17,10 +17,12 @@ class NavigationItem extends Model
         'parent_id',
         'is_active',
         'icon',
+        'auth_only',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'auth_only' => 'boolean',
         'order' => 'integer',
     ];
 
