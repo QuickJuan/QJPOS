@@ -157,28 +157,45 @@ class GuestOrderController extends Controller
             )
             ->firstOrFail();
 
+        $orderType = data_get($cart->meta_data, 'guest_checkout.order_type', 'pickup');
+        $pageUrl = url(route('guest.order.confirmation', $reference, absolute: false));
+
         return Inertia::render('GuestCart/Confirmation', [
             'order' => [
-                'reference_no' => $this->getCartReferenceNo($cart),
-                'name'         => data_get($cart->meta_data, 'guest_checkout.name'),
-                'phone'        => data_get($cart->meta_data, 'guest_checkout.phone'),
-                'email'        => data_get($cart->meta_data, 'guest_checkout.email'),
-                'address'      => data_get($cart->meta_data, 'guest_checkout.address'),
-                'order_type'   => data_get($cart->meta_data, 'guest_checkout.order_type'),
-                'notes'        => data_get($cart->meta_data, 'guest_checkout.notes'),
-                'status'       => $this->getCartProcessedAt($cart) ? 'processed' : 'pending',
-                'discount_amount' => (float) ($cart->total_discount ?? 0),
-                'total_amount' => (float) max(0, $cart->cartItems->sum('amount') - ($cart->total_discount ?? 0)),
-                'created_at'   => $cart->created_at->toIso8601String(),
-                'items'        => $cart->cartItems->map(fn ($item) => [
+                'reference_no'     => $this->getCartReferenceNo($cart),
+                'name'             => data_get($cart->meta_data, 'guest_checkout.name'),
+                'phone'            => data_get($cart->meta_data, 'guest_checkout.phone'),
+                'email'            => data_get($cart->meta_data, 'guest_checkout.email'),
+                'address'          => data_get($cart->meta_data, 'guest_checkout.address'),
+                'order_type'       => $orderType,
+                'notes'            => data_get($cart->meta_data, 'guest_checkout.notes'),
+                'status'           => data_get($cart->meta_data, 'guest_checkout.status', 'pending'),
+                'discount_amount'  => (float) ($cart->total_discount ?? 0),
+                'total_amount'     => (float) max(0, $cart->cartItems->sum('amount') - ($cart->total_discount ?? 0)),
+                'created_at'       => $cart->created_at->toIso8601String(),
+                'items'            => $cart->cartItems->map(fn ($item) => [
                     'product_name' => $item->product?->name ?? $item->description,
                     'price'        => (float) $item->price,
                     'quantity'     => (float) $item->quantity,
                     'subtotal'     => (float) $item->amount,
                 ])->values(),
-                'confirmation_message' => 'We will inform you once your order is received, confirmed, and ready.',
+                'confirmation_message' => 'Scan the QR code or bookmark this page to track your order status.',
             ],
+            'pageUrl' => $pageUrl,
             'appName' => config('app.name'),
+        ]);
+    }
+
+    public function orderStatus(string $reference)
+    {
+        $cart = Cart::when(
+            $this->cartColumnExists('reference_no'),
+            fn ($query) => $query->where('reference_no', $reference),
+            fn ($query) => $query->where('meta_data->guest_checkout->reference_no', $reference)
+        )->firstOrFail();
+
+        return response()->json([
+            'status' => data_get($cart->meta_data, 'guest_checkout.status', 'pending'),
         ]);
     }
 

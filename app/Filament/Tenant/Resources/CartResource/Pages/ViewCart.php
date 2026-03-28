@@ -2,11 +2,14 @@
 namespace App\Filament\Tenant\Resources\CartResource\Pages;
 
 use App\Filament\Tenant\Resources\CartResource;
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\Select;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Infolist;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 
 class ViewCart extends ViewRecord
@@ -16,6 +19,37 @@ class ViewCart extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('update_order_status')
+                ->label('Update Order Status')
+                ->icon('heroicon-o-arrow-path')
+                ->color('warning')
+                ->visible(fn (): bool => filled(data_get($this->record->meta_data, 'guest_checkout')))
+                ->form([
+                    Select::make('status')
+                        ->label('New Status')
+                        ->options([
+                            'pending'   => 'Pending',
+                            'confirmed' => 'Confirmed',
+                            'preparing' => 'Preparing',
+                            'ready'     => 'Ready',
+                        ])
+                        ->default(fn () => data_get($this->record->meta_data, 'guest_checkout.status', 'pending'))
+                        ->required()
+                        ->native(false),
+                ])
+                ->action(function (array $data): void {
+                    $meta = $this->record->meta_data ?? [];
+                    data_set($meta, 'guest_checkout.status', $data['status']);
+                    $this->record->update(['meta_data' => $meta]);
+
+                    Notification::make()
+                        ->title('Order status updated to ' . ucfirst($data['status']))
+                        ->success()
+                        ->send();
+
+                    $this->refreshFormData(['meta_data']);
+                }),
+
             EditAction::make('edit'),
 
             DeleteAction::make('delete')
@@ -63,6 +97,24 @@ class ViewCart extends ViewRecord
                             ->label('Order Type')
                             ->placeholder('N/A')
                             ->formatStateUsing(fn (?string $state): string => $state ? ucfirst($state) : 'N/A'),
+
+                        TextEntry::make('meta_data.guest_checkout.status')
+                            ->label('Order Status')
+                            ->badge()
+                            ->placeholder('N/A')
+                            ->color(fn (?string $state): string => match ($state) {
+                                'confirmed' => 'info',
+                                'preparing' => 'warning',
+                                'ready'     => 'success',
+                                default     => 'gray',
+                            })
+                            ->formatStateUsing(fn (?string $state): string => match ($state) {
+                                'pending'   => 'Pending',
+                                'confirmed' => 'Confirmed',
+                                'preparing' => 'Preparing',
+                                'ready'     => 'Ready',
+                                default     => 'N/A',
+                            }),
 
                         TextEntry::make('meta_data.guest_checkout.address')
                             ->label('Address')

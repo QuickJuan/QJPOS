@@ -80,7 +80,7 @@ class OnlineOrderController extends Controller
         $guestCheckout = data_get($cart->meta_data, 'guest_checkout', []);
         $metaData = $cart->meta_data ?? [];
         $metaData['guest_checkout'] = array_merge($guestCheckout, [
-            'status' => 'confirmed',
+            'status' => 'preparing', // immediately sent to kitchen in this same request
             'processed_at' => now()->toIso8601String(),
             'processed_by' => [
                 'id' => $request->user()->id,

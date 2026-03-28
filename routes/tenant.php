@@ -173,6 +173,7 @@ if (!isCentralDomain()) {
         Route::get('/checkout', [GuestOrderController::class, 'checkout'])->name('checkout');
         Route::post('/checkout', [GuestOrderController::class, 'store'])->name('checkout.store');
         Route::get('/order/{reference}', [GuestOrderController::class, 'confirmation'])->name('order.confirmation');
+        Route::get('/order/{reference}/status', [GuestOrderController::class, 'orderStatus'])->name('order.status');
         Route::post('/coupon/validate', [CouponCodeController::class, 'validateGuest'])->name('coupon.validate');
     });
 
