@@ -66,7 +66,7 @@ if (!isCentralDomain()) {
         InitializeTenancyByDomain::class,
         PreventAccessFromCentralDomains::class,
         'web',
-
+        \App\Http\Middleware\HandlePageRedirects::class,
 ])->group(function () {
 
     // PUBLIC STATIC FILE ROUTES (no auth required)
@@ -529,6 +529,10 @@ if (!isCentralDomain()) {
             //     });
 
         });
+
+    // SITEMAP
+    Route::get('/sitemap.xml', [\App\Http\Controllers\SitemapController::class, 'index'])
+        ->name('sitemap.xml');
 
     // Public pages routes with optional prefix
     // Note: Landing pages (page_type = 'landing_page') should only be accessible via the root URL '/'
