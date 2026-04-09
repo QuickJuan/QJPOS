@@ -486,30 +486,78 @@ const handleServerConfirm = async (payload: ServerConfirmationPayload) => {
     }
 };
 
-const handleReprintOrder = async () => {
-    const result = await Swal.fire({
-        title: "Re-print Order",
-        input: "text",
-        inputLabel: "Enter batch/order number",
-        inputPlaceholder: "e.g., 123",
-        showCancelButton: true,
-        confirmButtonText: "Re-print",
-        inputValidator: (value) => {
-            if (!value || !value.trim()) {
-                return "Batch number is required";
-            }
-            if (!/^\d+$/.test(value.trim())) {
-                return "Batch number must be numeric";
-            }
-            return null;
-        },
-    });
-
-    if (!result.isConfirmed || !result.value) {
-        return;
+const placedBatches = computed(() => {
+    const seen = new Set<string>();
+    const batches: Array<{
+        batchNumber: string;
+        servingNumber: string | null;
+    }> = [];
+    for (const item of props.orderItems) {
+        if (
+            item.placed_order &&
+            item.batch_number &&
+            !seen.has(String(item.batch_number))
+        ) {
+            seen.add(String(item.batch_number));
+            batches.push({
+                batchNumber: String(item.batch_number),
+                servingNumber: item.servingNumber ?? null,
+            });
+        }
     }
+    // Sort descending so the latest batch appears first
+    return batches.sort(
+        (a, b) => Number(b.batchNumber) - Number(a.batchNumber),
+    );
+});
 
-    const batchNumber = result.value.trim();
+const handleReprintOrder = async () => {
+    const batches = placedBatches.value;
+    let batchNumber: string;
+
+    if (batches.length > 0) {
+        const inputOptions: Record<string, string> = {};
+        for (const b of batches) {
+            inputOptions[b.batchNumber] = b.servingNumber
+                ? `Batch #${b.batchNumber}  —  Serving #${b.servingNumber}`
+                : `Batch #${b.batchNumber}`;
+        }
+
+        const result = await Swal.fire({
+            title: "Re-print Order",
+            text: "Select a batch to re-print",
+            input: "radio",
+            inputOptions,
+            inputValue: batches[0].batchNumber,
+            showCancelButton: true,
+            confirmButtonText: "Re-print",
+            inputValidator: (value) => {
+                if (!value) return "Please select a batch";
+                return null;
+            },
+        });
+
+        if (!result.isConfirmed || !result.value) return;
+        batchNumber = result.value;
+    } else {
+        const result = await Swal.fire({
+            title: "Re-print Order",
+            input: "text",
+            inputLabel: "Enter batch/order number",
+            inputPlaceholder: "e.g., 123",
+            showCancelButton: true,
+            confirmButtonText: "Re-print",
+            inputValidator: (value) => {
+                if (!value || !value.trim()) return "Batch number is required";
+                if (!/^\d+$/.test(value.trim()))
+                    return "Batch number must be numeric";
+                return null;
+            },
+        });
+
+        if (!result.isConfirmed || !result.value) return;
+        batchNumber = result.value.trim();
+    }
 
     try {
         const response = await httpGet(

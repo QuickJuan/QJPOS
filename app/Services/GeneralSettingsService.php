@@ -19,9 +19,11 @@ class GeneralSettingsService
             'company_name'    => $generalSettings->company_name,
             'company_address' => $generalSettings->company_address,
             'company_phone'   => $generalSettings->company_contact,
+            'company_contact' => $generalSettings->company_contact,
             'company_logo'    => $companyLogo,
             'hero_image'      => $heroImage,
             'timezone'        => $generalSettings->timezone ?? 'UTC',
+            'enable_feedback_qr_code' => (bool) ($generalSettings->enable_feedback_qr_code ?? false),
         ];
     }
 }

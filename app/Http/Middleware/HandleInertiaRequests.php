@@ -154,10 +154,11 @@ class HandleInertiaRequests extends Middleware
             return [
                 'company_name'    => $settings['company_name'] ?? '',
                 'company_address' => $settings['company_address'] ?? '',
-                'company_contact' => $settings['company_contact'] ?? '',
+                'company_contact' => $settings['company_contact'] ?? ($settings['company_phone'] ?? ''),
                 'company_logo'    => $settings['company_logo'] ?? '',
                 'hero_image'      => $settings['hero_image'] ?? '',
                 'timezone'        => $settings['timezone'] ?? 'UTC',
+                'enable_feedback_qr_code' => (bool) ($settings['enable_feedback_qr_code'] ?? false),
             ];
         } catch (\Exception $e) {
             return [
@@ -167,6 +168,7 @@ class HandleInertiaRequests extends Middleware
                 'company_logo'    => '',
                 'hero_image'      => '',
                 'timezone'        => 'UTC',
+                'enable_feedback_qr_code' => false,
             ];
         }
     }

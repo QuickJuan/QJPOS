@@ -6,7 +6,7 @@
             <div
                 class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.3),_transparent_38%),radial-gradient(circle_at_bottom_right,_rgba(16,185,129,0.24),_transparent_34%)]"
             />
-            <div class="relative grid gap-8 lg:grid-cols-[minmax(0,1.4fr)_360px]">
+            <div class="relative">
                 <div class="space-y-6">
                     <div class="flex flex-wrap items-center gap-3">
                         <span
@@ -40,7 +40,9 @@
                         >
                             Welcome back, {{ user.name }}.
                         </h1>
-                        <p class="mt-3 max-w-2xl text-base text-slate-300 sm:text-lg">
+                        <p
+                            class="mt-3 max-w-2xl text-base text-slate-300 sm:text-lg"
+                        >
                             Pick the workspace you need and keep cashiering,
                             floor operations, and attendance moving from one
                             clean dashboard.
@@ -51,20 +53,27 @@
                         <div
                             class="rounded-2xl border border-white/10 bg-white/8 p-4 backdrop-blur-sm"
                         >
-                            <p class="text-xs uppercase tracking-[0.22em] text-slate-400">
+                            <p
+                                class="text-xs uppercase tracking-[0.22em] text-slate-400"
+                            >
                                 Branch
                             </p>
                             <p class="mt-2 text-lg font-semibold text-white">
                                 {{ activeBranch?.name || "No branch selected" }}
                             </p>
                             <p class="mt-1 text-sm text-slate-300">
-                                {{ activeBranch?.branch_code || "Code unavailable" }}
+                                {{
+                                    activeBranch?.branch_code ||
+                                    "Code unavailable"
+                                }}
                             </p>
                         </div>
                         <div
                             class="rounded-2xl border border-white/10 bg-white/8 p-4 backdrop-blur-sm"
                         >
-                            <p class="text-xs uppercase tracking-[0.22em] text-slate-400">
+                            <p
+                                class="text-xs uppercase tracking-[0.22em] text-slate-400"
+                            >
                                 Role
                             </p>
                             <p class="mt-2 text-lg font-semibold text-white">
@@ -77,7 +86,9 @@
                         <div
                             class="rounded-2xl border border-white/10 bg-white/8 p-4 backdrop-blur-sm"
                         >
-                            <p class="text-xs uppercase tracking-[0.22em] text-slate-400">
+                            <p
+                                class="text-xs uppercase tracking-[0.22em] text-slate-400"
+                            >
                                 Last attendance
                             </p>
                             <p class="mt-2 text-lg font-semibold text-white">
@@ -89,38 +100,15 @@
                         </div>
                     </div>
                 </div>
-
-                <aside
-                    class="rounded-[1.75rem] border border-white/10 bg-white/8 p-5 backdrop-blur-sm"
-                >
-                    <p class="text-xs uppercase tracking-[0.22em] text-slate-400">
-                        Focus today
-                    </p>
-                    <div class="mt-4 space-y-4">
-                        <div
-                            v-for="item in focusPanels"
-                            :key="item.label"
-                            class="rounded-2xl border border-white/10 bg-slate-900/35 p-4"
-                        >
-                            <p class="text-sm text-slate-300">
-                                {{ item.label }}
-                            </p>
-                            <p class="mt-2 text-2xl font-semibold text-white">
-                                {{ item.value }}
-                            </p>
-                            <p class="mt-1 text-sm text-slate-400">
-                                {{ item.caption }}
-                            </p>
-                        </div>
-                    </div>
-                </aside>
             </div>
         </section>
 
         <section class="mt-8">
             <div class="mb-5 flex items-end justify-between gap-4">
                 <div>
-                    <h2 class="text-2xl font-semibold tracking-tight text-slate-900">
+                    <h2
+                        class="text-2xl font-semibold tracking-tight text-slate-900"
+                    >
                         Workspaces
                     </h2>
                     <p class="mt-1 text-sm text-slate-600">
@@ -141,7 +129,9 @@
                     :key="action.name"
                     :href="
                         action.route === 'resto.pending-orders.index'
-                            ? route(action.route, { branchId: activeBranch?.id })
+                            ? route(action.route, {
+                                  branchId: activeBranch?.id,
+                              })
                             : route(action.route)
                     "
                     class="group relative overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.35)] transition duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-[0_28px_60px_-35px_rgba(15,23,42,0.45)]"
@@ -160,11 +150,16 @@
 
                         <div class="mt-6 flex-1">
                             <div class="flex items-start justify-between gap-3">
-                                <h3 class="text-xl font-semibold text-slate-900">
+                                <h3
+                                    class="text-xl font-semibold text-slate-900"
+                                >
                                     {{ action.name }}
                                 </h3>
                                 <span
-                                    v-if="action.route === 'attendance.index' && isClockedIn"
+                                    v-if="
+                                        action.route === 'attendance.index' &&
+                                        isClockedIn
+                                    "
                                     class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"
                                 >
                                     Live
@@ -178,7 +173,9 @@
                         <div
                             class="mt-6 flex items-center justify-between text-sm font-medium"
                         >
-                            <span class="text-slate-500">{{ action.meta }}</span>
+                            <span class="text-slate-500">{{
+                                action.meta
+                            }}</span>
                             <span
                                 class="text-slate-900 transition group-hover:translate-x-1"
                             >
@@ -263,32 +260,13 @@ const attendanceSubLabel = computed(() => {
     return "Use Clock In/Out to begin your shift";
 });
 
-const focusPanels = computed(() => [
-    {
-        label: "Active branch",
-        value: activeBranch.value?.branch_code || "Not set",
-        caption: activeBranch.value?.name || "Assign a branch to continue",
-    },
-    {
-        label: "Shift status",
-        value: isClockedIn.value ? "On duty" : "Off duty",
-        caption: isClockedIn.value
-            ? "Attendance is active for today"
-            : "Clock in before starting work",
-    },
-    {
-        label: "Workspace access",
-        value: isOrderTaking.value ? "Order taking" : "Cashier + floor",
-        caption: "Modules shown below match this account",
-    },
-]);
-
 const actions = computed(() => {
     const commonActions = [
         {
             route: "attendance.index",
             name: "Clock In/Out",
-            description: "Capture employee attendance with camera validation and a live branch log.",
+            description:
+                "Capture employee attendance with camera validation and a live branch log.",
             icon: ClockInOutIcon,
             meta: "Attendance",
             badge: "bg-gradient-to-br from-amber-500 to-orange-500",
@@ -301,7 +279,8 @@ const actions = computed(() => {
             {
                 route: "table-rooms.index",
                 name: "Start Order Taking",
-                description: "Open the ordering workspace for table-side service and cart management.",
+                description:
+                    "Open the ordering workspace for table-side service and cart management.",
                 icon: TableOrderingIcon,
                 meta: "Dining floor",
                 badge: "bg-gradient-to-br from-sky-500 to-cyan-500",
@@ -315,7 +294,8 @@ const actions = computed(() => {
         {
             route: "resto.start-cashiering",
             name: "Start Cashiering",
-            description: "Launch the POS workspace for transactions, payments, and cashier operations.",
+            description:
+                "Launch the POS workspace for transactions, payments, and cashier operations.",
             icon: CashieringIcon,
             meta: "Point of sale",
             badge: "bg-gradient-to-br from-emerald-500 to-teal-500",
@@ -324,7 +304,8 @@ const actions = computed(() => {
         {
             route: "resto.pending-orders.index",
             name: "Pending Orders",
-            description: "Review queued orders, monitor kitchen progress, and keep service moving.",
+            description:
+                "Review queued orders, monitor kitchen progress, and keep service moving.",
             icon: TableOrderingIcon,
             meta: "Kitchen queue",
             badge: "bg-gradient-to-br from-violet-500 to-fuchsia-500",
@@ -333,7 +314,8 @@ const actions = computed(() => {
         {
             route: "table-management.index",
             name: "Table Management",
-            description: "Track tables, guest flow, and service activity across the restaurant floor.",
+            description:
+                "Track tables, guest flow, and service activity across the restaurant floor.",
             icon: AnalyticsIcon,
             meta: "Dining control",
             badge: "bg-gradient-to-br from-slate-700 to-slate-900",

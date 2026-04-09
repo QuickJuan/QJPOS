@@ -176,42 +176,57 @@
                                 {{ availablePaymentMethods.length }} configured
                             </span>
                         </div>
-                        <div class="grid grid-cols-2 2xl:grid-cols-3 gap-2">
+                        <div class="grid grid-cols-2 3xl:grid-cols-3 gap-2">
                             <button
                                 v-for="method in availablePaymentMethods"
                                 :key="method.id"
                                 type="button"
                                 @click="selectedPaymentMethodId = method.id"
                                 :class="[
-                                    'w-full rounded-2xl border text-left p-3 transition-all flex flex-col gap-1',
+                                    'group w-full rounded-2xl border text-left p-3 transition-all flex flex-col gap-2 min-h-[86px] focus:outline-none focus:ring-2 focus:ring-primary-200',
                                     selectedPaymentMethodId === method.id
-                                        ? 'bg-primary-50 text-primary-800 border-primary-300 ring-1 ring-primary-200 shadow-sm'
-                                        : 'bg-neutral-50 text-neutral-700 border-neutral-200 hover:bg-white',
+                                        ? 'bg-primary-50 text-primary-900 border-primary-300 shadow-sm'
+                                        : 'bg-white text-neutral-900 border-neutral-200 hover:border-neutral-300 hover:shadow-sm',
                                 ]"
                                 :aria-pressed="
                                     selectedPaymentMethodId === method.id
                                 "
                             >
-                                <span class="text-sm font-semibold">
-                                    {{ method.name }}
-                                </span>
-                                <span class="text-xs text-neutral-500">
-                                    {{
-                                        getPaymentTypeLabel(method.payment_type)
-                                    }}
-                                    <template
+                                <div class="flex flex-col gap-1">
+                                    <span
+                                        :class="[
+                                            'self-start inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wide border',
+                                            getPaymentTypePillClass(
+                                                method.payment_type,
+                                            ),
+                                        ]"
+                                    >
+                                        {{
+                                            getPaymentTypeLabel(
+                                                method.payment_type,
+                                            )
+                                        }}
+                                    </span>
+                                    <span
+                                        class="text-xs sm:text-sm font-semibold leading-snug whitespace-normal break-words"
+                                    >
+                                        {{ method.name }}
+                                    </span>
+                                </div>
+                                <div class="text-[11px] text-neutral-500">
+                                    <span
                                         v-if="
                                             method?.currency?.code ||
                                             method?.currency_code
                                         "
                                     >
-                                        ·
                                         {{
                                             method?.currency?.code ||
                                             method?.currency_code
                                         }}
-                                    </template>
-                                </span>
+                                    </span>
+                                    <span v-else>Default currency</span>
+                                </div>
                             </button>
                         </div>
                         <div
@@ -878,7 +893,7 @@
                         <button
                             type="button"
                             @click="navigateBack"
-                            class="flex-1 py-3 px-4 bg-gray-200 text-neutral-800 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
+                            class="flex-1 py-3 px-4 bg-gray-200 text-neutral-800 rounded-lg hover:bg-gray-300 transition-colors font-semibold whitespace-nowrap"
                         >
                             Cancel
                         </button>
@@ -902,7 +917,7 @@
                             :disabled="!canSettle || isSubmitting"
                             @click="handleSettlePayment"
                             :class="[
-                                'flex-1 py-3 px-4 rounded-lg font-semibold text-white transition-colors',
+                                'flex-1 py-3 px-4 rounded-lg font-semibold text-white transition-colors whitespace-nowrap',
                                 canSettle && !isSubmitting
                                     ? 'bg-success-600 hover:bg-success-700'
                                     : 'bg-gray-400 cursor-not-allowed',
@@ -1014,12 +1029,26 @@ const formattedCartNumber = computed(() => {
 });
 
 const paymentMethods = computed(() => page.props.payment_methods ?? []);
+const paymentTypeRank: Record<string, number> = {
+    cash: 0,
+    "e-wallet": 1,
+    card: 2,
+    credit: 3,
+    "gift-check": 4,
+    points: 5,
+};
 const availablePaymentMethods = computed(() => {
     const methods = Array.isArray(paymentMethods.value)
         ? paymentMethods.value
         : [];
 
     return [...methods].sort((a: any, b: any) => {
+        const rankA = paymentTypeRank[String(a.payment_type || "")] ?? 99;
+        const rankB = paymentTypeRank[String(b.payment_type || "")] ?? 99;
+        if (rankA !== rankB) {
+            return rankA - rankB;
+        }
+
         const orderA = typeof a.sort_order === "number" ? a.sort_order : 999;
         const orderB = typeof b.sort_order === "number" ? b.sort_order : 999;
 
@@ -1122,6 +1151,27 @@ const getPaymentTypeLabel = (type?: string | null) => {
             segment ? segment[0].toUpperCase() + segment.slice(1) : segment,
         )
         .join(" ");
+};
+
+const getPaymentTypePillClass = (type?: string | null) => {
+    const value = String(type || "").toLowerCase();
+
+    switch (value) {
+        case "cash":
+            return "bg-emerald-50 text-emerald-700 border-emerald-200";
+        case "e-wallet":
+            return "bg-sky-50 text-sky-700 border-sky-200";
+        case "card":
+            return "bg-indigo-50 text-indigo-700 border-indigo-200";
+        case "credit":
+            return "bg-amber-50 text-amber-700 border-amber-200";
+        case "gift-check":
+            return "bg-violet-50 text-violet-700 border-violet-200";
+        case "points":
+            return "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200";
+        default:
+            return "bg-neutral-50 text-neutral-700 border-neutral-200";
+    }
 };
 
 // Currency is now determined by the selected payment method
@@ -2318,6 +2368,13 @@ const processReceipt = async (data: any) => {
         receiptFooter: data?.branch?.receipt_footer,
         receiptHeader: data?.branch?.receipt_headers,
         birAccreditationFooter: data?.branch?.bir_accreditation_footer,
+        feedbackUrl: page.props.generalSettings?.enable_feedback_qr_code
+            ? route(
+                  "customer-feedback.create",
+                  { invoiceNo: data.invoice_no },
+                  true,
+              )
+            : undefined,
         isReprint: false,
     };
 

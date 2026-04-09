@@ -7,6 +7,7 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Form;
 use Filament\Pages\SettingsPage;
 use League\Flysystem\UnableToCheckFileExistence;
@@ -129,6 +130,11 @@ class ManageSettings extends SettingsPage
                     ->minValue(1)
                     ->required()
                     ->suffix('per point'),
+
+                Toggle::make('enable_feedback_qr_code')
+                    ->label('Print feedback QR code on receipts')
+                    ->helperText('Adds a QR code that links customers to a feedback form tied to their invoice number.')
+                    ->default(false),
             ]);
     }
 }

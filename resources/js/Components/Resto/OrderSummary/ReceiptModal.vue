@@ -138,8 +138,7 @@ const printReceipt = async () => {
             branch: props.receiptData.branch,
             orderNumber: props.receiptData.invoice_no,
             cashier: props.receiptData.cashier?.name,
-            date: dateStr,
-            time: timeStr,
+            dateTime: `${dateStr} ${timeStr}`,
             tableNumber: props.receiptData.table_number,
             items: props.receiptData.order_items || [],
             totals: props.receiptData.totals || 0,
@@ -147,6 +146,13 @@ const printReceipt = async () => {
             receiptFooter: props.receiptData?.branch?.receipt_footer,
             birAccreditationFooter:
                 props.receiptData?.branch?.bir_accreditation_footer,
+            feedbackUrl: page.props.generalSettings?.enable_feedback_qr_code
+                ? route(
+                      "customer-feedback.create",
+                      { invoiceNo: props.receiptData.invoice_no },
+                      true,
+                  )
+                : undefined,
             isReprint: false,
         };
 

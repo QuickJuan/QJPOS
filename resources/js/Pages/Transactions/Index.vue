@@ -463,6 +463,16 @@ const thermalReceiptData = computed(() => {
         receiptHeader: activeOrder.value?.branch?.receipt_headers,
         birAccreditationFooter:
             activeOrder.value?.branch?.bir_accreditation_footer,
+        feedbackUrl:
+            (page.props.generalSettings?.enable_feedback_qr_code ||
+                props.generalSettings?.enable_feedback_qr_code) &&
+            activeOrder.value.invoice_no
+                ? route(
+                      "customer-feedback.create",
+                      { invoiceNo: activeOrder.value.invoice_no },
+                      true
+                  )
+                : undefined,
         isReprint: true,
         refundMeta: refundMeta.value,
     };

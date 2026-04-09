@@ -132,6 +132,7 @@ interface ReceiptData {
     receiptFooter?: any;
     birAccreditationFooter?: any;
     footerMessage?: string;
+    feedbackUrl?: string;
     isReprint?: boolean;
     refundMeta?: {
         requested_by: string;
@@ -1304,6 +1305,23 @@ class ThermalPrinterService {
 
             commands.push(...this.ESC_POS.LINE_FEED);
 
+            // Optional customer feedback QR code
+            if (receiptData.feedbackUrl) {
+                commands.push(...this.ESC_POS.ALIGN_CENTER);
+                commands.push(...this.ESC_POS.BOLD_ON);
+                commands.push(...this.stringToBytes('Tell us how we did'));
+                commands.push(...this.ESC_POS.BOLD_OFF);
+                commands.push(...this.ESC_POS.LINE_FEED);
+                commands.push(...this.stringToBytes(`Scan to leave feedback for Invoice #${receiptData.orderNumber}`));
+                commands.push(...this.ESC_POS.LINE_FEED);
+                commands.push(...this.ESC_POS.LINE_FEED);
+
+                this.addQrCode(commands, receiptData.feedbackUrl, 6, 'M');
+
+                commands.push(...this.ESC_POS.LINE_FEED);
+                commands.push(...this.ESC_POS.LINE_FEED);
+            }
+
 
             if (receiptData.footerMessage) {
                 commands.push(...this.stringToBytes(receiptData.footerMessage));
@@ -1331,6 +1349,30 @@ class ThermalPrinterService {
             console.error('❌ Failed to print receipt:', error);
             throw error;
         }
+    }
+
+    private addQrCode(commands: number[], content: string, size: number = 6, errorCorrection: 'L' | 'M' | 'Q' | 'H' = 'M'): void {
+        const data = this.stringToBytes(content);
+        const model2 = [0x1d, 0x28, 0x6b, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00];
+        const sizeValue = Math.min(16, Math.max(1, Math.floor(size)));
+        const sizeCmd = [0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x43, sizeValue];
+
+        const eccMap: Record<string, number> = {
+            L: 0x30,
+            M: 0x31,
+            Q: 0x32,
+            H: 0x33,
+        };
+        const eccValue = eccMap[errorCorrection] ?? 0x31;
+        const eccCmd = [0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x45, eccValue];
+
+        const storeLen = data.length + 3;
+        const pL = storeLen & 0xff;
+        const pH = (storeLen >> 8) & 0xff;
+        const storeCmd = [0x1d, 0x28, 0x6b, pL, pH, 0x31, 0x50, 0x30, ...data];
+        const printCmd = [0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x51, 0x30];
+
+        commands.push(...model2, ...sizeCmd, ...eccCmd, ...storeCmd, ...printCmd);
     }
 
     /**

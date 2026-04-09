@@ -273,6 +273,17 @@
 </head>
 <body>
     <div class="receipt-container" id="receipt-content">
+        @php
+            $generalSettings = app(\App\Settings\GeneralSettings::class);
+            $showFeedbackQr = (bool) ($generalSettings->enable_feedback_qr_code ?? false);
+            $feedbackQr = null;
+
+            if ($showFeedbackQr && $order->invoice_no) {
+                $feedbackUrl = route('customer-feedback.create', ['invoiceNo' => $order->invoice_no]);
+                $feedbackQr = \App\Services\QrCodeService::pngDataUri($feedbackUrl, 140, 2);
+            }
+        @endphp
+
         <!-- Header -->
         <div class="receipt-header">
             @if($order->branch?->logo_url)
@@ -687,6 +698,18 @@
                         </div>
                     @endif
                 @endif
+            </div>
+        @endif
+
+        @if($feedbackQr)
+            <div style="text-align: center; margin-top: 12px; padding-top: 12px; border-top: 1px dashed #d1d5db;">
+                <div style="font-size: 11px; font-weight: 600; color: #111;">Tell us how we did</div>
+                <div style="margin-top: 8px;">
+                    <img src="{{ $feedbackQr }}" alt="Feedback QR Code" style="width: 120px; height: 120px;">
+                </div>
+                <div style="margin-top: 6px; font-size: 10px; color: #666;">
+                    Scan to leave feedback for Invoice #{{ $order->invoice_no }}
+                </div>
             </div>
         @endif
 

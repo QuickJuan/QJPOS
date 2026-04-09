@@ -33,6 +33,7 @@ use App\Http\Controllers\CouponCodeController;
 use App\Http\Controllers\OnlineOrderController;
 use App\Http\Controllers\CareerController;
 use App\Http\Controllers\ContactInquiryController;
+use App\Http\Controllers\CustomerFeedbackController;
 use App\Http\Controllers\Waiter\AuthController as WaiterAuthController;
 use Laravel\Fortify\Http\Controllers\NewPasswordController;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
@@ -252,7 +253,7 @@ if (!isCentralDomain()) {
     // ROUTES FOR AUTHENTICATED USER
     Route::middleware(['auth:sanctum'])
         ->group(function () {
-            Route::get('/home', [HomeController::class, 'index'])->name('home');
+            Route::get('/cashier', [HomeController::class, 'index'])->name('home');
 
             // Route::get('/dashboard', function () {
             //     return Inertia::render('Dashboard', [
@@ -537,6 +538,20 @@ if (!isCentralDomain()) {
     // SITEMAP
     Route::get('/sitemap.xml', [\App\Http\Controllers\SitemapController::class, 'index'])
         ->name('sitemap.xml');
+
+    // Customer feedback (public)
+    Route::get('/feedback/{invoiceNo}', [CustomerFeedbackController::class, 'create'])
+        ->whereNumber('invoiceNo')
+        ->name('customer-feedback.create');
+    Route::post('/feedback/{invoiceNo}', [CustomerFeedbackController::class, 'store'])
+        ->whereNumber('invoiceNo')
+        ->name('customer-feedback.store');
+    Route::get('/feedback/{invoiceNo}/thank-you', [CustomerFeedbackController::class, 'thankYou'])
+        ->whereNumber('invoiceNo')
+        ->name('customer-feedback.thank-you');
+    Route::get('/feedback/{invoiceNo}/already-submitted', [CustomerFeedbackController::class, 'alreadySubmitted'])
+        ->whereNumber('invoiceNo')
+        ->name('customer-feedback.already-submitted');
 
     // Public pages routes with optional prefix
     // Note: Landing pages (page_type = 'landing_page') should only be accessible via the root URL '/'

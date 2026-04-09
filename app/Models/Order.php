@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Auth;
 
 class Order extends Model
@@ -174,5 +175,9 @@ class Order extends Model
         return $this->belongsTo(Branch::class);
     }
 
+    public function customerFeedback(): HasOne
+    {
+        return $this->hasOne(CustomerFeedback::class);
+    }
 
 }
