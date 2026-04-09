@@ -444,6 +444,30 @@ class CartController extends Controller
         }
     }
 
+    public function listReprintBatches(Request $request): JsonResponse
+    {
+        try {
+            $limit = (int) $request->query('limit', 30);
+            $branchId = (int) ($request->query('branchId')
+                ?? $request->query('branch_id')
+                ?? (session('active_branch')->id ?? 0));
+
+            $batches = $this->cartService->getRecentPlacedBatches($branchId ?: null, $limit);
+
+            return response()->json([
+                'success' => true,
+                'data' => $batches,
+            ], 200);
+        } catch (Exception $e) {
+            Log::error('List reprint batches error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load recent batches.',
+            ], 500);
+        }
+    }
+
     public function showSettlePayment(Cart $cart): Response
     {
         $cart->load([

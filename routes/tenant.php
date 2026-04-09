@@ -387,6 +387,7 @@ if (!isCentralDomain()) {
                             Route::controller(CartController::class)
                                 ->group(function () {
                                     Route::get('/cart/{cart}/settle-payment', 'showSettlePayment')->name('cart.settle-payment');
+                                    Route::get('/cart/reprint-batches', 'listReprintBatches')->name('cart.reprint-batches');
                                     Route::get('/cart/reprint-order/{batchNumber}', 'reprintPlacedOrder')->name('cart.reprint-order');
                                     Route::post('/cart/settle-bill', 'settleBill')->name('cart.settle-bill');
                                     Route::post('/cart/transfer-items}', 'transferItems')->name('cart.transfer-items');

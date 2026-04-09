@@ -37,7 +37,11 @@
                                 <h2
                                     class="text-sm lg:text-sm font-bold text-white mb-0.5"
                                 >
-                                    Batch #{{ batch.batch_number }}
+                                    {{
+                                        batch.serving_number
+                                            ? `Serving #${batch.serving_number}`
+                                            : `Batch #${batch.batch_number}`
+                                    }}
                                 </h2>
                                 <p
                                     class="text-xs lg:text-xs text-blue-100 font-medium"

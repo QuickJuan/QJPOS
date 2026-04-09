@@ -1551,6 +1551,35 @@ class CartService
         ];
     }
 
+    public function getRecentPlacedBatches(?int $branchId = null, int $limit = 30): array
+    {
+        $limit = max(1, min($limit, 200));
+
+        $rows = CartItem::query()
+            ->select([
+                'batch_number',
+            ])
+            ->selectRaw('MAX(id) as max_id')
+            ->selectRaw('MAX(serving_number) as serving_number')
+            ->selectRaw('MAX(placed_order_time) as placed_order_time')
+            ->whereNotNull('batch_number')
+            ->where('placed_order', true)
+            ->whereNull('parent_id')
+            ->when($branchId, function ($query) use ($branchId) {
+                $query->whereHas('cart', fn ($q) => $q->where('branch_id', $branchId));
+            })
+            ->groupBy('batch_number')
+            ->orderByDesc('max_id')
+            ->limit($limit)
+            ->get();
+
+        return $rows->map(fn ($row) => [
+            'batch_number' => $row->batch_number,
+            'serving_number' => $row->serving_number,
+            'placed_order_time' => $row->placed_order_time,
+        ])->values()->all();
+    }
+
     /**
      * Recursively filter out served children from cart items
      */

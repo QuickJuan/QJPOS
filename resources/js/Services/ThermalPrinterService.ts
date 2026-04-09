@@ -359,6 +359,83 @@ class ThermalPrinterService {
     };
 
     private transport: 'bluetooth' | 'usb' | null = null;
+    private keepAliveIntervalId: number | null = null;
+
+    private getRememberedDeviceKey(type?: string): string {
+        return `thermal_printer_bluetooth_device_id:${type || 'unknown'}`;
+    }
+
+    private async getRememberedBluetoothDevice(type?: string, preferredName?: string): Promise<BluetoothDevice | undefined> {
+        if (!this.isBluetoothSupported()) {
+            return undefined;
+        }
+
+        const navBluetooth: any = (navigator as any).bluetooth;
+        const getDevices = navBluetooth?.getDevices;
+        if (typeof getDevices !== 'function') {
+            return undefined;
+        }
+
+        try {
+            const devices: BluetoothDevice[] = await getDevices.call(navBluetooth);
+            if (!Array.isArray(devices) || devices.length === 0) {
+                return undefined;
+            }
+
+            const rememberedId = typeof localStorage !== 'undefined'
+                ? localStorage.getItem(this.getRememberedDeviceKey(type))
+                : null;
+
+            const byId = rememberedId
+                ? devices.find((d) => (d as any).id === rememberedId)
+                : undefined;
+            if (byId) {
+                return byId;
+            }
+
+            if (preferredName) {
+                const byName = devices.find((d) => d.name === preferredName);
+                if (byName) {
+                    return byName;
+                }
+            }
+
+            return devices[0];
+        } catch (error) {
+            console.warn('Failed to load remembered Bluetooth devices:', error);
+            return undefined;
+        }
+    }
+
+    private startKeepAlive(): void {
+        this.stopKeepAlive();
+
+        // Keep-alive only makes sense for Bluetooth.
+        if (this.transport !== 'bluetooth') {
+            return;
+        }
+
+        // Send a status query periodically. This is non-printing on most ESC/POS printers.
+        this.keepAliveIntervalId = window.setInterval(async () => {
+            try {
+                if (!this.isConnected() || this.transport !== 'bluetooth') {
+                    return;
+                }
+
+                const statusQuery = new Uint8Array([0x10, 0x04, 0x01]); // DLE EOT 1
+                await this.sendToPrinter(statusQuery);
+            } catch {
+                // Ignore - disconnect handler will try to reconnect.
+            }
+        }, 45_000);
+    }
+
+    private stopKeepAlive(): void {
+        if (this.keepAliveIntervalId !== null) {
+            clearInterval(this.keepAliveIntervalId);
+            this.keepAliveIntervalId = null;
+        }
+    }
 
     private currentConfig: PrinterConfig | null = null;
     private reconnectAttempts: number = 0;
@@ -459,6 +536,18 @@ class ThermalPrinterService {
                     this.bluetooth.server = await existingDevice.gatt.connect();
                 }
             } else {
+                // Try to reuse a previously granted device (no pairing prompt) if available.
+                const rememberedDevice = await this.getRememberedBluetoothDevice(
+                    printerConfig?.type,
+                    printerConfig?.bluetooth_name || undefined,
+                );
+                if (rememberedDevice?.gatt) {
+                    console.log('♻️ Using remembered Bluetooth device');
+                    this.bluetooth.device = rememberedDevice;
+                    this.bluetooth.server = rememberedDevice.gatt.connected
+                        ? rememberedDevice.gatt
+                        : await rememberedDevice.gatt.connect();
+                } else {
                 // Request new device
                 console.log('🔍 Requesting new Bluetooth device');
 
@@ -492,6 +581,7 @@ class ThermalPrinterService {
 
                 // Connect to GATT server
                 this.bluetooth.server = await this.bluetooth.device.gatt?.connect();
+                }
             }
 
             if (!this.bluetooth.server) {
@@ -522,6 +612,19 @@ class ThermalPrinterService {
 
             console.log('✅ Successfully connected to thermal printer');
             this.transport = 'bluetooth';
+
+            try {
+                if (typeof localStorage !== 'undefined' && this.bluetooth.device) {
+                    localStorage.setItem(
+                        this.getRememberedDeviceKey(printerConfig?.type),
+                        (this.bluetooth.device as any).id,
+                    );
+                }
+            } catch {
+                // Ignore storage failures.
+            }
+
+            this.startKeepAlive();
             return true;
         } catch (error) {
             console.error('❌ Failed to connect to printer:', error);
@@ -676,6 +779,8 @@ class ThermalPrinterService {
      * Disconnect from printer
      */
     public async disconnectFromPrinter(): Promise<void> {
+        this.stopKeepAlive();
+
         // Disconnect Bluetooth (if any)
         try {
             if (this.bluetooth.device) {

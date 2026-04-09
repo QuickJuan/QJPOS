@@ -163,7 +163,11 @@ const appliedDiscount = computed(() => props.appliedDiscount);
 
 // Check if there are items that can be placed (not yet placed)
 const hasItemsToPlace = computed(() => {
-    return props.orderItems.some((item) => !item.placed_order);
+    return props.orderItems.some((group) =>
+        (group.cartItems ?? group.items ?? []).some(
+            (item: any) => !item.placed_order,
+        ),
+    );
 });
 
 const { placeOrder } = useTable();
@@ -492,17 +496,20 @@ const placedBatches = computed(() => {
         batchNumber: string;
         servingNumber: string | null;
     }> = [];
-    for (const item of props.orderItems) {
-        if (
-            item.placed_order &&
-            item.batch_number &&
-            !seen.has(String(item.batch_number))
-        ) {
-            seen.add(String(item.batch_number));
-            batches.push({
-                batchNumber: String(item.batch_number),
-                servingNumber: item.servingNumber ?? null,
-            });
+    for (const group of props.orderItems) {
+        const items = group.cartItems ?? group.items ?? [];
+        for (const item of items) {
+            if (
+                item.placed_order &&
+                item.batch_number &&
+                !seen.has(String(item.batch_number))
+            ) {
+                seen.add(String(item.batch_number));
+                batches.push({
+                    batchNumber: String(item.batch_number),
+                    servingNumber: item.servingNumber || null,
+                });
+            }
         }
     }
     // Sort descending so the latest batch appears first
@@ -512,51 +519,187 @@ const placedBatches = computed(() => {
 });
 
 const handleReprintOrder = async () => {
-    const batches = placedBatches.value;
-    let batchNumber: string;
+    let batchNumber: string | null = null;
 
-    if (batches.length > 0) {
-        const inputOptions: Record<string, string> = {};
-        for (const b of batches) {
-            inputOptions[b.batchNumber] = b.servingNumber
-                ? `Batch #${b.batchNumber}  —  Serving #${b.servingNumber}`
-                : `Batch #${b.batchNumber}`;
+    try {
+        const apiResponse = await httpGet(
+            route("resto.cart.reprint-batches", { limit: 30 }),
+        );
+
+        const apiPayload: any = apiResponse?.data;
+        const apiBatchesRaw = Array.isArray(apiPayload?.data)
+            ? apiPayload.data
+            : [];
+
+        const combined = [
+            ...apiBatchesRaw.map((b: any) => ({
+                batchNumber: String(b.batch_number ?? b.batchNumber ?? ""),
+                servingNumber: b.serving_number ?? b.servingNumber ?? null,
+                placedOrderTime:
+                    b.placed_order_time ?? b.placedOrderTime ?? null,
+            })),
+            ...placedBatches.value.map((b) => ({
+                ...b,
+                placedOrderTime: null,
+            })),
+        ].filter((b) => b.batchNumber);
+
+        const seen = new Set<string>();
+        const batches = combined.filter((b) => {
+            if (seen.has(b.batchNumber)) return false;
+            seen.add(b.batchNumber);
+            return true;
+        });
+
+        batches.sort((a, b) => {
+            const na = Number(a.batchNumber);
+            const nb = Number(b.batchNumber);
+            if (Number.isFinite(na) && Number.isFinite(nb)) return nb - na;
+            return String(b.batchNumber).localeCompare(String(a.batchNumber));
+        });
+
+        if (batches.length === 0) {
+            await Swal.fire({
+                icon: "info",
+                title: "Re-print Order",
+                text: "No recent batches found to re-print.",
+            });
+            return;
         }
 
+        const formatPlacedTime = (raw: any): string | null => {
+            if (!raw) return null;
+            const date = new Date(raw);
+            if (Number.isNaN(date.getTime())) return null;
+            return date.toLocaleString(undefined, {
+                month: "short",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+            });
+        };
+
+        const listHtml = batches
+            .map((b, index) => {
+                const serving = b.servingNumber
+                    ? `Serving #${String(b.servingNumber)}`
+                    : "Serving #—";
+                const placed = formatPlacedTime(b.placedOrderTime);
+                const checked = index === 0 ? "checked" : "";
+
+                return `
+                    <label class="reprint-item">
+                        <input class="reprint-radio" type="radio" name="reprintBatch" value="${b.batchNumber}" ${checked} />
+                        <div class="reprint-main">
+                            <div class="reprint-title">
+                                <span class="reprint-serving">${serving}</span>
+                                <span class="reprint-batch">Batch #${b.batchNumber}</span>
+                            </div>
+                            ${
+                                placed
+                                    ? `<div class="reprint-sub">Placed ${placed}</div>`
+                                    : `<div class="reprint-sub">Recently placed order</div>`
+                            }
+                        </div>
+                    </label>
+                `;
+            })
+            .join("");
+
         const result = await Swal.fire({
             title: "Re-print Order",
-            text: "Select a batch to re-print",
-            input: "radio",
-            inputOptions,
-            inputValue: batches[0].batchNumber,
+            html: `
+                <div class="reprint-help">Select a batch to re-print</div>
+                <div class="reprint-list">${listHtml}</div>
+            `,
             showCancelButton: true,
             confirmButtonText: "Re-print",
-            inputValidator: (value) => {
-                if (!value) return "Please select a batch";
-                return null;
+            focusConfirm: false,
+            customClass: {
+                popup: "reprint-popup",
+                confirmButton: "reprint-confirm",
+                cancelButton: "reprint-cancel",
+            },
+            buttonsStyling: false,
+            didOpen: () => {
+                const popup = Swal.getPopup();
+                if (!popup) return;
+
+                const style = document.createElement("style");
+                style.textContent = `
+                    .swal2-popup.reprint-popup { padding: 22px 22px 18px; border-radius: 18px; }
+                    .reprint-help { font-size: 13px; color: #6b7280; margin-top: -4px; margin-bottom: 14px; }
+                    .reprint-list { display: flex; flex-direction: column; gap: 10px; max-height: 320px; overflow: auto; padding-right: 4px; }
+                    .reprint-item { display: flex; gap: 12px; align-items: flex-start; padding: 12px 12px; border: 1px solid #e5e7eb; border-radius: 14px; background: #ffffff; cursor: pointer; transition: box-shadow 140ms ease, border-color 140ms ease, transform 140ms ease, background 140ms ease; }
+                    .reprint-item:hover { border-color: #c7d2fe; box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08); transform: translateY(-1px); }
+                    .reprint-radio { margin-top: 3px; accent-color: #4f46e5; }
+                    .reprint-main { flex: 1; min-width: 0; }
+                    .reprint-title { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+                    .reprint-serving { font-weight: 800; color: #0f172a; }
+                    .reprint-batch { font-size: 11px; font-weight: 800; color: #4338ca; background: #eef2ff; border: 1px solid #c7d2fe; padding: 2px 9px; border-radius: 999px; }
+                    .reprint-sub { margin-top: 4px; font-size: 12px; color: #64748b; }
+                    .reprint-item.is-selected { border-color: #4f46e5; background: #f5f3ff; }
+                    .reprint-confirm { background: #4f46e5; color: white; font-weight: 700; border-radius: 10px; padding: 10px 16px; min-width: 110px; }
+                    .reprint-confirm:hover { background: #4338ca; }
+                    .reprint-cancel { background: #f1f5f9; color: #0f172a; font-weight: 700; border-radius: 10px; padding: 10px 16px; min-width: 110px; }
+                    .reprint-cancel:hover { background: #e2e8f0; }
+                `;
+                popup.appendChild(style);
+
+                const updateSelected = () => {
+                    const items = popup.querySelectorAll<HTMLLabelElement>(
+                        ".reprint-item",
+                    );
+                    items.forEach((item) =>
+                        item.classList.remove("is-selected"),
+                    );
+                    const checked = popup.querySelector<HTMLInputElement>(
+                        'input[name="reprintBatch"]:checked',
+                    );
+                    if (checked) {
+                        const label = checked.closest(
+                            ".reprint-item",
+                        ) as HTMLLabelElement | null;
+                        label?.classList.add("is-selected");
+                    }
+                };
+
+                popup.addEventListener("change", (event) => {
+                    const target = event.target as HTMLElement;
+                    if (
+                        target &&
+                        (target as HTMLInputElement).name === "reprintBatch"
+                    ) {
+                        updateSelected();
+                    }
+                });
+
+                updateSelected();
+            },
+            preConfirm: () => {
+                const popup = Swal.getPopup();
+                const selected = popup?.querySelector<HTMLInputElement>(
+                    'input[name="reprintBatch"]:checked',
+                );
+                if (!selected?.value) {
+                    Swal.showValidationMessage("Please select a batch");
+                    return null;
+                }
+                return selected.value;
             },
         });
 
         if (!result.isConfirmed || !result.value) return;
-        batchNumber = result.value;
-    } else {
-        const result = await Swal.fire({
-            title: "Re-print Order",
-            input: "text",
-            inputLabel: "Enter batch/order number",
-            inputPlaceholder: "e.g., 123",
-            showCancelButton: true,
-            confirmButtonText: "Re-print",
-            inputValidator: (value) => {
-                if (!value || !value.trim()) return "Batch number is required";
-                if (!/^\d+$/.test(value.trim()))
-                    return "Batch number must be numeric";
-                return null;
-            },
+        batchNumber = String(result.value);
+    } catch (error) {
+        console.error("Failed to load reprint batches:", error);
+        toast.add({
+            severity: "error",
+            summary: "Re-print Failed",
+            detail: "Unable to load recent batches. Please try again.",
+            life: 4000,
         });
-
-        if (!result.isConfirmed || !result.value) return;
-        batchNumber = result.value.trim();
+        return;
     }
 
     try {

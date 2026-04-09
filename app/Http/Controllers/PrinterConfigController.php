@@ -12,7 +12,49 @@ class PrinterConfigController extends Controller
      */
     public function index(?int $tableId = null)
     {
-        $printers = PrinterConfig::orderBy('type')->orderBy('name')->get();
+        $cashierId = (int) auth()->id();
+
+        $printers = PrinterConfig::query()
+            ->where('cashier_id', $cashierId)
+            ->orderBy('type')
+            ->orderBy('name')
+            ->get();
+
+        // Backward-compat: if this cashier has no personal configs yet, clone legacy configs (cashier_id = null).
+        if ($printers->isEmpty()) {
+            $legacyPrinters = PrinterConfig::query()
+                ->whereNull('cashier_id')
+                ->orderBy('type')
+                ->orderBy('name')
+                ->get();
+
+            if ($legacyPrinters->isNotEmpty()) {
+                foreach ($legacyPrinters as $legacy) {
+                    PrinterConfig::create([
+                        'cashier_id' => $cashierId,
+                        'name' => $legacy->name,
+                        'type' => $legacy->type,
+                        'bluetooth_name' => $legacy->bluetooth_name,
+                        'bluetooth_address' => $legacy->bluetooth_address,
+                        'service_uuid' => $legacy->service_uuid,
+                        'characteristic_uuid' => $legacy->characteristic_uuid,
+                        'paper_size' => $legacy->paper_size,
+                        'character_width' => $legacy->character_width,
+                        'is_active' => $legacy->is_active,
+                        'auto_cut' => $legacy->auto_cut,
+                        'cut_spacing' => $legacy->cut_spacing,
+                        'print_categories' => $legacy->print_categories,
+                        'notes' => $legacy->notes,
+                    ]);
+                }
+
+                $printers = PrinterConfig::query()
+                    ->where('cashier_id', $cashierId)
+                    ->orderBy('type')
+                    ->orderBy('name')
+                    ->get();
+            }
+        }
 
         return Inertia::render('PrinterConfig/Index', [
             'printers' => $printers,
@@ -46,6 +88,15 @@ class PrinterConfigController extends Controller
             $validated['character_width'] = $validated['paper_size'] === '36mm' ? 32 : 48;
         }
 
+        $validated['cashier_id'] = (int) auth()->id();
+
+        if (($validated['is_active'] ?? true) === true) {
+            PrinterConfig::query()
+                ->where('cashier_id', $validated['cashier_id'])
+                ->where('type', $validated['type'])
+                ->update(['is_active' => false]);
+        }
+
         PrinterConfig::create($validated);
 
         return redirect()->back()->with('success', 'Printer configuration created successfully.');
@@ -56,6 +107,8 @@ class PrinterConfigController extends Controller
      */
     public function update(Request $request, PrinterConfig $printerConfig)
     {
+        abort_unless((int) $printerConfig->cashier_id === (int) auth()->id(), 403);
+
         $validated = $request->validate([
             'name'                => 'required|string|max:255',
             'type'                => 'required|in:kitchen,bar,receipt',
@@ -77,6 +130,14 @@ class PrinterConfigController extends Controller
             $validated['character_width'] = $validated['paper_size'] === '36mm' ? 32 : 48;
         }
 
+        if (($validated['is_active'] ?? $printerConfig->is_active) === true) {
+            PrinterConfig::query()
+                ->where('cashier_id', (int) auth()->id())
+                ->where('type', $validated['type'])
+                ->where('id', '!=', $printerConfig->id)
+                ->update(['is_active' => false]);
+        }
+
         $printerConfig->update($validated);
 
         return redirect()->back()->with('success', 'Printer configuration updated successfully.');
@@ -87,6 +148,8 @@ class PrinterConfigController extends Controller
      */
     public function destroy(PrinterConfig $printerConfig)
     {
+        abort_unless((int) $printerConfig->cashier_id === (int) auth()->id(), 403);
+
         $printerConfig->delete();
 
         return redirect()->back()->with('success', 'Printer configuration deleted successfully.');
@@ -97,7 +160,8 @@ class PrinterConfigController extends Controller
      */
     public function getConfig($type)
     {
-        $printer = PrinterConfig::getForType($type);
+        $cashierId = (int) auth()->id();
+        $printer = PrinterConfig::getForTypeForCashier($type, $cashierId);
 
         if (! $printer) {
             return response()->json(['error' => 'No active printer configuration found for type: ' . $type], 404);
@@ -111,6 +175,8 @@ class PrinterConfigController extends Controller
      */
     public function testPrinter(Request $request, PrinterConfig $printerConfig)
     {
+        abort_unless((int) $printerConfig->cashier_id === (int) auth()->id(), 403);
+
         // Return printer configuration for frontend to test
         return response()->json([
             'printer' => $printerConfig,

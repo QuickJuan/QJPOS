@@ -4,12 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PrinterConfig extends Model
 {
     use HasFactory;
 
     protected $fillable = [
+        'cashier_id',
         'name',
         'type',
         'bluetooth_name',
@@ -55,6 +57,32 @@ class PrinterConfig extends Model
     public static function getForType($type)
     {
         return static::active()->ofType($type)->first();
+    }
+
+    public function cashier(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cashier_id');
+    }
+
+    public function scopeForCashier($query, int $cashierId)
+    {
+        return $query->where('cashier_id', $cashierId);
+    }
+
+    public static function getForTypeForCashier(string $type, int $cashierId): ?self
+    {
+        return static::query()
+            ->active()
+            ->ofType($type)
+            ->where('cashier_id', $cashierId)
+            ->orderByDesc('updated_at')
+            ->first()
+            ?? static::query()
+                ->active()
+                ->ofType($type)
+                ->whereNull('cashier_id')
+                ->orderByDesc('updated_at')
+                ->first();
     }
 
     /**
